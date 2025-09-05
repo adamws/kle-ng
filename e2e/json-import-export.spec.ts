@@ -76,22 +76,18 @@ test.describe('JSON Import/Export Functionality', () => {
     })
 
     test('should handle invalid JSON gracefully', async ({ page }) => {
-      // Import invalid JSON and expect error dialog
+      // Import invalid JSON and expect error toast notification
       const filePath = path.resolve('e2e/fixtures', 'invalid.json')
-
-      // Set up dialog promise before triggering the action
-      const dialogPromise = page.waitForEvent('dialog')
 
       const fileChooserPromise = page.waitForEvent('filechooser')
       await page.locator('button', { hasText: 'Import JSON File' }).click()
       const fileChooser = await fileChooserPromise
       await fileChooser.setFiles(filePath)
 
-      // Wait for and handle the dialog
-      const dialog = await dialogPromise
-      expect(dialog.type()).toBe('alert')
-      expect(dialog.message()).toContain('Error loading file')
-      await dialog.accept()
+      // Wait for error toast notification to appear
+      await expect(page.locator('.toast-notification')).toBeVisible()
+      await expect(page.locator('.toast-notification')).toHaveClass(/toast-error/)
+      await expect(page.locator('.toast-title')).toContainText('Error loading file')
 
       // Should remain at 0 keys after error
       await expect(page.locator('.keys-counter')).toContainText('Keys: 0')

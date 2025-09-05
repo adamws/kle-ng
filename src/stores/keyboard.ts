@@ -3,6 +3,12 @@ import type { Ref } from 'vue'
 import { ref, computed } from 'vue'
 import { Key, KeyboardMetadata, Keyboard, Serial } from '@ijprest/kle-serial'
 import { D } from '../utils/decimal-math'
+import {
+  generateShareableUrl,
+  extractLayoutFromCurrentUrl,
+  clearShareFromUrl,
+} from '../utils/url-sharing'
+import type { LayoutData } from '../utils/url-sharing'
 
 export { Key, KeyboardMetadata } from '@ijprest/kle-serial'
 
@@ -345,6 +351,11 @@ export const useKeyboardStore = defineStore('keyboard', () => {
       return
     }
 
+    // Check if there's a shared layout in the URL first
+    if (loadFromShareUrl()) {
+      return // Successfully loaded from share URL
+    }
+
     const sampleLayout = [
       [
         'Num Lock',
@@ -664,6 +675,30 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     canvasMode.value = 'select'
   }
 
+  // URL Sharing functionality
+  const generateShareUrl = (): string => {
+    const layoutData: LayoutData = {
+      keys: keys.value,
+      metadata: metadata.value,
+    }
+    return generateShareableUrl(layoutData)
+  }
+
+  const loadFromShareUrl = (): boolean => {
+    try {
+      const sharedLayout = extractLayoutFromCurrentUrl()
+      if (sharedLayout) {
+        loadLayout(sharedLayout.keys, sharedLayout.metadata)
+        clearShareFromUrl() // Clean up URL after loading
+        return true
+      }
+      return false
+    } catch (error) {
+      console.error('Error loading layout from share URL:', error)
+      return false
+    }
+  }
+
   initWithSample()
 
   return {
@@ -730,5 +765,9 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     endRectSelect,
     setMirrorAxis,
     performMirror,
+
+    // URL sharing
+    generateShareUrl,
+    loadFromShareUrl,
   }
 })

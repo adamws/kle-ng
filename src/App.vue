@@ -7,6 +7,7 @@ import JsonEditorPanel from './components/JsonEditorPanel.vue'
 import AppFooter from './components/AppFooter.vue'
 import CanvasToolbar from './components/CanvasToolbar.vue'
 import CanvasHelpModal from './components/CanvasHelpModal.vue'
+import ToastContainer from './components/ToastContainer.vue'
 import { useKeyboardStore } from '@/stores/keyboard'
 
 const canvasRef = ref<InstanceType<typeof KeyboardCanvas>>()
@@ -477,6 +478,9 @@ const stopResize = () => {
 
     <!-- Canvas Help Modal -->
     <CanvasHelpModal :is-visible="isHelpVisible" @close="closeHelp" />
+
+    <!-- Toast Notifications -->
+    <ToastContainer />
   </div>
 </template>
 

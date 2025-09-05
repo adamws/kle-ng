@@ -15,7 +15,7 @@
         </select>
       </div>
 
-      <!-- Import/Export buttons -->
+      <!-- Import/Export/Share buttons -->
       <div class="btn-group" role="group">
         <button class="btn btn-kle-secondary" @click="triggerFileUpload" type="button">
           Import JSON File
@@ -44,6 +44,8 @@
             </button>
           </div>
         </div>
+
+        <button class="btn btn-kle-primary" @click="shareLayout" type="button">Share Link</button>
       </div>
     </div>
 
@@ -64,6 +66,7 @@ import { useKeyboardStore } from '@/stores/keyboard'
 import layoutsData from '@/data/layouts.json'
 import { parseJsonString } from '@/utils/serialization'
 import { Serial } from '@ijprest/kle-serial'
+import { toast } from '@/composables/useToast'
 
 // Store
 const keyboardStore = useKeyboardStore()
@@ -129,9 +132,13 @@ const handleFileUpload = async (event: Event) => {
     keyboardStore.loadLayout(keyboard.keys, keyboard.meta)
 
     console.log(`Loaded layout from file: ${file.name}`)
+    toast.showSuccess(`Layout loaded from ${file.name}`, 'Import successful')
   } catch (error) {
     console.error('Error loading file:', error)
-    alert(`Error loading file: ${error instanceof Error ? error.message : 'Invalid JSON'}`)
+    toast.showError(
+      `${error instanceof Error ? error.message : 'Invalid JSON'}`,
+      'Error loading file',
+    )
   } finally {
     // Clear the input
     input.value = ''
@@ -148,6 +155,7 @@ const downloadJson = () => {
   a.download = `${keyboardStore.metadata.name || 'keyboard-layout'}.json`
   a.click()
   URL.revokeObjectURL(url)
+  toast.showSuccess('JSON file downloaded successfully')
 }
 
 const downloadPng = () => {
@@ -155,7 +163,7 @@ const downloadPng = () => {
     // Find the canvas element from the keyboard canvas component
     const canvas = document.querySelector('.keyboard-canvas') as HTMLCanvasElement
     if (!canvas) {
-      alert('Canvas not found. Please make sure the keyboard is visible.')
+      toast.showError('Please make sure the keyboard is visible.', 'Canvas not found')
       return
     }
 
@@ -166,9 +174,10 @@ const downloadPng = () => {
     link.click()
 
     console.log('PNG export completed')
+    toast.showSuccess('PNG image downloaded successfully')
   } catch (error) {
     console.error('Error exporting PNG:', error)
-    alert('Error exporting PNG. Please try again.')
+    toast.showError('Please try again.', 'Error exporting PNG')
   }
 }
 
@@ -235,6 +244,37 @@ const toggleExportDropdown = () => {
 const handleExportAction = (action: () => void) => {
   action()
   showExportDropdown.value = false
+}
+
+// Share function
+const shareLayout = async () => {
+  try {
+    const shareUrl = keyboardStore.generateShareUrl()
+
+    // Copy to clipboard if available
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(shareUrl)
+      toast.showSuccess(
+        'The shareable link has been copied to your clipboard. Share it with others to let them view your layout!',
+        'Link copied successfully!',
+      )
+    } else {
+      // Fallback: show the URL in a custom toast with longer duration
+      toast.showInfo(
+        'Copy this link to share your layout: ' + shareUrl,
+        'Shareable Link Generated',
+        {
+          duration: 10000, // 10 seconds for manual copying
+          showCloseButton: true,
+        },
+      )
+    }
+
+    console.log('Share URL generated:', shareUrl)
+  } catch (error) {
+    console.error('Error generating share link:', error)
+    toast.showError('Please try again.', 'Error generating share link')
+  }
 }
 
 // Close dropdowns when clicking outside

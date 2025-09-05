@@ -32,6 +32,7 @@
     "file-saver": "^2.0.5",
     "html2canvas": "^1.4.1",
     "json5": "^2.2.3",
+    "lz-string": "^1.5.0",
     "pinia": "^3.0.3",
     "vue": "^3.5.18",
     "vue-router": "^4.5.1"
