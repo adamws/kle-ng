@@ -1,0 +1,491 @@
+<template>
+  <div class="canvas-toolbar">
+    <!-- Tool Selection -->
+    <div class="toolbar-section">
+      <label class="section-label">Tools</label>
+      <div class="tool-buttons">
+        <button
+          :class="{ 'tool-button': true, active: canvasMode === 'select' }"
+          @click="setMode('select')"
+          title="Selection Mode - Left click to select, middle drag to move"
+        >
+          <i class="bi bi-cursor"></i>
+        </button>
+
+        <button
+          :class="{ 'tool-button': true, active: canvasMode === 'mirror-h' }"
+          :disabled="!canUseMirrorTools"
+          @click="setMode('mirror-h')"
+          title="Mirror Horizontal"
+        >
+          <i class="bi bi-symmetry-horizontal"></i>
+        </button>
+
+        <button
+          :class="{ 'tool-button': true, active: canvasMode === 'mirror-v' }"
+          :disabled="!canUseMirrorTools"
+          @click="setMode('mirror-v')"
+          title="Mirror Vertical"
+        >
+          <i class="bi bi-symmetry-vertical"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Edit Operations -->
+    <div class="toolbar-section">
+      <label class="section-label">Edit</label>
+      <div class="tool-buttons">
+        <!-- Add Key Button Group -->
+        <div class="btn-group-vertical add-key-group">
+          <button class="tool-button primary-add-btn" @click="addKey" title="Add Standard Key">
+            <i class="bi bi-plus-circle"></i>
+          </button>
+          <button
+            ref="dropdownBtnRef"
+            class="tool-button dropdown-btn"
+            @click="toggleSpecialKeysDropdown"
+            title="Add Special Key"
+          >
+            <i class="bi bi-chevron-down"></i>
+          </button>
+        </div>
+
+        <!-- Special Keys Dropdown -->
+        <div
+          v-if="showSpecialKeysDropdown"
+          ref="dropdownRef"
+          class="special-keys-dropdown"
+          style="opacity: 0"
+        >
+          <div class="dropdown-header">Special Keys</div>
+          <button
+            v-for="specialKey in specialKeys"
+            :key="specialKey.name"
+            @click="addSpecialKey(specialKey)"
+            class="dropdown-item"
+            :title="specialKey.description"
+          >
+            {{ specialKey.name }}
+          </button>
+        </div>
+
+        <button class="tool-button" @click="deleteKeys" :disabled="!canDelete" title="Delete Keys">
+          <i class="bi bi-trash"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- History Operations -->
+    <div class="toolbar-section">
+      <label class="section-label">History</label>
+      <div class="tool-buttons">
+        <button class="tool-button" @click="undo" :disabled="!canUndo" title="Undo">
+          <i class="bi bi-arrow-counterclockwise"></i>
+        </button>
+
+        <button class="tool-button" @click="redo" :disabled="!canRedo" title="Redo">
+          <i class="bi bi-arrow-clockwise"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Clipboard Operations -->
+    <div class="toolbar-section">
+      <label class="section-label">Clip</label>
+      <div class="tool-buttons">
+        <button class="tool-button" @click="cut" :disabled="!canCopy" title="Cut">
+          <i class="bi bi-scissors"></i>
+        </button>
+
+        <button class="tool-button" @click="copy" :disabled="!canCopy" title="Copy">
+          <i class="bi bi-clipboard"></i>
+        </button>
+
+        <button class="tool-button" @click="paste" :disabled="!canPaste" title="Paste">
+          <i class="bi bi-clipboard-check"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed, ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { useKeyboardStore } from '@/stores/keyboard'
+import { SPECIAL_KEYS, type SpecialKeyTemplate } from '@/data/specialKeys'
+
+// Store
+const keyboardStore = useKeyboardStore()
+
+// Special keys dropdown state
+const showSpecialKeysDropdown = ref(false)
+const specialKeys = SPECIAL_KEYS
+const dropdownRef = ref<HTMLElement>()
+const dropdownBtnRef = ref<HTMLElement>()
+
+// Computed properties from store
+const canvasMode = computed(() => keyboardStore.canvasMode)
+const canDelete = computed(() => keyboardStore.selectedKeys.length > 0)
+const canUndo = computed(() => keyboardStore.canUndo)
+const canRedo = computed(() => keyboardStore.canRedo)
+const canCopy = computed(() => keyboardStore.canCopy)
+const canPaste = computed(() => keyboardStore.canPaste)
+const canUseMirrorTools = computed(() => keyboardStore.selectedKeys.length > 0)
+
+// Methods
+
+const setMode = (mode: 'select' | 'mirror-h' | 'mirror-v') => {
+  keyboardStore.setCanvasMode(mode)
+}
+
+// Key editing functions
+const addKey = () => {
+  keyboardStore.addKey()
+}
+
+// Special keys functions
+const toggleSpecialKeysDropdown = () => {
+  if (showSpecialKeysDropdown.value) {
+    // Hide dropdown
+    showSpecialKeysDropdown.value = false
+    return
+  }
+
+  // Calculate position before showing dropdown
+  if (dropdownBtnRef.value) {
+    const buttonRect = dropdownBtnRef.value.getBoundingClientRect()
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+
+    // Estimate dropdown dimensions (will be refined once rendered)
+    const estimatedDropdownWidth = 150
+    const estimatedDropdownHeight = Math.min(300, specialKeys.length * 32 + 40) // items + header
+
+    // Calculate optimal position
+    let left = buttonRect.right + 10 // Default: to the right
+    let top = buttonRect.top // Default: align with button top
+
+    // Check if dropdown would overflow viewport on the right
+    if (left + estimatedDropdownWidth > viewportWidth) {
+      // Position to the left of button instead
+      left = buttonRect.left - estimatedDropdownWidth - 10
+    }
+
+    // Ensure dropdown doesn't overflow left edge
+    if (left < 10) {
+      left = 10
+    }
+
+    // Check if dropdown would overflow viewport on the bottom
+    if (top + estimatedDropdownHeight > viewportHeight) {
+      // Position above the button instead
+      top = buttonRect.bottom - estimatedDropdownHeight
+    }
+
+    // Ensure dropdown doesn't overflow top edge
+    if (top < 10) {
+      top = 10
+    }
+
+    // Show dropdown first, then position it immediately
+    showSpecialKeysDropdown.value = true
+
+    // Use nextTick to ensure DOM is updated before positioning
+    nextTick(() => {
+      if (dropdownRef.value) {
+        const dropdown = dropdownRef.value
+        dropdown.style.left = `${left}px`
+        dropdown.style.top = `${top}px`
+        dropdown.style.opacity = '1'
+      }
+    })
+  }
+}
+
+const addSpecialKey = (specialKey: SpecialKeyTemplate) => {
+  // Add the special key without position data (x, y) - let the store handle positioning
+  keyboardStore.addKey(specialKey.data)
+  // Close the dropdown after selection
+  showSpecialKeysDropdown.value = false
+}
+
+const deleteKeys = () => {
+  keyboardStore.deleteKeys()
+}
+
+// History functions
+const undo = () => {
+  keyboardStore.undo()
+}
+
+const redo = () => {
+  keyboardStore.redo()
+}
+
+// Clipboard functions
+const cut = () => {
+  keyboardStore.cut()
+}
+
+const copy = () => {
+  keyboardStore.copy()
+}
+
+const paste = () => {
+  keyboardStore.paste()
+}
+
+// Close dropdown when clicking outside
+const handleClickOutside = (event: MouseEvent) => {
+  if (showSpecialKeysDropdown.value) {
+    const target = event.target as Node
+    const dropdownBtn = dropdownBtnRef.value
+    const dropdown = dropdownRef.value
+
+    if (dropdownBtn && !dropdownBtn.contains(target) && dropdown && !dropdown.contains(target)) {
+      showSpecialKeysDropdown.value = false
+    }
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
+</script>
+
+<style scoped>
+.canvas-toolbar {
+  width: 80px;
+  min-width: 80px;
+  background: #f8f9fa;
+  border-right: 1px solid #dee2e6;
+  padding: 16px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 1px 0 3px rgba(0, 0, 0, 0.1);
+  container-type: inline-size;
+}
+
+.toolbar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+}
+
+.section-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+  text-align: center;
+  width: 100%;
+}
+
+/* Tool Buttons */
+.tool-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  width: 100%;
+}
+
+/* Compact layout when toolbar height is constrained */
+@container (max-height: 500px) {
+  .canvas-toolbar {
+    width: 160px;
+    min-width: 160px;
+    padding: 12px 8px;
+    gap: 12px;
+  }
+
+  .toolbar-section {
+    gap: 4px;
+  }
+
+  .tool-buttons {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 3px;
+  }
+
+  .tool-button {
+    width: 34px;
+    height: 34px;
+  }
+
+  .add-key-group {
+    flex-direction: row;
+    gap: 2px;
+  }
+
+  .primary-add-btn {
+    border-radius: 6px 2px 2px 6px;
+    border-right: 1px solid #adb5bd;
+  }
+
+  .dropdown-btn {
+    height: 34px;
+    width: 16px;
+    border-radius: 2px 6px 6px 2px;
+    border-left: none;
+  }
+}
+
+.tool-button {
+  width: 38px;
+  height: 38px;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6c757d;
+  transition: all 0.15s ease;
+  padding: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.tool-button:hover {
+  background: #e9ecef;
+  border-color: #adb5bd;
+  color: #495057;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.tool-button.active {
+  background: #007bff;
+  border-color: #007bff;
+  color: white;
+  box-shadow: 0 2px 6px rgba(0, 123, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.tool-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.tool-button:disabled {
+  background: #f8f9fa;
+  border-color: #e9ecef;
+  color: #ced4da;
+  cursor: not-allowed;
+}
+
+.tool-button:disabled:hover {
+  background: #f8f9fa;
+  border-color: #e9ecef;
+  color: #ced4da;
+}
+
+/* Add Key Button Group Styles */
+.add-key-group {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.primary-add-btn {
+  border-radius: 6px 6px 2px 2px;
+  border-bottom: 1px solid #adb5bd;
+}
+
+.dropdown-btn {
+  height: 16px;
+  border-radius: 2px 2px 6px 6px;
+  border-top: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dropdown-btn:hover {
+  transform: none; /* Override the translateY for the smaller button */
+}
+
+/* Special Keys Dropdown */
+.special-keys-dropdown {
+  position: fixed;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10000;
+  min-width: 150px;
+  max-height: 300px;
+  overflow-y: auto;
+  transition: opacity 0.2s ease;
+  /* Position will be calculated by JavaScript */
+}
+
+.dropdown-header {
+  padding: 8px 12px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #e9ecef;
+  background: #f8f9fa;
+  border-radius: 6px 6px 0 0;
+}
+
+.dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  text-align: left;
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: #495057;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.dropdown-item:hover {
+  background-color: #f8f9fa;
+}
+
+.dropdown-item:active {
+  background-color: #e9ecef;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .canvas-toolbar {
+    width: 72px;
+    min-width: 72px;
+    padding: 12px 8px;
+    gap: 14px;
+  }
+
+  .tool-button {
+    width: 34px;
+    height: 34px;
+  }
+
+  .section-label {
+    font-size: 9px;
+  }
+
+  .special-keys-dropdown {
+    min-width: 120px;
+  }
+}
+</style>
