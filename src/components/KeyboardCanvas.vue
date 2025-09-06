@@ -1,5 +1,11 @@
 <template>
-  <div class="keyboard-canvas-container" ref="containerRef">
+  <div
+    class="keyboard-canvas-container"
+    ref="containerRef"
+    @click="handleContainerClick"
+    @mousedown="handleContainerMouseDown"
+    @mouseup="handleContainerMouseUp"
+  >
     <canvas
       ref="canvasRef"
       :width="canvasWidth"
@@ -15,6 +21,8 @@
       class="keyboard-canvas"
       tabindex="0"
       @keydown="handleKeyDown"
+      @focus="handleCanvasFocus"
+      @blur="handleCanvasBlur"
     />
   </div>
 </template>
@@ -49,6 +57,7 @@ const keyDragOccurred = ref(false)
 const mouseDownOnKey = ref<{ key: Key; pos: { x: number; y: number } } | null>(null)
 
 const mousePosition = ref({ x: 0, y: 0, visible: false })
+const canvasFocused = ref(false)
 
 const canvasCursor = computed(() => {
   if (keyboardStore.canvasMode === 'select') {
@@ -83,6 +92,7 @@ onMounted(() => {
     renderKeyboard()
 
     canvasRef.value.focus()
+    canvasFocused.value = true
 
     window.addEventListener('resize', handleWindowResize)
     handleWindowResize()
@@ -98,6 +108,7 @@ onMounted(() => {
 
     window.addEventListener('canvas-zoom', handleExternalZoom as EventListener)
     window.addEventListener('canvas-reset-view', handleExternalResetView as EventListener)
+    window.addEventListener('request-canvas-focus', handleCanvasFocusRequest as EventListener)
   }
 })
 
@@ -525,6 +536,54 @@ const getCanvasPosition = (event: MouseEvent) => {
   }
 }
 
+const handleContainerClick = (event: MouseEvent) => {
+  // If the click is on the canvas itself, let the canvas handler manage it
+  if (event.target === canvasRef.value) {
+    return
+  }
+
+  // Don't interfere if rectangle selection just occurred (let it complete)
+  if (rectSelectionOccurred.value) {
+    rectSelectionOccurred.value = false // Reset for next interaction
+    return
+  }
+
+  // Prevent default to avoid any focus issues
+  event.preventDefault()
+
+  // Clear selection when clicking in empty space (outside canvas)
+  // Important for allowing clearing selection when there is no empty
+  // space on the canvas (rectangular layouts without gaps between keys)
+  keyboardStore.unselectAll()
+
+  if (canvasRef.value) {
+    canvasRef.value.focus()
+  }
+}
+
+const handleContainerMouseDown = (event: MouseEvent) => {
+  // If the mousedown is on the canvas itself, let the canvas handler manage it
+  if (event.target === canvasRef.value) {
+    return
+  }
+
+  // Prevent the mousedown from causing other elements to lose focus
+  event.preventDefault()
+}
+
+const handleContainerMouseUp = (event: MouseEvent) => {
+  // If the mouseup is on the canvas itself, let the canvas handler manage it
+  if (event.target === canvasRef.value) {
+    return
+  }
+
+  // If we're in the middle of rectangle selection, complete it
+  if (keyboardStore.mouseDragMode === 'rect-select') {
+    handleMouseUpShared()
+    rectSelectionOccurred.value = true // Mark that rectangle selection occurred
+  }
+}
+
 const handleCanvasClick = (event: MouseEvent) => {
   if (!renderer.value) return
 
@@ -562,7 +621,7 @@ const handleCanvasClick = (event: MouseEvent) => {
   if (clickedKey) {
     keyboardStore.selectKey(clickedKey, event.ctrlKey || event.metaKey)
   } else {
-    // Clicked on empty space
+    // Clicked on empty space - clear selection unless Ctrl/Cmd is held
     if (!event.ctrlKey && !event.metaKey) {
       keyboardStore.unselectAll()
     }
@@ -602,6 +661,11 @@ const handleMouseDown = (event: MouseEvent) => {
   // Middle mouse button (1) - Move selected keys
   if (event.button === 1) {
     event.preventDefault()
+
+    // Ensure canvas is focused when middle-clicking
+    if (canvasRef.value) {
+      canvasRef.value.focus()
+    }
 
     if (clickedKey) {
       // If key is not selected, automatically select it first
@@ -844,6 +908,27 @@ const updateMousePosition = (event: MouseEvent) => {
   )
 }
 
+const handleCanvasFocus = () => {
+  canvasFocused.value = true
+  // Emit focus state to parent for status line
+  window.dispatchEvent(
+    new CustomEvent('canvas-focus-change', {
+      detail: { focused: true },
+    }),
+  )
+}
+
+// Using @blur to trigger this when canvas out of focus
+const handleCanvasBlur = () => {
+  canvasFocused.value = false
+  // Emit blur state to parent for status line
+  window.dispatchEvent(
+    new CustomEvent('canvas-focus-change', {
+      detail: { focused: false },
+    }),
+  )
+}
+
 const handleKeyDown = (event: KeyboardEvent) => {
   // Handle Ctrl+[ and Ctrl+] for key navigation (like bracket matching in editors)
   if ((event.ctrlKey || event.metaKey) && (event.key === '[' || event.key === ']')) {
@@ -969,6 +1054,12 @@ const handleExternalResetView = () => {
       renderKeyboard()
     })
   })
+}
+
+const handleCanvasFocusRequest = () => {
+  if (canvasRef.value) {
+    canvasRef.value.focus()
+  }
 }
 
 const resetView = () => {
@@ -1131,6 +1222,7 @@ const cleanup = () => {
   window.removeEventListener('resize', handleWindowResize)
   window.removeEventListener('canvas-zoom', handleExternalZoom as EventListener)
   window.removeEventListener('canvas-reset-view', handleExternalResetView as EventListener)
+  window.removeEventListener('request-canvas-focus', handleCanvasFocusRequest as EventListener)
 
   // Remove global mouse event listeners in case they weren't cleaned up
   document.removeEventListener('mousemove', handleGlobalMouseMove)

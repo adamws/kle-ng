@@ -135,13 +135,20 @@ const canUseMirrorTools = computed(() => keyboardStore.selectedKeys.length > 0)
 
 // Methods
 
+// Helper function to request canvas focus
+const requestCanvasFocus = () => {
+  window.dispatchEvent(new CustomEvent('request-canvas-focus'))
+}
+
 const setMode = (mode: 'select' | 'mirror-h' | 'mirror-v') => {
   keyboardStore.setCanvasMode(mode)
+  requestCanvasFocus()
 }
 
 // Key editing functions
 const addKey = () => {
   keyboardStore.addKey()
+  requestCanvasFocus()
 }
 
 // Special keys functions
@@ -208,32 +215,39 @@ const addSpecialKey = (specialKey: SpecialKeyTemplate) => {
   keyboardStore.addKey(specialKey.data)
   // Close the dropdown after selection
   showSpecialKeysDropdown.value = false
+  requestCanvasFocus()
 }
 
 const deleteKeys = () => {
   keyboardStore.deleteKeys()
+  requestCanvasFocus()
 }
 
 // History functions
 const undo = () => {
   keyboardStore.undo()
+  requestCanvasFocus()
 }
 
 const redo = () => {
   keyboardStore.redo()
+  requestCanvasFocus()
 }
 
 // Clipboard functions
 const cut = () => {
   keyboardStore.cut()
+  requestCanvasFocus()
 }
 
 const copy = () => {
   keyboardStore.copy()
+  requestCanvasFocus()
 }
 
 const paste = () => {
   keyboardStore.paste()
+  requestCanvasFocus()
 }
 
 // Close dropdown when clicking outside
