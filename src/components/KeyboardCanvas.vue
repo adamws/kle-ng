@@ -25,6 +25,16 @@
       @blur="handleCanvasBlur"
     />
   </div>
+
+  <!-- Rotation control modal -->
+  <RotationControlModal
+    :visible="keyboardStore.canvasMode === 'rotate' && keyboardStore.selectedKeys.length > 0"
+    :rotation-origin="keyboardStore.rotationOrigin"
+    :initial-angle="getSelectionCommonRotation()"
+    @apply="handleRotationApply"
+    @cancel="handleRotationCancel"
+    @angle-change="handleRotationAngleChange"
+  />
 </template>
 
 <script setup lang="ts">
@@ -33,6 +43,7 @@ import { useKeyboardStore, type Key } from '@/stores/keyboard'
 import { CanvasRenderer, type RenderOptions } from '@/utils/canvas-renderer'
 import { D } from '@/utils/decimal-math'
 import { keyIntersectsSelection } from '@/utils/geometry'
+import RotationControlModal from '@/components/RotationControlModal.vue'
 
 const keyboardStore = useKeyboardStore()
 
@@ -48,6 +59,9 @@ const resizeObserver = ref<ResizeObserver>()
 
 const dragCoordinateOffset = ref<{ x: number; y: number } | null>(null)
 
+// Rotation points interaction state
+const hoveredRotationPointId = ref<string | null>(null)
+
 const panX = ref(0)
 const panY = ref(0)
 const zoom = ref(1)
@@ -62,6 +76,10 @@ const canvasFocused = ref(false)
 const canvasCursor = computed(() => {
   if (keyboardStore.canvasMode === 'select') {
     return keyboardStore.mouseDragMode === 'rect-select' ? 'crosshair' : 'default'
+  }
+  if (keyboardStore.canvasMode === 'rotate') {
+    // Show pointer cursor when hovering over rotation points, otherwise default
+    return hoveredRotationPointId.value ? 'pointer' : 'default'
   }
   if (keyboardStore.canvasMode === 'mirror-h' || keyboardStore.canvasMode === 'mirror-v') {
     return keyboardStore.selectedKeys.length > 0 ? 'copy' : 'not-allowed'
@@ -229,62 +247,23 @@ const updateContainerWidth = () => {
   }
 }
 
-// Calculate coordinate system offset to handle negative coordinates
-const getCoordinateSystemOffset = () => {
+// Cached bounds to ensure consistency between canvas size and coordinate offset
+let cachedBounds: { minX: number; minY: number; maxX: number; maxY: number } | null = null
+
+// Calculate all bounds - used by both canvas size and coordinate offset
+const calculateAllBounds = () => {
   if (keyboardStore.keys.length === 0 || !renderer.value) {
-    return { x: 0, y: 0 }
+    return { minX: 0, minY: 0, maxX: 1, maxY: 1 }
   }
 
-  // Get bounds for all keys to determine minimum coordinates
-  let minX = Infinity,
-    minY = Infinity
-
-  keyboardStore.keys.forEach((key) => {
-    const keyBounds = renderer.value!.calculateRotatedKeyBounds(key)
-    const unit = renderOptions.unit
-    const keyMinX = D.div(keyBounds.minX, unit)
-    const keyMinY = D.div(keyBounds.minY, unit)
-
-    minX = D.min(minX, keyMinX)
-    minY = D.min(minY, keyMinY)
-  })
-
-  // Calculate offset needed to ensure all keys are in positive coordinates
-  const offsetX = D.mul(D.min(minX, 0), renderOptions.unit)
-  const offsetY = D.mul(D.min(minY, 0), renderOptions.unit)
-
-  return { x: -offsetX, y: -offsetY }
-}
-
-// Canvas size calculation now uses renderer's bounds calculation for consistency
-
-const updateCanvasSize = () => {
-  if (keyboardStore.keys.length === 0) {
-    // For empty layouts, use a default size scaled by zoom
-    const defaultWidth = D.round(D.mul(800, zoom.value))
-    const defaultHeight = D.round(D.mul(600, zoom.value))
-
-    canvasWidth.value = defaultWidth
-    canvasHeight.value = defaultHeight
-    containerWidth.value = defaultWidth
-    containerHeight.value = defaultHeight
-    return
-  }
-
-  // Calculate bounds using renderer for consistency
-  if (!renderer.value) return
-
-  // Get bounds for each key individually and track min/max in key units
   let minX = Infinity,
     minY = Infinity,
     maxX = -Infinity,
     maxY = -Infinity
 
+  // Process regular keys
   keyboardStore.keys.forEach((key) => {
-    // Get bounds from renderer (these are in canvas pixels)
     const keyBounds = renderer.value!.calculateRotatedKeyBounds(key)
-
-    // Convert to key units by scaling
     const unit = renderOptions.unit
     const keyMinX = keyBounds.minX / unit
     const keyMinY = keyBounds.minY / unit
@@ -296,6 +275,57 @@ const updateCanvasSize = () => {
     maxX = Math.max(maxX, keyMaxX)
     maxY = Math.max(maxY, keyMaxY)
   })
+
+  return { minX, minY, maxX, maxY }
+}
+
+// Calculate coordinate system offset to handle negative coordinates
+const getCoordinateSystemOffset = () => {
+  const bounds = cachedBounds || calculateAllBounds()
+
+  // Calculate offset needed to ensure all keys are in positive coordinates
+  const offsetX = D.mul(D.min(bounds.minX, 0), renderOptions.unit)
+  const offsetY = D.mul(D.min(bounds.minY, 0), renderOptions.unit)
+
+  return { x: -offsetX, y: -offsetY }
+}
+
+// Canvas size calculation now uses renderer's bounds calculation for consistency
+
+// Prevent overlapping canvas size updates
+let isUpdatingCanvasSize = false
+
+const updateCanvasSize = () => {
+  if (isUpdatingCanvasSize) {
+    return
+  }
+
+  isUpdatingCanvasSize = true
+
+  if (keyboardStore.keys.length === 0) {
+    // For empty layouts, use a default size scaled by zoom
+    const defaultWidth = D.round(D.mul(800, zoom.value))
+    const defaultHeight = D.round(D.mul(600, zoom.value))
+
+    canvasWidth.value = defaultWidth
+    canvasHeight.value = defaultHeight
+    containerWidth.value = defaultWidth
+    containerHeight.value = defaultHeight
+    cachedBounds = null
+    isUpdatingCanvasSize = false
+    return
+  }
+
+  // Calculate bounds using renderer for consistency
+  if (!renderer.value) {
+    isUpdatingCanvasSize = false
+    return
+  }
+
+  // Calculate bounds once and cache for coordinate offset consistency
+  const bounds = calculateAllBounds()
+  cachedBounds = bounds
+  const { minX, minY, maxX, maxY } = bounds
 
   const unit = renderOptions.unit * zoom.value
 
@@ -328,6 +358,10 @@ const updateCanvasSize = () => {
     containerWidth.value = newWidth
     containerHeight.value = newHeight
   }
+
+  // Mark update as complete and clear cache
+  cachedBounds = null
+  isUpdatingCanvasSize = false
 }
 
 const drawRectangleSelection = (ctx: CanvasRenderingContext2D) => {
@@ -488,6 +522,9 @@ const renderKeyboard = () => {
         keyboardStore.selectedKeys,
         keyboardStore.metadata,
         false,
+        keyboardStore.canvasMode === 'rotate' && keyboardStore.selectedKeys.length > 0,
+        hoveredRotationPointId.value || undefined,
+        keyboardStore.rotationOrigin,
       )
 
       // Draw rectangle selection if active
@@ -542,6 +579,12 @@ const handleContainerClick = (event: MouseEvent) => {
     return
   }
 
+  // Handle rotate mode - auto-switch back to selection mode when clicking outside canvas
+  if (keyboardStore.canvasMode === 'rotate') {
+    keyboardStore.setCanvasMode('select')
+    return
+  }
+
   // Don't interfere if rectangle selection just occurred (let it complete)
   if (rectSelectionOccurred.value) {
     rectSelectionOccurred.value = false // Reset for next interaction
@@ -586,6 +629,23 @@ const handleContainerMouseUp = (event: MouseEvent) => {
 
 const handleCanvasClick = (event: MouseEvent) => {
   if (!renderer.value) return
+
+  // Handle rotation mode - ONLY allow rotation point clicks, disable all other interactions
+  if (keyboardStore.canvasMode === 'rotate') {
+    const pos = getCanvasPosition(event)
+    // pos is already in canvas coordinates, no need to multiply by unit
+    const rotationPoint = renderer.value.getRotationPointAtPosition(pos.x, pos.y)
+
+    if (rotationPoint) {
+      // Start rotation with the selected point as origin
+      keyboardStore.startRotation({ x: rotationPoint.x, y: rotationPoint.y })
+    } else {
+      // If user clicks outside rotation points in rotate mode, auto-switch back to selection mode
+      keyboardStore.setCanvasMode('select')
+    }
+    // In rotate mode, we ONLY handle rotation points - ignore everything else
+    return
+  }
 
   // If rectangle selection occurred, don't handle click
   if (rectSelectionOccurred.value) {
@@ -633,6 +693,11 @@ const handleCanvasClick = (event: MouseEvent) => {
 
 const handleMouseDown = (event: MouseEvent) => {
   if (!renderer.value) return
+
+  // In rotate mode, disable all mouse down interactions (no key selection/dragging)
+  if (keyboardStore.canvasMode === 'rotate') {
+    return
+  }
 
   // In mirror mode, don't interfere with selection
   if (keyboardStore.canvasMode === 'mirror-h' || keyboardStore.canvasMode === 'mirror-v') {
@@ -698,6 +763,21 @@ const handleMouseDown = (event: MouseEvent) => {
 const handleMouseMove = (event: MouseEvent) => {
   // Update mouse position for display (only if mouse is over canvas)
   updateMousePosition(event)
+
+  // Handle rotation points hover when in rotate mode
+  if (keyboardStore.canvasMode === 'rotate' && renderer.value) {
+    const pos = getCanvasPosition(event)
+    // pos is already in canvas coordinates, no need to multiply by unit
+    const rotationPoint = renderer.value.getRotationPointAtPosition(pos.x, pos.y)
+
+    if (rotationPoint?.id !== hoveredRotationPointId.value) {
+      hoveredRotationPointId.value = rotationPoint?.id || null
+      nextTick(() => {
+        renderKeyboard()
+      })
+    }
+    return
+  }
 
   // Handle mirror mode preview - trigger re-render to show axis preview
   if (keyboardStore.canvasMode === 'mirror-h' || keyboardStore.canvasMode === 'mirror-v') {
@@ -872,6 +952,14 @@ const handleMouseEnter = () => {
 
 const handleMouseLeave = () => {
   mousePosition.value.visible = false
+
+  // Reset hovered rotation point
+  if (hoveredRotationPointId.value) {
+    hoveredRotationPointId.value = null
+    nextTick(() => {
+      renderKeyboard()
+    })
+  }
 
   // Dispatch event to notify that mouse position is hidden
   window.dispatchEvent(
@@ -1214,6 +1302,48 @@ const calculateSelectedKeys = (endPos: { x: number; y: number }): Key[] => {
 
   return keyboardStore.keys.filter((key) => {
     return keyIntersectsSelection(key, keyboardStore.rectSelectStart!, endPos, unit)
+  })
+}
+
+const getSelectionCommonRotation = (): number => {
+  const selectedKeys = keyboardStore.selectedKeys
+  if (selectedKeys.length === 0) return 0
+
+  // Check if all selected keys have the same rotation angle
+  const firstRotation = selectedKeys[0].rotation_angle || 0
+  const allSame = selectedKeys.every((key) => (key.rotation_angle || 0) === firstRotation)
+
+  return allSame ? firstRotation : 0
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const handleRotationApply = (angle: number) => {
+  // Apply the rotation and clean up
+  keyboardStore.applyRotation()
+
+  // Re-render to show final result
+  nextTick(() => {
+    renderKeyboard()
+  })
+}
+
+const handleRotationCancel = () => {
+  // Cancel rotation and clean up
+  keyboardStore.cancelRotation()
+
+  // Re-render to remove any preview
+  nextTick(() => {
+    renderKeyboard()
+  })
+}
+
+const handleRotationAngleChange = (angle: number) => {
+  // Apply rotation directly to the keys
+  keyboardStore.updateRotationPreview(angle)
+
+  // Re-render to show changes
+  nextTick(() => {
+    renderKeyboard()
   })
 }
 

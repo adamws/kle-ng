@@ -110,11 +110,11 @@
                     v-model="currentRotationAngle"
                     @change="updateRotationAngle"
                     :step="15"
-                    :min="-180"
-                    :max="180"
+                    :min="-360"
+                    :max="360"
                     :wrap-around="true"
-                    :wrap-min="-180"
-                    :wrap-max="180"
+                    :wrap-min="-360"
+                    :wrap-max="360"
                     class="form-control form-control-sm mb-1"
                     title="Rotation Angle in Degrees"
                   />
@@ -290,11 +290,11 @@
                     v-model="currentRotationAngle"
                     @change="updateRotationAngle"
                     :step="15"
-                    :min="-180"
-                    :max="180"
+                    :min="-360"
+                    :max="360"
                     :wrap-around="true"
-                    :wrap-min="-180"
-                    :wrap-max="180"
+                    :wrap-min="-360"
+                    :wrap-max="360"
                     class="form-control form-control-sm mb-1"
                     title="Rotation Angle in Degrees"
                   />
@@ -776,7 +776,14 @@ const formatNumber = (value: number): number => {
 
 // Computed
 const selectedKeys = computed(() => keyboardStore.selectedKeys)
-const isDisabled = computed(() => selectedKeys.value.length === 0)
+const isDisabled = computed(() => {
+  return (
+    selectedKeys.value.length === 0 ||
+    keyboardStore.canvasMode === 'rotate' ||
+    keyboardStore.canvasMode === 'mirror-h' ||
+    keyboardStore.canvasMode === 'mirror-v'
+  )
+})
 const moveStep = computed(() => keyboardStore.moveStep)
 
 // Non-rectangular key detection - only for truly J-shaped keys, not stepped keys
@@ -884,6 +891,17 @@ const relativeToAbsolute = (relativeCoord: number, keyPosition: number): number 
   return D.add(relativeCoord, keyPosition)
 }
 
+// Normalize rotation angle to -180 to 180 range
+const normalizeRotationAngle = (angle: number): number => {
+  while (angle > 180) {
+    angle -= 360
+  }
+  while (angle < -180) {
+    angle += 360
+  }
+  return formatNumber(angle)
+}
+
 // Computed properties for display values
 const displayRotationX = computed({
   get: () => {
@@ -968,7 +986,7 @@ const updateCurrentValues = () => {
     currentStepped.value = !!firstKey.stepped
     currentNub.value = !!firstKey.nub
     currentDecal.value = !!firstKey.decal
-    currentRotationAngle.value = formatNumber(firstKey.rotation_angle || 0)
+    currentRotationAngle.value = normalizeRotationAngle(firstKey.rotation_angle || 0)
     currentRotationX.value = formatNumber(firstKey.rotation_x || 0)
     currentRotationY.value = formatNumber(firstKey.rotation_y || 0)
   } else {
@@ -991,7 +1009,7 @@ const updateCurrentValues = () => {
     currentStepped.value = !!firstKey.stepped
     currentNub.value = !!firstKey.nub
     currentDecal.value = !!firstKey.decal
-    currentRotationAngle.value = formatNumber(firstKey.rotation_angle || 0)
+    currentRotationAngle.value = normalizeRotationAngle(firstKey.rotation_angle || 0)
     currentRotationX.value = formatNumber(firstKey.rotation_x || 0)
     currentRotationY.value = formatNumber(firstKey.rotation_y || 0)
   }
@@ -1203,9 +1221,14 @@ const updateDecal = () => {
 const updateRotationAngle = () => {
   if (selectedKeys.value.length === 0) return
 
+  const normalizedAngle = normalizeRotationAngle(currentRotationAngle.value)
+
   selectedKeys.value.forEach((key) => {
-    key.rotation_angle = currentRotationAngle.value
+    key.rotation_angle = normalizedAngle
   })
+
+  // Update the current value to reflect the normalization
+  currentRotationAngle.value = normalizedAngle
 
   keyboardStore.saveState()
 }

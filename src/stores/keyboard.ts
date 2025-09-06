@@ -20,7 +20,7 @@ export interface KeyboardState {
   historyIndex: number
   history: { keys: Key[]; metadata: KeyboardMetadata }[]
   dirty: boolean
-  canvasMode: 'select' | 'mirror-h' | 'mirror-v'
+  canvasMode: 'select' | 'mirror-h' | 'mirror-v' | 'rotate'
   moveStep: number
   lockRotations: boolean
   mouseDragMode: 'none' | 'key-move' | 'rect-select'
@@ -35,6 +35,13 @@ export interface KeyboardState {
   tempSelectedKeys: Key[]
   mirrorAxis: { x: number; y: number; direction: 'horizontal' | 'vertical' } | null
   showMirrorPreview: boolean
+  rotationOrigin: { x: number; y: number } | null
+  rotationPreviewAngle: number
+  originalRotationStates: Map<
+    Key,
+    { rotation_angle?: number; rotation_x?: number; rotation_y?: number }
+  >
+  showRotationPreview: boolean
 }
 
 export const useKeyboardStore = defineStore('keyboard', () => {
@@ -52,7 +59,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
   const dirty = ref(false)
   const resetViewTrigger = ref(0) // Incremented when layout changes to trigger view reset
 
-  const canvasMode = ref<'select' | 'mirror-h' | 'mirror-v'>('select')
+  const canvasMode = ref<'select' | 'mirror-h' | 'mirror-v' | 'rotate'>('select')
   const moveStep = ref(0.25)
   const lockRotations = ref(false)
 
@@ -73,6 +80,14 @@ export const useKeyboardStore = defineStore('keyboard', () => {
   const mirrorAxis: Ref<{ x: number; y: number; direction: 'horizontal' | 'vertical' } | null> =
     ref(null)
   const showMirrorPreview = ref(false)
+
+  // Rotation state
+  const rotationOrigin: Ref<{ x: number; y: number } | null> = ref(null)
+  const rotationPreviewAngle = ref(0)
+  const showRotationPreview = ref(false)
+  const originalRotationStates: Ref<
+    Map<Key, { rotation_angle?: number; rotation_x?: number; rotation_y?: number }>
+  > = ref(new Map())
 
   const canUndo = computed(() => historyIndex.value > 0)
   const canRedo = computed(() => historyIndex.value < history.value.length - 1)
@@ -440,7 +455,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
   }
 
   // Toolbar actions
-  const setCanvasMode = (mode: 'select' | 'mirror-h' | 'mirror-v') => {
+  const setCanvasMode = (mode: 'select' | 'mirror-h' | 'mirror-v' | 'rotate') => {
     canvasMode.value = mode
     // Reset any ongoing operations when switching modes
     mouseDragMode.value = 'none'
@@ -448,6 +463,9 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     tempSelectedKeys.value = []
     mirrorAxis.value = null
     showMirrorPreview.value = false
+    rotationOrigin.value = null
+    rotationPreviewAngle.value = 0
+    showRotationPreview.value = false
   }
 
   const setMoveStep = (step: number) => {
@@ -675,6 +693,174 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     canvasMode.value = 'select'
   }
 
+  // Rotation functionality
+  const startRotation = (origin: { x: number; y: number }) => {
+    // Store original rotation state for all selected keys
+    originalRotationStates.value.clear()
+    selectedKeys.value.forEach((key) => {
+      originalRotationStates.value.set(key, {
+        rotation_angle: key.rotation_angle || 0,
+        rotation_x: key.rotation_x,
+        rotation_y: key.rotation_y,
+      })
+
+      // For already-rotated keys, transform their rotation origins to the new point
+      // This ensures the rotation tool works correctly with mixed rotated/unrotated selections
+      transformRotationOrigin(key, origin.x, origin.y)
+    })
+
+    rotationOrigin.value = { x: origin.x, y: origin.y }
+    rotationPreviewAngle.value = 0
+    showRotationPreview.value = true
+  }
+
+  const updateRotationPreview = (deltaAngle: number) => {
+    // Apply rotation based on original state + delta
+    selectedKeys.value.forEach((key) => {
+      const originalState = originalRotationStates.value.get(key)
+      if (originalState) {
+        const newAngle = (originalState.rotation_angle || 0) + deltaAngle
+        key.rotation_angle = ((newAngle % 360) + 360) % 360
+        // rotation_x and rotation_y should already be set correctly from startRotation
+      }
+    })
+
+    // Store the current delta for reference
+    rotationPreviewAngle.value = deltaAngle
+  }
+
+  const applyRotation = () => {
+    // Finalize the rotation and save state
+    if (rotationOrigin.value && selectedKeys.value.length > 0) {
+      saveState()
+    }
+
+    // Clear rotation state
+    originalRotationStates.value.clear()
+    rotationOrigin.value = null
+    rotationPreviewAngle.value = 0
+    showRotationPreview.value = false
+    canvasMode.value = 'select'
+  }
+
+  const cancelRotation = () => {
+    // Restore original rotation state for all selected keys
+    selectedKeys.value.forEach((key) => {
+      const originalState = originalRotationStates.value.get(key)
+      if (originalState) {
+        key.rotation_angle = originalState.rotation_angle || 0
+        if (originalState.rotation_x !== undefined) {
+          key.rotation_x = originalState.rotation_x
+        }
+        if (originalState.rotation_y !== undefined) {
+          key.rotation_y = originalState.rotation_y
+        }
+      }
+    })
+
+    // Clear rotation state
+    originalRotationStates.value.clear()
+    rotationOrigin.value = null
+    rotationPreviewAngle.value = 0
+    showRotationPreview.value = false
+    canvasMode.value = 'select'
+  }
+
+  // Generalized function: Transform rotation origin from current to target point without changing visual appearance
+  const transformRotationOrigin = (key: Key, targetOriginX: number, targetOriginY: number) => {
+    // Only process keys that have rotation properties
+    if (
+      !key.rotation_angle ||
+      key.rotation_angle === 0 ||
+      key.rotation_x === undefined ||
+      key.rotation_y === undefined
+    ) {
+      // For non-rotated keys, just set the new origin
+      key.rotation_x = targetOriginX
+      key.rotation_y = targetOriginY
+      return
+    }
+
+    const currentOriginX = key.rotation_x
+    const currentOriginY = key.rotation_y
+    const angle = key.rotation_angle
+
+    const angleRad = D.degreesToRadians(angle)
+    const cos = Math.cos(angleRad)
+    const sin = Math.sin(angleRad)
+
+    // Step 1: Calculate current rendered position of key's top-left corner
+    const dx_key = D.sub(key.x, currentOriginX)
+    const dy_key = D.sub(key.y, currentOriginY)
+
+    const renderedKeyX = D.add(currentOriginX, D.sub(D.mul(dx_key, cos), D.mul(dy_key, sin)))
+    const renderedKeyY = D.add(currentOriginY, D.add(D.mul(dx_key, sin), D.mul(dy_key, cos)))
+
+    // Step 2: Calculate new key position so that when rotated around target origin,
+    // it produces the same rendered position
+    const dx_rendered = D.sub(renderedKeyX, targetOriginX)
+    const dy_rendered = D.sub(renderedKeyY, targetOriginY)
+
+    // Apply inverse rotation to get new key position
+    const newX = D.add(targetOriginX, D.add(D.mul(dx_rendered, cos), D.mul(dy_rendered, sin)))
+    const newY = D.add(targetOriginY, D.sub(D.mul(dy_rendered, cos), D.mul(dx_rendered, sin)))
+
+    // Update key properties
+    key.x = newX
+    key.y = newY
+    key.rotation_x = targetOriginX
+    key.rotation_y = targetOriginY
+  }
+
+  // Debug function: Move rotation origins to key centers for selected keys without changing visual appearance
+  const moveRotationsToKeyCenters = () => {
+    let modifiedCount = 0
+
+    selectedKeys.value.forEach((key) => {
+      if (key.rotation_angle && key.rotation_angle !== 0) {
+        // Calculate visual center of the rotated key
+        const currentOriginX = key.rotation_x!
+        const currentOriginY = key.rotation_y!
+        const angle = key.rotation_angle
+
+        const angleRad = D.degreesToRadians(angle)
+        const cos = Math.cos(angleRad)
+        const sin = Math.sin(angleRad)
+
+        // Get unrotated center and transform it to visual center
+        const unrotatedCenterX = D.add(key.x, D.div(key.width || 1, 2))
+        const unrotatedCenterY = D.add(key.y, D.div(key.height || 1, 2))
+
+        const dx_center = D.sub(unrotatedCenterX, currentOriginX)
+        const dy_center = D.sub(unrotatedCenterY, currentOriginY)
+
+        const visualCenterX = D.add(
+          currentOriginX,
+          D.sub(D.mul(dx_center, cos), D.mul(dy_center, sin)),
+        )
+        const visualCenterY = D.add(
+          currentOriginY,
+          D.add(D.mul(dx_center, sin), D.mul(dy_center, cos)),
+        )
+
+        // Use generalized function to transform rotation origin
+        transformRotationOrigin(key, visualCenterX, visualCenterY)
+        modifiedCount++
+      } else {
+        // For non-rotated keys, set rotation origin to their center
+        const centerX = D.add(key.x, D.div(key.width || 1, 2))
+        const centerY = D.add(key.y, D.div(key.height || 1, 2))
+        key.rotation_x = centerX
+        key.rotation_y = centerY
+        modifiedCount++
+      }
+    })
+
+    if (modifiedCount > 0) {
+      saveState()
+    }
+  }
+
   // URL Sharing functionality
   const generateShareUrl = (): string => {
     const layoutData: LayoutData = {
@@ -727,6 +913,9 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     tempSelectedKeys,
     mirrorAxis,
     showMirrorPreview,
+    rotationOrigin,
+    rotationPreviewAngle,
+    showRotationPreview,
 
     canUndo,
     canRedo,
@@ -765,6 +954,14 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     endRectSelect,
     setMirrorAxis,
     performMirror,
+
+    // Rotation functions
+    startRotation,
+    updateRotationPreview,
+    applyRotation,
+    cancelRotation,
+    transformRotationOrigin,
+    moveRotationsToKeyCenters,
 
     // URL sharing
     generateShareUrl,

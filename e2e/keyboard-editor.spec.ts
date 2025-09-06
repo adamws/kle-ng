@@ -138,19 +138,16 @@ test.describe('Keyboard Layout Editor', () => {
     // Key should be selected by default
     await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
 
-    // Copy button should be enabled
-    const copyButton = page.locator('button[title="Copy"]')
-    await expect(copyButton).not.toHaveAttribute('disabled')
+    // Focus the canvas for keyboard shortcuts
+    const canvas = page.locator('.keyboard-canvas')
+    await canvas.click()
+    await canvas.waitFor({ state: 'attached' })
 
-    // Copy the key
-    await copyButton.click()
+    // Copy the key using keyboard shortcut (Ctrl+C)
+    await page.keyboard.press('Control+c')
 
-    // Paste button should now be enabled
-    const pasteButton = page.locator('button[title="Paste"]')
-    await expect(pasteButton).not.toHaveAttribute('disabled')
-
-    // Paste the key
-    await pasteButton.click()
+    // Paste the key using keyboard shortcut (Ctrl+V)
+    await page.keyboard.press('Control+v')
 
     // Should now have 2 keys
     await expect(page.locator('.keys-counter')).toContainText('Keys: 2')
@@ -221,30 +218,26 @@ test.describe('Keyboard Layout Editor', () => {
     await expect(page.locator('.text-warning').filter({ hasText: 'Unsaved changes' })).toBeVisible()
   })
 
-  test('should handle copy/paste operations via UI buttons', async ({ page }) => {
+  test('should handle copy/paste operations via keyboard shortcuts', async ({ page }) => {
     // Add a key first
     await page.click('button[title="Add Standard Key"]')
 
     // Ensure key is selected (should be by default)
     await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
 
-    // Test copy/paste using buttons - this tests the underlying functionality
-    // that keyboard shortcuts also use, but avoids headless keyboard event issues
-    const copyButton = page.locator('button[title="Copy"]')
-    const pasteButton = page.locator('button[title="Paste"]')
+    // Focus the canvas for keyboard shortcuts
+    const canvas = page.locator('.keyboard-canvas')
+    await canvas.click()
+    await canvas.waitFor({ state: 'attached' })
+
+    // Test copy/paste using keyboard shortcuts
     const undoButton = page.locator('button[title="Undo"]')
 
-    // Copy button should be enabled when key is selected
-    await expect(copyButton).not.toHaveAttribute('disabled')
+    // Copy using Ctrl+C
+    await page.keyboard.press('Control+c')
 
-    // Click copy
-    await copyButton.click()
-
-    // Paste button should now be enabled
-    await expect(pasteButton).not.toHaveAttribute('disabled')
-
-    // Click paste
-    await pasteButton.click()
+    // Paste using Ctrl+V
+    await page.keyboard.press('Control+v')
 
     // Should now have 2 keys
     await expect(page.locator('.keys-counter')).toContainText('Keys: 2')

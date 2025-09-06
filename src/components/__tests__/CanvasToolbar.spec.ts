@@ -20,8 +20,8 @@ describe('CanvasToolbar', () => {
       // Initially dropdown should be hidden
       expect(wrapper.find('.special-keys-dropdown').exists()).toBe(false)
 
-      // Click the dropdown button
-      const dropdownBtn = wrapper.find('.dropdown-btn')
+      // Click the special keys dropdown button (within add-key-group)
+      const dropdownBtn = wrapper.find('.add-key-group .dropdown-btn')
       expect(dropdownBtn.exists()).toBe(true)
 
       await dropdownBtn.trigger('click')
@@ -54,7 +54,7 @@ describe('CanvasToolbar', () => {
       const initialKeyCount = store.keys.length
 
       // Open dropdown
-      const dropdownBtn = wrapper.find('.dropdown-btn')
+      const dropdownBtn = wrapper.find('.add-key-group .dropdown-btn')
       await dropdownBtn.trigger('click')
       await wrapper.vm.$nextTick()
 
@@ -119,13 +119,15 @@ describe('CanvasToolbar', () => {
       })
 
       const sections = wrapper.findAll('.toolbar-section')
-      expect(sections.length).toBe(4) // Tools, Edit, History, Clipboard
+      // We now have 3 sections: Tools, Edit, History
+      // Debug tools are now part of Tools as "Extra tools" dropdown
+      // Clipboard operations removed (users use keyboard shortcuts)
+      expect(sections.length).toBe(3)
 
       const labels = sections.map((section) => section.find('.section-label').text())
       expect(labels).toContain('Tools')
       expect(labels).toContain('Edit')
       expect(labels).toContain('History')
-      expect(labels).toContain('Clip')
     })
 
     it('should enable/disable buttons based on state', async () => {

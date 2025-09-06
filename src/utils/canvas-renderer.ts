@@ -549,6 +549,190 @@ export class CanvasRenderer {
     this.ctx.restore()
   }
 
+  private rotationPoints: Array<{
+    id: string
+    x: number
+    y: number
+    keyX: number
+    keyY: number
+    type: 'corner' | 'center'
+    canvasX: number
+    canvasY: number
+  }> = []
+
+  private calculateRotatedPoint(
+    x: number,
+    y: number,
+    originX: number,
+    originY: number,
+    angleRadians: number,
+  ): { x: number; y: number } {
+    // Use canvas transformation to get exact same result as renderer
+    // Create a temporary canvas context for transformation calculation
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')!
+
+    // Save current transform
+    ctx.save()
+
+    // Apply same transformation as the key renderer
+    const originCanvasX = originX * this.options.unit
+    const originCanvasY = originY * this.options.unit
+    ctx.translate(originCanvasX, originCanvasY)
+    ctx.rotate(angleRadians)
+    ctx.translate(-originCanvasX, -originCanvasY)
+
+    // Transform the point
+    const canvasX = x * this.options.unit
+    const canvasY = y * this.options.unit
+    const transform = ctx.getTransform()
+    const transformedX = transform.a * canvasX + transform.c * canvasY + transform.e
+    const transformedY = transform.b * canvasX + transform.d * canvasY + transform.f
+
+    ctx.restore()
+
+    // Convert back to key coordinates
+    return {
+      x: transformedX / this.options.unit,
+      y: transformedY / this.options.unit,
+    }
+  }
+
+  private drawRotationPoints(
+    selectedKeys: Key[],
+    hoveredPointId?: string,
+    selectedRotationOrigin?: { x: number; y: number } | null,
+  ) {
+    if (selectedKeys.length === 0) return
+
+    // Clear previous rotation points
+    this.rotationPoints = []
+
+    this.ctx.save()
+
+    selectedKeys.forEach((key, keyIndex) => {
+      // Calculate rotation parameters
+      const hasRotation = key.rotation_angle && key.rotation_angle !== 0
+      const angleRadians = hasRotation ? D.degreesToRadians(key.rotation_angle) : 0
+      // Use the actual rotation origin from key properties (not defaulting to center)
+      const originX = key.rotation_x !== undefined ? key.rotation_x : key.x + key.width / 2
+      const originY = key.rotation_y !== undefined ? key.rotation_y : key.y + key.height / 2
+
+      // Draw key corners (4 points per key) - use actual rotated positions
+      const corners = [
+        { x: key.x, y: key.y, corner: 'top-left' },
+        { x: key.x + key.width, y: key.y, corner: 'top-right' },
+        { x: key.x, y: key.y + key.height, corner: 'bottom-left' },
+        { x: key.x + key.width, y: key.y + key.height, corner: 'bottom-right' },
+      ]
+
+      corners.forEach((corner, cornerIndex) => {
+        // Calculate rotated corner position if key is rotated
+        const rotatedCorner = hasRotation
+          ? this.calculateRotatedPoint(corner.x, corner.y, originX, originY, angleRadians)
+          : { x: corner.x, y: corner.y }
+
+        const canvasX = rotatedCorner.x * this.options.unit
+        const canvasY = rotatedCorner.y * this.options.unit
+        const pointId = `corner-${keyIndex}-${cornerIndex}`
+
+        // Store rotation point for hit testing (use rotated positions)
+        this.rotationPoints.push({
+          id: pointId,
+          x: rotatedCorner.x,
+          y: rotatedCorner.y,
+          keyX: rotatedCorner.x,
+          keyY: rotatedCorner.y,
+          type: 'corner',
+          canvasX,
+          canvasY,
+        })
+
+        // Draw corner point as circle with hover/selection effect
+        const isHovered = hoveredPointId === pointId
+        const isSelected =
+          selectedRotationOrigin &&
+          Math.abs(rotatedCorner.x - selectedRotationOrigin.x) < 0.01 &&
+          Math.abs(rotatedCorner.y - selectedRotationOrigin.y) < 0.01
+        const isHighlighted = isHovered || isSelected
+        this.ctx.fillStyle = isHighlighted ? '#dc3545' : '#007bff'
+        this.ctx.strokeStyle = '#ffffff'
+        this.ctx.lineWidth = isHighlighted ? 3 : 2
+        this.ctx.beginPath()
+        this.ctx.arc(canvasX, canvasY, isHighlighted ? 8 : 6, 0, 2 * Math.PI)
+        this.ctx.fill()
+        this.ctx.stroke()
+      })
+
+      // Draw key center (1 point per key) - also account for rotation
+      const centerX = key.x + key.width / 2
+      const centerY = key.y + key.height / 2
+
+      // Calculate rotated center position if key is rotated
+      const rotatedCenter = hasRotation
+        ? this.calculateRotatedPoint(centerX, centerY, originX, originY, angleRadians)
+        : { x: centerX, y: centerY }
+
+      const canvasCenterX = rotatedCenter.x * this.options.unit
+      const canvasCenterY = rotatedCenter.y * this.options.unit
+      const centerPointId = `center-${keyIndex}`
+
+      // Store center rotation point for hit testing (use rotated positions)
+      this.rotationPoints.push({
+        id: centerPointId,
+        x: rotatedCenter.x,
+        y: rotatedCenter.y,
+        keyX: rotatedCenter.x,
+        keyY: rotatedCenter.y,
+        type: 'center',
+        canvasX: canvasCenterX,
+        canvasY: canvasCenterY,
+      })
+
+      // Draw center point as circle with hover/selection effect
+      const isCenterHovered = hoveredPointId === centerPointId
+      const isCenterSelected =
+        selectedRotationOrigin &&
+        Math.abs(rotatedCenter.x - selectedRotationOrigin.x) < 0.01 &&
+        Math.abs(rotatedCenter.y - selectedRotationOrigin.y) < 0.01
+      const isCenterHighlighted = isCenterHovered || isCenterSelected
+      this.ctx.fillStyle = isCenterHighlighted ? '#dc3545' : '#0056b3'
+      this.ctx.strokeStyle = '#ffffff'
+      this.ctx.lineWidth = isCenterHighlighted ? 3 : 2
+      this.ctx.beginPath()
+      this.ctx.arc(canvasCenterX, canvasCenterY, isCenterHighlighted ? 8 : 6, 0, 2 * Math.PI)
+      this.ctx.fill()
+      this.ctx.stroke()
+    })
+
+    this.ctx.restore()
+  }
+
+  public getRotationPointAtPosition(
+    canvasX: number,
+    canvasY: number,
+  ): { id: string; x: number; y: number; type: 'corner' | 'center' } | null {
+    for (const point of this.rotationPoints) {
+      const distance = Math.sqrt(
+        Math.pow(canvasX - point.canvasX, 2) + Math.pow(canvasY - point.canvasY, 2),
+      )
+
+      // Hit radius - slightly larger than visual radius
+      const hitRadius = point.type === 'corner' ? 10 : 12
+
+      if (distance <= hitRadius) {
+        return {
+          id: point.id,
+          x: point.keyX,
+          y: point.keyY,
+          type: point.type,
+        }
+      }
+    }
+
+    return null
+  }
+
   private drawKey(key: Key, isSelected = false) {
     let params = this.getRenderParams(key)
     const sizes = {
@@ -951,6 +1135,9 @@ export class CanvasRenderer {
     selectedKeys: Key[],
     metadata: KeyboardMetadata,
     clearCanvas: boolean = true,
+    showRotationPoints: boolean = false,
+    hoveredRotationPointId?: string,
+    selectedRotationOrigin?: { x: number; y: number } | null,
   ) {
     // Clear canvas if requested
     if (clearCanvas) {
@@ -1004,6 +1191,11 @@ export class CanvasRenderer {
         this.drawRotationOriginIndicator(key)
       }
     })
+
+    // Draw rotation points if requested
+    if (showRotationPoints && selectedKeys.length > 0) {
+      this.drawRotationPoints(selectedKeys, hoveredRotationPointId, selectedRotationOrigin)
+    }
 
     this.ctx.restore()
   }

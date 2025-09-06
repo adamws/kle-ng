@@ -48,8 +48,8 @@ const props = withDefaults(defineProps<Props>(), {
   class: 'form-control form-control-sm',
   disabled: false,
   wrapAround: false,
-  wrapMin: -180,
-  wrapMax: 180,
+  wrapMin: -360,
+  wrapMax: 360,
 })
 
 const emit = defineEmits<Emits>()
@@ -92,21 +92,26 @@ const adjustValue = (delta: number) => {
   let newValue = D.add(props.modelValue, D.mul(delta, props.step || 1))
 
   if (props.wrapAround) {
-    // Handle wrapping for rotation values (-180 to 180)
-    const min = props.wrapMin || -180
-    const max = props.wrapMax || 180
-    const range = D.sub(max, min)
+    const min = props.wrapMin || -360
+    const max = props.wrapMax || 360
 
-    // Normalize to 0-range, wrap, then shift back
-    let normalized = D.sub(newValue, min)
-    normalized = D.mod(D.add(D.mod(normalized, range), range), range)
-    newValue = D.add(normalized, min)
-
-    // Ensure we stay within the exact bounds
-    if (newValue > max) {
-      newValue = D.add(min, D.sub(newValue, max))
-    } else if (newValue < min) {
-      newValue = D.sub(max, D.sub(min, newValue))
+    // Special handling for rotation values: wrap to 0 when doing full circles
+    if (Math.abs(max - min) >= 360) {
+      // For full circle ranges like -360 to 360, normalize to -180 to 180
+      // This ensures values wrap around 0 properly
+      while (newValue > 180) {
+        newValue -= 360
+      }
+      while (newValue < -180) {
+        newValue += 360
+      }
+    } else {
+      // Standard wrap-around logic for smaller ranges
+      if (newValue > max) {
+        newValue = min + (newValue - max)
+      } else if (newValue < min) {
+        newValue = max - (min - newValue)
+      }
     }
   } else {
     // Apply min/max constraints for non-wrapping values

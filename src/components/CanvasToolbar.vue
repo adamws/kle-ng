@@ -29,6 +29,47 @@
         >
           <i class="bi bi-symmetry-vertical"></i>
         </button>
+
+        <button
+          :class="{ 'tool-button': true, active: canvasMode === 'rotate' }"
+          :disabled="!canUseRotateTool"
+          @click="setMode('rotate')"
+          title="Rotate Selection"
+        >
+          <i class="bi bi-arrow-repeat"></i>
+        </button>
+
+        <!-- Extra Tools Dropdown -->
+        <div class="btn-group-vertical extra-tools-group">
+          <button
+            ref="extraToolsBtnRef"
+            class="tool-button"
+            @click="toggleExtraToolsDropdown"
+            title="Extra Tools"
+          >
+            <i class="bi bi-tools"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Extra Tools Dropdown -->
+      <div
+        v-if="showExtraToolsDropdown"
+        ref="extraToolsDropdownRef"
+        class="extra-tools-dropdown"
+        style="opacity: 0"
+      >
+        <div class="dropdown-header">Extra Tools</div>
+        <button
+          v-for="tool in extraTools"
+          :key="tool.id"
+          @click="executeExtraTool(tool)"
+          class="dropdown-item"
+          :title="tool.description"
+          :disabled="tool.disabled"
+        >
+          {{ tool.name }}
+        </button>
       </div>
     </div>
 
@@ -89,24 +130,6 @@
         </button>
       </div>
     </div>
-
-    <!-- Clipboard Operations -->
-    <div class="toolbar-section">
-      <label class="section-label">Clip</label>
-      <div class="tool-buttons">
-        <button class="tool-button" @click="cut" :disabled="!canCopy" title="Cut">
-          <i class="bi bi-scissors"></i>
-        </button>
-
-        <button class="tool-button" @click="copy" :disabled="!canCopy" title="Copy">
-          <i class="bi bi-clipboard"></i>
-        </button>
-
-        <button class="tool-button" @click="paste" :disabled="!canPaste" title="Paste">
-          <i class="bi bi-clipboard-check"></i>
-        </button>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -124,14 +147,37 @@ const specialKeys = SPECIAL_KEYS
 const dropdownRef = ref<HTMLElement>()
 const dropdownBtnRef = ref<HTMLElement>()
 
+// Extra tools dropdown
+const showExtraToolsDropdown = ref(false)
+const extraToolsDropdownRef = ref<HTMLElement>()
+const extraToolsBtnRef = ref<HTMLElement>()
+
+// Define extra tools
+interface ExtraTool {
+  id: string
+  name: string
+  description: string
+  disabled?: boolean
+  action: () => void
+}
+
+const extraTools: ExtraTool[] = [
+  {
+    id: 'move-rotation-origins',
+    name: 'Move rotation origins to key centers',
+    description: 'Move rotation origins to key centers for selected keys',
+    disabled: false,
+    action: () => moveRotationsToKeyCenters(),
+  },
+]
+
 // Computed properties from store
 const canvasMode = computed(() => keyboardStore.canvasMode)
 const canDelete = computed(() => keyboardStore.selectedKeys.length > 0)
 const canUndo = computed(() => keyboardStore.canUndo)
 const canRedo = computed(() => keyboardStore.canRedo)
-const canCopy = computed(() => keyboardStore.canCopy)
-const canPaste = computed(() => keyboardStore.canPaste)
 const canUseMirrorTools = computed(() => keyboardStore.selectedKeys.length > 0)
+const canUseRotateTool = computed(() => keyboardStore.selectedKeys.length > 0)
 
 // Methods
 
@@ -140,7 +186,7 @@ const requestCanvasFocus = () => {
   window.dispatchEvent(new CustomEvent('request-canvas-focus'))
 }
 
-const setMode = (mode: 'select' | 'mirror-h' | 'mirror-v') => {
+const setMode = (mode: 'select' | 'mirror-h' | 'mirror-v' | 'rotate') => {
   keyboardStore.setCanvasMode(mode)
   requestCanvasFocus()
 }
@@ -234,19 +280,76 @@ const redo = () => {
   requestCanvasFocus()
 }
 
-// Clipboard functions
-const cut = () => {
-  keyboardStore.cut()
+// Debug functions
+const moveRotationsToKeyCenters = () => {
+  keyboardStore.moveRotationsToKeyCenters()
   requestCanvasFocus()
 }
 
-const copy = () => {
-  keyboardStore.copy()
-  requestCanvasFocus()
+// Extra tools functions
+const toggleExtraToolsDropdown = () => {
+  if (showExtraToolsDropdown.value) {
+    // Hide dropdown
+    showExtraToolsDropdown.value = false
+    return
+  }
+
+  // Calculate position before showing dropdown
+  if (extraToolsBtnRef.value) {
+    const buttonRect = extraToolsBtnRef.value.getBoundingClientRect()
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+
+    // Estimate dropdown dimensions (will be refined once rendered)
+    const estimatedDropdownWidth = 200
+    const estimatedDropdownHeight = Math.min(300, extraTools.length * 32 + 40) // items + header
+
+    // Calculate optimal position
+    let left = buttonRect.right + 10 // Default: to the right
+    let top = buttonRect.top // Default: align with button top
+
+    // Check if dropdown would overflow viewport on the right
+    if (left + estimatedDropdownWidth > viewportWidth) {
+      // Position to the left of button instead
+      left = buttonRect.left - estimatedDropdownWidth - 10
+    }
+
+    // Ensure dropdown doesn't overflow left edge
+    if (left < 10) {
+      left = 10
+    }
+
+    // Check if dropdown would overflow viewport on the bottom
+    if (top + estimatedDropdownHeight > viewportHeight) {
+      // Position above the button instead
+      top = buttonRect.bottom - estimatedDropdownHeight
+    }
+
+    // Ensure dropdown doesn't overflow top edge
+    if (top < 10) {
+      top = 10
+    }
+
+    // Show dropdown first, then position it immediately
+    showExtraToolsDropdown.value = true
+
+    // Use nextTick to ensure DOM is updated before positioning
+    nextTick(() => {
+      if (extraToolsDropdownRef.value) {
+        const dropdown = extraToolsDropdownRef.value
+        dropdown.style.left = `${left}px`
+        dropdown.style.top = `${top}px`
+        dropdown.style.opacity = '1'
+      }
+    })
+  }
 }
 
-const paste = () => {
-  keyboardStore.paste()
+const executeExtraTool = (tool: ExtraTool) => {
+  // Execute the tool's action
+  tool.action()
+  // Close the dropdown after selection
+  showExtraToolsDropdown.value = false
   requestCanvasFocus()
 }
 
@@ -259,6 +362,16 @@ const handleClickOutside = (event: MouseEvent) => {
 
     if (dropdownBtn && !dropdownBtn.contains(target) && dropdown && !dropdown.contains(target)) {
       showSpecialKeysDropdown.value = false
+    }
+  }
+
+  if (showExtraToolsDropdown.value) {
+    const target = event.target as Node
+    const dropdownBtn = extraToolsBtnRef.value
+    const dropdown = extraToolsDropdownRef.value
+
+    if (dropdownBtn && !dropdownBtn.contains(target) && dropdown && !dropdown.contains(target)) {
+      showExtraToolsDropdown.value = false
     }
   }
 }
@@ -478,6 +591,28 @@ onUnmounted(() => {
 
 .dropdown-item:active {
   background-color: #e9ecef;
+}
+
+/* Extra Tools Dropdown */
+.extra-tools-dropdown {
+  position: fixed;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10000;
+  min-width: 200px;
+  max-height: 300px;
+  overflow-y: auto;
+  transition: opacity 0.2s ease;
+  /* Position will be calculated by JavaScript */
+}
+
+.extra-tools-group {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
 /* Responsive adjustments */

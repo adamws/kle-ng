@@ -1,55 +1,65 @@
 <template>
   <div class="json-editor-panel">
-    <div class="mb-2">
-      <div class="d-flex justify-content-between align-items-center">
-        <small class="text-muted"> Edit the JSON directly </small>
-        <div v-if="hasJsonError" class="text-danger small">
-          <i class="bi bi-exclamation-triangle"></i> Invalid JSON
-        </div>
-        <div v-else-if="hasChanges" class="text-warning small">
-          <i class="bi bi-pencil"></i> Unsaved changes
-        </div>
-        <div v-else class="text-success small"><i class="bi bi-check"></i> Valid JSON</div>
-        <div class="btn-group btn-group-sm">
-          <button @click="formatJson" class="btn btn-outline-secondary" :disabled="hasJsonError">
-            Format
-          </button>
-          <button @click="applyChanges" class="btn btn-primary" :disabled="hasJsonError">
-            Apply Changes
-          </button>
+    <fieldset :disabled="isDisabled" :class="{ 'opacity-50': isDisabled }">
+      <div class="mb-2">
+        <div class="d-flex justify-content-between align-items-center">
+          <small class="text-muted"> Edit the JSON directly </small>
+          <div v-if="hasJsonError" class="text-danger small">
+            <i class="bi bi-exclamation-triangle"></i> Invalid JSON
+          </div>
+          <div v-else-if="hasChanges" class="text-warning small">
+            <i class="bi bi-pencil"></i> Unsaved changes
+          </div>
+          <div v-else class="text-success small"><i class="bi bi-check"></i> Valid JSON</div>
+          <div class="btn-group btn-group-sm">
+            <button
+              @click="formatJson"
+              class="btn btn-outline-secondary"
+              :disabled="hasJsonError || isDisabled"
+            >
+              Format
+            </button>
+            <button
+              @click="applyChanges"
+              class="btn btn-primary"
+              :disabled="hasJsonError || isDisabled"
+            >
+              Apply Changes
+            </button>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="position-relative">
-      <textarea
-        v-model="jsonContent"
-        @input="onJsonChange"
-        class="form-control font-monospace"
-        :class="{ 'is-invalid': hasJsonError }"
-        rows="20"
-        spellcheck="false"
-        placeholder="Loading JSON..."
-      ></textarea>
+      <div class="position-relative">
+        <textarea
+          v-model="jsonContent"
+          @input="onJsonChange"
+          class="form-control font-monospace"
+          :class="{ 'is-invalid': hasJsonError }"
+          rows="20"
+          spellcheck="false"
+          placeholder="Loading JSON..."
+        ></textarea>
 
-      <div v-if="hasJsonError" class="invalid-feedback d-block">
-        {{ jsonError }}
+        <div v-if="hasJsonError" class="invalid-feedback d-block">
+          {{ jsonError }}
+        </div>
       </div>
-    </div>
 
-    <div class="mt-2">
-      <small class="text-muted">
-        This editor supports the
-        <a
-          href="https://github.com/ijprest/keyboard-layout-editor/wiki/Serialized-Data-Format"
-          target="_blank"
-          class="text-decoration-none"
-        >
-          KLE JSON format</a
-        >. JSON is validated automatically as you type. Changes are applied when you click "Apply
-        Changes" or use Ctrl+Enter.
-      </small>
-    </div>
+      <div class="mt-2">
+        <small class="text-muted">
+          This editor supports the
+          <a
+            href="https://github.com/ijprest/keyboard-layout-editor/wiki/Serialized-Data-Format"
+            target="_blank"
+            class="text-decoration-none"
+          >
+            KLE JSON format</a
+          >. JSON is validated automatically as you type. Changes are applied when you click "Apply
+          Changes" or use Ctrl+Enter.
+        </small>
+      </div>
+    </fieldset>
   </div>
 </template>
 
@@ -146,6 +156,14 @@ const formatJson = () => {
 // Computed
 const hasChanges = computed(() => {
   return jsonContent.value !== originalJson.value && !hasJsonError.value
+})
+
+const isDisabled = computed(() => {
+  return (
+    keyboardStore.canvasMode === 'rotate' ||
+    keyboardStore.canvasMode === 'mirror-h' ||
+    keyboardStore.canvasMode === 'mirror-v'
+  )
 })
 
 // Load JSON from store
