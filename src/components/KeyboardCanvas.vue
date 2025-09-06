@@ -845,6 +845,17 @@ const updateMousePosition = (event: MouseEvent) => {
 }
 
 const handleKeyDown = (event: KeyboardEvent) => {
+  // Handle Ctrl+[ and Ctrl+] for key navigation (like bracket matching in editors)
+  if ((event.ctrlKey || event.metaKey) && (event.key === '[' || event.key === ']')) {
+    event.preventDefault()
+    if (event.key === '[') {
+      selectPreviousKey()
+    } else {
+      selectNextKey()
+    }
+    return
+  }
+
   // Handle keyboard shortcuts
   if (event.ctrlKey || event.metaKey) {
     switch (event.key.toLowerCase()) {
@@ -1018,6 +1029,88 @@ const adjustSelectedKeysSize = (dimension: 'width' | 'height', delta: number) =>
   nextTick(() => {
     renderKeyboard()
   })
+}
+
+const selectNextKey = () => {
+  if (keyboardStore.keys.length === 0) return
+
+  // Sort keys by position (top-to-bottom, left-to-right)
+  const sortedKeys = [...keyboardStore.keys].sort((a, b) => {
+    // First by Y position (top to bottom)
+    if (Math.abs(a.y - b.y) > 0.1) {
+      return a.y - b.y
+    }
+    // Then by X position (left to right)
+    return a.x - b.x
+  })
+
+  let nextIndex = 0
+
+  if (keyboardStore.selectedKeys.length === 1) {
+    // Find current key index
+    const currentKey = keyboardStore.selectedKeys[0]
+    const currentIndex = sortedKeys.findIndex((key) => key === currentKey)
+
+    if (currentIndex !== -1) {
+      // Select next key (wrap around to start if at end)
+      nextIndex = (currentIndex + 1) % sortedKeys.length
+    }
+  } else if (keyboardStore.selectedKeys.length > 1) {
+    // Multiple keys selected - find the last selected key in sort order
+    const lastSelectedKey = keyboardStore.selectedKeys.reduce((latest, key) => {
+      const keyIndex = sortedKeys.findIndex((k) => k === key)
+      const latestIndex = sortedKeys.findIndex((k) => k === latest)
+      return keyIndex > latestIndex ? key : latest
+    })
+
+    const currentIndex = sortedKeys.findIndex((key) => key === lastSelectedKey)
+    nextIndex = (currentIndex + 1) % sortedKeys.length
+  }
+  // If no selection, start with first key (nextIndex = 0)
+
+  // Select the next key
+  keyboardStore.selectKey(sortedKeys[nextIndex], false)
+}
+
+const selectPreviousKey = () => {
+  if (keyboardStore.keys.length === 0) return
+
+  // Sort keys by position (top-to-bottom, left-to-right)
+  const sortedKeys = [...keyboardStore.keys].sort((a, b) => {
+    // First by Y position (top to bottom)
+    if (Math.abs(a.y - b.y) > 0.1) {
+      return a.y - b.y
+    }
+    // Then by X position (left to right)
+    return a.x - b.x
+  })
+
+  let prevIndex = sortedKeys.length - 1
+
+  if (keyboardStore.selectedKeys.length === 1) {
+    // Find current key index
+    const currentKey = keyboardStore.selectedKeys[0]
+    const currentIndex = sortedKeys.findIndex((key) => key === currentKey)
+
+    if (currentIndex !== -1) {
+      // Select previous key (wrap around to end if at start)
+      prevIndex = currentIndex === 0 ? sortedKeys.length - 1 : currentIndex - 1
+    }
+  } else if (keyboardStore.selectedKeys.length > 1) {
+    // Multiple keys selected - find the first selected key in sort order
+    const firstSelectedKey = keyboardStore.selectedKeys.reduce((earliest, key) => {
+      const keyIndex = sortedKeys.findIndex((k) => k === key)
+      const earliestIndex = sortedKeys.findIndex((k) => k === earliest)
+      return keyIndex < earliestIndex ? key : earliest
+    })
+
+    const currentIndex = sortedKeys.findIndex((key) => key === firstSelectedKey)
+    prevIndex = currentIndex === 0 ? sortedKeys.length - 1 : currentIndex - 1
+  }
+  // If no selection, start with last key (prevIndex = sortedKeys.length - 1)
+
+  // Select the previous key
+  keyboardStore.selectKey(sortedKeys[prevIndex], false)
 }
 
 // Calculate which keys are selected by the rectangle selection

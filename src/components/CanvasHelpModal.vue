@@ -72,6 +72,20 @@
                   </div>
                 </div>
                 <div class="control-item">
+                  <div class="kbd-combo"><kbd>Ctrl</kbd><kbd>]</kbd></div>
+                  <div>
+                    <strong>Next Key</strong>
+                    <div class="control-desc">Select next key in layout order</div>
+                  </div>
+                </div>
+                <div class="control-item">
+                  <div class="kbd-combo"><kbd>Ctrl</kbd><kbd>[</kbd></div>
+                  <div>
+                    <strong>Previous Key</strong>
+                    <div class="control-desc">Select previous key in layout order</div>
+                  </div>
+                </div>
+                <div class="control-item">
                   <div class="kbd-combo"><kbd>Ctrl</kbd><kbd>Z</kbd></div>
                   <div>
                     <strong>Undo</strong>
