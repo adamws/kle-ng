@@ -1170,6 +1170,7 @@ defineExpose({
   display: block;
   cursor: crosshair;
   margin: 10px;
+  outline: none;
   /* Canvas maintains its intrinsic dimensions based on key bounds */
 }
 </style>
