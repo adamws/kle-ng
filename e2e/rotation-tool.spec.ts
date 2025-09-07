@@ -1,0 +1,202 @@
+// Selection rotation tool e2e tests with canvas baseline approach
+import { test, expect } from '@playwright/test'
+import { CanvasTestHelper } from './helpers/canvas-test-helpers'
+import { promises as fs } from 'fs'
+
+test.describe('Selection Rotation Tool', () => {
+  // Canvas rendering tests only run on Chromium since we've verified
+  // pixel-perfect identical rendering across all browsers
+  test.skip(
+    ({ browserName }) => browserName !== 'chromium',
+    'Canvas rendering tests only run on Chromium (verified identical across browsers)',
+  )
+
+  let canvasHelper: CanvasTestHelper
+
+  test.beforeEach(async ({ page }) => {
+    canvasHelper = new CanvasTestHelper(page)
+    await page.goto('/')
+
+    // Clear any existing layout
+    await page.evaluate(() => {
+      const store = (
+        window as {
+          __VUE_DEVTOOLS_GLOBAL_HOOK__?: { apps?: { store?: { clearKeys?: () => void } }[] }
+        }
+      ).__VUE_DEVTOOLS_GLOBAL_HOOK__?.apps?.[0]?.store
+      if (store) {
+        store.clearKeys()
+      }
+    })
+  })
+
+  test('should successfully rotate multiple selected keys', async ({ page }) => {
+    // Add three keys
+    await canvasHelper.addKey()
+    await canvasHelper.addKey()
+    await canvasHelper.addKey()
+    await expect(page.locator('.keys-counter')).toContainText('Keys: 3')
+    await canvasHelper.expectCanvasScreenshot('rotation-01-three-keys-added')
+
+    // First rotation: Select all keys and rotate by 30 degrees
+    await canvasHelper.selectAllKeys()
+    await expect(page.locator('.selected-counter')).toContainText('Selected: 3')
+
+    const rotationToolButton = page.locator('button[title="Rotate Selection"]')
+    await expect(rotationToolButton).toBeEnabled()
+    await rotationToolButton.click()
+
+    const rotationModal = page.locator('.rotation-panel')
+    await expect(rotationModal).toBeVisible()
+    await expect(page.locator('.rotation-info')).toContainText('Select rotation anchor point')
+
+    const canvas = canvasHelper.getCanvas()
+    await canvas.click({ position: { x: 0, y: 54 }, force: true })
+    await expect(page.locator('.rotation-info')).toContainText('Origin:')
+
+    const angleInput = page.locator('.rotation-panel input[type="number"]')
+    await expect(angleInput).toBeEnabled()
+    await angleInput.fill('30')
+
+    const applyButton = page.locator('.rotation-panel .btn-primary')
+    await expect(applyButton).toBeEnabled()
+    await applyButton.click()
+    await expect(rotationModal).toBeHidden()
+
+    await canvasHelper.waitForRender()
+    await canvasHelper.expectCanvasScreenshot('rotation-02-after-first-rotation')
+    await expect(page.locator('.selected-counter')).toContainText('Selected: 3')
+
+    // Second rotation: Select third key and rotate by another 30 degrees
+    await canvasHelper.deselectAllKeys()
+    await expect(page.locator('.selected-counter')).toContainText('Selected: 0')
+
+    // Select third key at position (2.5, 1.8) in key coordinates -> (135, 97.2) canvas
+    await canvas.click({ position: { x: 135, y: 97.2 }, force: true })
+    await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
+
+    await rotationToolButton.click()
+    await expect(rotationModal).toBeVisible()
+    await expect(page.locator('.rotation-info')).toContainText('Select rotation anchor point')
+
+    // Select anchor point at (1.69, 2.0) in key coordinates -> (91.26, 108) canvas
+    await canvas.click({ position: { x: 91.26, y: 108 }, force: true })
+    await expect(page.locator('.rotation-info')).toContainText('Origin:')
+
+    await angleInput.fill('30')
+    await applyButton.click()
+    await expect(rotationModal).toBeHidden()
+
+    await canvasHelper.waitForRender()
+    await canvasHelper.expectCanvasScreenshot('rotation-03-after-second-rotation')
+    await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
+
+    // Verify JSON layout matches expected result
+    await canvasHelper.selectAllKeys()
+
+    // Export JSON and verify layout
+    const exportButton = page.locator('button', { hasText: 'Export' })
+    await expect(exportButton).toBeVisible()
+    await exportButton.click()
+
+    // Set up download handler
+    const downloadPromise = page.waitForEvent('download')
+    await page.locator('button', { hasText: 'Download JSON' }).click()
+
+    const download = await downloadPromise
+    const downloadPath = `e2e/test-output/rotation-test-${Date.now()}.json`
+    await download.saveAs(downloadPath)
+
+    // Read and verify the exported JSON
+    const exportedContent = await fs.readFile(downloadPath, 'utf-8')
+    const layout = JSON.parse(exportedContent)
+
+    // Expected layout structure:
+    // [[{"r":30,"ry":1,"y":-1,"a":0},"",""],
+    // [{"r":60,"rx":1.732051,"ry":2,"x":0,"y":-1},""]]
+    expect(Array.isArray(layout)).toBe(true)
+    expect(layout.length).toBe(2) // Two rows
+
+    // First row: All keys rotated 30 degrees
+    expect(layout[0][0]).toMatchObject({
+      r: 30,
+      ry: 1,
+      y: -1,
+      a: 0,
+    })
+
+    // Second row: Third key rotated additional 30 degrees (total 60)
+    expect(layout[1][0].r).toBe(60)
+    expect(layout[1][0].x).toBeCloseTo(0, 10) // Use precision tolerance for floating point
+    expect(layout[1][0].y).toBe(-1)
+    expect(layout[1][0].rx).toBeCloseTo(1.732051, 5)
+    expect(layout[1][0].ry).toBeCloseTo(2, 5)
+
+    // Clean up test file
+    await fs.unlink(downloadPath)
+  })
+
+  test('should handle rotation modal cancellation', async ({ page }) => {
+    // Add and select keys
+    await canvasHelper.addKey()
+    await canvasHelper.addKey()
+    await canvasHelper.selectAllKeys()
+
+    // Open rotation tool
+    const rotationToolButton = page.locator('button[title="Rotate Selection"]')
+    await rotationToolButton.click()
+
+    const rotationModal = page.locator('.rotation-panel')
+    await expect(rotationModal).toBeVisible()
+
+    // Cancel without selecting anchor
+    const cancelButton = page.locator('.rotation-panel .btn-secondary')
+    await cancelButton.click()
+
+    // Modal should be gone
+    await expect(rotationModal).toBeHidden()
+
+    // Keys should still be selected
+    await expect(page.locator('.selected-counter')).toContainText('Selected: 2')
+    await expect(rotationToolButton).toBeEnabled()
+  })
+
+  test('should disable rotation tool when no keys selected', async ({ page }) => {
+    // Add keys but don't select any
+    await canvasHelper.addKey()
+
+    // Use reliable deselect method
+    await canvasHelper.deselectAllKeys()
+    await expect(page.locator('.selected-counter')).toContainText('Selected: 0')
+
+    // Rotation tool should be disabled
+    const rotationToolButton = page.locator('button[title="Rotate Selection"]')
+    await expect(rotationToolButton).toBeDisabled()
+  })
+
+  test('should enable rotation tool when one key selected', async ({ page }) => {
+    // Add key - single key should be selected by default
+    await canvasHelper.addKey()
+
+    // Single key should be selected by default after adding
+    await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
+
+    // Rotation tool should be enabled (works with any selected keys)
+    const rotationToolButton = page.locator('button[title="Rotate Selection"]')
+    await expect(rotationToolButton).toBeEnabled()
+  })
+
+  test('should enable rotation tool when multiple keys selected', async ({ page }) => {
+    // Add keys and select multiple
+    await canvasHelper.addKey()
+    await canvasHelper.addKey()
+
+    // Select both keys
+    await canvasHelper.selectAllKeys()
+    await expect(page.locator('.selected-counter')).toContainText('Selected: 2')
+
+    // Rotation tool should be enabled
+    const rotationToolButton = page.locator('button[title="Rotate Selection"]')
+    await expect(rotationToolButton).toBeEnabled()
+  })
+})
