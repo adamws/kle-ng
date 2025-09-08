@@ -950,9 +950,6 @@ export class CanvasRenderer {
       this.ctx.textAlign = pos.align as CanvasTextAlign
       this.ctx.textBaseline = pos.baseline as CanvasTextBaseline
 
-      // Enhanced text rendering with HTML entity support
-      const text = this.processLabelText(label)
-
       // Calculate available space for this label
       const availableWidth = this.calculateAvailableWidth(params)
       const availableHeight = this.calculateAvailableHeight(params)
@@ -966,7 +963,7 @@ export class CanvasRenderer {
       }
 
       // Draw text with wrapping and bounds checking
-      this.drawWrappedText(text, x, y, availableWidth, availableHeight, pos)
+      this.drawWrappedText(label, x, y, availableWidth, availableHeight, pos)
 
       // Clear shadow
       this.ctx.shadowColor = 'transparent'
@@ -1096,25 +1093,6 @@ export class CanvasRenderer {
       const lineY = startY + index * lineHeight
       this.ctx.fillText(line, x, lineY)
     })
-  }
-
-  private processLabelText(label: string): string {
-    // Process HTML entities and basic formatting
-    return label
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&amp;/g, '&')
-      .replace(/&larr;/g, '←')
-      .replace(/&darr;/g, '↓')
-      .replace(/&uarr;/g, '↑')
-      .replace(/&rarr;/g, '→')
-      .replace(/&lArr;/g, '⇐')
-      .replace(/&dArr;/g, '⇓')
-      .replace(/&uArr;/g, '⇑')
-      .replace(/&rArr;/g, '⇒')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/<[^>]*>/g, '') // Strip HTML tags
-      .trim()
   }
 
   private isLightColor(color: string): boolean {
