@@ -87,7 +87,7 @@
                       <label class="control-label">Non-rectangular Key</label>
                       <div
                         class="d-flex align-items-center form-control form-control-sm bg-light"
-                        style="height: 31px"
+                        style="height: 27px"
                       >
                         <small class="text-muted me-2">Size cannot be edited directly</small>
                         <button
@@ -1362,6 +1362,11 @@ const clearFrontLabels = () => {
 </script>
 
 <style scoped>
+/* Panel columns minimum width styling */
+.key-properties-panel .col-lg-3.col-md-6 {
+  min-width: 340px;
+}
+
 /* Property groups styling */
 .property-group {
   background: #f8f9fa;
