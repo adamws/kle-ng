@@ -1,80 +1,88 @@
 <template>
-  <div class="card-footer bg-light d-flex justify-content-between align-items-center">
-    <!-- Left side: Keys status -->
-    <div class="canvas-status d-flex align-items-center gap-3">
-      <div class="canvas-focus-indicator d-flex align-items-center gap-1">
-        <div
-          class="focus-status-dot"
-          :class="{ active: canvasFocused }"
-          :title="
-            canvasFocused
-              ? 'Canvas is active (accepts keyboard shortcuts)'
-              : 'Canvas is inactive (click to activate)'
-          "
-        ></div>
-        <span class="small text-muted">{{ canvasFocused ? 'Active' : 'Inactive' }}</span>
+  <div class="card-footer bg-light">
+    <div
+      class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center justify-content-lg-between gap-2 gap-lg-3"
+    >
+      <!-- Left side: Keys status -->
+      <div
+        class="canvas-status d-flex flex-wrap align-items-center gap-2 gap-sm-3 justify-content-center justify-content-lg-start"
+      >
+        <div class="canvas-focus-indicator d-flex align-items-center gap-1">
+          <div
+            class="focus-status-dot"
+            :class="{ active: canvasFocused }"
+            :title="
+              canvasFocused
+                ? 'Canvas is active (accepts keyboard shortcuts)'
+                : 'Canvas is inactive (click to activate)'
+            "
+          ></div>
+          <span class="small text-muted">{{ canvasFocused ? 'Active' : 'Inactive' }}</span>
+        </div>
+        <div class="keys-counter small text-muted">
+          Keys: <span class="fw-semibold">{{ keyboardStore.keys.length }}</span>
+        </div>
+        <div class="selected-counter small text-muted">
+          Selected: <span class="fw-semibold">{{ keyboardStore.selectedKeys.length }}</span>
+        </div>
+        <!-- Move Step Control -->
+        <div class="move-step-control d-flex align-items-center gap-1">
+          <label class="move-step-label small text-muted mb-0">Step:</label>
+          <input
+            type="number"
+            :value="keyboardStore.moveStep"
+            @input="updateMoveStep"
+            step="0.05"
+            min="0.05"
+            max="5"
+            class="move-step-input"
+          />
+          <span class="move-step-unit small text-muted">U</span>
+        </div>
+        <!-- Lock Rotations Control -->
+        <div class="lock-rotations-control d-flex align-items-center gap-1">
+          <input
+            id="lockRotations"
+            type="checkbox"
+            :checked="keyboardStore.lockRotations"
+            @change="toggleLockRotations"
+            class="form-check-input lock-rotations-checkbox"
+          />
+          <label
+            for="lockRotations"
+            class="form-check-label small text-muted mb-0"
+            title="When enabled, rotation origins move with keys to maintain relative offset"
+          >
+            Lock rotations
+          </label>
+        </div>
       </div>
-      <div class="keys-counter small text-muted">
-        Keys: <span class="fw-semibold">{{ keyboardStore.keys.length }}</span>
-      </div>
-      <div class="selected-counter small text-muted">
-        Selected: <span class="fw-semibold">{{ keyboardStore.selectedKeys.length }}</span>
-      </div>
-      <!-- Move Step Control -->
-      <div class="move-step-control d-flex align-items-center gap-1">
-        <label class="move-step-label small text-muted mb-0">Step:</label>
-        <input
-          type="number"
-          :value="keyboardStore.moveStep"
-          @input="updateMoveStep"
-          step="0.05"
-          min="0.05"
-          max="5"
-          class="move-step-input"
-        />
-        <span class="move-step-unit small text-muted">U</span>
-      </div>
-      <!-- Lock Rotations Control -->
-      <div class="lock-rotations-control d-flex align-items-center gap-1">
-        <input
-          id="lockRotations"
-          type="checkbox"
-          :checked="keyboardStore.lockRotations"
-          @change="toggleLockRotations"
-          class="form-check-input lock-rotations-checkbox"
-        />
-        <label
-          for="lockRotations"
-          class="form-check-label small text-muted mb-0"
-          title="When enabled, rotation origins move with keys to maintain relative offset"
-        >
-          Lock rotations
-        </label>
-      </div>
-    </div>
 
-    <!-- Right side: Zoom controls and mouse position -->
-    <div class="d-flex align-items-center gap-3">
-      <!-- Zoom Controls -->
-      <div class="btn-group btn-group-sm">
-        <button @click="zoomOut" class="btn btn-outline-kle-secondary" title="Zoom Out">
-          <i class="bi bi-zoom-out"></i>
-        </button>
-        <button @click="resetView" class="btn btn-outline-kle-secondary" title="Reset View">
-          <i class="bi bi-house"></i>
-        </button>
-        <button @click="zoomIn" class="btn btn-outline-kle-secondary" title="Zoom In">
-          <i class="bi bi-zoom-in"></i>
-        </button>
-      </div>
-      <div class="zoom-indicator">{{ Math.round(zoom * 100) }}%</div>
+      <!-- Right side: Zoom controls and mouse position -->
+      <div
+        class="d-flex flex-wrap align-items-center gap-2 gap-sm-3 justify-content-center justify-content-lg-end"
+      >
+        <!-- Zoom Controls -->
+        <div class="btn-group btn-group-sm">
+          <button @click="zoomOut" class="btn btn-outline-kle-secondary" title="Zoom Out">
+            <i class="bi bi-zoom-out"></i>
+          </button>
+          <button @click="resetView" class="btn btn-outline-kle-secondary" title="Reset View">
+            <i class="bi bi-house"></i>
+          </button>
+          <button @click="zoomIn" class="btn btn-outline-kle-secondary" title="Zoom In">
+            <i class="bi bi-zoom-in"></i>
+          </button>
+        </div>
+        <div class="zoom-indicator">{{ Math.round(zoom * 100) }}%</div>
 
-      <!-- Mouse position display -->
-      <div class="position-indicator">
-        <span class="position-label">Mouse:</span>
-        <span class="position-values">
-          {{ `${formatPosition(mousePosition.x)}, ${formatPosition(mousePosition.y)}` }}
-        </span>
+        <!-- Mouse position display -->
+        <div class="position-indicator">
+          <span class="position-label">Mouse:</span>
+          <span class="position-values">
+            {{ `${formatPosition(mousePosition.x)}, ${formatPosition(mousePosition.y)}` }}
+          </span>
+        </div>
       </div>
     </div>
   </div>
@@ -259,5 +267,42 @@ window.addEventListener('canvas-focus-change', (event: Event) => {
 
 .selected-counter {
   min-width: 80px; /* Assume max ~999 selected */
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 575.98px) {
+  .canvas-status > * {
+    flex: 0 0 auto;
+    min-width: fit-content;
+  }
+
+  .position-indicator {
+    min-width: 120px;
+    font-size: 0.7rem;
+  }
+
+  .position-values {
+    min-width: 75px;
+  }
+
+  .zoom-indicator {
+    font-size: 0.7rem;
+    padding: 3px 6px;
+  }
+
+  .move-step-input {
+    width: 50px;
+    font-size: 0.7rem;
+  }
+
+  .small {
+    font-size: 0.7rem !important;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .card-footer {
+    padding: 0.5rem;
+  }
 }
 </style>

@@ -1,10 +1,9 @@
 <template>
-  <div class="d-flex flex-wrap align-items-center toolbar-container keyboard-toolbar">
-    <!-- Spacer to push right side elements to the right -->
-    <div class="flex-grow-1"></div>
-
+  <div class="toolbar-container keyboard-toolbar">
     <!-- Right side: Presets, Import/Export -->
-    <div class="d-flex align-items-center gap-3">
+    <div
+      class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2 gap-sm-3 justify-content-sm-end"
+    >
       <!-- Presets -->
       <div>
         <select v-model="selectedPreset" @change="loadPreset" class="form-select preset-select">
@@ -18,7 +17,8 @@
       <!-- Import/Export/Share buttons -->
       <div class="btn-group" role="group">
         <button class="btn btn-kle-secondary" @click="triggerFileUpload" type="button">
-          Import JSON File
+          <span class="d-none d-sm-inline">Import JSON File</span>
+          <span class="d-inline d-sm-none">Import</span>
         </button>
 
         <div class="btn-group position-relative">
@@ -48,7 +48,10 @@
           </div>
         </div>
 
-        <button class="btn btn-kle-primary" @click="shareLayout" type="button">Share Link</button>
+        <button class="btn btn-kle-primary" @click="shareLayout" type="button">
+          <span class="d-none d-sm-inline">Share Link</span>
+          <span class="d-inline d-sm-none">Share</span>
+        </button>
       </div>
     </div>
 
@@ -351,6 +354,27 @@ const handleClickOutside = (event: MouseEvent) => {
 .preset-select {
   width: 200px;
   flex-shrink: 0;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 575.98px) {
+  .preset-select {
+    width: 100%;
+  }
+
+  /* Make buttons more compact to fit in one row */
+  .btn-group .btn {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 320px) {
+  .btn-group .btn {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+  }
 }
 
 .gap-3 {

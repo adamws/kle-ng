@@ -236,10 +236,16 @@ const stopResize = () => {
   <div id="app" class="d-flex flex-column min-vh-100">
     <!-- Header with integrated toolbar -->
     <header class="navbar navbar-light bg-light border-bottom py-2">
-      <div class="container-fluid d-flex align-items-center flex-nowrap">
-        <h1 class="navbar-brand mb-0 me-4 flex-shrink-0">Keyboard Layout Editor NG</h1>
-        <div class="flex-grow-1">
-          <KeyboardToolbar />
+      <div class="container-fluid">
+        <div
+          class="w-100 d-flex flex-column flex-md-row align-items-stretch align-items-md-center gap-2"
+        >
+          <h1 class="navbar-brand mb-0 flex-shrink-0 text-center text-md-start">
+            Keyboard Layout Editor NG
+          </h1>
+          <div class="flex-grow-1">
+            <KeyboardToolbar />
+          </div>
         </div>
       </div>
     </header>
