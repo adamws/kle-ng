@@ -936,8 +936,8 @@ export class CanvasRenderer {
         y = params.innercapy + params.innercapheight + 1
       }
 
-      // Font size calculation matching original KLE
-      let fontSize = Math.max(6, textSize * 4)
+      // Font size calculation using linear formula: 6 + (2 * textSize)
+      let fontSize = 6 + 2 * textSize
 
       // Front labels (indices 9-11) use smaller font size like in original KLE
       if (index >= 9) {
