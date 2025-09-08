@@ -52,11 +52,19 @@ test.describe('Canvas Rendering - Layout Tests', () => {
     // Load ANSI 104 preset
     await page.selectOption('select:has(option:has-text("Choose Preset..."))', '1')
 
-    // Wait for layout to load
-    await page.waitForFunction(() => {
-      const statusText = document.querySelector('.keys-counter')?.textContent
-      return statusText && statusText.includes('Keys:') && !statusText.includes('Keys: 0')
-    })
+    // Small wait to ensure the selection event is processed
+    await page.waitForTimeout(100)
+
+    // Wait for layout to load with increased timeout for CI environments
+    await page.waitForFunction(
+      () => {
+        const statusText = document.querySelector('.keys-counter')?.textContent
+        if (!statusText) return false
+        const match = statusText.match(/Keys: (\d+)/)
+        return match && parseInt(match[1]) >= 100 // ANSI 104 should have 104 keys
+      },
+      { timeout: 60000 },
+    )
 
     // Ensure canvas is ready with loaded content
     await expect(page.locator('.keyboard-canvas')).toBeVisible()

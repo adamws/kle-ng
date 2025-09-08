@@ -318,16 +318,67 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     resetViewTrigger.value++ // Trigger view reset
   }
 
-  const getSerializedData = (format: 'kle' | 'internal' = 'internal') => {
+  const getSerializedData = (format: 'kle' | 'kle-internal' | 'internal' = 'internal') => {
     const keyboard = new Keyboard()
     keyboard.keys = keys.value
     keyboard.meta = metadata.value
 
     if (format === 'kle') {
-      return Serial.serialize(keyboard)
+      return Serial.serialize(getRoundedKeyboard(keyboard))
+    }
+
+    if (format === 'kle-internal') {
+      return getKleInternalFormat(keyboard)
     }
 
     return keyboard
+  }
+
+  const getRoundedKeyboard = (keyboard: Keyboard): Keyboard => {
+    const roundToSixDecimals = (value: number): number => {
+      return D.round(value, 6)
+    }
+
+    const roundedKeys = keyboard.keys.map((key) => {
+      const roundedKey = { ...key }
+
+      // Round all numeric properties to 6 decimal places
+      if (typeof roundedKey.x === 'number') roundedKey.x = roundToSixDecimals(roundedKey.x)
+      if (typeof roundedKey.y === 'number') roundedKey.y = roundToSixDecimals(roundedKey.y)
+      if (typeof roundedKey.width === 'number')
+        roundedKey.width = roundToSixDecimals(roundedKey.width)
+      if (typeof roundedKey.height === 'number')
+        roundedKey.height = roundToSixDecimals(roundedKey.height)
+      if (typeof roundedKey.x2 === 'number') roundedKey.x2 = roundToSixDecimals(roundedKey.x2)
+      if (typeof roundedKey.y2 === 'number') roundedKey.y2 = roundToSixDecimals(roundedKey.y2)
+      if (typeof roundedKey.width2 === 'number')
+        roundedKey.width2 = roundToSixDecimals(roundedKey.width2)
+      if (typeof roundedKey.height2 === 'number')
+        roundedKey.height2 = roundToSixDecimals(roundedKey.height2)
+      if (typeof roundedKey.rotation_x === 'number')
+        roundedKey.rotation_x = roundToSixDecimals(roundedKey.rotation_x)
+      if (typeof roundedKey.rotation_y === 'number')
+        roundedKey.rotation_y = roundToSixDecimals(roundedKey.rotation_y)
+      if (typeof roundedKey.rotation_angle === 'number')
+        roundedKey.rotation_angle = roundToSixDecimals(roundedKey.rotation_angle)
+
+      return roundedKey
+    })
+
+    const roundedKeyboard = new Keyboard()
+    roundedKeyboard.keys = roundedKeys
+    roundedKeyboard.meta = keyboard.meta
+
+    return roundedKeyboard
+  }
+
+  const getKleInternalFormat = (keyboard: Keyboard) => {
+    const roundedKeyboard = getRoundedKeyboard(keyboard)
+
+    return {
+      meta: roundedKeyboard.meta,
+      keys: roundedKeyboard.keys,
+    }
   }
 
   const loadKLELayout = (kleData: unknown) => {

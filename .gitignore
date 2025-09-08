@@ -31,3 +31,4 @@ coverage
 
 test-results/
 playwright-report/
+e2e/test-output/

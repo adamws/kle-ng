@@ -962,8 +962,9 @@ export class CanvasRenderer {
         this.ctx.shadowBlur = 1
       }
 
-      // Draw text with wrapping and bounds checking
-      this.drawWrappedText(label, x, y, availableWidth, availableHeight, pos)
+      // Process label to handle line breaks, then draw with wrapping
+      const processedLabel = this.processLabelText(label)
+      this.drawWrappedText(processedLabel, x, y, availableWidth, availableHeight, pos)
 
       // Clear shadow
       this.ctx.shadowColor = 'transparent'
@@ -971,6 +972,15 @@ export class CanvasRenderer {
       this.ctx.shadowOffsetY = 0
       this.ctx.shadowBlur = 0
     })
+  }
+
+  /**
+   * Process label text to handle line breaks while preserving other content
+   * Only <br> and <BR> tags are converted to line breaks; all other HTML is preserved
+   */
+  private processLabelText(label: string): string {
+    // Convert <br> and <BR> tags (with optional attributes) to newlines
+    return label.replace(/<br\s*\/?>/gi, '\n')
   }
 
   private calculateAvailableWidth(params: KeyRenderParams): number {
@@ -993,24 +1003,6 @@ export class CanvasRenderer {
     maxHeight: number,
     pos: { align: string; baseline: string },
   ): void {
-    // First, try to draw the text as-is if it fits
-    const textWidth = this.ctx.measureText(text).width
-
-    if (textWidth <= maxWidth) {
-      // Text fits on one line
-      this.ctx.fillText(text, x, y)
-      return
-    }
-
-    // Text is too long - attempt to wrap it
-    const words = text.split(' ')
-    if (words.length === 1) {
-      // Single word that's too long - try to fit by reducing font size or truncating
-      this.drawOverflowText(text, x, y, maxWidth)
-      return
-    }
-
-    // Multiple words - wrap them
     const lineHeight = parseInt(this.ctx.font.match(/\d+/)?.[0] || '12') * 1.2
     const maxLines = Math.floor(maxHeight / lineHeight)
 
@@ -1019,36 +1011,127 @@ export class CanvasRenderer {
       return
     }
 
-    const lines: string[] = []
-    let currentLine = ''
+    // Check if text contains explicit line breaks from <br> tags
+    const hasLineBreaks = text.includes('\n')
 
-    for (const word of words) {
-      const testLine = currentLine ? `${currentLine} ${word}` : word
-      const testWidth = this.ctx.measureText(testLine).width
+    if (!hasLineBreaks) {
+      // No line breaks - use original simple logic
+      const textWidth = this.ctx.measureText(text).width
+      if (textWidth <= maxWidth) {
+        // Text fits on one line
+        this.ctx.fillText(text, x, y)
+        return
+      }
 
-      if (testWidth <= maxWidth) {
-        currentLine = testLine
-      } else {
-        if (currentLine) {
-          lines.push(currentLine)
-          currentLine = word
+      // Text is too long - wrap by words
+      const words = text.split(' ')
+      if (words.length === 1) {
+        // Single word too long
+        this.drawOverflowText(text, x, y, maxWidth)
+        return
+      }
+
+      // Multiple words - wrap them using original logic
+      const lines: string[] = []
+      let currentLine = ''
+
+      for (const word of words) {
+        const testLine = currentLine ? `${currentLine} ${word}` : word
+        const testWidth = this.ctx.measureText(testLine).width
+
+        if (testWidth <= maxWidth) {
+          currentLine = testLine
         } else {
-          // Single word too long for line
-          lines.push(word)
-        }
+          if (currentLine) {
+            lines.push(currentLine)
+            currentLine = word
+          } else {
+            // Single word too long for line
+            lines.push(word)
+          }
 
-        if (lines.length >= maxLines) {
-          break
+          if (lines.length >= maxLines) {
+            break
+          }
         }
       }
+
+      if (currentLine && lines.length < maxLines) {
+        lines.push(currentLine)
+      }
+
+      this.drawMultiLineText(lines, x, y, lineHeight, pos)
+      return
     }
 
-    if (currentLine && lines.length < maxLines) {
-      lines.push(currentLine)
+    // Handle text with explicit line breaks
+    const explicitLines = text.split('\n')
+    const finalLines: string[] = []
+
+    for (const line of explicitLines) {
+      const trimmedLine = line.trim()
+
+      if (!trimmedLine) {
+        // Empty line from line break - add it
+        finalLines.push('')
+        if (finalLines.length >= maxLines) break
+        continue
+      }
+
+      // Check if this line fits as-is
+      const lineWidth = this.ctx.measureText(trimmedLine).width
+
+      if (lineWidth <= maxWidth) {
+        // Line fits, add it directly
+        finalLines.push(trimmedLine)
+      } else {
+        // Line is too long, need to wrap words within this line
+        const words = trimmedLine.split(' ')
+
+        if (words.length === 1) {
+          // Single word that's too long - add it and let rendering handle overflow
+          finalLines.push(trimmedLine)
+        } else {
+          // Multiple words - wrap them
+          let currentLine = ''
+
+          for (const word of words) {
+            const testLine = currentLine ? `${currentLine} ${word}` : word
+            const testWidth = this.ctx.measureText(testLine).width
+
+            if (testWidth <= maxWidth) {
+              currentLine = testLine
+            } else {
+              if (currentLine) {
+                finalLines.push(currentLine)
+                currentLine = word
+                if (finalLines.length >= maxLines) break
+              } else {
+                // Single word too long for line
+                finalLines.push(word)
+                break
+              }
+            }
+          }
+
+          if (currentLine && finalLines.length < maxLines) {
+            finalLines.push(currentLine)
+          }
+        }
+      }
+
+      // Stop if we've reached max lines
+      if (finalLines.length >= maxLines) break
     }
 
-    // Draw the wrapped lines
-    this.drawMultiLineText(lines, x, y, lineHeight, pos)
+    // If we only have one line and it fits, use simple rendering
+    if (finalLines.length === 1 && this.ctx.measureText(finalLines[0]).width <= maxWidth) {
+      this.ctx.fillText(finalLines[0], x, y)
+      return
+    }
+
+    // Use multi-line rendering for multiple lines or overflow cases
+    this.drawMultiLineText(finalLines.slice(0, maxLines), x, y, lineHeight, pos)
   }
 
   private drawOverflowText(text: string, x: number, y: number, maxWidth: number): void {

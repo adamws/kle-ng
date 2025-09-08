@@ -39,6 +39,9 @@
             <button @click="handleExportAction(downloadJson)" class="dropdown-item">
               Download JSON
             </button>
+            <button @click="handleExportAction(downloadKleInternalJson)" class="dropdown-item">
+              Download KLE Internal JSON
+            </button>
             <button @click="handleExportAction(downloadPng)" class="dropdown-item">
               Download PNG
             </button>
@@ -63,9 +66,8 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useKeyboardStore } from '@/stores/keyboard'
-import layoutsData from '@/data/layouts.json'
+import presetsMetadata from '@/data/presets.json'
 import { parseJsonString } from '@/utils/serialization'
-import { Serial } from '@ijprest/kle-serial'
 import { toast } from '@/composables/useToast'
 
 // Store
@@ -73,7 +75,7 @@ const keyboardStore = useKeyboardStore()
 
 // Component state
 const selectedPreset = ref('')
-const availablePresets = ref<{ name: string; data: unknown[] }[]>([])
+const availablePresets = ref<{ name: string; file: string }[]>([])
 const fileInput = ref<HTMLInputElement>()
 
 // Dropdown state
@@ -83,7 +85,7 @@ const exportBtnRef = ref<HTMLElement>()
 
 // Load presets on mount and setup event listeners
 onMounted(() => {
-  availablePresets.value = layoutsData.presets || []
+  availablePresets.value = presetsMetadata.presets || []
   document.addEventListener('click', handleClickOutside)
 })
 
@@ -93,7 +95,7 @@ onUnmounted(() => {
 
 // Actions
 
-const loadPreset = () => {
+const loadPreset = async () => {
   if (selectedPreset.value === '') return
 
   const presetIndex = parseInt(selectedPreset.value)
@@ -103,20 +105,45 @@ const loadPreset = () => {
 
   if (preset) {
     try {
+      // Fetch the preset file from public directory (with correct base path)
+      const response = await fetch(`${import.meta.env.BASE_URL}data/presets/${preset.file}`)
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+      const presetData = await response.json()
+
       // Load KLE format data
-      keyboardStore.loadKLELayout(preset.data)
+      keyboardStore.loadKLELayout(presetData)
       console.log('Preset loaded successfully:', preset.name, 'Keys:', keyboardStore.keys.length)
     } catch (error) {
       console.error('Error loading preset:', error)
+      toast.showError(`Failed to load ${preset.name}`, 'Error loading preset')
     }
   }
-
-  selectedPreset.value = ''
 }
 
 // Import functions
 const triggerFileUpload = () => {
   fileInput.value?.click()
+}
+
+import type { Key, KeyboardMetadata } from '@/stores/keyboard'
+
+// Define a type for the internal KLE format
+interface InternalKleFormat {
+  meta: KeyboardMetadata
+  keys: Key[]
+}
+
+// Format detection helper
+const isInternalKleFormat = (data: unknown): data is InternalKleFormat => {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'meta' in data &&
+    'keys' in data &&
+    Array.isArray((data as Record<string, unknown>).keys)
+  )
 }
 
 const handleFileUpload = async (event: Event) => {
@@ -128,11 +155,19 @@ const handleFileUpload = async (event: Event) => {
   try {
     const text = await file.text()
     const data = parseJsonString(text)
-    const keyboard = Serial.deserialize(data as Array<unknown>)
-    keyboardStore.loadLayout(keyboard.keys, keyboard.meta)
 
-    console.log(`Loaded layout from file: ${file.name}`)
-    toast.showSuccess(`Layout loaded from ${file.name}`, 'Import successful')
+    // Auto-detect format and load accordingly
+    if (isInternalKleFormat(data)) {
+      // Internal KLE format with meta and keys
+      console.log(`Loading internal KLE format from: ${file.name}`)
+      keyboardStore.loadLayout(data.keys, data.meta)
+      toast.showSuccess(`Internal KLE layout loaded from ${file.name}`, 'Import successful')
+    } else {
+      // Raw KLE format (array-based)
+      console.log(`Loading raw KLE format from: ${file.name}`)
+      keyboardStore.loadKLELayout(data)
+      toast.showSuccess(`KLE layout loaded from ${file.name}`, 'Import successful')
+    }
   } catch (error) {
     console.error('Error loading file:', error)
     toast.showError(
@@ -155,7 +190,17 @@ const downloadJson = () => {
   a.download = `${keyboardStore.metadata.name || 'keyboard-layout'}.json`
   a.click()
   URL.revokeObjectURL(url)
-  toast.showSuccess('JSON file downloaded successfully')
+}
+
+const downloadKleInternalJson = () => {
+  const data = keyboardStore.getSerializedData('kle-internal')
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${keyboardStore.metadata.name || 'keyboard-layout'}-internal.json`
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 const downloadPng = () => {

@@ -95,18 +95,29 @@ test.describe('Keyboard Layout Editor', () => {
   })
 
   test('should load presets', async ({ page }) => {
-    // Open preset dropdown and select ANSI 104 (option 1, not 0 which is blank)
-    await page.selectOption('select:has(option:has-text("Choose Preset..."))', '1')
-
-    // Wait for keys to be loaded
-    await page.waitForFunction(() => {
-      const keysCounter = document.querySelector('.keys-counter')?.textContent
-      return keysCounter && keysCounter.includes('Keys:') && !keysCounter.includes('Keys: 0')
+    // Select ANSI 104 preset by name (more reliable than index)
+    await page.selectOption('select:has(option:has-text("Choose Preset..."))', {
+      label: 'ANSI 104',
     })
 
-    // Check that keys were added (ANSI 104 should have 104 keys)
-    const keysCounterText = await page.locator('.keys-counter').textContent()
-    expect(keysCounterText).toMatch(/Keys: [1-9]\d*/) // At least one key
+    // Wait for the preset to load - ANSI 104 should have exactly 104 keys
+    await page.waitForFunction(
+      () => {
+        const keysCounter = document.querySelector('.keys-counter')?.textContent
+        if (!keysCounter) return false
+
+        const match = keysCounter.match(/Keys: (\d+)/)
+        if (!match) return false
+
+        const keyCount = parseInt(match[1])
+        // ANSI 104 should have exactly 104 keys
+        return keyCount === 104
+      },
+    )
+
+    // Verify the final key count
+    const finalKeysCount = await page.locator('.keys-counter').textContent()
+    expect(finalKeysCount?.trim()).toBe('Keys: 104')
   })
 
   test('should handle undo/redo operations', async ({ page }) => {

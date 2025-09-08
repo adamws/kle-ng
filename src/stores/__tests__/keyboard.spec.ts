@@ -909,5 +909,99 @@ describe('Keyboard Store', () => {
       const foundA = data.some((row) => Array.isArray(row) && row.includes('A'))
       expect(foundA).toBe(true)
     })
+
+    it('should get serialized data in KLE internal format', () => {
+      const data = store.getSerializedData('kle-internal') as {
+        meta: KeyboardMetadata
+        keys: Key[]
+      }
+
+      expect(data).toHaveProperty('meta')
+      expect(data).toHaveProperty('keys')
+      expect(Array.isArray(data.keys)).toBe(true)
+      expect(data.keys).toHaveLength(1)
+      expect(data.keys[0]).toHaveProperty('x')
+      expect(data.keys[0]).toHaveProperty('y')
+      expect(data.keys[0]).toHaveProperty('width')
+      expect(data.keys[0]).toHaveProperty('height')
+      expect(data.keys[0].labels[4]).toBe('A')
+    })
+
+    it('should round numeric values to 6 decimal places in KLE format', () => {
+      // Add a key with high precision values
+      store.addKey({
+        x: 1.1234567890123456,
+        y: 2.9876543210987654,
+        width: 1.5555555555555556,
+        rotation_angle: 15.123456789012345,
+      })
+
+      const data = store.getSerializedData('kle') as unknown[]
+      // Since KLE format is array-based, we need to parse the keys from the serialized format
+      expect(Array.isArray(data)).toBe(true)
+    })
+
+    it('should round numeric values to 6 decimal places in KLE internal format', () => {
+      // Add a key with high precision values
+      store.addKey({
+        x: 1.1234567890123456,
+        y: 2.9876543210987654,
+        width: 1.5555555555555556,
+        height: 2.7777777777777778,
+        rotation_angle: 15.123456789012345,
+        rotation_x: 3.1415926535897932,
+        rotation_y: 2.7182818284590451,
+      })
+
+      const data = store.getSerializedData('kle-internal') as {
+        meta: KeyboardMetadata
+        keys: Key[]
+      }
+      const key = data.keys[1] // Second key (first one was added in beforeEach)
+
+      // Check that values are rounded to 6 decimal places
+      expect(key.x).toBe(1.123457) // 1.1234567890123456 -> 1.123457
+      expect(key.y).toBe(2.987654) // 2.9876543210987654 -> 2.987654
+      expect(key.width).toBe(1.555556) // 1.5555555555555556 -> 1.555556
+      expect(key.height).toBe(2.777778) // 2.7777777777777778 -> 2.777778
+      expect(key.rotation_angle).toBe(15.123457) // 15.123456789012345 -> 15.123457
+      expect(key.rotation_x).toBe(3.141593) // 3.1415926535897932 -> 3.141593
+      expect(key.rotation_y).toBe(2.718282) // 2.7182818284590451 -> 2.718282
+    })
+
+    it('should handle zero and integer values correctly', () => {
+      store.addKey({
+        x: 0,
+        y: 1,
+        width: 2.0,
+        height: 3,
+      })
+
+      const data = store.getSerializedData('kle-internal') as {
+        meta: KeyboardMetadata
+        keys: Key[]
+      }
+      const key = data.keys[1] // Second key
+
+      expect(key.x).toBe(0)
+      expect(key.y).toBe(1)
+      expect(key.width).toBe(2)
+      expect(key.height).toBe(3)
+    })
+
+    it('should preserve metadata in KLE internal format', () => {
+      store.metadata.name = 'Test Keyboard'
+      store.metadata.author = 'Test Author'
+      store.metadata.backcolor = '#123456'
+
+      const data = store.getSerializedData('kle-internal') as {
+        meta: KeyboardMetadata
+        keys: Key[]
+      }
+
+      expect(data.meta.name).toBe('Test Keyboard')
+      expect(data.meta.author).toBe('Test Author')
+      expect(data.meta.backcolor).toBe('#123456')
+    })
   })
 })

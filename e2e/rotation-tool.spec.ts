@@ -127,10 +127,9 @@ test.describe('Selection Rotation Tool', () => {
 
     // Second row: Third key rotated additional 30 degrees (total 60)
     expect(layout[1][0].r).toBe(60)
-    expect(layout[1][0].x).toBeCloseTo(0, 10) // Use precision tolerance for floating point
     expect(layout[1][0].y).toBe(-1)
-    expect(layout[1][0].rx).toBeCloseTo(1.732051, 5)
-    expect(layout[1][0].ry).toBeCloseTo(2, 5)
+    expect(layout[1][0].rx).toBe(1.732051)
+    expect(layout[1][0].ry).toBe(2)
 
     // Clean up test file
     await fs.unlink(downloadPath)

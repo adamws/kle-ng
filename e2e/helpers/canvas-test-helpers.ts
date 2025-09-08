@@ -222,11 +222,19 @@ export class CanvasTestHelper {
       presetIndex.toString(),
     )
 
-    // Wait for layout to load
-    await this.page.waitForFunction(() => {
-      const keysCounter = document.querySelector('.keys-counter')?.textContent
-      return keysCounter && keysCounter.includes('Keys:') && !keysCounter.includes('Keys: 0')
-    })
+    // Small wait to ensure the selection event is processed
+    await this.page.waitForTimeout(100)
+
+    // Wait for layout to load with increased timeout for CI environments
+    await this.page.waitForFunction(
+      () => {
+        const keysCounter = document.querySelector('.keys-counter')?.textContent
+        if (!keysCounter) return false
+        const match = keysCounter.match(/Keys: (\d+)/)
+        return match && parseInt(match[1]) >= 10 // At least 10 keys for most presets
+      },
+      { timeout: 60000 },
+    )
   }
 
   async selectAllKeys() {
