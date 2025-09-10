@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import KeyboardToolbar from './components/KeyboardToolbar.vue'
 import KeyboardCanvas from './components/KeyboardCanvas.vue'
 import KeyPropertiesPanel from './components/KeyPropertiesPanel.vue'
+import KeyboardMetadataPanel from './components/KeyboardMetadataPanel.vue'
 import JsonEditorPanel from './components/JsonEditorPanel.vue'
 import AppFooter from './components/AppFooter.vue'
 import CanvasToolbar from './components/CanvasToolbar.vue'
@@ -18,6 +19,9 @@ const keyboardStore = useKeyboardStore()
 const sectionOrder = ref(['canvas', 'properties', 'json'])
 const draggedSection = ref<string | null>(null)
 const dragOverSection = ref<string | null>(null)
+
+// Tab state for Key Properties section
+const activePropertiesTab = ref<'properties' | 'metadata'>('properties')
 
 const collapsedSections = ref<Record<string, boolean>>({
   properties: false,
@@ -271,7 +275,25 @@ const stopResize = () => {
             class="card-header d-flex align-items-center justify-content-between py-1 drag-handle"
           >
             <div class="d-flex align-items-center gap-2">
-              <span class="section-title">{{ section.title }}</span>
+              <!-- Tabs for Properties Section -->
+              <div v-if="section.id === 'properties'" class="section-tabs">
+                <button
+                  class="tab-btn"
+                  :class="{ active: activePropertiesTab === 'properties' }"
+                  @click.stop="activePropertiesTab = 'properties'"
+                >
+                  Key Properties
+                </button>
+                <button
+                  class="tab-btn"
+                  :class="{ active: activePropertiesTab === 'metadata' }"
+                  @click.stop="activePropertiesTab = 'metadata'"
+                >
+                  Keyboard Metadata
+                </button>
+              </div>
+              <!-- Regular title for other sections -->
+              <span v-else class="section-title">{{ section.title }}</span>
               <!-- Unsaved indicator for canvas section only -->
               <div v-if="section.id === 'canvas' && keyboardStore.dirty" class="small text-warning">
                 • Unsaved changes
@@ -308,12 +330,13 @@ const stopResize = () => {
           </div>
 
           <!-- Section Content -->
-          <!-- Key Properties Section -->
+          <!-- Key Properties Section Content -->
           <div
             v-if="section.id === 'properties' && !collapsedSections[section.id]"
             class="card-body"
           >
-            <KeyPropertiesPanel />
+            <KeyPropertiesPanel v-if="activePropertiesTab === 'properties'" />
+            <KeyboardMetadataPanel v-else-if="activePropertiesTab === 'metadata'" />
           </div>
 
           <!-- Canvas Section -->
@@ -530,5 +553,34 @@ const stopResize = () => {
   .drag-grip {
     font-size: 12px;
   }
+}
+
+/* Header Tab Styles for Key Properties Section */
+.section-tabs {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.tab-btn {
+  background: none;
+  border: none;
+  color: #6c757d;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  border-radius: 0.25rem;
+  font-weight: 400;
+}
+
+.tab-btn:hover {
+  color: #495057;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.tab-btn.active {
+  color: #212529;
+  font-weight: 600;
+  background-color: rgba(0, 0, 0, 0.08);
 }
 </style>

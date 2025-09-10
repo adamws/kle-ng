@@ -94,14 +94,14 @@ const canvasCursor = computed(() => {
   return 'default'
 })
 
-const renderOptions: RenderOptions = {
+const renderOptions = computed<RenderOptions>(() => ({
   unit: 54,
-  background: '#f0f0f0',
-}
+  background: keyboardStore.metadata?.backcolor || '#ffffff',
+}))
 
 onMounted(() => {
   if (canvasRef.value && containerRef.value) {
-    renderer.value = new CanvasRenderer(canvasRef.value, renderOptions)
+    renderer.value = new CanvasRenderer(canvasRef.value, renderOptions.value)
 
     updateContainerWidth()
 
@@ -237,6 +237,18 @@ watch(
   },
 )
 
+// Watch for background color changes and update renderer
+watch(
+  () => keyboardStore.metadata?.backcolor,
+  (newBackcolor, oldBackcolor) => {
+    if (renderer.value && newBackcolor !== oldBackcolor) {
+      renderer.value.updateOptions(renderOptions.value)
+      renderKeyboard()
+    }
+  },
+  { immediate: false },
+)
+
 const updateContainerWidth = () => {
   if (containerRef.value) {
     // Get the actual available width, accounting for all padding/margins
@@ -264,7 +276,7 @@ const calculateAllBounds = () => {
   // Process regular keys
   keyboardStore.keys.forEach((key) => {
     const keyBounds = renderer.value!.calculateRotatedKeyBounds(key)
-    const unit = renderOptions.unit
+    const unit = renderOptions.value.unit
     const keyMinX = keyBounds.minX / unit
     const keyMinY = keyBounds.minY / unit
     const keyMaxX = keyBounds.maxX / unit
@@ -284,8 +296,8 @@ const getCoordinateSystemOffset = () => {
   const bounds = cachedBounds || calculateAllBounds()
 
   // Calculate offset needed to ensure all keys are in positive coordinates
-  const offsetX = D.mul(D.min(bounds.minX, 0), renderOptions.unit)
-  const offsetY = D.mul(D.min(bounds.minY, 0), renderOptions.unit)
+  const offsetX = D.mul(D.min(bounds.minX, 0), renderOptions.value.unit)
+  const offsetY = D.mul(D.min(bounds.minY, 0), renderOptions.value.unit)
 
   return { x: -offsetX, y: -offsetY }
 }
@@ -327,7 +339,7 @@ const updateCanvasSize = () => {
   cachedBounds = bounds
   const { minX, minY, maxX, maxY } = bounds
 
-  const unit = renderOptions.unit * zoom.value
+  const unit = renderOptions.value.unit * zoom.value
 
   // Calculate required size for the keyboard layout, accounting for negative coordinates
   let layoutWidth = (maxX - Math.min(minX, 0)) * unit
@@ -410,8 +422,8 @@ const drawMirrorAxis = (ctx: CanvasRenderingContext2D) => {
       direction: keyboardStore.mirrorAxis.direction,
     }
     axisPosition = {
-      x: keyboardStore.mirrorAxis.x * renderOptions.unit,
-      y: keyboardStore.mirrorAxis.y * renderOptions.unit,
+      x: keyboardStore.mirrorAxis.x * renderOptions.value.unit,
+      y: keyboardStore.mirrorAxis.y * renderOptions.value.unit,
       direction: keyboardStore.mirrorAxis.direction,
     }
   } else if (mousePosition.value.visible) {
@@ -426,8 +438,8 @@ const drawMirrorAxis = (ctx: CanvasRenderingContext2D) => {
       direction: keyboardStore.canvasMode === 'mirror-h' ? 'horizontal' : 'vertical',
     }
     axisPosition = {
-      x: D.mul(snappedX, renderOptions.unit),
-      y: D.mul(snappedY, renderOptions.unit),
+      x: D.mul(snappedX, renderOptions.value.unit),
+      y: D.mul(snappedY, renderOptions.value.unit),
       direction: keyboardStore.canvasMode === 'mirror-h' ? 'horizontal' : 'vertical',
     }
   }
@@ -499,6 +511,10 @@ const renderKeyboard = () => {
       ctx.save()
       ctx.setTransform(1, 0, 0, 1, 0, 0) // Reset to identity matrix
       ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+
+      // Fill with background color
+      ctx.fillStyle = renderOptions.value.background
+      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height)
       ctx.restore()
 
       // Apply transformations before rendering
@@ -981,8 +997,8 @@ const handleContextMenu = (event: MouseEvent) => {
 const updateMousePosition = (event: MouseEvent) => {
   const canvasPos = getCanvasPosition(event)
   // Convert canvas coordinates to keyboard units
-  mousePosition.value.x = D.format(D.div(canvasPos.x, renderOptions.unit), 2)
-  mousePosition.value.y = D.format(D.div(canvasPos.y, renderOptions.unit), 2)
+  mousePosition.value.x = D.format(D.div(canvasPos.x, renderOptions.value.unit), 2)
+  mousePosition.value.y = D.format(D.div(canvasPos.y, renderOptions.value.unit), 2)
 
   // Emit position update to parent
   window.dispatchEvent(

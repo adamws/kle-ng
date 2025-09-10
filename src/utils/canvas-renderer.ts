@@ -99,6 +99,10 @@ export class CanvasRenderer {
     return this.options
   }
 
+  public updateOptions(options: RenderOptions): void {
+    this.options = options
+  }
+
   private getRenderParams(key: Key): KeyRenderParams {
     const sizes = {
       ...defaultSizes,
@@ -1203,11 +1207,13 @@ export class CanvasRenderer {
     // Clear canvas if requested
     if (clearCanvas) {
       this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height)
+
+      // Fill with background color
+      this.ctx.fillStyle = this.options.background
+      this.ctx.fillRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height)
     }
 
     this.ctx.save()
-
-    // Skip background rendering - render keys only
 
     // Create sets for efficient lookup
     const selectedKeySet = new Set(selectedKeys)
