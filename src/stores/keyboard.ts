@@ -428,64 +428,13 @@ export const useKeyboardStore = defineStore('keyboard', () => {
         '/',
         '*',
         '-',
-        {
-          x: 0.25,
-          f: 4,
-          w: 14,
-          h: 2,
-          d: true,
-        },
-        'Getting Started with Keyboard Layout Editor NG\nStart by exploring the presets and samples from the menu-bar to give you an idea of the possibilities. Once you are ready to start designing your own keyboard, just load one of the presets and start customizing it!',
+        { x: 0.25, f: 4, w: 14, h: 5, d: true },
+        "Getting Started with Keyboard Layout Editor NG<br><br>Start by exploring the presets and samples from the menu-bar to give you an idea of the possibilities. Once you are ready to start designing your own keyboard, just load one of the presets and start customizing it!<br><br>→ Use left-side toolbar to add and edit keys<br>→ The selected keys can be modified on the Properties tab. Use mouse left click to select one or multiple keys<br>→ Move selection with arrows or with mouse middle-click drag.<br><br>When you're ready to save your layout, simply use 'Export' from the menu-bar. Have fun!",
       ],
-      [
-        {
-          f: 3,
-        },
-        '7\nHome',
-        '8\n↑',
-        '9\nPgUp',
-        {
-          h: 2,
-        },
-        '+',
-      ],
+      [{ f: 3 }, '7\nHome', '8\n↑', '9\nPgUp', { h: 2 }, '+'],
       ['4\n←', '5', '6\n→'],
-      [
-        '1\nEnd',
-        '2\n↓',
-        '3\nPgDn',
-        {
-          h: 2,
-        },
-        'Enter',
-      ],
-      [
-        {
-          w: 2,
-        },
-        '0\nIns',
-        '.\nDel',
-      ],
-      [
-        {
-          x: 4.25,
-          y: -3,
-          w: 14,
-          h: 1.5,
-          d: true,
-        },
-        '→ Use left-side toolbar to add keys\n→ The selected keys can be modified on the Properties tab. Use mouse left click to select one or multiple keys\n\n\n\n\n→ Move selection with arrows or with mouse middle-click drag.',
-      ],
-      [
-        {
-          x: 4.25,
-          f: 4,
-          y: 0.5,
-          w: 14,
-          d: true,
-        },
-        "When you're ready to save your layout, simply use 'Export' from the menu-bar. Have fun!",
-      ],
+      ['1\nEnd', '2\n↓', '3\nPgDn', { h: 2 }, 'Enter'],
+      [{ w: 2 }, '0\nIns', '.\nDel'],
     ]
 
     try {
