@@ -45,6 +45,9 @@ import { D } from '@/utils/decimal-math'
 import { keyIntersectsSelection } from '@/utils/geometry'
 import RotationControlModal from '@/components/RotationControlModal.vue'
 
+// Visual border around rendered keycaps (in pixels)
+const CANVAS_BORDER = 9
+
 const keyboardStore = useKeyboardStore()
 
 const canvasRef = ref<HTMLCanvasElement>()
@@ -299,7 +302,8 @@ const getCoordinateSystemOffset = () => {
   const offsetX = D.mul(D.min(bounds.minX, 0), renderOptions.value.unit)
   const offsetY = D.mul(D.min(bounds.minY, 0), renderOptions.value.unit)
 
-  return { x: -offsetX, y: -offsetY }
+  // Add visual border offset to shift all rendering by CANVAS_BORDER pixels
+  return { x: -offsetX + CANVAS_BORDER, y: -offsetY + CANVAS_BORDER }
 }
 
 // Canvas size calculation now uses renderer's bounds calculation for consistency
@@ -316,8 +320,8 @@ const updateCanvasSize = () => {
 
   if (keyboardStore.keys.length === 0) {
     // For empty layouts, use a default size scaled by zoom
-    const defaultWidth = D.round(D.mul(800, zoom.value))
-    const defaultHeight = D.round(D.mul(600, zoom.value))
+    const defaultWidth = D.round(D.mul(800, zoom.value)) + CANVAS_BORDER * 2
+    const defaultHeight = D.round(D.mul(600, zoom.value)) + CANVAS_BORDER * 2
 
     canvasWidth.value = defaultWidth
     canvasHeight.value = defaultHeight
@@ -360,8 +364,8 @@ const updateCanvasSize = () => {
   const requiredHeight = layoutHeight // Fit exactly to key bounds (including borders calculated by renderer)
 
   // Canvas size should contain all keys - scrollbars will appear if container is smaller
-  const newWidth = Math.ceil(requiredWidth)
-  const newHeight = Math.ceil(requiredHeight)
+  const newWidth = Math.ceil(requiredWidth) + CANVAS_BORDER * 2
+  const newHeight = Math.ceil(requiredHeight) + CANVAS_BORDER * 2
 
   // Only update canvas if size actually changed
   if (canvasWidth.value !== newWidth || canvasHeight.value !== newHeight) {

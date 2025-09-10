@@ -108,10 +108,10 @@ describe('KeyboardCanvas', () => {
       canvas.dispatchEvent(enterEvent)
 
       // Mock mouse event at position where key at (0,0) should be
-      // Key at (0,0) is now rendered at canvas position (0, 0) with no padding
+      // Key at (0,0) is now rendered at canvas position (9, 9) with 9px border
       const mouseEvent = new MouseEvent('mousemove', {
-        clientX: 0, // no padding
-        clientY: 0, // no padding
+        clientX: 9, // 9px border offset
+        clientY: 9, // 9px border offset
       })
 
       // Trigger mouse move
@@ -150,8 +150,8 @@ describe('KeyboardCanvas', () => {
 
       // Mouse event at a different position
       const mouseEvent = new MouseEvent('mousemove', {
-        clientX: 54, // 1 unit (54px) - no padding
-        clientY: 54, // 1 unit (54px) - no padding
+        clientX: 63, // 1 unit (54px) + 9px border offset
+        clientY: 63, // 1 unit (54px) + 9px border offset
       })
 
       canvas.dispatchEvent(mouseEvent)

@@ -51,7 +51,7 @@ test.describe('Selection Rotation Tool', () => {
     await expect(page.locator('.rotation-info')).toContainText('Select rotation anchor point')
 
     const canvas = canvasHelper.getCanvas()
-    await canvas.click({ position: { x: 0, y: 54 }, force: true })
+    await canvas.click({ position: { x: 0, y: 63 }, force: true })
     await expect(page.locator('.rotation-info')).toContainText('Origin:')
 
     const angleInput = page.locator('.rotation-panel input[type="number"]')
@@ -71,16 +71,16 @@ test.describe('Selection Rotation Tool', () => {
     await canvasHelper.deselectAllKeys()
     await expect(page.locator('.selected-counter')).toContainText('Selected: 0')
 
-    // Select third key at position (2.5, 1.8) in key coordinates -> (135, 97.2) canvas
-    await canvas.click({ position: { x: 135, y: 97.2 }, force: true })
+    // Select third key at position (2.5, 1.8) in key coordinates -> (135 + 9, 97.2 + 9) canvas
+    await canvas.click({ position: { x: 144, y: 106.2 }, force: true })
     await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
 
     await rotationToolButton.click()
     await expect(rotationModal).toBeVisible()
     await expect(page.locator('.rotation-info')).toContainText('Select rotation anchor point')
 
-    // Select anchor point at (1.69, 2.0) in key coordinates -> (91.26, 108) canvas
-    await canvas.click({ position: { x: 91.26, y: 108 }, force: true })
+    // Select anchor point at (1.69, 2.0) in key coordinates -> (91.26 + 9, 108 + 9) canvas
+    await canvas.click({ position: { x: 101.26, y: 117 }, force: true })
     await expect(page.locator('.rotation-info')).toContainText('Origin:')
 
     await angleInput.fill('30')
