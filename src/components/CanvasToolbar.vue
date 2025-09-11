@@ -1,78 +1,5 @@
 <template>
   <div class="canvas-toolbar">
-    <!-- Tool Selection -->
-    <div class="toolbar-section">
-      <label class="section-label">Tools</label>
-      <div class="tool-buttons">
-        <button
-          :class="{ 'tool-button': true, active: canvasMode === 'select' }"
-          @click="setMode('select')"
-          title="Selection Mode - Left click to select, middle drag to move"
-        >
-          <i class="bi bi-cursor"></i>
-        </button>
-
-        <button
-          :class="{ 'tool-button': true, active: canvasMode === 'mirror-h' }"
-          :disabled="!canUseMirrorTools"
-          @click="setMode('mirror-h')"
-          title="Mirror Horizontal"
-        >
-          <i class="bi bi-symmetry-horizontal"></i>
-        </button>
-
-        <button
-          :class="{ 'tool-button': true, active: canvasMode === 'mirror-v' }"
-          :disabled="!canUseMirrorTools"
-          @click="setMode('mirror-v')"
-          title="Mirror Vertical"
-        >
-          <i class="bi bi-symmetry-vertical"></i>
-        </button>
-
-        <button
-          :class="{ 'tool-button': true, active: canvasMode === 'rotate' }"
-          :disabled="!canUseRotateTool"
-          @click="setMode('rotate')"
-          title="Rotate Selection"
-        >
-          <i class="bi bi-arrow-repeat"></i>
-        </button>
-
-        <!-- Extra Tools Dropdown -->
-        <div class="btn-group-vertical extra-tools-group">
-          <button
-            ref="extraToolsBtnRef"
-            class="tool-button"
-            @click="toggleExtraToolsDropdown"
-            title="Extra Tools"
-          >
-            <i class="bi bi-tools"></i>
-          </button>
-        </div>
-      </div>
-
-      <!-- Extra Tools Dropdown -->
-      <div
-        v-if="showExtraToolsDropdown"
-        ref="extraToolsDropdownRef"
-        class="extra-tools-dropdown"
-        style="opacity: 0"
-      >
-        <div class="dropdown-header">Extra Tools</div>
-        <button
-          v-for="tool in extraTools"
-          :key="tool.id"
-          @click="executeExtraTool(tool)"
-          class="dropdown-item"
-          :title="tool.description"
-          :disabled="tool.disabled"
-        >
-          {{ tool.name }}
-        </button>
-      </div>
-    </div>
-
     <!-- Edit Operations -->
     <div class="toolbar-section">
       <label class="section-label">Edit</label>
@@ -113,6 +40,88 @@
 
         <button class="tool-button" @click="deleteKeys" :disabled="!canDelete" title="Delete Keys">
           <i class="bi bi-trash"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Tool Selection -->
+    <div class="toolbar-section">
+      <label class="section-label">Tools</label>
+      <div class="tool-buttons">
+        <button
+          :class="{ 'tool-button': true, active: canvasMode === 'select' }"
+          @click="setMode('select')"
+          title="Selection Mode - Left click to select, middle drag to move"
+        >
+          <i class="bi bi-cursor"></i>
+        </button>
+
+        <button
+          :class="{ 'tool-button': true, active: canvasMode === 'move-exactly' }"
+          :disabled="!canUseMoveExactlyTool"
+          @click="setMode('move-exactly')"
+          title="Move Exactly - Move selected keys by exact X/Y values"
+        >
+          <i class="bi bi-arrows-move"></i>
+        </button>
+
+        <button
+          :class="{ 'tool-button': true, active: canvasMode === 'rotate' }"
+          :disabled="!canUseRotateTool"
+          @click="setMode('rotate')"
+          title="Rotate Selection"
+        >
+          <i class="bi bi-arrow-repeat"></i>
+        </button>
+
+        <button
+          :class="{ 'tool-button': true, active: canvasMode === 'mirror-h' }"
+          :disabled="!canUseMirrorTools"
+          @click="setMode('mirror-h')"
+          title="Mirror Horizontal"
+        >
+          <i class="bi bi-symmetry-horizontal"></i>
+        </button>
+
+        <button
+          :class="{ 'tool-button': true, active: canvasMode === 'mirror-v' }"
+          :disabled="!canUseMirrorTools"
+          @click="setMode('mirror-v')"
+          title="Mirror Vertical"
+        >
+          <i class="bi bi-symmetry-vertical"></i>
+        </button>
+
+        <!-- Extra Tools Dropdown -->
+        <div class="btn-group-vertical extra-tools-group">
+          <button
+            ref="extraToolsBtnRef"
+            class="tool-button"
+            @click="toggleExtraToolsDropdown"
+            title="Extra Tools"
+          >
+            <i class="bi bi-tools"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Extra Tools Dropdown -->
+      <div
+        v-if="showExtraToolsDropdown"
+        ref="extraToolsDropdownRef"
+        class="extra-tools-dropdown"
+        style="opacity: 0"
+      >
+        <div class="dropdown-header">Extra Tools</div>
+        <button
+          v-for="tool in extraTools"
+          :key="tool.id"
+          @click="executeExtraTool(tool)"
+          class="dropdown-item"
+          :title="tool.description"
+          :disabled="tool.disabled"
+        >
+          {{ tool.name }}
         </button>
       </div>
     </div>
@@ -178,6 +187,7 @@ const canUndo = computed(() => keyboardStore.canUndo)
 const canRedo = computed(() => keyboardStore.canRedo)
 const canUseMirrorTools = computed(() => keyboardStore.selectedKeys.length > 0)
 const canUseRotateTool = computed(() => keyboardStore.selectedKeys.length > 0)
+const canUseMoveExactlyTool = computed(() => keyboardStore.selectedKeys.length > 0)
 
 // Methods
 
@@ -186,7 +196,7 @@ const requestCanvasFocus = () => {
   window.dispatchEvent(new CustomEvent('request-canvas-focus'))
 }
 
-const setMode = (mode: 'select' | 'mirror-h' | 'mirror-v' | 'rotate') => {
+const setMode = (mode: 'select' | 'mirror-h' | 'mirror-v' | 'rotate' | 'move-exactly') => {
   keyboardStore.setCanvasMode(mode)
   requestCanvasFocus()
 }

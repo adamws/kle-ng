@@ -35,6 +35,14 @@
     @cancel="handleRotationCancel"
     @angle-change="handleRotationAngleChange"
   />
+
+  <!-- Move Exactly control modal -->
+  <MoveExactlyModal
+    :visible="keyboardStore.canvasMode === 'move-exactly' && keyboardStore.selectedKeys.length > 0"
+    @apply="handleMoveExactlyApply"
+    @cancel="handleMoveExactlyCancel"
+    @movement-change="handleMoveExactlyChange"
+  />
 </template>
 
 <script setup lang="ts">
@@ -44,6 +52,7 @@ import { CanvasRenderer, type RenderOptions } from '@/utils/canvas-renderer'
 import { D } from '@/utils/decimal-math'
 import { keyIntersectsSelection } from '@/utils/geometry'
 import RotationControlModal from '@/components/RotationControlModal.vue'
+import MoveExactlyModal from '@/components/MoveExactlyModal.vue'
 
 // Visual border around rendered keycaps (in pixels)
 const CANVAS_BORDER = 9
@@ -87,9 +96,8 @@ const canvasCursor = computed(() => {
   if (keyboardStore.canvasMode === 'mirror-h' || keyboardStore.canvasMode === 'mirror-v') {
     return keyboardStore.selectedKeys.length > 0 ? 'copy' : 'not-allowed'
   }
-  if (keyboardStore.canvasMode === 'drag-drop') {
-    if (keyboardStore.mouseDragMode === 'rect-select') return 'crosshair'
-    return keyboardStore.mouseDragMode === 'key-move' ? 'grabbing' : 'move'
+  if (keyboardStore.canvasMode === 'move-exactly') {
+    return keyboardStore.selectedKeys.length > 0 ? 'move' : 'not-allowed'
   }
   if (keyboardStore.mouseDragMode === 'key-move') {
     return 'grabbing'
@@ -1367,6 +1375,31 @@ const handleRotationAngleChange = (angle: number) => {
   nextTick(() => {
     renderKeyboard()
   })
+}
+
+// Move Exactly handlers
+const handleMoveExactlyApply = (deltaX: number, deltaY: number) => {
+  // Apply the movement to selected keys and save state
+  keyboardStore.moveSelectedKeys(deltaX, deltaY)
+  keyboardStore.saveState()
+
+  // Defer the mode change to avoid modal closing before click is processed
+  nextTick(() => {
+    // Exit move exactly mode
+    keyboardStore.setCanvasMode('select')
+    // Re-render to show final result
+    renderKeyboard()
+  })
+}
+
+const handleMoveExactlyCancel = () => {
+  // Exit move exactly mode without applying changes
+  keyboardStore.setCanvasMode('select')
+}
+
+const handleMoveExactlyChange = () => {
+  // This could be used for real-time preview, but for now we'll just ignore it
+  // The actual movement happens only on apply
 }
 
 // Cleanup

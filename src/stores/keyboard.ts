@@ -20,7 +20,7 @@ export interface KeyboardState {
   historyIndex: number
   history: { keys: Key[]; metadata: KeyboardMetadata }[]
   dirty: boolean
-  canvasMode: 'select' | 'mirror-h' | 'mirror-v' | 'rotate'
+  canvasMode: 'select' | 'mirror-h' | 'mirror-v' | 'rotate' | 'move-exactly'
   moveStep: number
   lockRotations: boolean
   mouseDragMode: 'none' | 'key-move' | 'rect-select'
@@ -59,7 +59,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
   const dirty = ref(false)
   const resetViewTrigger = ref(0) // Incremented when layout changes to trigger view reset
 
-  const canvasMode = ref<'select' | 'mirror-h' | 'mirror-v' | 'rotate'>('select')
+  const canvasMode = ref<'select' | 'mirror-h' | 'mirror-v' | 'rotate' | 'move-exactly'>('select')
   const moveStep = ref(0.25)
   const lockRotations = ref(false)
 
@@ -455,7 +455,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
   }
 
   // Toolbar actions
-  const setCanvasMode = (mode: 'select' | 'mirror-h' | 'mirror-v' | 'rotate') => {
+  const setCanvasMode = (mode: 'select' | 'mirror-h' | 'mirror-v' | 'rotate' | 'move-exactly') => {
     canvasMode.value = mode
     // Reset any ongoing operations when switching modes
     mouseDragMode.value = 'none'
@@ -812,6 +812,23 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     key.rotation_y = targetOriginY
   }
 
+  // Move selected keys by exact delta X and Y values (in internal units)
+  const moveSelectedKeys = (deltaX: number, deltaY: number) => {
+    selectedKeys.value.forEach((key) => {
+      // Add delta to current position
+      key.x = D.add(key.x, deltaX)
+      key.y = D.add(key.y, deltaY)
+
+      // If the key has rotation origins, move them too to maintain rotation behavior
+      if (key.rotation_x !== undefined) {
+        key.rotation_x = D.add(key.rotation_x, deltaX)
+      }
+      if (key.rotation_y !== undefined) {
+        key.rotation_y = D.add(key.rotation_y, deltaY)
+      }
+    })
+  }
+
   // Debug function: Move rotation origins to key centers for selected keys without changing visual appearance
   const moveRotationsToKeyCenters = () => {
     let modifiedCount = 0
@@ -962,6 +979,9 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     cancelRotation,
     transformRotationOrigin,
     moveRotationsToKeyCenters,
+
+    // Movement functions
+    moveSelectedKeys,
 
     // URL sharing
     generateShareUrl,
