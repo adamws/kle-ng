@@ -627,20 +627,6 @@
                 </div>
               </div>
 
-              <!-- Text Size -->
-              <div class="mb-2">
-                <label class="form-label small mb-1">Text Size</label>
-                <input
-                  v-model.number="currentTextSize"
-                  @change="updateTextSize"
-                  type="number"
-                  min="1"
-                  max="9"
-                  step="1"
-                  class="form-control form-control-sm"
-                />
-              </div>
-
               <!-- Key and Text Colors -->
               <div class="row g-1 mb-2">
                 <div class="col-6">
@@ -689,10 +675,162 @@
             </div>
           </div>
 
-          <!-- Column 3: Options -->
+          <!-- Column 3: Text Size and Options -->
           <div class="col-lg-3 col-md-6">
             <div class="property-group">
-              <h6 class="property-group-title">Options</h6>
+              <h6 class="property-group-title">Text Size and Options</h6>
+
+              <!-- Default Text Size -->
+              <div class="mb-2">
+                <label class="form-label small mb-1">Default Text Size</label>
+                <input
+                  v-model.number="currentDefaultTextSize"
+                  @change="updateDefaultTextSize"
+                  type="number"
+                  min="1"
+                  max="9"
+                  step="1"
+                  class="form-control form-control-sm"
+                  title="Default text size for all labels"
+                />
+              </div>
+
+              <!-- Per-Label Text Sizes -->
+              <div class="mb-2">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <label class="form-label small mb-0">Per-Label Text Size</label>
+                  <button
+                    @click="clearTextSizes"
+                    class="btn btn-xs btn-outline-secondary clear-labels-btn"
+                    :disabled="isDisabled"
+                    title="Clear all text sizes"
+                  >
+                    Clear all
+                  </button>
+                </div>
+                <div class="text-size-grid-layout">
+                  <!-- Row 1: Top labels -->
+                  <div class="text-size-input-group">
+                    <input
+                      v-model.number="labelTextSizes[0]"
+                      @input="handleTextSizeInput(0, $event)"
+                      @change="updateLabelTextSize(0)"
+                      type="number"
+                      min="1"
+                      max="9"
+                      step="1"
+                      :class="['form-control', 'form-control-sm', 'text-size-input']"
+                      :title="`Text size for Top Left (default: ${currentDefaultTextSize})`"
+                    />
+                  </div>
+                  <div class="text-size-input-group">
+                    <input
+                      v-model.number="labelTextSizes[1]"
+                      @input="handleTextSizeInput(1, $event)"
+                      @change="updateLabelTextSize(1)"
+                      type="number"
+                      min="1"
+                      max="9"
+                      step="1"
+                      :class="['form-control', 'form-control-sm', 'text-size-input']"
+                      :title="`Text size for Top Center (default: ${currentDefaultTextSize})`"
+                    />
+                  </div>
+                  <div class="text-size-input-group">
+                    <input
+                      v-model.number="labelTextSizes[2]"
+                      @input="handleTextSizeInput(2, $event)"
+                      @change="updateLabelTextSize(2)"
+                      type="number"
+                      min="1"
+                      max="9"
+                      step="1"
+                      :class="['form-control', 'form-control-sm', 'text-size-input']"
+                      :title="`Text size for Top Right (default: ${currentDefaultTextSize})`"
+                    />
+                  </div>
+                  <!-- Row 2: Middle labels -->
+                  <div class="text-size-input-group">
+                    <input
+                      v-model.number="labelTextSizes[3]"
+                      @input="handleTextSizeInput(3, $event)"
+                      @change="updateLabelTextSize(3)"
+                      type="number"
+                      min="1"
+                      max="9"
+                      step="1"
+                      :class="['form-control', 'form-control-sm', 'text-size-input']"
+                      :title="`Text size for Center Left (default: ${currentDefaultTextSize})`"
+                    />
+                  </div>
+                  <div class="text-size-input-group">
+                    <input
+                      v-model.number="labelTextSizes[4]"
+                      @input="handleTextSizeInput(4, $event)"
+                      @change="updateLabelTextSize(4)"
+                      type="number"
+                      min="1"
+                      max="9"
+                      step="1"
+                      :class="['form-control', 'form-control-sm', 'text-size-input']"
+                      :title="`Text size for Center (default: ${currentDefaultTextSize})`"
+                    />
+                  </div>
+                  <div class="text-size-input-group">
+                    <input
+                      v-model.number="labelTextSizes[5]"
+                      @input="handleTextSizeInput(5, $event)"
+                      @change="updateLabelTextSize(5)"
+                      type="number"
+                      min="1"
+                      max="9"
+                      step="1"
+                      :class="['form-control', 'form-control-sm', 'text-size-input']"
+                      :title="`Text size for Center Right (default: ${currentDefaultTextSize})`"
+                    />
+                  </div>
+                  <!-- Row 3: Bottom labels -->
+                  <div class="text-size-input-group">
+                    <input
+                      v-model.number="labelTextSizes[6]"
+                      @input="handleTextSizeInput(6, $event)"
+                      @change="updateLabelTextSize(6)"
+                      type="number"
+                      min="1"
+                      max="9"
+                      step="1"
+                      :class="['form-control', 'form-control-sm', 'text-size-input']"
+                      :title="`Text size for Bottom Left (default: ${currentDefaultTextSize})`"
+                    />
+                  </div>
+                  <div class="text-size-input-group">
+                    <input
+                      v-model.number="labelTextSizes[7]"
+                      @input="handleTextSizeInput(7, $event)"
+                      @change="updateLabelTextSize(7)"
+                      type="number"
+                      min="1"
+                      max="9"
+                      step="1"
+                      :class="['form-control', 'form-control-sm', 'text-size-input']"
+                      :title="`Text size for Bottom Center (default: ${currentDefaultTextSize})`"
+                    />
+                  </div>
+                  <div class="text-size-input-group">
+                    <input
+                      v-model.number="labelTextSizes[8]"
+                      @input="handleTextSizeInput(8, $event)"
+                      @change="updateLabelTextSize(8)"
+                      type="number"
+                      min="1"
+                      max="9"
+                      step="1"
+                      :class="['form-control', 'form-control-sm', 'text-size-input']"
+                      :title="`Text size for Bottom Right (default: ${currentDefaultTextSize})`"
+                    />
+                  </div>
+                </div>
+              </div>
 
               <!-- Options -->
               <div class="mb-2">
@@ -863,6 +1001,9 @@ loadRotationModePreference()
 // Reactive property values
 const labels = ref<(string | undefined)[]>(Array(12).fill(undefined))
 const labelColors = ref<(string | undefined)[]>(Array(12).fill(undefined))
+const labelTextSizes = ref<(number | undefined)[]>(Array(12).fill(undefined))
+// Store the previous values to detect spinner usage
+const previousTextSizeValues = ref<(number | undefined)[]>(Array(9).fill(undefined))
 const currentWidth = ref(1)
 const currentHeight = ref(1)
 const currentWidth2 = ref(1)
@@ -873,7 +1014,7 @@ const currentX2 = ref(0)
 const currentY2 = ref(0)
 const currentColor = ref('#cccccc')
 const currentTextColor = ref('#000000')
-const currentTextSize = ref(3)
+const currentDefaultTextSize = ref(3)
 const currentGhost = ref(false)
 const currentStepped = ref(false)
 const currentNub = ref(false)
@@ -946,7 +1087,11 @@ const updateCurrentValues = () => {
     currentY2.value = 0
     currentColor.value = '#cccccc'
     currentTextColor.value = '#000000'
-    currentTextSize.value = 3
+    currentDefaultTextSize.value = 3
+    labelTextSizes.value = Array(12).fill(undefined)
+    // Initialize previous values for spinner detection
+    previousTextSizeValues.value = Array(9).fill(undefined)
+    // Ensure all reactive values are properly initialized
     currentGhost.value = false
     currentStepped.value = false
     currentNub.value = false
@@ -981,7 +1126,13 @@ const updateCurrentValues = () => {
     currentY2.value = formatNumber(firstKey.y2 || 0)
     currentColor.value = firstKey.color
     currentTextColor.value = firstKey.default.textColor
-    currentTextSize.value = firstKey.default.textSize
+    currentDefaultTextSize.value = firstKey.default.textSize
+    // Map per-label text sizes - show only explicitly set values (undefined means using default)
+    labelTextSizes.value = firstKey.textSize.map((size: number | undefined) =>
+      size === undefined ? undefined : size,
+    )
+    // Initialize previous values for spinner detection
+    previousTextSizeValues.value = [...labelTextSizes.value.slice(0, 9)]
     currentGhost.value = !!firstKey.ghost
     currentStepped.value = !!firstKey.stepped
     currentNub.value = !!firstKey.nub
@@ -1004,7 +1155,13 @@ const updateCurrentValues = () => {
     currentY2.value = formatNumber(firstKey.y2 || 0)
     currentColor.value = firstKey.color
     currentTextColor.value = firstKey.default.textColor
-    currentTextSize.value = firstKey.default.textSize
+    currentDefaultTextSize.value = firstKey.default.textSize
+    // Map per-label text sizes - show only explicitly set values (undefined means using default)
+    labelTextSizes.value = firstKey.textSize.map((size: number | undefined) =>
+      size === undefined ? undefined : size,
+    )
+    // Initialize previous values for spinner detection
+    previousTextSizeValues.value = [...labelTextSizes.value.slice(0, 9)]
     currentGhost.value = !!firstKey.ghost
     currentStepped.value = !!firstKey.stepped
     currentNub.value = !!firstKey.nub
@@ -1056,12 +1213,79 @@ const updateTextColor = () => {
   keyboardStore.saveState()
 }
 
-const updateTextSize = () => {
+const updateDefaultTextSize = () => {
   if (selectedKeys.value.length === 0) return
 
   selectedKeys.value.forEach((key) => {
-    key.default.textSize = currentTextSize.value
-    key.textSize = Array(12).fill(0)
+    key.default.textSize = currentDefaultTextSize.value
+  })
+
+  keyboardStore.saveState()
+}
+
+// Validation helper
+const validateTextSize = (value: string | number): number => {
+  const parsed = typeof value === 'number' ? value : parseInt(String(value))
+  if (isNaN(parsed)) return 3 // default
+  return Math.max(1, Math.min(9, parsed)) // clamp 1-9
+}
+
+// Handle text size input with smart default behavior for spinners
+const handleTextSizeInput = (index: number, event: Event) => {
+  const input = event.target as HTMLInputElement
+  const newValueStr = input.value
+  const previousValue = previousTextSizeValues.value[index]
+
+  if (newValueStr === '') {
+    // Field was cleared
+    previousTextSizeValues.value[index] = undefined
+    return
+  }
+
+  const newValue = parseInt(newValueStr)
+  if (isNaN(newValue)) {
+    return
+  }
+
+  // If the previous value was undefined/empty and user used spinner
+  if (previousValue === undefined) {
+    // Check if this looks like spinner usage (value of 1 or 0/-1)
+    if (newValue === 1) {
+      // This was likely an increment from empty - set to default + 1
+      const newSize = Math.min(9, currentDefaultTextSize.value + 1)
+      labelTextSizes.value[index] = newSize
+      input.value = newSize.toString()
+      previousTextSizeValues.value[index] = newSize
+      return
+    } else if (newValue <= 0) {
+      // This was likely a decrement from empty - set to default - 1
+      const newSize = Math.max(1, currentDefaultTextSize.value - 1)
+      labelTextSizes.value[index] = newSize
+      input.value = newSize.toString()
+      previousTextSizeValues.value[index] = newSize
+      return
+    }
+  }
+
+  // Update the previous value for next time
+  previousTextSizeValues.value[index] = newValue
+}
+
+// Update per-label text size
+const updateLabelTextSize = (index: number) => {
+  if (selectedKeys.value.length === 0 || index < 0 || index >= 9) return
+
+  const inputValue = labelTextSizes.value[index]
+
+  selectedKeys.value.forEach((key) => {
+    if (inputValue === undefined || inputValue === null) {
+      // Clear the custom text size (will use default)
+      key.textSize[index] = undefined
+    } else {
+      // Store the validated size
+      const validatedSize = validateTextSize(inputValue)
+      key.textSize[index] = validatedSize
+    }
   })
 
   keyboardStore.saveState()
@@ -1359,6 +1583,22 @@ const clearFrontLabels = () => {
 
   keyboardStore.saveState()
 }
+
+// Clear all per-label text sizes (indices 0-8)
+const clearTextSizes = () => {
+  if (selectedKeys.value.length === 0) return
+  selectedKeys.value.forEach((key) => {
+    // Clear text sizes for positions 0-8 by setting them to undefined
+    for (let i = 0; i <= 8; i++) {
+      key.textSize[i] = undefined
+    }
+  })
+  // Update reactive values - set to undefined to show empty fields
+  for (let i = 0; i <= 8; i++) {
+    labelTextSizes.value[i] = undefined
+  }
+  keyboardStore.saveState()
+}
 </script>
 
 <style scoped>
@@ -1420,12 +1660,16 @@ const clearFrontLabels = () => {
   gap: 2px;
 }
 
+.label-input-group input[type='text'] {
+  flex: 1;
+  min-width: 0;
+}
+
 .labels-grid .form-control {
   border: 1px solid #e9ecef;
   font-size: 0.7rem;
   padding: 0.125rem 0.25rem;
   min-height: 24px;
-  flex: 1;
 }
 
 .label-color-picker {
@@ -1436,6 +1680,35 @@ const clearFrontLabels = () => {
   cursor: pointer;
   flex-shrink: 0;
   padding: 0;
+}
+
+.text-size-input {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  text-align: center;
+  font-size: 0.7rem !important;
+  padding: 0.125rem 0.25rem !important;
+  min-height: 24px;
+  flex: 1;
+  border: 1px solid #e9ecef;
+  font-weight: 500;
+}
+
+.text-size-grid-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 4px;
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 6px;
+}
+
+.text-size-input-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .label-color-picker::-webkit-color-swatch-wrapper {
@@ -1504,6 +1777,17 @@ const clearFrontLabels = () => {
   .label-color-picker {
     width: 14px;
     height: 14px;
+  }
+
+  .text-size-grid-layout {
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+  }
+
+  .text-size-input {
+    font-size: 0.65rem !important;
+    padding: 0.1rem 0.2rem !important;
+    min-height: 20px;
   }
 }
 

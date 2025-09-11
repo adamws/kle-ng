@@ -264,14 +264,17 @@ describe('KeyPropertiesPanel', () => {
         },
       })
 
-      // Should have "Clear all" buttons for both label sections
+      // Should have "Clear all" buttons for labels and text sizes
       const clearButtons = wrapper.findAll('.clear-labels-btn')
-      expect(clearButtons.length).toBe(2)
+      expect(clearButtons.length).toBe(3)
       expect(
         clearButtons.some((button) => button.attributes('title') === 'Clear all top labels'),
       ).toBe(true)
       expect(
         clearButtons.some((button) => button.attributes('title') === 'Clear all front labels'),
+      ).toBe(true)
+      expect(
+        clearButtons.some((button) => button.attributes('title') === 'Clear all text sizes'),
       ).toBe(true)
     })
 

@@ -238,5 +238,71 @@ test.describe('Single Key Rendering Tests', () => {
 
       await expect(helper.getCanvas()).toHaveScreenshot('labels/ctrl-modifier.png')
     })
+
+    test('key with per-label text sizes and colors', async () => {
+      await helper.addKey()
+
+      // Set labels for multiple positions including front labels
+      await helper.setKeyLabel('topLeft', '!')
+      await helper.setKeyLabel('topCenter', '@')
+      await helper.setKeyLabel('centerLeft', '$')
+      await helper.setKeyLabel('center', '5')
+      await helper.setKeyLabel('centerRight', '%')
+      await helper.setKeyLabel('bottomLeft', 'A')
+      await helper.setKeyLabel('bottomRight', 'B')
+
+      // Add front labels to test that they maintain original positioning
+      // Front labels are in separate .front-label-group divs, not in .labels-grid
+      const frontLabelInputs = helper.page.locator('.front-label-group .form-control')
+      const frontInputsCount = await frontLabelInputs.count()
+
+      // Add front labels if available
+      if (frontInputsCount >= 3) {
+        await frontLabelInputs.nth(0).fill('F1') // Front left
+        await frontLabelInputs.nth(1).fill('F2') // Front center
+        await frontLabelInputs.nth(2).fill('F3') // Front right
+      }
+
+      // Set different text sizes for each position (non-default)
+      await helper.setDefaultTextSize(3) // Set default to 3 first
+      await helper.setLabelTextSize('topLeft', 2)
+      await helper.setLabelTextSize('topCenter', 5) // Large
+      await helper.setLabelTextSize('centerLeft', 4) // Larger than default
+      await helper.setLabelTextSize('center', 6) // Large
+      await helper.setLabelTextSize('centerRight', 8) // Larger
+      await helper.setLabelTextSize('bottomLeft', 3) // Default size for contrast
+      await helper.setLabelTextSize('bottomRight', 9) // Maximum size
+
+      // Set different colors for some labels (including front labels)
+      await helper.setLabelColor('topLeft', '#ff0000') // Red
+      await helper.setLabelColor('topCenter', '#00ff00') // Green
+      await helper.setLabelColor('center', '#0000ff') // Blue
+      await helper.setLabelColor('centerRight', '#ff8800') // Orange
+      await helper.setLabelColor('bottomRight', '#8800ff') // Purple
+
+      // Set colors for front labels to verify they work correctly
+      const frontColorPickers = helper.page.locator('.front-label-group .label-color-picker-small')
+      const frontColorPickersCount = await frontColorPickers.count()
+
+      if (frontColorPickersCount >= 2) {
+        // Set color for front left label (index 0 in front group)
+        await frontColorPickers.nth(0).click()
+        await helper.page.locator('.color-picker-popup').waitFor({ state: 'visible' })
+        await helper.page.locator('.color-picker-popup .vc-input__input').first().fill('00ffff')
+        await helper.page.locator('.color-picker-popup .btn-primary').click()
+        await helper.page.locator('.color-picker-popup').waitFor({ state: 'hidden' })
+
+        // Set color for front center label (index 1 in front group)
+        await frontColorPickers.nth(1).click()
+        await helper.page.locator('.color-picker-popup').waitFor({ state: 'visible' })
+        await helper.page.locator('.color-picker-popup .vc-input__input').first().fill('ff00ff')
+        await helper.page.locator('.color-picker-popup .btn-primary').click()
+        await helper.page.locator('.color-picker-popup').waitFor({ state: 'hidden' })
+      }
+
+      await helper.waitForRender()
+
+      await expect(helper.getCanvas()).toHaveScreenshot('labels/per-label-text-sizes-colors.png')
+    })
   })
 })

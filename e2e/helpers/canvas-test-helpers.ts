@@ -114,6 +114,107 @@ export class CanvasTestHelper {
     await this.waitForRender()
   }
 
+  async setLabelTextSize(
+    position:
+      | 'topLeft'
+      | 'topCenter'
+      | 'topRight'
+      | 'centerLeft'
+      | 'center'
+      | 'centerRight'
+      | 'bottomLeft'
+      | 'bottomCenter'
+      | 'bottomRight',
+    size: number,
+  ) {
+    const positions = {
+      topLeft: 0,
+      topCenter: 1,
+      topRight: 2,
+      centerLeft: 3,
+      center: 4,
+      centerRight: 5,
+      bottomLeft: 6,
+      bottomCenter: 7,
+      bottomRight: 8,
+    }
+
+    const textSizeInput = this.page
+      .locator('.text-size-grid-layout .text-size-input')
+      .nth(positions[position])
+
+    await textSizeInput.clear()
+    await textSizeInput.fill(size.toString())
+    await textSizeInput.dispatchEvent('change')
+    await textSizeInput.blur()
+
+    // Wait for the canvas to update
+    await this.waitForRender()
+  }
+
+  async setLabelColor(
+    position:
+      | 'topLeft'
+      | 'topCenter'
+      | 'topRight'
+      | 'centerLeft'
+      | 'center'
+      | 'centerRight'
+      | 'bottomLeft'
+      | 'bottomCenter'
+      | 'bottomRight',
+    color: string,
+  ) {
+    const positions = {
+      topLeft: 0,
+      topCenter: 1,
+      topRight: 2,
+      centerLeft: 3,
+      center: 4,
+      centerRight: 5,
+      bottomLeft: 6,
+      bottomCenter: 7,
+      bottomRight: 8,
+    }
+
+    // Click the color picker for this label position
+    const colorPickerButton = this.page
+      .locator('.labels-grid .label-color-picker')
+      .nth(positions[position])
+    await colorPickerButton.click()
+
+    // Wait for picker popup to appear
+    const colorPickerPopup = this.page.locator('.color-picker-popup')
+    await expect(colorPickerPopup).toBeVisible()
+
+    // Enter hex value in the color picker input
+    const hexInput = this.page.locator('.color-picker-popup .vc-input__input').first()
+    await hexInput.fill(color.replace('#', ''))
+    await hexInput.press('Enter')
+
+    // Click OK button to confirm and wait for popup to disappear
+    const okButton = this.page.locator('.color-picker-popup .btn-primary')
+    await okButton.click()
+    await expect(colorPickerPopup).toBeHidden()
+
+    // Wait for the canvas to update
+    await this.waitForRender()
+  }
+
+  async setDefaultTextSize(size: number) {
+    const defaultTextSizeInput = this.page
+      .locator('input[title="Default text size for all labels"]')
+      .first()
+    await defaultTextSizeInput.clear()
+    await defaultTextSizeInput.fill(size.toString())
+    await defaultTextSizeInput.dispatchEvent('input')
+    await defaultTextSizeInput.dispatchEvent('change')
+    await defaultTextSizeInput.blur()
+
+    // Wait for the canvas to update
+    await this.waitForRender()
+  }
+
   async setKeyRotation(angle: number, originX?: number, originY?: number) {
     const rotationInput = this.page.locator('input[title="Rotation Angle in Degrees"]').first()
     await rotationInput.clear()

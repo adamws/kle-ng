@@ -879,9 +879,9 @@ export class CanvasRenderer {
     // Label positioning grid matching original KLE (12 positions)
     const labelPositions = [
       // Top row
-      { align: 'left', baseline: 'top' }, // 0: top-left
-      { align: 'center', baseline: 'top' }, // 1: top-center
-      { align: 'right', baseline: 'top' }, // 2: top-right
+      { align: 'left', baseline: 'hanging' }, // 0: top-left
+      { align: 'center', baseline: 'hanging' }, // 1: top-center
+      { align: 'right', baseline: 'hanging' }, // 2: top-right
 
       // Center row
       { align: 'left', baseline: 'middle' }, // 3: center-left
@@ -889,14 +889,14 @@ export class CanvasRenderer {
       { align: 'right', baseline: 'middle' }, // 5: center-right
 
       // Bottom row
-      { align: 'left', baseline: 'bottom' }, // 6: bottom-left
-      { align: 'center', baseline: 'bottom' }, // 7: bottom-center
-      { align: 'right', baseline: 'bottom' }, // 8: bottom-right
+      { align: 'left', baseline: 'alphabetic' }, // 6: bottom-left
+      { align: 'center', baseline: 'alphabetic' }, // 7: bottom-center
+      { align: 'right', baseline: 'alphabetic' }, // 8: bottom-right
 
       // Front legends (side print)
-      { align: 'left', baseline: 'top' }, // 9: front-left
-      { align: 'center', baseline: 'top' }, // 10: front-center
-      { align: 'right', baseline: 'top' }, // 11: front-right
+      { align: 'left', baseline: 'hanging' }, // 9: front-left
+      { align: 'center', baseline: 'hanging' }, // 10: front-center
+      { align: 'right', baseline: 'hanging' }, // 11: front-right
     ]
 
     key.labels.forEach((label, index) => {
@@ -920,24 +920,8 @@ export class CanvasRenderer {
         // Right-aligned labels use fixed distance from right edge
         x = params.textcapx + params.textcapwidth - fixedEdgeMargin
       } else {
-        // Center-aligned labels move proportionally with key width (no smartMargin needed)
+        // Center-aligned labels move proportionally with key width
         x = params.textcapx + params.textcapwidth * 0.5
-      }
-
-      if (pos.baseline === 'top') {
-        // top labels use fixed distance from top edge
-        y = params.textcapy + fixedEdgeMargin
-      } else if (pos.baseline === 'bottom') {
-        // bottom labels use fixed distance from bottom edge
-        y = params.textcapy + params.textcapheight - fixedEdgeMargin
-      } else {
-        // middle labels move proportionally with key width (no smartMargin needed)
-        y = params.textcapy + params.textcapheight * 0.5
-      }
-
-      // For front legends, position them on the front face
-      if (index >= 9) {
-        y = params.innercapy + params.innercapheight + 1
       }
 
       // Font size calculation using linear formula: 6 + (2 * textSize)
@@ -950,6 +934,30 @@ export class CanvasRenderer {
 
       // Use more web-safe fonts that match original better
       this.ctx.font = `${fontSize}px "Helvetica Neue", Helvetica, Arial, sans-serif`
+
+      // Apply new baseline positioning only to top labels (0-8), keep original for front labels (9-11)
+      if (index >= 9) {
+        // For front legends, position them on the front face
+        y = params.innercapy + params.innercapheight + 1
+      } else {
+        // Calculate three fixed lines on the key surface
+        const topLine = params.textcapy + fixedEdgeMargin
+        const middleLine = params.textcapy + params.textcapheight * 0.5
+        const bottomLine = params.textcapy + params.textcapheight - fixedEdgeMargin
+
+        // Top labels (0-8): Use the appropriate fixed line
+        if (index >= 0 && index <= 2) {
+          y = topLine
+        } else if (index >= 3 && index <= 5) {
+          y = middleLine
+        } else if (index >= 6 && index <= 8) {
+          y = bottomLine
+        } else {
+          // Fallback: middle line
+          y = middleLine
+        }
+      }
+
       this.ctx.fillStyle = textColor
       this.ctx.textAlign = pos.align as CanvasTextAlign
       this.ctx.textBaseline = pos.baseline as CanvasTextBaseline
@@ -958,23 +966,9 @@ export class CanvasRenderer {
       const availableWidth = this.calculateAvailableWidth(params)
       const availableHeight = this.calculateAvailableHeight(params)
 
-      // Add text shadow for better readability on light keys
-      if (this.isLightColor(key.color)) {
-        this.ctx.shadowColor = 'rgba(0, 0, 0, 0.1)'
-        this.ctx.shadowOffsetX = 0.5
-        this.ctx.shadowOffsetY = 0.5
-        this.ctx.shadowBlur = 1
-      }
-
       // Process label to handle line breaks, then draw with wrapping
       const processedLabel = this.processLabelText(label)
       this.drawWrappedText(processedLabel, x, y, availableWidth, availableHeight, pos)
-
-      // Clear shadow
-      this.ctx.shadowColor = 'transparent'
-      this.ctx.shadowOffsetX = 0
-      this.ctx.shadowOffsetY = 0
-      this.ctx.shadowBlur = 0
     })
   }
 
@@ -1162,37 +1156,26 @@ export class CanvasRenderer {
     lineHeight: number,
     pos: { align: string; baseline: string },
   ): void {
-    // Adjust starting Y position based on baseline and number of lines
     let startY = y
 
+    // Note: Y position has already been calculated considering the baseline,
+    // so we don't need to adjust further for baseline - just handle multi-line spacing
     if (pos.baseline === 'middle') {
-      // Center the block of text vertically
+      // Center the block of text vertically around the provided Y
       const totalHeight = (lines.length - 1) * lineHeight
       startY = y - totalHeight / 2
-    } else if (pos.baseline === 'bottom') {
-      // Position so the last line is at y
+    } else if (pos.baseline === 'alphabetic') {
+      // Position so the last line ends at the provided Y
       const totalHeight = (lines.length - 1) * lineHeight
       startY = y - totalHeight
     }
+    // For 'top' baseline, startY = y is correct
 
     // Draw each line
     lines.forEach((line, index) => {
       const lineY = startY + index * lineHeight
       this.ctx.fillText(line, x, lineY)
     })
-  }
-
-  private isLightColor(color: string): boolean {
-    const hex = color.replace('#', '')
-    if (hex.length !== 6) return false
-
-    const r = parseInt(hex.substr(0, 2), 16)
-    const g = parseInt(hex.substr(2, 2), 16)
-    const b = parseInt(hex.substr(4, 2), 16)
-
-    // Calculate relative luminance
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
-    return luminance > 0.5
   }
 
   public render(
