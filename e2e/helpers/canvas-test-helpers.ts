@@ -384,4 +384,34 @@ export class CanvasTestHelper {
     // Ensure canvas is ready for interaction
     await canvas.waitFor({ state: 'attached' })
   }
+
+  // Zoom controls for regression testing
+  async zoomIn(clicks: number = 1) {
+    const zoomInButton = this.page.locator('button[title="Zoom In"]')
+    for (let i = 0; i < clicks; i++) {
+      await zoomInButton.click()
+      await this.waitForRender()
+    }
+  }
+
+  async zoomOut(clicks: number = 1) {
+    const zoomOutButton = this.page.locator('button[title="Zoom Out"]')
+    for (let i = 0; i < clicks; i++) {
+      await zoomOutButton.click()
+      await this.waitForRender()
+    }
+  }
+
+  async resetZoom() {
+    const resetViewButton = this.page.locator('button[title="Reset View"]')
+    await resetViewButton.click()
+    await this.waitForRender()
+  }
+
+  async getZoomLevel() {
+    // Get zoom percentage from the zoom indicator
+    const zoomIndicator = this.page.locator('.zoom-indicator')
+    const zoomText = await zoomIndicator.textContent()
+    return parseInt(zoomText?.replace('%', '') || '100')
+  }
 }

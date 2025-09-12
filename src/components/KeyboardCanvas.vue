@@ -299,11 +299,13 @@ const getCoordinateSystemOffset = () => {
   const bounds = cachedBounds || calculateAllBounds()
 
   // Calculate offset needed to ensure all keys are in positive coordinates
+  // Use base unit only - zoom scaling will be applied by the transform matrix
   const offsetX = D.mul(D.min(bounds.minX, 0), renderOptions.value.unit)
   const offsetY = D.mul(D.min(bounds.minY, 0), renderOptions.value.unit)
 
   // Add visual border offset to shift all rendering by CANVAS_BORDER pixels
-  return { x: -offsetX + CANVAS_BORDER, y: -offsetY + CANVAS_BORDER }
+  // Border should be in base coordinates, not scaled by zoom
+  return { x: -offsetX + CANVAS_BORDER / zoom.value, y: -offsetY + CANVAS_BORDER / zoom.value }
 }
 
 // Canvas size calculation now uses renderer's bounds calculation for consistency
