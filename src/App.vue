@@ -4,6 +4,7 @@ import KeyboardToolbar from './components/KeyboardToolbar.vue'
 import KeyboardCanvas from './components/KeyboardCanvas.vue'
 import KeyPropertiesPanel from './components/KeyPropertiesPanel.vue'
 import KeyboardMetadataPanel from './components/KeyboardMetadataPanel.vue'
+import SummaryPanel from './components/SummaryPanel.vue'
 import JsonEditorPanel from './components/JsonEditorPanel.vue'
 import AppFooter from './components/AppFooter.vue'
 import CanvasToolbar from './components/CanvasToolbar.vue'
@@ -21,7 +22,7 @@ const draggedSection = ref<string | null>(null)
 const dragOverSection = ref<string | null>(null)
 
 // Tab state for Key Properties section
-const activePropertiesTab = ref<'properties' | 'metadata'>('properties')
+const activePropertiesTab = ref<'properties' | 'metadata' | 'summary'>('properties')
 
 const collapsedSections = ref<Record<string, boolean>>({
   properties: false,
@@ -291,6 +292,13 @@ const stopResize = () => {
                 >
                   Keyboard Metadata
                 </button>
+                <button
+                  class="tab-btn"
+                  :class="{ active: activePropertiesTab === 'summary' }"
+                  @click.stop="activePropertiesTab = 'summary'"
+                >
+                  Summary
+                </button>
               </div>
               <!-- Regular title for other sections -->
               <span v-else class="section-title">{{ section.title }}</span>
@@ -337,6 +345,7 @@ const stopResize = () => {
           >
             <KeyPropertiesPanel v-if="activePropertiesTab === 'properties'" />
             <KeyboardMetadataPanel v-else-if="activePropertiesTab === 'metadata'" />
+            <SummaryPanel v-else-if="activePropertiesTab === 'summary'" />
           </div>
 
           <!-- Canvas Section -->
