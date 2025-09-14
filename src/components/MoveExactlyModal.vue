@@ -55,26 +55,30 @@
         <div v-if="selectedUnit === 'mm'" class="spacing-config mb-3">
           <div class="row g-2">
             <div class="col-6">
-              <label class="form-label small mb-1">X Spacing (mm/U):</label>
-              <input
-                v-model.number="uSpacing.x"
-                type="number"
-                class="form-control form-control-sm"
-                step="0.1"
-                min="10"
-                max="30"
-              />
+              <label class="form-label small mb-1">X Spacing:</label>
+              <CustomNumberInput
+                :model-value="uSpacing.x"
+                @update:modelValue="updateUSpacingX"
+                @change="updateUSpacingX"
+                :step="0.1"
+                :min="10"
+                :max="30"
+              >
+                <template #suffix>mm/U</template>
+              </CustomNumberInput>
             </div>
             <div class="col-6">
-              <label class="form-label small mb-1">Y Spacing (mm/U):</label>
-              <input
-                v-model.number="uSpacing.y"
-                type="number"
-                class="form-control form-control-sm"
-                step="0.1"
-                min="10"
-                max="30"
-              />
+              <label class="form-label small mb-1">Y Spacing:</label>
+              <CustomNumberInput
+                :model-value="uSpacing.y"
+                @update:modelValue="updateUSpacingY"
+                @change="updateUSpacingY"
+                :step="0.1"
+                :min="10"
+                :max="30"
+              >
+                <template #suffix>mm/U</template>
+              </CustomNumberInput>
             </div>
           </div>
           <small class="form-text text-muted"> Configure mm-to-U conversion </small>
@@ -85,37 +89,25 @@
           <div class="row g-2">
             <div class="col-6">
               <label class="form-label small mb-1">X Movement:</label>
-              <div class="input-group input-group-sm">
-                <input
-                  ref="xInputRef"
-                  v-model.number="movementX"
-                  type="number"
-                  class="form-control"
-                  step="0.1"
-                  @input="handleMovementInput"
-                  @wheel="handleMovementWheel($event, 'x')"
-                  @focus="handleInputFocus('x')"
-                  @blur="handleInputBlur"
-                />
-                <span class="input-group-text">{{ selectedUnit }}</span>
-              </div>
+              <CustomNumberInput
+                :model-value="movementX"
+                @update:modelValue="updateMovementX"
+                @change="updateMovementX"
+                :step="0.1"
+              >
+                <template #suffix>{{ selectedUnit }}</template>
+              </CustomNumberInput>
             </div>
             <div class="col-6">
               <label class="form-label small mb-1">Y Movement:</label>
-              <div class="input-group input-group-sm">
-                <input
-                  ref="yInputRef"
-                  v-model.number="movementY"
-                  type="number"
-                  class="form-control"
-                  step="0.1"
-                  @input="handleMovementInput"
-                  @wheel="handleMovementWheel($event, 'y')"
-                  @focus="handleInputFocus('y')"
-                  @blur="handleInputBlur"
-                />
-                <span class="input-group-text">{{ selectedUnit }}</span>
-              </div>
+              <CustomNumberInput
+                :model-value="movementY"
+                @update:modelValue="updateMovementY"
+                @change="updateMovementY"
+                :step="0.1"
+              >
+                <template #suffix>{{ selectedUnit }}</template>
+              </CustomNumberInput>
             </div>
           </div>
           <small class="form-text text-muted">
@@ -146,6 +138,7 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import CustomNumberInput from './CustomNumberInput.vue'
 
 // Props
 interface Props {
@@ -180,12 +173,9 @@ const lastUsedValues = ref({
 })
 
 const panelRef = ref<HTMLDivElement>()
-const xInputRef = ref<HTMLInputElement>()
-const yInputRef = ref<HTMLInputElement>()
 const position = ref({ x: 100, y: 100 })
 const isDragging = ref(false)
 const dragOffset = ref({ x: 0, y: 0 })
-const focusedInput = ref<'x' | 'y' | null>(null)
 
 // Watch for modal visibility - restore last used values and auto-focus
 watch(
@@ -199,11 +189,16 @@ watch(
       uSpacing.value = { ...lastUsedValues.value.uSpacing }
       position.value = { x: window.innerWidth - 400, y: 100 }
 
-      // Auto-focus the first input field after DOM update
+      // Modal is now visible and ready for interaction
       await nextTick()
-      if (xInputRef.value) {
-        xInputRef.value.focus()
-        xInputRef.value.select() // Select all text for easy replacement
+
+      // Auto-focus the X input for better UX
+      const xInput = document.querySelector(
+        '.move-exactly-panel input[type="number"]',
+      ) as HTMLInputElement
+      if (xInput) {
+        xInput.focus()
+        xInput.select() // Select the text for easy replacement
       }
     }
   },
@@ -226,42 +221,38 @@ const convertYToInternalUnits = (yValue: number): number => {
   }
 }
 
-const handleMovementInput = () => {
-  // Emit the delta for immediate preview (converted to internal units)
-  const deltaX = convertXToInternalUnits(movementX.value)
-  const deltaY = convertYToInternalUnits(movementY.value)
-  emit('movementChange', deltaX, deltaY)
-}
-
-const handleMovementWheel = (event: WheelEvent, axis: 'x' | 'y') => {
-  // Only handle wheel events when input is focused
-  if (focusedInput.value !== axis) return
-
-  event.preventDefault()
-
-  // Determine scroll direction and step size
-  const delta = event.deltaY > 0 ? -0.1 : 0.1
-  const step = event.ctrlKey ? 1.0 : 0.1
-
-  const currentValue = axis === 'x' ? movementX.value : movementY.value
-  const newValue = currentValue + (delta > 0 ? step : -step)
-
-  if (axis === 'x') {
-    movementX.value = Math.round(newValue * 10) / 10 // Round to 1 decimal place
-  } else {
-    movementY.value = Math.round(newValue * 10) / 10
+// Update spacing values
+const updateUSpacingX = (value: number | undefined) => {
+  if (value !== undefined) {
+    uSpacing.value.x = value
   }
-
-  // Emit the change for preview
-  handleMovementInput()
 }
 
-const handleInputFocus = (axis: 'x' | 'y') => {
-  focusedInput.value = axis
+const updateUSpacingY = (value: number | undefined) => {
+  if (value !== undefined) {
+    uSpacing.value.y = value
+  }
 }
 
-const handleInputBlur = () => {
-  focusedInput.value = null
+// Update movement values and emit changes
+const updateMovementX = (value: number | undefined) => {
+  if (value !== undefined) {
+    movementX.value = value
+    // Emit the delta for immediate preview (converted to internal units)
+    const deltaX = convertXToInternalUnits(movementX.value)
+    const deltaY = convertYToInternalUnits(movementY.value)
+    emit('movementChange', deltaX, deltaY)
+  }
+}
+
+const updateMovementY = (value: number | undefined) => {
+  if (value !== undefined) {
+    movementY.value = value
+    // Emit the delta for immediate preview (converted to internal units)
+    const deltaX = convertXToInternalUnits(movementX.value)
+    const deltaY = convertYToInternalUnits(movementY.value)
+    emit('movementChange', deltaX, deltaY)
+  }
 }
 
 const handleApply = () => {

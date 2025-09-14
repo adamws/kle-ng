@@ -32,7 +32,7 @@
                   <div class="row g-1">
                     <div class="col-6">
                       <label class="control-label">X</label>
-                      <ScrollableNumberInput
+                      <CustomNumberInput
                         v-model="currentX"
                         @change="updateX"
                         :step="moveStep"
@@ -43,7 +43,7 @@
                     </div>
                     <div class="col-6">
                       <label class="control-label">Y</label>
-                      <ScrollableNumberInput
+                      <CustomNumberInput
                         v-model="currentY"
                         @change="updateY"
                         :step="moveStep"
@@ -61,7 +61,7 @@
                   <div v-if="!isNonRectangular" class="row g-1">
                     <div class="col-6">
                       <label class="control-label">Width</label>
-                      <ScrollableNumberInput
+                      <CustomNumberInput
                         v-model="currentWidth"
                         @change="updateWidth"
                         :step="moveStep"
@@ -72,7 +72,7 @@
                     </div>
                     <div class="col-6">
                       <label class="control-label">Height</label>
-                      <ScrollableNumberInput
+                      <CustomNumberInput
                         v-model="currentHeight"
                         @change="updateHeight"
                         :step="moveStep"
@@ -105,8 +105,7 @@
                 <!-- Rotation -->
                 <div class="mb-2">
                   <label class="form-label small mb-1">Rotation</label>
-                  <label class="control-label">Degrees</label>
-                  <ScrollableNumberInput
+                  <CustomNumberInput
                     v-model="currentRotationAngle"
                     @change="updateRotationAngle"
                     :step="15"
@@ -117,7 +116,9 @@
                     :wrap-max="360"
                     class="form-control form-control-sm mb-1"
                     title="Rotation Angle in Degrees"
-                  />
+                  >
+                    <template #suffix>degrees</template>
+                  </CustomNumberInput>
                   <div class="d-flex justify-content-between align-items-center mb-1">
                     <label class="form-label small mb-0">{{
                       isRelativeRotationMode ? 'Origin Point (relative)' : 'Origin Point (absolute)'
@@ -144,7 +145,7 @@
                       <label class="control-label">{{
                         isRelativeRotationMode ? 'X offset' : 'X'
                       }}</label>
-                      <ScrollableNumberInput
+                      <CustomNumberInput
                         v-model="displayRotationX"
                         @change="updateRotationX"
                         :step="moveStep"
@@ -161,7 +162,7 @@
                       <label class="control-label">{{
                         isRelativeRotationMode ? 'Y offset' : 'Y'
                       }}</label>
-                      <ScrollableNumberInput
+                      <CustomNumberInput
                         v-model="displayRotationY"
                         @change="updateRotationY"
                         :step="moveStep"
@@ -186,7 +187,7 @@
                   <div class="row g-1">
                     <div class="col-3">
                       <label class="control-label">X</label>
-                      <ScrollableNumberInput
+                      <CustomNumberInput
                         v-model="currentX"
                         @change="updateX"
                         :step="moveStep"
@@ -197,7 +198,7 @@
                     </div>
                     <div class="col-3">
                       <label class="control-label">Y</label>
-                      <ScrollableNumberInput
+                      <CustomNumberInput
                         v-model="currentY"
                         @change="updateY"
                         :step="moveStep"
@@ -208,7 +209,7 @@
                     </div>
                     <div class="col-3">
                       <label class="control-label">X2</label>
-                      <ScrollableNumberInput
+                      <CustomNumberInput
                         v-model="currentX2"
                         @change="updateX2"
                         :step="moveStep"
@@ -219,7 +220,7 @@
                     </div>
                     <div class="col-3">
                       <label class="control-label">Y2</label>
-                      <ScrollableNumberInput
+                      <CustomNumberInput
                         v-model="currentY2"
                         @change="updateY2"
                         :step="moveStep"
@@ -237,7 +238,7 @@
                   <div class="row g-1">
                     <div class="col-3">
                       <label class="control-label">Width</label>
-                      <ScrollableNumberInput
+                      <CustomNumberInput
                         v-model="currentWidth"
                         @change="updateWidth"
                         :step="moveStep"
@@ -248,7 +249,7 @@
                     </div>
                     <div class="col-3">
                       <label class="control-label">Height</label>
-                      <ScrollableNumberInput
+                      <CustomNumberInput
                         v-model="currentHeight"
                         @change="updateHeight"
                         :step="moveStep"
@@ -259,7 +260,7 @@
                     </div>
                     <div class="col-3">
                       <label class="control-label">Width2</label>
-                      <ScrollableNumberInput
+                      <CustomNumberInput
                         v-model="currentWidth2"
                         @change="updateWidth2"
                         :step="moveStep"
@@ -270,7 +271,7 @@
                     </div>
                     <div class="col-3">
                       <label class="control-label">Height2</label>
-                      <ScrollableNumberInput
+                      <CustomNumberInput
                         v-model="currentHeight2"
                         @change="updateHeight2"
                         :step="moveStep"
@@ -286,7 +287,7 @@
                 <div class="mb-2">
                   <label class="form-label small mb-1">Rotation</label>
                   <label class="control-label">Degrees</label>
-                  <ScrollableNumberInput
+                  <CustomNumberInput
                     v-model="currentRotationAngle"
                     @change="updateRotationAngle"
                     :step="15"
@@ -324,7 +325,7 @@
                       <label class="control-label">{{
                         isRelativeRotationMode ? 'X offset' : 'X'
                       }}</label>
-                      <ScrollableNumberInput
+                      <CustomNumberInput
                         v-model="displayRotationX"
                         @change="updateRotationX"
                         :step="moveStep"
@@ -341,7 +342,7 @@
                       <label class="control-label">{{
                         isRelativeRotationMode ? 'Y offset' : 'Y'
                       }}</label>
-                      <ScrollableNumberInput
+                      <CustomNumberInput
                         v-model="displayRotationY"
                         @change="updateRotationY"
                         :step="moveStep"
@@ -683,14 +684,12 @@
               <!-- Default Text Size -->
               <div class="mb-2">
                 <label class="form-label small mb-1">Default Text Size</label>
-                <input
-                  v-model.number="currentDefaultTextSize"
-                  @change="updateDefaultTextSize"
-                  type="number"
-                  min="1"
-                  max="9"
-                  step="1"
-                  class="form-control form-control-sm"
+                <CustomNumberInput
+                  :model-value="currentDefaultTextSize"
+                  @change="updateDefaultTextSizeValue"
+                  :min="1"
+                  :max="9"
+                  :step="1"
                   title="Default text size for all labels"
                 />
               </div>
@@ -711,121 +710,112 @@
                 <div class="text-size-grid-layout">
                   <!-- Row 1: Top labels -->
                   <div class="text-size-input-group">
-                    <input
-                      v-model.number="labelTextSizes[0]"
-                      @input="handleTextSizeInput(0, $event)"
-                      @change="updateLabelTextSize(0)"
-                      type="number"
-                      min="1"
-                      max="9"
-                      step="1"
-                      :class="['form-control', 'form-control-sm', 'text-size-input']"
+                    <CustomNumberInput
+                      :model-value="labelTextSizes[0]"
+                      @change="(value) => updateLabelTextSizeValue(0, value)"
+                      :min="1"
+                      :max="9"
+                      :step="1"
+                      :value-on-clear="null"
+                      size="compact"
                       :title="`Text size for Top Left (default: ${currentDefaultTextSize})`"
                     />
                   </div>
                   <div class="text-size-input-group">
-                    <input
-                      v-model.number="labelTextSizes[1]"
-                      @input="handleTextSizeInput(1, $event)"
-                      @change="updateLabelTextSize(1)"
-                      type="number"
-                      min="1"
-                      max="9"
-                      step="1"
-                      :class="['form-control', 'form-control-sm', 'text-size-input']"
+                    <CustomNumberInput
+                      :model-value="labelTextSizes[1]"
+                      @change="(value) => updateLabelTextSizeValue(1, value)"
+                      :min="1"
+                      :max="9"
+                      :step="1"
+                      :value-on-clear="null"
+                      size="compact"
                       :title="`Text size for Top Center (default: ${currentDefaultTextSize})`"
                     />
                   </div>
                   <div class="text-size-input-group">
-                    <input
-                      v-model.number="labelTextSizes[2]"
-                      @input="handleTextSizeInput(2, $event)"
-                      @change="updateLabelTextSize(2)"
-                      type="number"
-                      min="1"
-                      max="9"
-                      step="1"
-                      :class="['form-control', 'form-control-sm', 'text-size-input']"
+                    <CustomNumberInput
+                      :model-value="labelTextSizes[2]"
+                      @change="(value) => updateLabelTextSizeValue(2, value)"
+                      :min="1"
+                      :max="9"
+                      :step="1"
+                      :value-on-clear="null"
+                      size="compact"
                       :title="`Text size for Top Right (default: ${currentDefaultTextSize})`"
                     />
                   </div>
                   <!-- Row 2: Middle labels -->
                   <div class="text-size-input-group">
-                    <input
-                      v-model.number="labelTextSizes[3]"
-                      @input="handleTextSizeInput(3, $event)"
-                      @change="updateLabelTextSize(3)"
-                      type="number"
-                      min="1"
-                      max="9"
-                      step="1"
-                      :class="['form-control', 'form-control-sm', 'text-size-input']"
+                    <CustomNumberInput
+                      :model-value="labelTextSizes[3]"
+                      @change="(value) => updateLabelTextSizeValue(3, value)"
+                      :min="1"
+                      :max="9"
+                      :step="1"
+                      :value-on-clear="null"
+                      size="compact"
                       :title="`Text size for Center Left (default: ${currentDefaultTextSize})`"
                     />
                   </div>
                   <div class="text-size-input-group">
-                    <input
-                      v-model.number="labelTextSizes[4]"
-                      @input="handleTextSizeInput(4, $event)"
-                      @change="updateLabelTextSize(4)"
-                      type="number"
-                      min="1"
-                      max="9"
-                      step="1"
-                      :class="['form-control', 'form-control-sm', 'text-size-input']"
+                    <CustomNumberInput
+                      :model-value="labelTextSizes[4]"
+                      @change="(value) => updateLabelTextSizeValue(4, value)"
+                      :min="1"
+                      :max="9"
+                      :step="1"
+                      :value-on-clear="null"
+                      size="compact"
                       :title="`Text size for Center (default: ${currentDefaultTextSize})`"
                     />
                   </div>
                   <div class="text-size-input-group">
-                    <input
-                      v-model.number="labelTextSizes[5]"
-                      @input="handleTextSizeInput(5, $event)"
-                      @change="updateLabelTextSize(5)"
-                      type="number"
-                      min="1"
-                      max="9"
-                      step="1"
-                      :class="['form-control', 'form-control-sm', 'text-size-input']"
+                    <CustomNumberInput
+                      :model-value="labelTextSizes[5]"
+                      @change="(value) => updateLabelTextSizeValue(5, value)"
+                      :min="1"
+                      :max="9"
+                      :step="1"
+                      :value-on-clear="null"
+                      size="compact"
                       :title="`Text size for Center Right (default: ${currentDefaultTextSize})`"
                     />
                   </div>
                   <!-- Row 3: Bottom labels -->
                   <div class="text-size-input-group">
-                    <input
-                      v-model.number="labelTextSizes[6]"
-                      @input="handleTextSizeInput(6, $event)"
-                      @change="updateLabelTextSize(6)"
-                      type="number"
-                      min="1"
-                      max="9"
-                      step="1"
-                      :class="['form-control', 'form-control-sm', 'text-size-input']"
+                    <CustomNumberInput
+                      :model-value="labelTextSizes[6]"
+                      @change="(value) => updateLabelTextSizeValue(6, value)"
+                      :min="1"
+                      :max="9"
+                      :step="1"
+                      :value-on-clear="null"
+                      size="compact"
                       :title="`Text size for Bottom Left (default: ${currentDefaultTextSize})`"
                     />
                   </div>
                   <div class="text-size-input-group">
-                    <input
-                      v-model.number="labelTextSizes[7]"
-                      @input="handleTextSizeInput(7, $event)"
-                      @change="updateLabelTextSize(7)"
-                      type="number"
-                      min="1"
-                      max="9"
-                      step="1"
-                      :class="['form-control', 'form-control-sm', 'text-size-input']"
+                    <CustomNumberInput
+                      :model-value="labelTextSizes[7]"
+                      @change="(value) => updateLabelTextSizeValue(7, value)"
+                      :min="1"
+                      :max="9"
+                      :step="1"
+                      :value-on-clear="null"
+                      size="compact"
                       :title="`Text size for Bottom Center (default: ${currentDefaultTextSize})`"
                     />
                   </div>
                   <div class="text-size-input-group">
-                    <input
-                      v-model.number="labelTextSizes[8]"
-                      @input="handleTextSizeInput(8, $event)"
-                      @change="updateLabelTextSize(8)"
-                      type="number"
-                      min="1"
-                      max="9"
-                      step="1"
-                      :class="['form-control', 'form-control-sm', 'text-size-input']"
+                    <CustomNumberInput
+                      :model-value="labelTextSizes[8]"
+                      @change="(value) => updateLabelTextSizeValue(8, value)"
+                      :min="1"
+                      :max="9"
+                      :step="1"
+                      :value-on-clear="null"
+                      size="compact"
                       :title="`Text size for Bottom Right (default: ${currentDefaultTextSize})`"
                     />
                   </div>
@@ -900,7 +890,7 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import { useKeyboardStore } from '@/stores/keyboard'
 import ColorPicker from './ColorPicker.vue'
-import ScrollableNumberInput from './ScrollableNumberInput.vue'
+import CustomNumberInput from './CustomNumberInput.vue'
 import { D } from '@/utils/decimal-math'
 
 const keyboardStore = useKeyboardStore()
@@ -1213,82 +1203,11 @@ const updateTextColor = () => {
   keyboardStore.saveState()
 }
 
-const updateDefaultTextSize = () => {
-  if (selectedKeys.value.length === 0) return
-
-  selectedKeys.value.forEach((key) => {
-    key.default.textSize = currentDefaultTextSize.value
-  })
-
-  keyboardStore.saveState()
-}
-
 // Validation helper
 const validateTextSize = (value: string | number): number => {
   const parsed = typeof value === 'number' ? value : parseInt(String(value))
   if (isNaN(parsed)) return 3 // default
   return Math.max(1, Math.min(9, parsed)) // clamp 1-9
-}
-
-// Handle text size input with smart default behavior for spinners
-const handleTextSizeInput = (index: number, event: Event) => {
-  const input = event.target as HTMLInputElement
-  const newValueStr = input.value
-  const previousValue = previousTextSizeValues.value[index]
-
-  if (newValueStr === '') {
-    // Field was cleared
-    previousTextSizeValues.value[index] = undefined
-    return
-  }
-
-  const newValue = parseInt(newValueStr)
-  if (isNaN(newValue)) {
-    return
-  }
-
-  // If the previous value was undefined/empty and user used spinner
-  if (previousValue === undefined) {
-    // Check if this looks like spinner usage (value of 1 or 0/-1)
-    if (newValue === 1) {
-      // This was likely an increment from empty - set to default + 1
-      const newSize = Math.min(9, currentDefaultTextSize.value + 1)
-      labelTextSizes.value[index] = newSize
-      input.value = newSize.toString()
-      previousTextSizeValues.value[index] = newSize
-      return
-    } else if (newValue <= 0) {
-      // This was likely a decrement from empty - set to default - 1
-      const newSize = Math.max(1, currentDefaultTextSize.value - 1)
-      labelTextSizes.value[index] = newSize
-      input.value = newSize.toString()
-      previousTextSizeValues.value[index] = newSize
-      return
-    }
-  }
-
-  // Update the previous value for next time
-  previousTextSizeValues.value[index] = newValue
-}
-
-// Update per-label text size
-const updateLabelTextSize = (index: number) => {
-  if (selectedKeys.value.length === 0 || index < 0 || index >= 9) return
-
-  const inputValue = labelTextSizes.value[index]
-
-  selectedKeys.value.forEach((key) => {
-    if (inputValue === undefined || inputValue === null) {
-      // Clear the custom text size (will use default)
-      key.textSize[index] = undefined
-    } else {
-      // Store the validated size
-      const validatedSize = validateTextSize(inputValue)
-      key.textSize[index] = validatedSize
-    }
-  })
-
-  keyboardStore.saveState()
 }
 
 const updateWidth = () => {
@@ -1598,6 +1517,37 @@ const clearTextSizes = () => {
     labelTextSizes.value[i] = undefined
   }
   keyboardStore.saveState()
+}
+
+// Update default text size with CustomNumberInput
+const updateLabelTextSizeValue = (index: number, value: number | undefined) => {
+  if (selectedKeys.value.length === 0 || index < 0 || index >= 9) return
+
+  // Update local state
+  labelTextSizes.value[index] = value
+
+  // Update key data
+  selectedKeys.value.forEach((key) => {
+    if (value === undefined || value === null) {
+      // Clear the custom text size (will use default)
+      key.textSize[index] = undefined
+    } else {
+      // Store the validated size
+      const validatedSize = validateTextSize(value)
+      key.textSize[index] = validatedSize
+    }
+  })
+
+  keyboardStore.saveState()
+}
+
+const updateDefaultTextSizeValue = (value: number | undefined) => {
+  if (value !== undefined && selectedKeys.value.length > 0) {
+    selectedKeys.value.forEach((key) => {
+      key.default.textSize = value
+    })
+    keyboardStore.saveState()
+  }
 }
 </script>
 

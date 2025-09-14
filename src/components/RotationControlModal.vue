@@ -47,26 +47,21 @@
         <!-- Current angle display and direct input -->
         <div v-if="rotationOrigin" class="angle-input mb-3">
           <div class="d-flex align-items-center gap-3">
-            <label class="form-label small mb-0 text-nowrap">Rotation Change (degrees):</label>
-            <div class="input-group flex-grow-1">
-              <input
-                ref="angleInputRef"
-                v-model.number="currentAngle"
-                type="number"
-                class="form-control"
-                step="1"
-                min="-360"
-                max="360"
-                :disabled="!rotationOrigin"
-                @input="handleAngleInput"
-                @wheel="handleAngleWheel"
-                @focus="handleAngleFocus"
-                @blur="handleAngleBlur"
-              />
-            </div>
+            <label class="form-label small mb-0 text-nowrap">Rotation Change:</label>
+            <CustomNumberInput
+              :model-value="currentAngle"
+              @update:modelValue="updateAngle"
+              @change="updateAngle"
+              :step="1"
+              :min="-360"
+              :max="360"
+              :disabled="!rotationOrigin"
+            >
+              <template #suffix>degrees</template>
+            </CustomNumberInput>
           </div>
           <small class="form-text text-muted">
-            <span v-if="rotationOrigin"> Focus and scroll: ±1°, Ctrl+scroll: ±5° </span>
+            <span v-if="rotationOrigin"> Mouse wheel: ±1°, Ctrl+wheel: ±5° </span>
             <span v-else class="text-warning">
               Select an anchor point first to enable rotation controls
             </span>
@@ -102,6 +97,7 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted } from 'vue'
+import CustomNumberInput from './CustomNumberInput.vue'
 
 // Props
 interface Props {
@@ -126,11 +122,9 @@ const emit = defineEmits<Emits>()
 // Local state - this represents the rotation DELTA (change), not absolute angle
 const currentAngle = ref(0)
 const panelRef = ref<HTMLDivElement>()
-const angleInputRef = ref<HTMLInputElement>()
 const position = ref({ x: 100, y: 100 }) // Default position
 const isDragging = ref(false)
 const dragOffset = ref({ x: 0, y: 0 })
-const inputFocused = ref(false)
 
 // Watch for modal visibility - reset delta when modal opens
 watch(
@@ -147,40 +141,13 @@ const formatNumber = (value: number): string => {
   return value.toFixed(2).replace(/\.?0+$/, '')
 }
 
-const handleAngleInput = () => {
-  // Directly emit the delta for immediate application
-  emit('angleChange', currentAngle.value)
-}
-
-const handleAngleWheel = (event: WheelEvent) => {
-  // Only handle wheel events when input is focused
-  if (!inputFocused.value) return
-
-  event.preventDefault()
-
-  // Determine scroll direction and step size
-  const delta = event.deltaY > 0 ? -1 : 1
-  const step = event.ctrlKey ? 5 : 1
-
-  currentAngle.value += delta * step
-
-  // Normalize angle to -360 to 360 range
-  if (currentAngle.value > 360) {
-    currentAngle.value -= 360
-  } else if (currentAngle.value < -360) {
-    currentAngle.value += 360
+// Update angle value and emit change
+const updateAngle = (value: number | undefined) => {
+  if (value !== undefined) {
+    currentAngle.value = value
+    // Emit the delta for immediate application
+    emit('angleChange', currentAngle.value)
   }
-
-  // Emit the DELTA for preview (same as input)
-  emit('angleChange', currentAngle.value)
-}
-
-const handleAngleFocus = () => {
-  inputFocused.value = true
-}
-
-const handleAngleBlur = () => {
-  inputFocused.value = false
 }
 
 const handleApply = () => {

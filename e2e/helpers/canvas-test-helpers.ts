@@ -140,7 +140,7 @@ export class CanvasTestHelper {
     }
 
     const textSizeInput = this.page
-      .locator('.text-size-grid-layout .text-size-input')
+      .locator('.text-size-grid-layout .custom-number-input input')
       .nth(positions[position])
 
     await textSizeInput.clear()

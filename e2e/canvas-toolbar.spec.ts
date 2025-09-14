@@ -15,8 +15,8 @@ test.describe('Canvas Toolbar', () => {
       await expect(page.locator('.canvas-toolbar')).toBeVisible()
 
       // Move Step is now in app footer, not canvas toolbar
-      await expect(page.locator('.move-step-input')).toBeVisible()
-      await expect(page.locator('.move-step-unit')).toBeVisible()
+      await expect(page.locator('.move-step-control input[type="number"]')).toBeVisible()
+      await expect(page.locator('.move-step-control .input-suffix')).toBeVisible()
 
       // Check key tool buttons are present (drag & drop tool no longer exists)
       await expect(
@@ -47,12 +47,12 @@ test.describe('Canvas Toolbar', () => {
   test.describe('Move Step Control', () => {
     test('should have default move step value of 0.25', async ({ page }) => {
       // Move step input is now in the app footer, not canvas toolbar
-      const stepInput = page.locator('.move-step-input')
+      const stepInput = page.locator('.move-step-control input[type="number"]')
       await expect(stepInput).toHaveValue('0.25')
     })
 
     test('should accept valid move step values', async ({ page }) => {
-      const stepInput = page.locator('.move-step-input')
+      const stepInput = page.locator('.move-step-control input[type="number"]')
 
       // Test setting to 0.5
       await stepInput.fill('0.5')
@@ -84,7 +84,7 @@ test.describe('Canvas Toolbar', () => {
       await canvasHelper.addKey()
 
       // Set move step to 0.5
-      const stepInput = page.locator('.move-step-input')
+      const stepInput = page.locator('.move-step-control input[type="number"]')
       await stepInput.fill('0.5')
       await stepInput.blur()
 
@@ -359,7 +359,7 @@ test.describe('Canvas Toolbar', () => {
       await canvasHelper.addMultipleKeys(3)
 
       // Set a specific move step for snapping
-      const stepInput = page.locator('.move-step-input')
+      const stepInput = page.locator('.move-step-control input[type="number"]')
       await stepInput.fill('0.5')
       await stepInput.blur()
       // Verify move step is set
@@ -526,7 +526,7 @@ test.describe('Canvas Toolbar', () => {
       await canvasHelper.addKey()
 
       // Change move step in toolbar
-      const stepInput = page.locator('.move-step-input')
+      const stepInput = page.locator('.move-step-control input[type="number"]')
       await stepInput.fill('0.75')
       await stepInput.blur()
 
@@ -546,7 +546,7 @@ test.describe('Canvas Toolbar', () => {
       await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
 
       // Set a specific move step (0.5U)
-      const stepInput = page.locator('.move-step-input')
+      const stepInput = page.locator('.move-step-control input[type="number"]')
       await stepInput.fill('0.5')
       await stepInput.blur()
       // Wait for move step to be applied
@@ -595,7 +595,7 @@ test.describe('Canvas Toolbar', () => {
       await canvasHelper.addKey()
 
       // Set move step to a specific value
-      const stepInput = page.locator('.move-step-input')
+      const stepInput = page.locator('.move-step-control input[type="number"]')
       await stepInput.fill('1.5')
       await stepInput.blur()
 
@@ -615,7 +615,7 @@ test.describe('Canvas Toolbar', () => {
 
   test.describe('Error Handling and Edge Cases', () => {
     test('should handle invalid move step values gracefully', async ({ page }) => {
-      const stepInput = page.locator('.move-step-input')
+      const stepInput = page.locator('.move-step-control input[type="number"]')
 
       // Test value below minimum (0.05)
       await stepInput.fill('0.01')
@@ -644,12 +644,14 @@ test.describe('Canvas Toolbar', () => {
 
       // Test programmatic invalid input by setting value directly
       await page.evaluate(() => {
-        const input = document.querySelector('.move-step-input') as HTMLInputElement
+        const input = document.querySelector(
+          '.move-step-control input[type="number"]',
+        ) as HTMLInputElement
         input.value = 'invalid'
         input.dispatchEvent(new Event('input', { bubbles: true }))
+        input.dispatchEvent(new Event('blur', { bubbles: true }))
       })
       // Wait for validation to reset value
-      await expect(stepInput).toHaveValue('0.25')
       await expect(stepInput).toHaveValue('0.25')
     })
 
@@ -686,7 +688,7 @@ test.describe('Canvas Toolbar', () => {
       await canvasHelper.addKey()
 
       // Change move step to test snapping
-      const moveStepInput = page.locator('.move-step-input')
+      const moveStepInput = page.locator('.move-step-control input[type="number"]')
       await moveStepInput.fill('0.25')
 
       // Switch to horizontal mirror mode
@@ -736,7 +738,7 @@ test.describe('Canvas Toolbar', () => {
       await expect(mirrorButton).toHaveClass(/active/)
 
       // Move step input should still work
-      const stepInput = page.locator('.move-step-input')
+      const stepInput = page.locator('.move-step-control input[type="number"]')
       await stepInput.fill('0.75')
       await expect(stepInput).toHaveValue('0.75')
     })

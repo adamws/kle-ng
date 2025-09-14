@@ -28,16 +28,18 @@
         <!-- Move Step Control -->
         <div class="move-step-control d-flex align-items-center gap-1">
           <label class="move-step-label small text-muted mb-0">Step:</label>
-          <input
-            type="number"
-            :value="keyboardStore.moveStep"
-            @input="updateMoveStep"
-            step="0.05"
-            min="0.05"
-            max="5"
-            class="move-step-input"
-          />
-          <span class="move-step-unit small text-muted">U</span>
+          <CustomNumberInput
+            :model-value="keyboardStore.moveStep"
+            @change="updateMoveStep"
+            :step="0.05"
+            :min="0.05"
+            :max="5"
+            :value-on-clear="0.25"
+            :disable-wheel="true"
+            size="compact"
+          >
+            <template #suffix>U</template>
+          </CustomNumberInput>
         </div>
         <!-- Lock Rotations Control -->
         <div class="lock-rotations-control d-flex align-items-center gap-1">
@@ -91,6 +93,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useKeyboardStore } from '@/stores/keyboard'
+import CustomNumberInput from './CustomNumberInput.vue'
 
 const keyboardStore = useKeyboardStore()
 
@@ -128,19 +131,11 @@ const resetView = () => {
 }
 
 // Move step control
-const updateMoveStep = (event: Event) => {
-  const input = event.target as HTMLInputElement
-  let value = parseFloat(input.value)
-
-  if (isNaN(value)) {
-    value = 0.25
+const updateMoveStep = (value: number | undefined) => {
+  // The CustomNumberInput already handles validation and constraints
+  if (value !== undefined) {
+    keyboardStore.setMoveStep(value)
   }
-
-  value = Math.max(0.05, Math.min(5, value))
-
-  keyboardStore.setMoveStep(value)
-
-  input.value = value.toString()
   requestCanvasFocus()
 }
 
