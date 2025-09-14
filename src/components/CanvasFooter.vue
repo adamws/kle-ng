@@ -66,13 +66,13 @@
       >
         <!-- Zoom Controls -->
         <div class="btn-group btn-group-sm">
-          <button @click="zoomOut" class="btn btn-outline-kle-secondary" title="Zoom Out">
+          <button @click="zoomOut" class="btn btn-outline-secondary" title="Zoom Out">
             <i class="bi bi-zoom-out"></i>
           </button>
-          <button @click="resetView" class="btn btn-outline-kle-secondary" title="Reset View">
+          <button @click="resetView" class="btn btn-outline-secondary" title="Reset View">
             <i class="bi bi-house"></i>
           </button>
-          <button @click="zoomIn" class="btn btn-outline-kle-secondary" title="Zoom In">
+          <button @click="zoomIn" class="btn btn-outline-secondary" title="Zoom In">
             <i class="bi bi-zoom-in"></i>
           </button>
         </div>
@@ -170,7 +170,7 @@ window.addEventListener('canvas-focus-change', (event: Event) => {
 <style scoped>
 .zoom-indicator {
   background: white;
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--bs-border-color);
   border-radius: 4px;
   padding: 4px 8px;
   font-size: 0.75rem;
@@ -181,7 +181,7 @@ window.addEventListener('canvas-focus-change', (event: Event) => {
 
 .position-indicator {
   background: white;
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--bs-border-color);
   border-radius: 4px;
   padding: 4px 8px;
   font-size: 0.75rem;
@@ -208,31 +208,13 @@ window.addEventListener('canvas-focus-change', (event: Event) => {
   white-space: nowrap;
 }
 
-/* Move Step Control in Status Line */
-.move-step-input {
-  width: 60px;
-  padding: 2px 6px;
-  border: 1px solid #ced4da;
-  border-radius: 3px;
-  font-size: 0.75rem;
-  text-align: center;
-  background: white;
-}
-
-.move-step-input:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 1px rgba(0, 123, 255, 0.25);
-}
-
 /* Lock Rotations Checkbox Alignment */
 .lock-rotations-checkbox {
   margin-top: 0 !important;
   margin-bottom: 0 !important;
 }
 
-.move-step-label,
-.move-step-unit {
+.move-step-label {
   font-size: 0.75rem;
   white-space: nowrap;
 }
@@ -283,11 +265,6 @@ window.addEventListener('canvas-focus-change', (event: Event) => {
   .zoom-indicator {
     font-size: 0.7rem;
     padding: 3px 6px;
-  }
-
-  .move-step-input {
-    width: 50px;
-    font-size: 0.7rem;
   }
 
   .small {

@@ -16,7 +16,7 @@
 
       <!-- Import/Export/Share buttons -->
       <div class="btn-group" role="group">
-        <button class="btn btn-kle-secondary" @click="triggerFileUpload" type="button">
+        <button class="btn btn-secondary" @click="triggerFileUpload" type="button">
           <span class="d-none d-sm-inline">Import JSON File</span>
           <span class="d-inline d-sm-none">Import</span>
         </button>
@@ -24,7 +24,7 @@
         <div class="btn-group position-relative">
           <button
             ref="exportBtnRef"
-            class="btn btn-kle-success dropdown-toggle"
+            class="btn btn-success dropdown-toggle"
             @click="toggleExportDropdown"
             type="button"
           >
@@ -48,7 +48,7 @@
           </div>
         </div>
 
-        <button class="btn btn-kle-primary" @click="shareLayout" type="button">
+        <button class="btn btn-primary" @click="shareLayout" type="button">
           <span class="d-none d-sm-inline">Share Link</span>
           <span class="d-inline d-sm-none">Share</span>
         </button>
@@ -395,7 +395,7 @@ const handleClickOutside = (event: MouseEvent) => {
 .custom-dropdown-menu {
   position: fixed;
   background: white;
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--bs-border-color);
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 10000;
@@ -421,7 +421,7 @@ const handleClickOutside = (event: MouseEvent) => {
 }
 
 .custom-dropdown-menu .dropdown-item:hover {
-  background-color: #f8f9fa;
+  background: var(--bs-tertiary-bg);
 }
 
 .custom-dropdown-menu .dropdown-item:active {

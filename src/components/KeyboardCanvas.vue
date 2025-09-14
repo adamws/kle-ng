@@ -1437,7 +1437,7 @@ defineExpose({
   width: 100%;
   height: 100%;
   overflow: auto;
-  background-color: #f8f9fa;
+  background: var(--bs-tertiary-bg);
   position: relative;
 }
 

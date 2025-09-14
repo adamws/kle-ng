@@ -399,8 +399,8 @@ onUnmounted(() => {
 .canvas-toolbar {
   width: 80px;
   min-width: 80px;
-  background: #f8f9fa;
-  border-right: 1px solid #dee2e6;
+  background: var(--bs-tertiary-bg);
+  border-right: 1px solid var(--bs-border-color);
   padding: 16px 10px;
   display: flex;
   flex-direction: column;
@@ -419,7 +419,7 @@ onUnmounted(() => {
 .section-label {
   font-size: 10px;
   font-weight: 600;
-  color: #6c757d;
+  color: var(--bs-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 2px;
@@ -482,30 +482,30 @@ onUnmounted(() => {
 .tool-button {
   width: 38px;
   height: 38px;
-  border: 1px solid #ced4da;
+  border: 1px solid var(--bs-border-color);
   border-radius: 6px;
   background: white;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #6c757d;
+  color: var(--bs-secondary);
   transition: all 0.15s ease;
   padding: 0;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .tool-button:hover {
-  background: #e9ecef;
-  border-color: #adb5bd;
-  color: #495057;
+  background: var(--bs-secondary-bg);
+  border-color: var(--bs-secondary-bg);
+  color: var(--bs-secondary-color);
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .tool-button.active {
-  background: #007bff;
-  border-color: #007bff;
+  background: var(--bs-primary);
+  border-color: var(--bs-primary);
   color: white;
   box-shadow: 0 2px 6px rgba(0, 123, 255, 0.3);
   transform: translateY(-1px);
@@ -517,16 +517,16 @@ onUnmounted(() => {
 }
 
 .tool-button:disabled {
-  background: #f8f9fa;
-  border-color: #e9ecef;
-  color: #ced4da;
+  background: var(--bs-tertiary-bg);
+  border-color: var(--bs-secondary-bg);
+  color: var(--bs-border-color);
   cursor: not-allowed;
 }
 
 .tool-button:disabled:hover {
-  background: #f8f9fa;
-  border-color: #e9ecef;
-  color: #ced4da;
+  background: var(--bs-tertiary-bg);
+  border-color: var(--bs-secondary-bg);
+  color: var(--bs-border-color);
 }
 
 /* Add Key Button Group Styles */
@@ -559,7 +559,7 @@ onUnmounted(() => {
 .special-keys-dropdown {
   position: fixed;
   background: white;
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--bs-border-color);
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 10000;
@@ -574,11 +574,11 @@ onUnmounted(() => {
   padding: 8px 12px;
   font-size: 10px;
   font-weight: 600;
-  color: #6c757d;
+  color: var(--bs-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border-bottom: 1px solid #e9ecef;
-  background: #f8f9fa;
+  border-bottom: 1px solid var(--bs-border-color);
+  background: var(--bs-tertiary-bg);
   border-radius: 6px 6px 0 0;
 }
 
@@ -590,24 +590,20 @@ onUnmounted(() => {
   background: none;
   border: none;
   font-size: 12px;
-  color: #495057;
+  color: var(--bs-secondary-color);
   cursor: pointer;
   transition: background-color 0.15s ease;
 }
 
 .dropdown-item:hover {
-  background-color: #f8f9fa;
-}
-
-.dropdown-item:active {
-  background-color: #e9ecef;
+  background: var(--bs-tertiary-bg);
 }
 
 /* Extra Tools Dropdown */
 .extra-tools-dropdown {
   position: fixed;
   background: white;
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--bs-border-color);
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 10000;

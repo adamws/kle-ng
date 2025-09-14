@@ -347,13 +347,13 @@ onUnmounted(() => {
   background: white;
   border-radius: 8px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  border: 1px solid #ddd;
+  border: 1px solid var(--bs-border-color);
   overflow: hidden;
 }
 
 .panel-header {
   background: #f8f9fa;
-  border-bottom: 1px solid #dee2e6;
+  border-bottom: 1px solid var(--bs-border-color);
   padding: 8px 12px;
   display: flex;
   align-items: center;
@@ -387,7 +387,7 @@ onUnmounted(() => {
 }
 
 .panel-footer {
-  border-top: 1px solid #dee2e6;
+  border-top: 1px solid var(--bs-border-color);
   padding: 8px 12px;
   display: flex;
   justify-content: flex-end;

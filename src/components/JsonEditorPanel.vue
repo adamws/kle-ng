@@ -259,13 +259,11 @@ textarea.font-monospace {
   min-height: 300px;
 }
 
-textarea:focus {
-  border-color: #86b7fe;
-  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+.is-invalid {
+  border-color: var(--bs-danger);
 }
 
 .is-invalid:focus {
-  border-color: #dc3545;
-  box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
+  box-shadow: 0 0 0 0.25rem var(--bs-danger-border-subtle);
 }
 </style>

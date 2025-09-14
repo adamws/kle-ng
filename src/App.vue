@@ -402,7 +402,7 @@ const stopResize = () => {
 /* Custom overrides for the application */
 .card {
   box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--bs-border-color);
 }
 
 .navbar-brand {
@@ -430,14 +430,14 @@ const stopResize = () => {
 
 .drag-handle {
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border-bottom: 1px solid #dee2e6;
+  border-bottom: 1px solid var(--bs-border-color);
   user-select: none;
   min-height: 28px;
   padding: 4px 12px !important;
 }
 
 .drag-grip {
-  color: #6c757d;
+  color: var(--bs-secondary);
   font-size: 14px;
   line-height: 1;
   cursor: grab;
@@ -458,7 +458,7 @@ const stopResize = () => {
 .section-title {
   font-size: 0.9rem;
   font-weight: 600;
-  color: #495057;
+  color: var(--bs-secondary-color);
 }
 
 .collapse-btn,
@@ -472,11 +472,6 @@ const stopResize = () => {
   font-size: 14px;
   line-height: 1;
   border-radius: 4px;
-}
-
-.help-btn:hover {
-  color: #007bff;
-  border-color: #007bff;
 }
 
 /* Drag States */
@@ -493,13 +488,13 @@ const stopResize = () => {
 }
 
 .draggable-container.drag-over .draggable-section {
-  border-color: #007bff;
+  border-color: var(--bs-primary);
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
 .draggable-container.drag-over .drag-handle {
   background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-  border-color: #007bff;
+  border-color: var(--bs-primary);
 }
 
 /* Smooth transitions for reordering */
@@ -523,9 +518,9 @@ const stopResize = () => {
 /* Layout Editor Resize Handle */
 .layout-editor-resize-handle {
   height: 6px;
-  background: #f8f9fa;
-  border-top: 1px solid #dee2e6;
-  border-bottom: 1px solid #dee2e6;
+  background: var(--bs-tertiary-bg);
+  border-top: 1px solid var(--bs-border-color);
+  border-bottom: 1px solid var(--bs-border-color);
   cursor: ns-resize;
   position: relative;
   display: flex;
@@ -536,13 +531,13 @@ const stopResize = () => {
 
 .layout-editor-resize-handle:hover,
 .layout-editor-resize-handle.active {
-  background: #e9ecef;
+  background: var(--bs-secondary-bg);
 }
 
 .resize-handle-line {
   width: 40px;
   height: 2px;
-  background: #6c757d;
+  background: var(--bs-secondary);
   border-radius: 1px;
   opacity: 0.5;
   transition: opacity 0.2s;
@@ -574,7 +569,7 @@ const stopResize = () => {
 .tab-btn {
   background: none;
   border: none;
-  color: #6c757d;
+  color: var(--bs-secondary);
   padding: 0.25rem 0.5rem;
   font-size: 0.875rem;
   cursor: pointer;
@@ -584,12 +579,12 @@ const stopResize = () => {
 }
 
 .tab-btn:hover {
-  color: #495057;
+  color: var(--bs-secondary-color);
   background-color: rgba(0, 0, 0, 0.05);
 }
 
 .tab-btn.active {
-  color: #212529;
+  color: var(--bs-body-color);
   font-weight: 600;
   background-color: rgba(0, 0, 0, 0.08);
 }

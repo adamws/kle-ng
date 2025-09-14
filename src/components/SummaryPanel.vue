@@ -32,33 +32,33 @@
             </div>
           </div>
           <div class="table-container">
-            <table class="table table-sm table-striped">
-              <thead>
+            <table class="table table-sm table-striped mb-0">
+              <thead class="table-light">
                 <tr>
-                  <th>Size (U)</th>
-                  <th class="text-end">Count</th>
+                  <th class="fw-semibold small border-top-0">Size (U)</th>
+                  <th class="text-end fw-semibold small border-top-0">Count</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="entry in keysBySize" :key="entry.size">
-                  <td>{{ entry.size }}</td>
-                  <td class="text-end">{{ entry.count }}</td>
+                  <td class="small align-middle">{{ entry.size }}</td>
+                  <td class="text-end small align-middle">{{ entry.count }}</td>
                 </tr>
-                <tr class="table-summary">
-                  <td><strong>Total Keys</strong></td>
-                  <td class="text-end">
+                <tr class="table-active border-top">
+                  <td class="small align-middle"><strong>Total Keys</strong></td>
+                  <td class="text-end small align-middle">
                     <strong>{{ totalKeys }}</strong>
                   </td>
                 </tr>
-                <tr v-if="totalDecalKeys > 0" class="table-summary">
-                  <td><strong>Regular Keys</strong></td>
-                  <td class="text-end">
+                <tr v-if="totalDecalKeys > 0" class="table-active border-top">
+                  <td class="small align-middle"><strong>Regular Keys</strong></td>
+                  <td class="text-end small align-middle">
                     <strong>{{ totalKeysWithoutDecals }}</strong>
                   </td>
                 </tr>
-                <tr v-if="totalDecalKeys > 0" class="table-summary">
-                  <td><strong>Decal Keys</strong></td>
-                  <td class="text-end">
+                <tr v-if="totalDecalKeys > 0" class="table-active border-top">
+                  <td class="small align-middle"><strong>Decal Keys</strong></td>
+                  <td class="text-end small align-middle">
                     <strong>{{ totalDecalKeys }}</strong>
                   </td>
                 </tr>
@@ -97,18 +97,18 @@
             </div>
           </div>
           <div class="table-container">
-            <table class="table table-sm table-striped">
-              <thead>
+            <table class="table table-sm table-striped mb-0">
+              <thead class="table-light">
                 <tr>
-                  <th>Size (U)</th>
-                  <th>Color</th>
-                  <th class="text-end">Count</th>
+                  <th class="fw-semibold small border-top-0">Size (U)</th>
+                  <th class="fw-semibold small border-top-0">Color</th>
+                  <th class="text-end fw-semibold small border-top-0">Count</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="entry in keysBySizeAndColor" :key="`${entry.size}-${entry.color}`">
-                  <td>{{ entry.size }}</td>
-                  <td>
+                  <td class="small align-middle">{{ entry.size }}</td>
+                  <td class="small align-middle">
                     <div class="d-flex align-items-center gap-2">
                       <div
                         class="color-swatch"
@@ -118,26 +118,26 @@
                       <code class="color-code">{{ entry.color }}</code>
                     </div>
                   </td>
-                  <td class="text-end">{{ entry.count }}</td>
+                  <td class="text-end small align-middle">{{ entry.count }}</td>
                 </tr>
-                <tr class="table-summary">
-                  <td><strong>Total Keys</strong></td>
-                  <td></td>
-                  <td class="text-end">
+                <tr class="table-active border-top">
+                  <td class="small align-middle"><strong>Total Keys</strong></td>
+                  <td class="small align-middle"></td>
+                  <td class="text-end small align-middle">
                     <strong>{{ totalKeys }}</strong>
                   </td>
                 </tr>
-                <tr v-if="totalDecalKeys > 0" class="table-summary">
-                  <td><strong>Regular Keys</strong></td>
-                  <td></td>
-                  <td class="text-end">
+                <tr v-if="totalDecalKeys > 0" class="table-active border-top">
+                  <td class="small align-middle"><strong>Regular Keys</strong></td>
+                  <td class="small align-middle"></td>
+                  <td class="text-end small align-middle">
                     <strong>{{ totalKeysWithoutDecals }}</strong>
                   </td>
                 </tr>
-                <tr v-if="totalDecalKeys > 0" class="table-summary">
-                  <td><strong>Decal Keys</strong></td>
-                  <td></td>
-                  <td class="text-end">
+                <tr v-if="totalDecalKeys > 0" class="table-active border-top">
+                  <td class="small align-middle"><strong>Decal Keys</strong></td>
+                  <td class="small align-middle"></td>
+                  <td class="text-end small align-middle">
                     <strong>{{ totalDecalKeys }}</strong>
                   </td>
                 </tr>
@@ -334,52 +334,30 @@ const keysBySizeAndColor = computed(() => {
 
 <style scoped>
 .summary-panel {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
+  background: var(--bs-tertiary-bg);
+  border: 1px solid var(--bs-border-color);
   border-radius: 6px;
   padding: 12px;
   height: 100%;
 }
 
 .section-title {
-  color: #495057;
+  color: var(--bs-secondary-color);
   font-weight: 600;
-}
-
-.table {
-  margin-bottom: 0;
-  background: white;
-}
-
-.table th {
-  background: #f8f9fa;
-  border-top: none;
-  font-weight: 600;
-  font-size: 0.875rem;
-  color: #495057;
-  height: 2.5rem;
-  padding: 0.375rem 0.75rem;
-}
-
-.table td {
-  font-size: 0.875rem;
-  vertical-align: middle;
-  height: 2.5rem;
-  padding: 0.375rem 0.75rem;
 }
 
 .color-swatch {
   width: 16px;
   height: 16px;
   border-radius: 2px;
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--bs-border-color);
   flex-shrink: 0;
 }
 
 .color-code {
   font-size: 0.7rem;
-  color: #6c757d;
-  background: #f8f9fa;
+  color: var(--bs-secondary);
+  background: var(--bs-tertiary-bg);
   padding: 0.1rem 0.2rem;
   border-radius: 0.25rem;
   line-height: 1;
@@ -391,15 +369,6 @@ const keysBySizeAndColor = computed(() => {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.table .table-summary {
-  background-color: #f8f9fa !important;
-  border-top: 1px solid #dee2e6 !important;
-}
-
-.table .table-summary td {
-  background-color: #f8f9fa !important;
-}
-
 /* Responsive adjustments */
 @media (max-width: 576px) {
   .summary-panel {
@@ -408,10 +377,6 @@ const keysBySizeAndColor = computed(() => {
 
   .metric-value {
     font-size: 1.25rem;
-  }
-
-  .table {
-    font-size: 0.8rem;
   }
 
   .color-code {

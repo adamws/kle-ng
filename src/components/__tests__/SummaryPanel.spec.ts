@@ -232,7 +232,7 @@ describe('SummaryPanel', () => {
         },
       })
 
-      const summaryRows = wrapper.findAll('.table-summary')
+      const summaryRows = wrapper.findAll('.table-active')
       expect(summaryRows).toHaveLength(3) // Total, Regular, Decal
 
       const tableText = wrapper.find('tbody').text()
@@ -250,7 +250,7 @@ describe('SummaryPanel', () => {
         },
       })
 
-      const summaryRows = wrapper.findAll('.table-summary')
+      const summaryRows = wrapper.findAll('.table-active')
       expect(summaryRows).toHaveLength(1) // Only Total Keys
 
       const tableText = wrapper.find('tbody').text()
@@ -301,7 +301,7 @@ describe('SummaryPanel', () => {
       // Switch to size-color view
       await wrapper.find('input[value="size-color"]').setValue(true)
 
-      const rows = wrapper.findAll('tbody tr:not(.table-summary)')
+      const rows = wrapper.findAll('tbody tr:not(.table-active)')
       expect(rows).toHaveLength(2) // Two different color groups
 
       // Should have one row with count 2 (red keys) and one with count 1 (green key)
@@ -327,11 +327,11 @@ describe('SummaryPanel', () => {
       })
 
       // Check individual counts
-      const rows = wrapper.findAll('tbody tr:not(.table-summary)')
+      const rows = wrapper.findAll('tbody tr:not(.table-active)')
       expect(rows).toHaveLength(3) // 1x1 (count 2), 2x1 (count 1), 6.25x1 (count 1)
 
       // Check total
-      expect(wrapper.find('.table-summary').text()).toContain('Total Keys4')
+      expect(wrapper.find('.table-active').text()).toContain('Total Keys4')
     })
 
     it('should sort keys by count descending', () => {
@@ -349,7 +349,7 @@ describe('SummaryPanel', () => {
         },
       })
 
-      const dataRows = wrapper.findAll('tbody tr:not(.table-summary)')
+      const dataRows = wrapper.findAll('tbody tr:not(.table-active)')
 
       // First row should be the most frequent (2x1 with count 3)
       expect(dataRows[0].text()).toContain('2 × 1')

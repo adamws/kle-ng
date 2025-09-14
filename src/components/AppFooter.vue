@@ -3,7 +3,7 @@
     <div class="container">
       <div class="row">
         <div class="col-md-6">
-          <div class="text-muted"><strong>Keyboard Layout Editor NG</strong> v{{ version }}</div>
+          <div><strong>Keyboard Layout Editor NG</strong> v{{ version }}</div>
           Successor of
           <a
             href="https://www.keyboard-layout-editor.com/"
@@ -39,25 +39,8 @@ const version = packageJson.version
 </script>
 
 <style scoped>
-.footer-links a {
-  color: #6c757d;
-  font-size: 0.9rem;
-  line-height: 1.6;
-}
-
-.footer-links a:hover {
-  color: var(--kle-primary);
-}
-
-.text-muted {
-  font-size: 0.9rem;
-  line-height: 1.6;
-}
-
 #footer {
   margin-top: auto; /* Push footer to bottom */
-  border-top: 1px solid var(--kle-border);
-  background-color: var(--kle-light) !important;
 }
 
 /* Responsive adjustments */

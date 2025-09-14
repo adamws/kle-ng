@@ -1549,8 +1549,8 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
 
 /* Property groups styling */
 .property-group {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
+  background: var(--bs-tertiary-bg);
+  border: 1px solid var(--bs-border-color);
   border-radius: 6px;
   padding: 12px;
   height: 100%;
@@ -1559,11 +1559,11 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
 .property-group-title {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #495057;
+  color: var(--bs-secondary-color);
   margin-bottom: 8px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border-bottom: 1px solid #dee2e6;
+  border-bottom: 1px solid var(--bs-border-color);
   padding-bottom: 4px;
 }
 
@@ -1580,7 +1580,7 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
 
 .form-control-color {
   padding: 0.125rem;
-  border: 1px solid #ced4da;
+  border: 1px solid var(--bs-border-color);
 }
 
 /* Labels grid - 3x3 layout with color pickers */
@@ -1588,8 +1588,8 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 4px;
-  background: #fff;
-  border: 1px solid #dee2e6;
+  background: white;
+  border: 1px solid var(--bs-border-color);
   border-radius: 4px;
   padding: 6px;
 }
@@ -1606,7 +1606,7 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
 }
 
 .labels-grid .form-control {
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--bs-border-color);
   font-size: 0.7rem;
   padding: 0.125rem 0.25rem;
   min-height: 24px;
@@ -1631,7 +1631,7 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
   padding: 0.125rem 0.25rem !important;
   min-height: 24px;
   flex: 1;
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--bs-border-color);
   font-weight: 500;
 }
 
@@ -1639,8 +1639,8 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 4px;
-  background: #fff;
-  border: 1px solid #dee2e6;
+  background: white;
+  border: 1px solid var(--bs-border-color);
   border-radius: 4px;
   padding: 6px;
 }
@@ -1733,7 +1733,7 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
 
 .control-label {
   font-size: 0.65rem;
-  color: #666;
+  color: var(--bs-secondary);
   font-weight: 500;
   display: block;
   margin-bottom: 1px;
@@ -1783,8 +1783,8 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #dee2e6;
-  border: 1px solid #ced4da;
+  background-color: var(--bs-secondary-bg);
+  border: 1px solid var(--bs-border-color);
   border-radius: 10px;
   transition: 0.2s;
   display: flex;
@@ -1795,7 +1795,7 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
 
 /* Remove the different background for checked state - keep consistent */
 .toggle-input:checked + .toggle-slider {
-  background-color: #dee2e6;
+  background-color: var(--bs-border-color);
   border-color: #ced4da;
 }
 
@@ -1830,7 +1830,7 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
 
 .toggle-label-left {
   left: 6px;
-  color: #666;
+  color: var(--bs-secondary);
 }
 
 .toggle-label-right {
@@ -1839,11 +1839,11 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
 }
 
 .toggle-input:checked + .toggle-slider .toggle-label-left {
-  color: #666;
+  color: var(--bs-secondary);
 }
 
 .toggle-input:checked + .toggle-slider .toggle-label-right {
-  color: #666;
+  color: var(--bs-secondary);
 }
 
 /* Disabled state styling */
@@ -1853,12 +1853,12 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
 }
 
 .toggle-switch.disabled .toggle-slider {
-  background-color: #f8f9fa;
-  border-color: #e9ecef;
+  background-color: var(--bs-secondary-bg);
+  border-color: var(--bs-border-color);
 }
 
 .toggle-switch.disabled .toggle-label {
-  color: #adb5bd;
+  color: var(--bs-secondary-bg);
 }
 
 .toggle-switch.disabled .toggle-slider::before {
@@ -1866,7 +1866,7 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
 }
 
 .toggle-input:not(:checked) + .toggle-slider .toggle-label-left {
-  color: #666;
+  color: var(--bs-secondary);
 }
 
 .toggle-input:not(:checked) + .toggle-slider .toggle-label-right {

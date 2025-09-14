@@ -121,8 +121,8 @@ const updateBackcolor = () => {
 
 <style scoped>
 .keyboard-metadata-panel {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
+  background: var(--bs-tertiary-bg);
+  border: 1px solid var(--bs-border-color);
   border-radius: 6px;
   padding: 12px;
   height: 100%;
@@ -135,7 +135,7 @@ const updateBackcolor = () => {
 
 .form-control-color {
   padding: 0.125rem;
-  border: 1px solid #ced4da;
+  border: 1px solid var(--bs-border-color);
 }
 
 .form-label.small {

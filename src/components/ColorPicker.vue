@@ -201,7 +201,7 @@ onUnmounted(() => {
   left: 0;
   z-index: 1000;
   background: white;
-  border: 1px solid #ccc;
+  border: 1px solid var(--bs-border-color);
   border-radius: 4px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   padding: 15px;
@@ -211,7 +211,7 @@ onUnmounted(() => {
 .color-picker-footer {
   margin-top: 10px;
   text-align: center;
-  border-top: 1px solid #dee2e6;
+  border-top: 1px solid var(--bs-border-color);
   padding-top: 10px;
 }
 

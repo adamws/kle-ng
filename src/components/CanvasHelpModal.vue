@@ -224,10 +224,10 @@ onUnmounted(() => {
 }
 
 .interaction-column {
-  background: #f8f9fa;
+  background: var(--bs-tertiary-bg);
   border-radius: 8px;
   padding: 1.25rem;
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--bs-border-color);
 }
 
 .section-title {
@@ -282,7 +282,7 @@ onUnmounted(() => {
   border-radius: 3px;
   font-size: 0.75rem;
   font-family: monospace;
-  border: 1px solid #343a40;
+  border: 1px solid var(--bs-border-color);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
@@ -303,7 +303,7 @@ onUnmounted(() => {
   font-weight: 600;
   margin-bottom: 1rem;
   padding-bottom: 0.5rem;
-  border-bottom: 2px solid #e9ecef;
+  border-bottom: 2px solid var(--bs-border-color);
 }
 
 .help-content {

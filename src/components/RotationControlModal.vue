@@ -247,13 +247,13 @@ onUnmounted(() => {
   background: white;
   border-radius: 8px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  border: 1px solid #ddd;
+  border: 1px solid var(--bs-border-color);
   overflow: hidden;
 }
 
 .panel-header {
-  background: #f8f9fa;
-  border-bottom: 1px solid #dee2e6;
+  background: var(--bs-tertiary-bg);
+  border-bottom: 1px solid var(--bs-border-color);
   padding: 8px 12px;
   display: flex;
   align-items: center;
@@ -266,13 +266,13 @@ onUnmounted(() => {
   font-size: 0.9rem;
   font-weight: 600;
   margin: 0;
-  color: #495057;
+  color: var(--bs-secondary-color);
   display: flex;
   align-items: center;
 }
 
 .drag-handle {
-  color: #6c757d;
+  color: var(--bs-secondary);
   cursor: grab;
 }
 
@@ -287,19 +287,19 @@ onUnmounted(() => {
 }
 
 .panel-footer {
-  border-top: 1px solid #dee2e6;
+  border-top: 1px solid var(--bs-border-color);
   padding: 8px 12px;
   display: flex;
   justify-content: flex-end;
   gap: 6px;
-  background: #f8f9fa;
+  background: var(--bs-tertiary-bg);
 }
 
 .rotation-info {
-  background: #f8f9fa;
+  background: var(--bs-tertiary-bg);
   padding: 8px 12px;
   border-radius: 4px;
-  border-left: 3px solid #007bff;
+  border-left: 3px solid var(--bs-primary);
 }
 
 .angle-buttons .btn {
@@ -345,7 +345,7 @@ onUnmounted(() => {
 
 /* Highlight current angle input when focused */
 .angle-input .form-control:focus {
-  border-color: #007bff;
+  border-color: var(--bs-primary);
   box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 }
 </style>
