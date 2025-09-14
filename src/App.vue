@@ -423,8 +423,9 @@ const stopResize = () => {
 
 .draggable-section {
   transition: all 0.2s ease;
-  margin-left: 0;
-  margin-right: 0;
+  margin-top: 1rem;
+  margin-left: 6px;
+  margin-right: 6px;
 }
 
 .drag-handle {
