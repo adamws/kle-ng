@@ -60,7 +60,7 @@
                 :model-value="uSpacing.x"
                 @update:modelValue="updateUSpacingX"
                 @change="updateUSpacingX"
-                :step="0.1"
+                :step="0.05"
                 :min="10"
                 :max="30"
               >
@@ -73,7 +73,7 @@
                 :model-value="uSpacing.y"
                 @update:modelValue="updateUSpacingY"
                 @change="updateUSpacingY"
-                :step="0.1"
+                :step="0.05"
                 :min="10"
                 :max="30"
               >

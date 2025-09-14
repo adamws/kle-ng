@@ -208,8 +208,8 @@ test.describe('Move Exactly Tool', () => {
       await expect(page.locator('#unit-mm')).toBeChecked()
 
       // Verify default spacing values (19.05mm per U)
-      const xSpacingInput = page.locator('input[step="0.1"][min="10"][max="30"]').first()
-      const ySpacingInput = page.locator('input[step="0.1"][min="10"][max="30"]').last()
+      const xSpacingInput = page.locator('input[step="0.05"][min="10"][max="30"]').first()
+      const ySpacingInput = page.locator('input[step="0.05"][min="10"][max="30"]').last()
       await expect(xSpacingInput).toHaveValue('19.05')
       await expect(ySpacingInput).toHaveValue('19.05')
 
@@ -259,8 +259,8 @@ test.describe('Move Exactly Tool', () => {
       await expect(page.locator('#unit-mm')).toBeChecked()
 
       // Set custom spacing values
-      const xSpacingInput = page.locator('input[step="0.1"][min="10"][max="30"]').first()
-      const ySpacingInput = page.locator('input[step="0.1"][min="10"][max="30"]').last()
+      const xSpacingInput = page.locator('input[step="0.05"][min="10"][max="30"]').first()
+      const ySpacingInput = page.locator('input[step="0.05"][min="10"][max="30"]').last()
       await xSpacingInput.fill('18')
       await ySpacingInput.fill('17')
 
@@ -374,8 +374,8 @@ test.describe('Move Exactly Tool', () => {
       await expect(page.locator('#unit-mm')).toBeChecked()
 
       // Verify default spacing values (19.05mm per U)
-      const xSpacingInput = page.locator('input[step="0.1"][min="10"][max="30"]').first()
-      const ySpacingInput = page.locator('input[step="0.1"][min="10"][max="30"]').last()
+      const xSpacingInput = page.locator('input[step="0.05"][min="10"][max="30"]').first()
+      const ySpacingInput = page.locator('input[step="0.05"][min="10"][max="30"]').last()
       await expect(xSpacingInput).toHaveValue('19.05')
       await expect(ySpacingInput).toHaveValue('19.05')
 
