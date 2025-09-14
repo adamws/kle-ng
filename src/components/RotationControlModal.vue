@@ -45,7 +45,7 @@
         </div>
 
         <!-- Current angle display and direct input -->
-        <div class="angle-input mb-3">
+        <div v-if="rotationOrigin" class="angle-input mb-3">
           <div class="d-flex align-items-center gap-3">
             <label class="form-label small mb-0 text-nowrap">Rotation Change (degrees):</label>
             <div class="input-group flex-grow-1">
@@ -85,6 +85,7 @@
           Cancel
         </button>
         <button
+          v-if="rotationOrigin"
           type="button"
           class="btn btn-primary btn-sm"
           :disabled="!rotationOrigin"
