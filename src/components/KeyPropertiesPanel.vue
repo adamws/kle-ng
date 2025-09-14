@@ -560,66 +560,60 @@
                     Clear all
                   </button>
                 </div>
-                <div class="row g-1">
-                  <div class="col-4">
-                    <div class="front-label-group">
-                      <input
-                        v-model="labels[9]"
-                        @input="updateLabel(9)"
-                        type="text"
-                        class="form-control form-control-sm text-center"
-                        title="Front Left"
-                      />
-                      <ColorPicker
-                        v-model="labelColors[9]"
-                        @change="updateLabelColor(9)"
-                        @input="updateLabelColorPreview(9)"
-                        :disabled="isDisabled"
-                        class="label-color-picker-small"
-                        style="width: 16px; height: 16px; flex: none; border-radius: 0"
-                        title="Front Left Color"
-                      />
-                    </div>
+                <div class="labels-grid">
+                  <div class="label-input-group">
+                    <input
+                      v-model="labels[9]"
+                      @input="updateLabel(9)"
+                      type="text"
+                      class="form-control form-control-sm text-center"
+                      title="Top Left"
+                    />
+                    <ColorPicker
+                      v-model="labelColors[9]"
+                      @change="updateLabelColor(9)"
+                      @input="updateLabelColorPreview(9)"
+                      :disabled="isDisabled"
+                      class="label-color-picker"
+                      style="width: 16px; height: 16px; flex: none; border-radius: 0"
+                      title="Top Left Color"
+                    />
                   </div>
-                  <div class="col-4">
-                    <div class="front-label-group">
-                      <input
-                        v-model="labels[10]"
-                        @input="updateLabel(10)"
-                        type="text"
-                        class="form-control form-control-sm text-center"
-                        title="Front Center"
-                      />
-                      <ColorPicker
-                        v-model="labelColors[10]"
-                        @change="updateLabelColor(10)"
-                        @input="updateLabelColorPreview(10)"
-                        :disabled="isDisabled"
-                        class="label-color-picker-small"
-                        style="width: 16px; height: 16px; flex: none; border-radius: 0"
-                        title="Front Center Color"
-                      />
-                    </div>
+                  <div class="label-input-group">
+                    <input
+                      v-model="labels[10]"
+                      @input="updateLabel(10)"
+                      type="text"
+                      class="form-control form-control-sm text-center"
+                      title="Top Center"
+                    />
+                    <ColorPicker
+                      v-model="labelColors[10]"
+                      @change="updateLabelColor(10)"
+                      @input="updateLabelColorPreview(10)"
+                      :disabled="isDisabled"
+                      class="label-color-picker"
+                      style="width: 16px; height: 16px; flex: none; border-radius: 0"
+                      title="Top Center Color"
+                    />
                   </div>
-                  <div class="col-4">
-                    <div class="front-label-group">
-                      <input
-                        v-model="labels[11]"
-                        @input="updateLabel(11)"
-                        type="text"
-                        class="form-control form-control-sm text-center"
-                        title="Front Right"
-                      />
-                      <ColorPicker
-                        v-model="labelColors[11]"
-                        @change="updateLabelColor(11)"
-                        @input="updateLabelColorPreview(11)"
-                        :disabled="isDisabled"
-                        class="label-color-picker-small"
-                        style="width: 16px; height: 16px; flex: none; border-radius: 0"
-                        title="Front Right Color"
-                      />
-                    </div>
+                  <div class="label-input-group">
+                    <input
+                      v-model="labels[11]"
+                      @input="updateLabel(11)"
+                      type="text"
+                      class="form-control form-control-sm text-center"
+                      title="Top Right"
+                    />
+                    <ColorPicker
+                      v-model="labelColors[11]"
+                      @change="updateLabelColor(11)"
+                      @input="updateLabelColorPreview(11)"
+                      :disabled="isDisabled"
+                      class="label-color-picker"
+                      style="width: 16px; height: 16px; flex: none; border-radius: 0"
+                      title="Top Right Color"
+                    />
                   </div>
                 </div>
               </div>
