@@ -440,9 +440,9 @@ watch([() => props.disabled, () => props.min, () => props.max], () => {
   width: var(--suffix-width, auto);
   min-width: 20px;
   max-width: 80px;
-  background: var(--bg-secondary);
-  border-left: 1px solid var(--border-primary);
-  color: var(--text-secondary);
+  background: var(--bs-secondary-bg);
+  border-left: 1px solid var(--bs-border-color);
+  color: var(--bs-secondary-color);
   font-size: inherit;
   font-weight: 500;
   pointer-events: none;
@@ -457,20 +457,24 @@ watch([() => props.disabled, () => props.min, () => props.max], () => {
 
 .spinner-buttons {
   position: absolute;
-  right: 1px;
-  top: 1px;
-  bottom: 1px;
+  right: 0px;
+  top: 0px;
+  height: 32px;
   width: 30px;
   display: flex;
   flex-direction: column;
-  border-left: 1px solid var(--border-primary);
+  border: 1px solid var(--bs-border-color);
+  border-left: 1px solid var(--bs-border-color);
+  border-top-right-radius: var(--bs-border-radius);
+  border-bottom-right-radius: var(--bs-border-radius);
+  overflow: hidden;
 }
 
 .spinner-btn {
   flex: 1;
-  background: var(--bg-secondary);
+  background: var(--bs-secondary-bg);
   border: none;
-  color: var(--text-secondary);
+  color: var(--bs-secondary-color);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -479,11 +483,26 @@ watch([() => props.disabled, () => props.min, () => props.max], () => {
   line-height: 1;
   transition: all 0.15s ease;
   user-select: none;
+  position: relative;
+}
+
+.spinner-btn:first-child {
+  border-bottom: 1px solid var(--bs-border-color);
+}
+
+.spinner-btn:hover {
+  background: var(--bs-primary-bg-subtle);
+  color: var(--bs-primary-text-emphasis);
 }
 
 .spinner-btn:disabled {
-  color: var(--text-muted);
+  color: var(--bs-secondary-color);
   cursor: not-allowed;
+}
+
+.spinner-btn:disabled:hover {
+  background: var(--bs-secondary-bg);
+  color: var(--bs-secondary-color);
 }
 
 /* Focus state */
@@ -492,10 +511,16 @@ watch([() => props.disabled, () => props.min, () => props.max], () => {
   box-shadow: 0 0 0 2px var(--bs-primary);
 }
 
+.input-focused .spinner-buttons {
+  border-top-color: #86b7fe;
+  border-right-color: #86b7fe;
+  border-bottom-color: #86b7fe;
+}
+
 /* Disabled state */
 .input-disabled .spinner-btn {
-  background: var(--bg-accent);
-  color: var(--text-muted);
+  background: var(--bs-secondary-bg-subtle);
+  color: var(--bs-secondary-color);
   cursor: not-allowed;
 }
 
@@ -506,6 +531,7 @@ watch([() => props.disabled, () => props.min, () => props.max], () => {
 
 .custom-number-input input.form-control-sm ~ .spinner-buttons {
   width: 26px;
+  height: 32px;
 }
 
 .custom-number-input input.form-control-sm ~ .spinner-buttons .spinner-btn {
@@ -521,12 +547,13 @@ watch([() => props.disabled, () => props.min, () => props.max], () => {
 }
 
 .custom-number-input.size-default .spinner-buttons {
-  width: 30px;
+  width: 30px !important;
+  height: 32px !important;
   font-size: 10px;
 }
 
 .custom-number-input.size-default .input-suffix {
-  right: 27px;
+  right: 30px;
   font-size: 0.875rem;
   height: 30px;
   line-height: 30px;
@@ -548,10 +575,13 @@ watch([() => props.disabled, () => props.min, () => props.max], () => {
 
 .custom-number-input.size-compact .spinner-buttons {
   width: 18px !important;
-  top: 1px !important;
-  right: 1px !important;
+  height: 24px !important;
+  top: 0px !important;
+  right: 0px !important;
   font-size: 7px;
   line-height: 1;
+  border-top-right-radius: var(--bs-border-radius-sm);
+  border-bottom-right-radius: var(--bs-border-radius-sm);
 }
 
 .custom-number-input.size-compact .input-suffix {
@@ -565,6 +595,7 @@ watch([() => props.disabled, () => props.min, () => props.max], () => {
 /* Override form-control-sm rules for compact variant */
 .custom-number-input.size-compact input.form-control-sm ~ .spinner-buttons {
   width: 18px !important;
+  height: 24px !important;
 }
 
 .custom-number-input.size-compact input.form-control-sm ~ .spinner-buttons .spinner-btn {
