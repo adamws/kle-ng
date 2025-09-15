@@ -21,7 +21,7 @@ describe('KeyboardToolbar', () => {
   })
 
   describe('preset dropdown', () => {
-    it('should have "Choose Preset..." option disabled', async () => {
+    it('should have "Choose Preset..." as default dropdown text', async () => {
       const wrapper = mount(KeyboardToolbar, {
         global: {
           plugins: [createPinia()],
@@ -30,16 +30,12 @@ describe('KeyboardToolbar', () => {
 
       await wrapper.vm.$nextTick()
 
-      const selectElement = wrapper.find('select.preset-select')
-      expect(selectElement.exists()).toBe(true)
-
-      const placeholderOption = selectElement.find('option[value=""]')
-      expect(placeholderOption.exists()).toBe(true)
-      expect(placeholderOption.text()).toBe('Choose Preset...')
-      expect(placeholderOption.attributes('disabled')).toBeDefined()
+      const dropdownButton = wrapper.find('button.preset-select')
+      expect(dropdownButton.exists()).toBe(true)
+      expect(dropdownButton.text().trim()).toBe('Choose Preset...')
     })
 
-    it('should not allow selecting the placeholder option', async () => {
+    it('should show dropdown menu with preset options', async () => {
       const wrapper = mount(KeyboardToolbar, {
         global: {
           plugins: [createPinia()],
@@ -48,11 +44,14 @@ describe('KeyboardToolbar', () => {
 
       await wrapper.vm.$nextTick()
 
-      const selectElement = wrapper.find('select.preset-select')
+      const dropdownButton = wrapper.find('button.preset-select')
+      expect(dropdownButton.exists()).toBe(true)
 
-      // The placeholder option should be disabled
-      const placeholderOption = selectElement.find('option[value=""]')
-      expect(placeholderOption.attributes('disabled')).toBeDefined()
+      const dropdownMenu = wrapper.find('.dropdown-menu')
+      expect(dropdownMenu.exists()).toBe(true)
+
+      const dropdownItems = wrapper.findAll('.dropdown-item')
+      expect(dropdownItems.length).toBeGreaterThan(0)
     })
 
     it('should load preset when selected', async () => {
@@ -78,21 +77,22 @@ describe('KeyboardToolbar', () => {
 
       await wrapper.vm.$nextTick()
 
-      const selectElement = wrapper.find('select.preset-select')
+      const dropdownItems = wrapper.findAll('.dropdown-item')
+      expect(dropdownItems.length).toBeGreaterThan(0)
 
-      // Select a preset
-      await selectElement.setValue('0')
-      await selectElement.trigger('change')
+      // Click the first preset
+      await dropdownItems[0].trigger('click')
 
-      // Wait for async preset loading to complete - increase timeout for fetch
+      // Wait for async preset loading to complete
       await new Promise((resolve) => setTimeout(resolve, 500))
       await wrapper.vm.$nextTick()
 
       // Should have called loadKLELayout with the mocked data
       expect(loadKLELayoutSpy).toHaveBeenCalledWith(mockPresetData)
 
-      // The selectedPreset should remain selected (not reset)
-      expect((selectElement.element as HTMLSelectElement).value).toBe('0')
+      // The dropdown button should show the selected preset name
+      const dropdownButton = wrapper.find('button.preset-select')
+      expect(dropdownButton.text().trim()).toBe('Test Layout 1')
     })
 
     it('should load available presets from presets.json', async () => {
@@ -104,14 +104,12 @@ describe('KeyboardToolbar', () => {
 
       await wrapper.vm.$nextTick()
 
-      const selectElement = wrapper.find('select.preset-select')
-      const options = selectElement.findAll('option')
+      const dropdownItems = wrapper.findAll('.dropdown-item')
 
-      // Should have placeholder + 2 preset options
-      expect(options.length).toBe(3)
-      expect(options[0].text()).toBe('Choose Preset...')
-      expect(options[1].text()).toBe('Test Layout 1')
-      expect(options[2].text()).toBe('Test Layout 2')
+      // Should have 2 preset options
+      expect(dropdownItems.length).toBe(2)
+      expect(dropdownItems[0].text().trim()).toBe('Test Layout 1')
+      expect(dropdownItems[1].text().trim()).toBe('Test Layout 2')
     })
   })
 

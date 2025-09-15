@@ -95,9 +95,17 @@ test.describe('Keyboard Layout Editor', () => {
   })
 
   test('should load presets', async ({ page }) => {
-    // Select ANSI 104 preset by name (more reliable than index)
-    await page.selectOption('select:has(option:has-text("Choose Preset..."))', {
-      label: 'ANSI 104',
+    // Select ANSI 104 preset by dispatching click event directly
+    await page.waitForSelector('.dropdown-item', { state: 'attached', timeout: 5000 })
+
+    // Dispatch click event to ANSI 104 preset
+    await page.evaluate(() => {
+      const ansiItem = Array.from(document.querySelectorAll('.dropdown-item')).find((item) =>
+        item.textContent?.includes('ANSI 104'),
+      )
+      if (ansiItem) {
+        ansiItem.click()
+      }
     })
 
     // Wait for the preset to load - ANSI 104 should have exactly 104 keys

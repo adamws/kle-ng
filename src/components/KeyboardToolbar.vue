@@ -5,13 +5,22 @@
       class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2 gap-sm-3 justify-content-sm-end"
     >
       <!-- Presets -->
-      <div>
-        <select v-model="selectedPreset" @change="loadPreset" class="form-select preset-select">
-          <option value="" disabled>Choose Preset...</option>
-          <option v-for="(preset, index) in availablePresets" :key="index" :value="index">
-            {{ preset.name }}
-          </option>
-        </select>
+      <div class="dropdown preset-dropdown">
+        <button
+          class="btn btn-outline-secondary dropdown-toggle preset-select"
+          type="button"
+          data-bs-toggle="dropdown"
+          aria-expanded="false"
+        >
+          {{ selectedPresetName || 'Choose Preset...' }}
+        </button>
+        <ul class="dropdown-menu">
+          <li v-for="(preset, index) in availablePresets" :key="index">
+            <a class="dropdown-item" href="#" @click.prevent="selectPreset(index)">
+              {{ preset.name }}
+            </a>
+          </li>
+        </ul>
       </div>
 
       <!-- Import/Export/Share buttons -->
@@ -78,6 +87,7 @@ const keyboardStore = useKeyboardStore()
 
 // Component state
 const selectedPreset = ref('')
+const selectedPresetName = ref('')
 const availablePresets = ref<{ name: string; file: string }[]>([])
 const fileInput = ref<HTMLInputElement>()
 
@@ -97,6 +107,12 @@ onUnmounted(() => {
 })
 
 // Actions
+const selectPreset = async (index: number) => {
+  selectedPreset.value = index.toString()
+  const preset = availablePresets.value[index]
+  selectedPresetName.value = preset?.name || ''
+  await loadPreset()
+}
 
 const loadPreset = async () => {
   if (selectedPreset.value === '') return
@@ -351,19 +367,33 @@ const handleClickOutside = (event: MouseEvent) => {
   min-height: 38px;
 }
 
-.preset-select {
+.preset-dropdown .preset-select {
   width: 200px;
+  flex-shrink: 0;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* Match standard Bootstrap button height and sizing */
+}
+
+.preset-dropdown .preset-select::after {
+  margin-left: 0.5rem;
   flex-shrink: 0;
 }
 
 /* Mobile responsive adjustments */
 @media (max-width: 575.98px) {
-  .preset-select {
+  .preset-dropdown .preset-select {
     width: 100%;
   }
 
   /* Make buttons more compact to fit in one row */
-  .btn-group .btn {
+  .btn-group .btn,
+  .preset-dropdown .preset-select {
     font-size: 0.75rem;
     padding: 0.25rem 0.5rem;
     white-space: nowrap;
@@ -371,7 +401,8 @@ const handleClickOutside = (event: MouseEvent) => {
 }
 
 @media (max-width: 320px) {
-  .btn-group .btn {
+  .btn-group .btn,
+  .preset-dropdown .preset-select {
     font-size: 0.7rem;
     padding: 0.2rem 0.4rem;
   }

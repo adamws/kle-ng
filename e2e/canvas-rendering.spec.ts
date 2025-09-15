@@ -49,8 +49,19 @@ test.describe('Canvas Rendering - Layout Tests', () => {
   })
 
   test('should render ANSI 104 layout', async ({ page }) => {
-    // Load ANSI 104 preset
-    await page.selectOption('select:has(option:has-text("Choose Preset..."))', '1')
+    // Load ANSI 104 preset by directly dispatching click event
+    // Wait for dropdown items to be in DOM
+    await page.waitForSelector('.dropdown-item', { state: 'attached', timeout: 5000 })
+
+    // Dispatch click event directly to ANSI 104 preset
+    await page.evaluate(() => {
+      const ansiItem = Array.from(document.querySelectorAll('.dropdown-item')).find((item) =>
+        item.textContent?.includes('ANSI 104'),
+      )
+      if (ansiItem) {
+        ansiItem.click()
+      }
+    })
 
     // Small wait to ensure the selection event is processed
     await page.waitForTimeout(100)
