@@ -1703,7 +1703,7 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
 
 @media (max-width: 767.98px) {
   .labels-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
     gap: 2px;
   }
 
@@ -1711,15 +1711,18 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
     font-size: 0.65rem;
     padding: 0.1rem 0.2rem;
     min-height: 20px;
+    min-width: 0;
+    width: 100%;
   }
 
   .label-color-picker {
     width: 14px;
     height: 14px;
+    flex-shrink: 0;
   }
 
   .text-size-grid-layout {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
     gap: 2px;
   }
 
@@ -1727,6 +1730,54 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
     font-size: 0.65rem !important;
     padding: 0.1rem 0.2rem !important;
     min-height: 20px;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .labels-grid {
+    gap: 1px;
+  }
+
+  .labels-grid .form-control {
+    font-size: 0.6rem;
+    padding: 0.05rem 0.15rem;
+    min-height: 18px;
+  }
+
+  .label-color-picker {
+    width: 12px;
+    height: 12px;
+  }
+
+  .text-size-grid-layout {
+    gap: 1px;
+  }
+
+  .text-size-input {
+    font-size: 0.6rem !important;
+    padding: 0.05rem 0.15rem !important;
+    min-height: 18px;
+  }
+}
+
+@media (max-width: 400px) {
+  .labels-grid .form-control {
+    font-size: 0.55rem;
+    padding: 0.05rem 0.1rem;
+    min-height: 16px;
+  }
+
+  .label-color-picker {
+    width: 10px;
+    height: 10px;
+  }
+
+  .text-size-input {
+    font-size: 0.55rem !important;
+    padding: 0.05rem 0.1rem !important;
+    min-height: 16px;
   }
 }
 
