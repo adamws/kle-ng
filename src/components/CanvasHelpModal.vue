@@ -14,23 +14,20 @@
           <div class="interactions-grid">
             <!-- Mouse Interactions -->
             <div class="interaction-column">
-              <h6 class="section-title">
-                <i class="bi bi-mouse"></i>
-                Mouse Controls
-              </h6>
+              <h6 class="section-title">Mouse Controls</h6>
               <div class="controls-list">
                 <div class="control-item">
-                  <i class="bi bi-mouse-left control-icon"></i>
+                  <i class="bi bi-mouse control-icon"></i>
                   <div>
                     <strong>Left Click</strong>
-                    <div class="control-desc">Select keys, drag for multi-select</div>
+                    <div class="text-secondary">Select keys, drag for multi-select</div>
                   </div>
                 </div>
                 <div class="control-item">
-                  <i class="bi bi-mouse-wheel control-icon"></i>
+                  <i class="bi bi-mouse control-icon"></i>
                   <div>
-                    <strong>Middle Drag</strong>
-                    <div class="control-desc">Move selected keys</div>
+                    <strong>Middle Click and Drag</strong>
+                    <div class="text-secondary">Move selected keys</div>
                   </div>
                 </div>
               </div>
@@ -38,86 +35,83 @@
 
             <!-- Keyboard Shortcuts -->
             <div class="interaction-column">
-              <h6 class="section-title">
-                <i class="bi bi-keyboard"></i>
-                Keyboard Shortcuts
-              </h6>
+              <h6 class="section-title">Keyboard Shortcuts</h6>
               <div class="controls-list">
                 <div class="control-item">
                   <div class="kbd-combo"><kbd>Ctrl</kbd><kbd>C</kbd></div>
                   <div>
                     <strong>Copy</strong>
-                    <div class="control-desc">Copy selected keys</div>
+                    <div class="text-secondary">Copy selected keys</div>
                   </div>
                 </div>
                 <div class="control-item">
                   <div class="kbd-combo"><kbd>Ctrl</kbd><kbd>V</kbd></div>
                   <div>
                     <strong>Paste</strong>
-                    <div class="control-desc">Paste keys from clipboard</div>
+                    <div class="text-secondary">Paste keys from clipboard</div>
                   </div>
                 </div>
                 <div class="control-item">
                   <div class="kbd-combo"><kbd>Ctrl</kbd><kbd>X</kbd></div>
                   <div>
                     <strong>Cut</strong>
-                    <div class="control-desc">Cut selected keys</div>
+                    <div class="text-secondary">Cut selected keys</div>
                   </div>
                 </div>
                 <div class="control-item">
                   <div class="kbd-combo"><kbd>Del</kbd>/<kbd>Backspace</kbd></div>
                   <div>
                     <strong>Delete</strong>
-                    <div class="control-desc">Remove selected keys</div>
+                    <div class="text-secondary">Remove selected keys</div>
                   </div>
                 </div>
                 <div class="control-item">
                   <div class="kbd-combo"><kbd>Ctrl</kbd><kbd>]</kbd></div>
                   <div>
                     <strong>Next Key</strong>
-                    <div class="control-desc">Select next key in layout order</div>
+                    <div class="text-secondary">Select next key in layout order</div>
                   </div>
                 </div>
                 <div class="control-item">
                   <div class="kbd-combo"><kbd>Ctrl</kbd><kbd>[</kbd></div>
                   <div>
                     <strong>Previous Key</strong>
-                    <div class="control-desc">Select previous key in layout order</div>
+                    <div class="text-secondary">Select previous key in layout order</div>
                   </div>
                 </div>
                 <div class="control-item">
                   <div class="kbd-combo"><kbd>Ctrl</kbd><kbd>Z</kbd></div>
                   <div>
                     <strong>Undo</strong>
-                    <div class="control-desc">Undo last action</div>
+                    <div class="text-secondary">Undo last action</div>
                   </div>
                 </div>
                 <div class="control-item">
                   <div class="kbd-combo"><kbd>Arrows</kbd></div>
                   <div>
                     <strong>Move keys</strong>
-                    <div class="control-desc">Nudge selected keys</div>
+                    <div class="text-secondary">Nudge selected keys</div>
                   </div>
                 </div>
                 <div class="control-item">
                   <div class="kbd-combo"><kbd>A</kbd></div>
                   <div>
                     <strong>Add key</strong>
-                    <div class="control-desc">Add new key to layout</div>
+                    <div class="text-secondary">Add new key to layout</div>
                   </div>
                 </div>
                 <div class="control-item">
                   <div class="kbd-combo"><kbd>Shift</kbd><kbd>←</kbd><kbd>→</kbd></div>
                   <div>
                     <strong>Adjust width</strong>
-                    <div class="control-desc">Change width of selected keys</div>
+                    <div class="text-secondary">Change width of selected keys</div>
                   </div>
                 </div>
                 <div class="control-item">
                   <div class="kbd-combo"><kbd>Shift</kbd><kbd>↑</kbd><kbd>↓</kbd></div>
                   <div>
                     <strong>Adjust height</strong>
-                    <div class="control-desc">Change height of selected keys</div>
+                    <div class="text-secondary">Change height of selected keys</div>
                   </div>
                 </div>
               </div>
@@ -211,7 +205,6 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #007bff;
   font-weight: 600;
 }
 
@@ -234,7 +227,6 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #495057;
   font-weight: 600;
   margin-bottom: 1rem;
   font-size: 1rem;
@@ -253,17 +245,10 @@ onUnmounted(() => {
 
 .control-icon {
   font-size: 1.25rem;
-  color: #007bff;
   display: flex;
   align-items: center;
   justify-self: start;
   align-self: center;
-}
-
-.control-desc {
-  font-size: 0.85rem;
-  color: #6c757d;
-  margin-top: 0.125rem;
 }
 
 /* Keyboard combo styling */
