@@ -282,7 +282,6 @@
                 <!-- Rotation (same as basic) -->
                 <div class="mb-2">
                   <label class="form-label small mb-1">Rotation</label>
-                  <label class="control-label">Degrees</label>
                   <CustomNumberInput
                     v-model="currentRotationAngle"
                     @change="updateRotationAngle"
@@ -294,7 +293,9 @@
                     :wrap-max="360"
                     class="form-control form-control-sm mb-1"
                     title="Rotation Angle in Degrees"
-                  />
+                  >
+                    <template #suffix>degrees</template>
+                  </CustomNumberInput>
                   <div class="d-flex justify-content-between align-items-center mb-1">
                     <label class="form-label small mb-0">{{
                       isRelativeRotationMode ? 'Origin Point (relative)' : 'Origin Point (absolute)'
