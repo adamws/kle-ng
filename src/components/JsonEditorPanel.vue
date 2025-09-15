@@ -11,17 +11,17 @@
             <i class="bi bi-pencil"></i> Unsaved changes
           </div>
           <div v-else class="text-success small"><i class="bi bi-check"></i> Valid JSON</div>
-          <div class="btn-group btn-group-sm">
+          <div class="d-flex gap-2">
             <button
               @click="formatJson"
-              class="btn btn-outline-secondary"
+              class="btn btn-outline-secondary btn-sm"
               :disabled="hasJsonError || isDisabled"
             >
               Format
             </button>
             <button
               @click="applyChanges"
-              class="btn btn-primary"
+              class="btn btn-primary btn-sm"
               :disabled="hasJsonError || isDisabled"
             >
               Apply Changes
