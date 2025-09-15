@@ -15,4 +15,14 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  css: {
+    preprocessorOptions: {
+      scss: {
+        // Suppress Sass deprecation warnings from Bootstrap
+        quietDeps: true,
+        // Additional options to suppress specific warnings
+        silenceDeprecations: ['import', 'global-builtin', 'color-functions']
+      }
+    }
+  },
 })
