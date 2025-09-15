@@ -173,8 +173,8 @@ onUnmounted(() => {
 }
 
 .color-picker-button:hover:not(.disabled) {
-  border-color: #86b7fe;
-  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+  border-color: var(--input-focus-border-color);
+  box-shadow: 0 0 0 0.25rem var(--bs-focus-ring-color);
 }
 
 .color-picker-button.disabled {

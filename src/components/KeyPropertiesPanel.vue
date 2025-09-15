@@ -1606,7 +1606,6 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
 }
 
 .labels-grid .form-control {
-  border: 1px solid var(--bs-border-color);
   font-size: 0.7rem;
   padding: 0.125rem 0.25rem;
   min-height: 24px;

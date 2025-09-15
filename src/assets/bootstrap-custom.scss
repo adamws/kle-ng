@@ -1,4 +1,21 @@
 // Bootstrap customization
 $primary: #00ab91;
+$primary-opacity: rgba(0, 171, 145, 0.15);
+
+$input-focus-border-color: $primary;
 
 @import 'bootstrap/scss/bootstrap';
+
+:root {
+  --input-focus-border-color: #{$input-focus-border-color};
+}
+
+.form-control:focus {
+  border-color: var(--input-focus-border-color);
+  box-shadow: 0 0 0 2px var(--input-focus-border-color);
+}
+
+textarea.form-control:focus {
+  border-color: var(--input-focus-border-color);
+  box-shadow: 0 0 0 2px var(--input-focus-border-color);
+}

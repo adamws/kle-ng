@@ -491,7 +491,7 @@ watch([() => props.disabled, () => props.min, () => props.max], () => {
 }
 
 .spinner-btn:hover {
-  background: var(--bs-primary-bg-subtle);
+  background: var(--bs-primary);
   color: var(--bs-primary-text-emphasis);
 }
 
@@ -505,16 +505,10 @@ watch([() => props.disabled, () => props.min, () => props.max], () => {
   color: var(--bs-secondary-color);
 }
 
-/* Focus state */
-.input-focused input {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--bs-primary);
-}
-
 .input-focused .spinner-buttons {
-  border-top-color: #86b7fe;
-  border-right-color: #86b7fe;
-  border-bottom-color: #86b7fe;
+  border-top-color: var(--input-focus-border-color);
+  border-right-color: var(--input-focus-border-color);
+  border-bottom-color: var(--input-focus-border-color);
 }
 
 /* Disabled state */
