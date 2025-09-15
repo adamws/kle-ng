@@ -47,12 +47,12 @@
 
       <!-- Right Column: Notes -->
       <div class="col-md-6">
-        <div class="mb-3 h-100">
+        <div class="h-100 d-flex flex-column">
           <label class="form-label small mb-1">Notes</label>
           <textarea
             v-model="currentNotes"
             @input="updateMetadata('notes', currentNotes)"
-            class="form-control form-control-sm h-100"
+            class="form-control form-control-sm flex-grow-1"
             placeholder="Add notes about your keyboard layout..."
             style="min-height: 120px; resize: none"
           ></textarea>
