@@ -170,8 +170,7 @@ window.addEventListener('canvas-focus-change', (event: Event) => {
 <style scoped>
 /* Canvas footer theme support */
 .canvas-footer {
-  background-color: var(--bs-secondary-bg);
-  color: var(--bs-body-color);
+  background-color: var(--bs-tertiary-bg);
 }
 
 .zoom-indicator {
@@ -181,7 +180,6 @@ window.addEventListener('canvas-focus-change', (event: Event) => {
   padding: 4px 8px;
   font-size: 0.75rem;
   text-align: center;
-  color: var(--bs-body-color);
   font-weight: 500;
 }
 
@@ -191,7 +189,6 @@ window.addEventListener('canvas-focus-change', (event: Event) => {
   border-radius: 4px;
   padding: 4px 8px;
   font-size: 0.75rem;
-  color: var(--bs-body-color);
   font-weight: 500;
   font-family: monospace;
   display: flex;
@@ -202,7 +199,6 @@ window.addEventListener('canvas-focus-change', (event: Event) => {
 }
 
 .position-label {
-  color: var(--bs-secondary);
   font-weight: normal;
   white-space: nowrap;
 }

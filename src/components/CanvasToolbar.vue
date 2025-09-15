@@ -419,7 +419,6 @@ onUnmounted(() => {
 .section-label {
   font-size: 10px;
   font-weight: 600;
-  color: var(--bs-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 2px;
@@ -539,12 +538,12 @@ onUnmounted(() => {
 
 .primary-add-btn {
   border-radius: 6px 6px 2px 2px;
-  border-bottom: 1px solid #adb5bd;
 }
 
 .dropdown-btn {
   height: 16px;
-  border-radius: 2px 2px 6px 6px;
+  max-height: 16px;
+  border-radius: 0px 0px 6px 6px;
   border-top: none;
   display: flex;
   align-items: center;
