@@ -585,7 +585,7 @@ watch([() => props.disabled, () => props.min, () => props.max], () => {
 }
 
 .custom-number-input.size-compact .input-suffix {
-  right: 19px;
+  right: 18px;
   font-size: 0.7rem;
   height: 22px;
   line-height: 22px;

@@ -252,6 +252,10 @@ window.addEventListener('canvas-focus-change', (event: Event) => {
   min-width: 80px; /* Assume max ~999 selected */
 }
 
+.move-step-control {
+  min-width: 110px;
+}
+
 /* Mobile responsive adjustments */
 @media (max-width: 575.98px) {
   .canvas-status > * {
