@@ -1543,9 +1543,18 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
 </script>
 
 <style scoped>
-/* Panel columns minimum width styling */
+/* Panel columns minimum width styling (too have same width for normal and advanced mode) */
 .key-properties-panel .col-lg-3.col-md-6 {
   min-width: 340px;
+}
+
+/* Remove minimum width on mobile to allow even spacing */
+@media (max-width: 575.98px) {
+  .key-properties-panel .col-lg-3.col-md-6 {
+    min-width: unset;
+    padding-left: 0px;
+    padding-right: 0px;
+  }
 }
 
 /* Property groups styling */
@@ -1735,6 +1744,10 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
 }
 
 @media (max-width: 575.98px) {
+  .property-group {
+    padding: 8px;
+  }
+
   .labels-grid {
     gap: 1px;
   }
@@ -1762,6 +1775,10 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
 }
 
 @media (max-width: 400px) {
+  .property-group {
+    padding: 6px;
+  }
+
   .labels-grid .form-control {
     font-size: 0.55rem;
     padding: 0.05rem 0.1rem;
