@@ -94,11 +94,11 @@ onUnmounted(() => {
   right: 20px;
   min-width: 320px;
   max-width: 500px;
-  background: white;
+  background: var(--bs-body-bg);
+  color: var(--bs-body-color);
+  border: 1px solid var(--bs-border-color);
   border-radius: 8px;
-  box-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.15),
-    0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--bs-box-shadow);
   border-left: 4px solid;
   z-index: 10001;
   overflow: hidden;

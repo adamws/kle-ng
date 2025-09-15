@@ -484,7 +484,7 @@ onUnmounted(() => {
   height: 38px;
   border: 1px solid var(--bs-border-color);
   border-radius: 6px;
-  background: white;
+  background-color: var(--bs-body-bg);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -506,7 +506,7 @@ onUnmounted(() => {
 .tool-button.active {
   background: var(--bs-primary);
   border-color: var(--bs-primary);
-  color: white;
+  color: var(--bs-primary-text, white);
   box-shadow: 0 2px 6px rgba(0, 123, 255, 0.3);
   transform: translateY(-1px);
 }
@@ -558,10 +558,10 @@ onUnmounted(() => {
 /* Special Keys Dropdown */
 .special-keys-dropdown {
   position: fixed;
-  background: white;
+  background-color: var(--bs-body-bg);
   border: 1px solid var(--bs-border-color);
   border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--bs-box-shadow);
   z-index: 10000;
   min-width: 150px;
   max-height: 300px;
@@ -602,10 +602,10 @@ onUnmounted(() => {
 /* Extra Tools Dropdown */
 .extra-tools-dropdown {
   position: fixed;
-  background: white;
+  background-color: var(--bs-body-bg);
   border: 1px solid var(--bs-border-color);
   border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--bs-box-shadow);
   z-index: 10000;
   min-width: 200px;
   max-height: 300px;

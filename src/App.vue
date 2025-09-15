@@ -11,11 +11,16 @@ import CanvasToolbar from './components/CanvasToolbar.vue'
 import CanvasFooter from './components/CanvasFooter.vue'
 import CanvasHelpModal from './components/CanvasHelpModal.vue'
 import ToastContainer from './components/ToastContainer.vue'
+import ThemeToggle from './components/ThemeToggle.vue'
 import { useKeyboardStore } from '@/stores/keyboard'
+import { useTheme } from '@/composables/useTheme'
 
 const canvasRef = ref<InstanceType<typeof KeyboardCanvas>>()
 
 const keyboardStore = useKeyboardStore()
+
+// Initialize theme composable (theme will be initialized automatically on mount)
+useTheme()
 
 const sectionOrder = ref(['canvas', 'properties', 'json'])
 const draggedSection = ref<string | null>(null)
@@ -240,7 +245,7 @@ const stopResize = () => {
 <template>
   <div id="app" class="d-flex flex-column min-vh-100">
     <!-- Header with integrated toolbar -->
-    <header class="navbar navbar-light bg-light border-bottom py-2">
+    <header class="navbar app-header border-bottom py-2">
       <div class="container-fluid">
         <div
           class="w-100 d-flex flex-column flex-md-row align-items-stretch align-items-md-center gap-2"
@@ -250,6 +255,10 @@ const stopResize = () => {
           </h1>
           <div class="flex-grow-1">
             <KeyboardToolbar />
+          </div>
+          <!-- Add theme toggle to header -->
+          <div class="d-flex align-items-center">
+            <ThemeToggle />
           </div>
         </div>
       </div>
@@ -405,8 +414,15 @@ const stopResize = () => {
   border: 1px solid var(--bs-border-color);
 }
 
+/* Header theme support */
+.app-header {
+  background-color: var(--bs-tertiary-bg);
+  color: var(--bs-body-color);
+}
+
 .navbar-brand {
   font-weight: 500;
+  color: var(--bs-body-color) !important;
 }
 
 .canvas-area {
@@ -429,7 +445,7 @@ const stopResize = () => {
 }
 
 .drag-handle {
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  background-color: var(--bs-secondary-bg);
   border-bottom: 1px solid var(--bs-border-color);
   user-select: none;
   min-height: 28px;
@@ -452,7 +468,7 @@ const stopResize = () => {
 }
 
 .drag-grip:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: var(--bs-secondary-bg);
 }
 
 .section-title {
@@ -493,7 +509,7 @@ const stopResize = () => {
 }
 
 .draggable-container.drag-over .drag-handle {
-  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  background-color: var(--bs-primary-bg-subtle);
   border-color: var(--bs-primary);
 }
 
@@ -580,12 +596,12 @@ const stopResize = () => {
 
 .tab-btn:hover {
   color: var(--bs-secondary-color);
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: var(--bs-secondary-bg);
 }
 
 .tab-btn.active {
   color: var(--bs-body-color);
   font-weight: 600;
-  background-color: rgba(0, 0, 0, 0.08);
+  background-color: var(--bs-tertiary-bg);
 }
 </style>

@@ -164,7 +164,6 @@ onUnmounted(() => {
 
 .color-picker-button {
   cursor: pointer;
-  border: 1px solid #ced4da;
   border-radius: 0;
   padding: 0;
   width: 100%;

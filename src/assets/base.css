@@ -8,7 +8,8 @@
 
 body {
   min-height: 100vh;
-  background: var(--bs-primary-bg);
+  background: var(--bs-body-bg, var(--bs-primary-bg));
+  color: var(--bs-body-color);
   transition:
     color 0.5s,
     background-color 0.5s;

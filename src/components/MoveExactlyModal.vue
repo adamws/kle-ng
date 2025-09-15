@@ -344,15 +344,15 @@ onUnmounted(() => {
 }
 
 .panel-content {
-  background: white;
+  background-color: var(--bs-body-bg);
   border-radius: 8px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--bs-box-shadow-lg);
   border: 1px solid var(--bs-border-color);
   overflow: hidden;
 }
 
 .panel-header {
-  background: #f8f9fa;
+  background-color: var(--bs-tertiary-bg);
   border-bottom: 1px solid var(--bs-border-color);
   padding: 8px 12px;
   display: flex;
@@ -366,7 +366,7 @@ onUnmounted(() => {
   font-size: 0.9rem;
   font-weight: 600;
   margin: 0;
-  color: #495057;
+  color: var(--bs-text-primary);
   display: flex;
   align-items: center;
 }
@@ -392,21 +392,21 @@ onUnmounted(() => {
   display: flex;
   justify-content: flex-end;
   gap: 6px;
-  background: #f8f9fa;
+  background-color: var(--bs-tertiary-bg);
 }
 
 .unit-selection {
-  background: #f8f9fa;
+  background: var(--bs-tertiary-bg);
   padding: 8px 12px;
   border-radius: 4px;
-  border-left: 3px solid #007bff;
+  border-left: 3px solid var(--bs-primary);
 }
 
 .spacing-config {
-  background: #fff8e1;
+  background-color: var(--bs-warning-bg-subtle);
   padding: 8px 12px;
   border-radius: 4px;
-  border-left: 3px solid #ffc107;
+  border-left: 3px solid var(--bs-warning);
 }
 
 .movement-inputs .form-control {

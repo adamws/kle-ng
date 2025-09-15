@@ -1,5 +1,5 @@
 <template>
-  <div class="card-footer bg-light">
+  <div class="card-footer canvas-footer">
     <div
       class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center justify-content-lg-between gap-2 gap-lg-3"
     >
@@ -168,24 +168,30 @@ window.addEventListener('canvas-focus-change', (event: Event) => {
 </script>
 
 <style scoped>
+/* Canvas footer theme support */
+.canvas-footer {
+  background-color: var(--bs-secondary-bg);
+  color: var(--bs-body-color);
+}
+
 .zoom-indicator {
-  background: white;
+  background-color: var(--bs-body-bg);
   border: 1px solid var(--bs-border-color);
   border-radius: 4px;
   padding: 4px 8px;
   font-size: 0.75rem;
   text-align: center;
-  color: #495057;
+  color: var(--bs-body-color);
   font-weight: 500;
 }
 
 .position-indicator {
-  background: white;
+  background-color: var(--bs-body-bg);
   border: 1px solid var(--bs-border-color);
   border-radius: 4px;
   padding: 4px 8px;
   font-size: 0.75rem;
-  color: #495057;
+  color: var(--bs-body-color);
   font-weight: 500;
   font-family: monospace;
   display: flex;
@@ -196,7 +202,7 @@ window.addEventListener('canvas-focus-change', (event: Event) => {
 }
 
 .position-label {
-  color: #6c757d;
+  color: var(--bs-secondary);
   font-weight: normal;
   white-space: nowrap;
 }

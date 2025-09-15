@@ -1,5 +1,5 @@
 <template>
-  <footer id="footer" class="bg-light py-4 mt-auto border-top">
+  <footer id="footer" class="app-footer py-4 mt-auto border-top">
     <div class="container">
       <div class="row">
         <div class="col-md-6">
@@ -39,7 +39,10 @@ const version = packageJson.version
 </script>
 
 <style scoped>
-#footer {
+/* Footer theme support */
+.app-footer {
+  background-color: var(--bs-tertiary-bg);
+  color: var(--bs-body-color);
   margin-top: auto; /* Push footer to bottom */
 }
 

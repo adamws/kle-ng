@@ -276,8 +276,8 @@ onUnmounted(() => {
 }
 
 .kbd-combo kbd {
-  background: #495057;
-  color: white;
+  background-color: var(--bs-secondary);
+  color: var(--bs-secondary-text, white);
   padding: 0.125rem 0.375rem;
   border-radius: 3px;
   font-size: 0.75rem;

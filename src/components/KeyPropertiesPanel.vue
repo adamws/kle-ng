@@ -1589,7 +1589,6 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 4px;
-  background: white;
   border: 1px solid var(--bs-border-color);
   border-radius: 4px;
   padding: 6px;
@@ -1640,7 +1639,6 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 4px;
-  background: white;
   border: 1px solid var(--bs-border-color);
   border-radius: 4px;
   padding: 6px;

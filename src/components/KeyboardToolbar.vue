@@ -425,10 +425,10 @@ const handleClickOutside = (event: MouseEvent) => {
 /* Custom Dropdown Styles */
 .custom-dropdown-menu {
   position: fixed;
-  background: white;
+  background-color: var(--bs-body-bg);
   border: 1px solid var(--bs-border-color);
   border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--bs-box-shadow);
   z-index: 10000;
   min-width: 180px;
   max-height: 300px;
@@ -445,7 +445,7 @@ const handleClickOutside = (event: MouseEvent) => {
   background: none;
   border: none;
   font-size: 14px;
-  color: #495057;
+  color: var(--bs-body-color);
   cursor: pointer;
   transition: background-color 0.15s ease;
   text-decoration: none;
@@ -456,6 +456,6 @@ const handleClickOutside = (event: MouseEvent) => {
 }
 
 .custom-dropdown-menu .dropdown-item:active {
-  background-color: #e9ecef;
+  background-color: var(--bs-secondary-bg);
 }
 </style>

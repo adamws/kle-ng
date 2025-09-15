@@ -244,9 +244,9 @@ onUnmounted(() => {
 }
 
 .panel-content {
-  background: white;
+  background-color: var(--bs-body-bg);
   border-radius: 8px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--bs-box-shadow-lg);
   border: 1px solid var(--bs-border-color);
   overflow: hidden;
 }
@@ -266,7 +266,7 @@ onUnmounted(() => {
   font-size: 0.9rem;
   font-weight: 600;
   margin: 0;
-  color: var(--bs-secondary-color);
+  color: var(--bs-text-primary);
   display: flex;
   align-items: center;
 }
