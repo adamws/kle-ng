@@ -36,7 +36,7 @@
                 v-model="selectedUnit"
                 autocomplete="off"
               />
-              <label class="btn btn-outline-secondary btn-sm" for="unit-u">U</label>
+              <label class="btn btn-outline-primary btn-sm" for="unit-u">U</label>
 
               <input
                 type="radio"
@@ -46,7 +46,7 @@
                 v-model="selectedUnit"
                 autocomplete="off"
               />
-              <label class="btn btn-outline-secondary btn-sm" for="unit-mm">mm</label>
+              <label class="btn btn-outline-primary btn-sm" for="unit-mm">mm</label>
             </div>
           </div>
         </div>

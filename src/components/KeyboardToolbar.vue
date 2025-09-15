@@ -25,7 +25,7 @@
 
       <!-- Import/Export/Share buttons -->
       <div class="btn-group" role="group">
-        <button class="btn btn-secondary" @click="triggerFileUpload" type="button">
+        <button class="btn btn-outline-primary" @click="triggerFileUpload" type="button">
           <span class="d-none d-sm-inline">Import JSON File</span>
           <span class="d-inline d-sm-none">Import</span>
         </button>
@@ -33,7 +33,7 @@
         <div class="btn-group position-relative">
           <button
             ref="exportBtnRef"
-            class="btn btn-success dropdown-toggle"
+            class="btn btn-outline-primary dropdown-toggle"
             @click="toggleExportDropdown"
             type="button"
           >

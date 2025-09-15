@@ -251,7 +251,7 @@ const stopResize = () => {
           class="w-100 d-flex flex-column flex-md-row align-items-stretch align-items-md-center gap-2"
         >
           <h1 class="navbar-brand mb-0 flex-shrink-0 text-center text-md-start">
-            Keyboard Layout Editor NG
+            <strong>Keyboard Layout Editor NG</strong>
           </h1>
           <div class="flex-grow-1">
             <KeyboardToolbar />
@@ -421,8 +421,7 @@ const stopResize = () => {
 }
 
 .navbar-brand {
-  font-weight: 500;
-  color: var(--bs-body-color) !important;
+  color: var(--bs-primary) !important;
 }
 
 .canvas-area {
