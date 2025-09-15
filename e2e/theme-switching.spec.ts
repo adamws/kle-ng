@@ -24,7 +24,8 @@ test.describe('Theme switching functionality', () => {
 
   test('should default to auto theme', async ({ page }) => {
     const themeToggle = page.locator('button[title*="Current theme"]')
-    await expect(themeToggle).toContainText('Auto')
+    const themeIcon = themeToggle.locator('i.bi-circle-half')
+    await expect(themeIcon).toBeVisible()
 
     // HTML element should have data-bs-theme set to light or dark based on system preference when in auto mode
     const htmlElement = page.locator('html')
@@ -37,14 +38,14 @@ test.describe('Theme switching functionality', () => {
     await themeToggle.click()
 
     // Click on Dark option in dropdown
-    await page.click('text=Dark')
+    await page.locator('button:has-text("Dark")').click()
 
     // Verify theme is applied to HTML element
     const htmlElement = page.locator('html')
     await expect(htmlElement).toHaveAttribute('data-bs-theme', 'dark')
 
     // Verify button shows dark theme
-    await expect(themeToggle).toContainText('Dark')
+    await expect(themeToggle).toHaveAttribute('title', 'Current theme: dark')
 
     // Verify the theme icon changed to moon
     const themeIcon = themeToggle.locator('i.bi-moon-stars-fill')
@@ -56,14 +57,14 @@ test.describe('Theme switching functionality', () => {
     await themeToggle.click()
 
     // Click on Light option in dropdown
-    await page.click('text=Light')
+    await page.locator('button:has-text("Light")').click()
 
     // Verify theme is applied to HTML element
     const htmlElement = page.locator('html')
     await expect(htmlElement).toHaveAttribute('data-bs-theme', 'light')
 
     // Verify button shows light theme
-    await expect(themeToggle).toContainText('Light')
+    await expect(themeToggle).toHaveAttribute('title', 'Current theme: light')
 
     // Verify the theme icon changed to sun
     const themeIcon = themeToggle.locator('i.bi-sun-fill')
@@ -75,7 +76,7 @@ test.describe('Theme switching functionality', () => {
 
     // Switch to dark theme
     await themeToggle.click()
-    await page.click('text=Dark')
+    await page.locator('button:has-text("Dark")').click()
 
     // Verify dark theme is applied
     const htmlElement = page.locator('html')
@@ -87,7 +88,7 @@ test.describe('Theme switching functionality', () => {
 
     // Verify dark theme is still applied after reload
     await expect(htmlElement).toHaveAttribute('data-bs-theme', 'dark')
-    await expect(themeToggle).toContainText('Dark')
+    await expect(themeToggle).toHaveAttribute('title', 'Current theme: dark')
   })
 
   test('should show active state in dropdown menu', async ({ page }) => {
@@ -95,7 +96,7 @@ test.describe('Theme switching functionality', () => {
 
     // Switch to dark theme first
     await themeToggle.click()
-    await page.click('text=Dark')
+    await page.locator('button:has-text("Dark")').click()
 
     // Open dropdown again
     await themeToggle.click()
@@ -116,13 +117,13 @@ test.describe('Theme switching functionality', () => {
 
     // Switch to light first, then to auto
     await themeToggle.click()
-    await page.click('text=Light')
+    await page.locator('button:has-text("Light")').click()
 
     await themeToggle.click()
-    await page.click('text=Auto')
+    await page.locator('button:has-text("Auto")').click()
 
     // Verify auto theme
-    await expect(themeToggle).toContainText('Auto')
+    await expect(themeToggle).toHaveAttribute('title', 'Current theme: auto')
 
     // For auto mode, HTML should have data-bs-theme set to light or dark based on system preference
     const htmlElement = page.locator('html')
@@ -135,7 +136,7 @@ test.describe('Theme switching functionality', () => {
 
     // Switch to auto mode
     await themeToggle.click()
-    await page.click('text=Auto')
+    await page.locator('button:has-text("Auto")').click()
 
     // Get reference to html element
     const htmlElement = page.locator('html')
@@ -164,7 +165,7 @@ test.describe('Theme switching functionality', () => {
     // Switch to dark theme
     const themeToggle = page.locator('button[title*="Current theme"]')
     await themeToggle.click()
-    await page.click('text=Dark')
+    await page.locator('button:has-text("Dark")').click()
 
     // Wait for theme to be applied
     await page.waitForTimeout(100)
@@ -183,7 +184,7 @@ test.describe('Theme switching functionality', () => {
 
     // Switch to light theme and verify
     await themeToggle.click()
-    await page.click('text=Light')
+    await page.locator('button:has-text("Light")').click()
     await page.waitForTimeout(100)
 
     const lightBodyBackground = await page.evaluate(() => {

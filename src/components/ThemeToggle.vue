@@ -1,14 +1,13 @@
 <template>
   <div class="dropdown">
     <button
-      class="btn btn-outline-secondary btn-sm dropdown-toggle"
+      class="btn btn-outline-secondary dropdown-toggle"
       type="button"
       data-bs-toggle="dropdown"
       aria-expanded="false"
       :title="`Current theme: ${theme}`"
     >
       <i :class="themeIcon"></i>
-      <span class="d-none d-md-inline ms-1">{{ themeLabel }}</span>
     </button>
     <ul class="dropdown-menu dropdown-menu-end">
       <li>
@@ -59,17 +58,6 @@ const themeIcon = computed(() => {
       return 'bi bi-moon-stars-fill'
     default:
       return 'bi bi-circle-half'
-  }
-})
-
-const themeLabel = computed(() => {
-  switch (theme.value) {
-    case 'light':
-      return 'Light'
-    case 'dark':
-      return 'Dark'
-    default:
-      return 'Auto'
   }
 })
 </script>
