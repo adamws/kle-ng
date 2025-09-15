@@ -7,7 +7,7 @@
       <!-- Presets -->
       <div class="dropdown preset-dropdown">
         <button
-          class="btn btn-outline-secondary dropdown-toggle preset-select"
+          class="btn btn-outline-primary dropdown-toggle preset-select"
           type="button"
           data-bs-toggle="dropdown"
           aria-expanded="false"
@@ -25,7 +25,12 @@
 
       <!-- Import/Export/Share buttons -->
       <div class="btn-group" role="group">
-        <button class="btn btn-outline-primary" @click="triggerFileUpload" type="button">
+        <button
+          class="btn btn-outline-primary"
+          style="border-right-width: 1px"
+          @click="triggerFileUpload"
+          type="button"
+        >
           <span class="d-none d-sm-inline">Import JSON File</span>
           <span class="d-inline d-sm-none">Import</span>
         </button>
@@ -457,5 +462,9 @@ const handleClickOutside = (event: MouseEvent) => {
 
 .custom-dropdown-menu .dropdown-item:active {
   background-color: var(--bs-secondary-bg);
+}
+
+.keyboard-toolbar .btn-outline-primary {
+  border-width: 2px;
 }
 </style>

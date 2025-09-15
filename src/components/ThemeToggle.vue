@@ -61,3 +61,24 @@ const themeIcon = computed(() => {
   }
 })
 </script>
+
+<style scoped>
+.btn-outline-secondary {
+  border-width: 2px;
+}
+
+/* Responsive sizing to match KeyboardToolbar buttons */
+@media (max-width: 575.98px) {
+  .btn-outline-secondary {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }
+}
+
+@media (max-width: 320px) {
+  .btn-outline-secondary {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+  }
+}
+</style>

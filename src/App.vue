@@ -253,12 +253,15 @@ const stopResize = () => {
           <h1 class="navbar-brand mb-0 flex-shrink-0 text-center text-md-start">
             <strong>Keyboard Layout Editor NG</strong>
           </h1>
-          <div class="flex-grow-1">
-            <KeyboardToolbar />
-          </div>
-          <!-- Add theme toggle to header -->
-          <div class="d-flex align-items-center">
-            <ThemeToggle />
+          <!-- On small screens: toolbar and theme toggle in same row -->
+          <div class="d-flex flex-row flex-grow-1 align-items-center gap-2">
+            <div class="flex-grow-1">
+              <KeyboardToolbar />
+            </div>
+            <!-- Theme toggle grouped with toolbar buttons on small screens -->
+            <div class="d-flex align-items-center flex-shrink-0">
+              <ThemeToggle />
+            </div>
           </div>
         </div>
       </div>
