@@ -2,6 +2,15 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { CanvasRenderer } from '../canvas-renderer'
 import { Key, KeyboardMetadata } from '@ijprest/kle-serial'
 
+// Mock Path2D constructor and methods for Node.js environment
+global.Path2D = vi.fn().mockImplementation(() => ({
+  moveTo: vi.fn(),
+  lineTo: vi.fn(),
+  closePath: vi.fn(),
+  quadraticCurveTo: vi.fn(),
+  addPath: vi.fn(),
+}))
+
 // Mock canvas and context
 const mockGradient = {
   addColorStop: vi.fn(),
@@ -15,8 +24,20 @@ const mockContext = {
   lineTo: vi.fn(),
   quadraticCurveTo: vi.fn(),
   closePath: vi.fn(),
-  fill: vi.fn(),
-  stroke: vi.fn(),
+  fill: vi.fn((path?: Path2D) => {
+    // Track path-based fills
+    if (path) {
+      mockContext._pathFillCalls = (mockContext._pathFillCalls || 0) + 1
+    }
+  }),
+  stroke: vi.fn((path?: Path2D) => {
+    // Track path-based strokes
+    if (path) {
+      mockContext._pathStrokeCalls = (mockContext._pathStrokeCalls || 0) + 1
+    }
+  }),
+  _pathFillCalls: 0,
+  _pathStrokeCalls: 0,
   fillText: vi.fn(),
   save: vi.fn(),
   restore: vi.fn(),
@@ -54,6 +75,9 @@ describe('CanvasRenderer', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    // Reset path call counters
+    mockContext._pathFillCalls = 0
+    mockContext._pathStrokeCalls = 0
     renderer = new CanvasRenderer(mockCanvas, {
       unit: 54,
       background: '#f0f0f0',
@@ -93,7 +117,7 @@ describe('CanvasRenderer', () => {
       renderer.render(keys, selectedKeys, metadata)
 
       expect(mockContext.clearRect).toHaveBeenCalled()
-      expect(mockContext.beginPath).toHaveBeenCalled()
+      // Modern Path2D approach doesn't use beginPath
       expect(mockContext.fill).toHaveBeenCalled()
       expect(mockContext.fillText).toHaveBeenCalledWith('A', expect.any(Number), expect.any(Number))
     })
@@ -329,7 +353,7 @@ describe('CanvasRenderer', () => {
       expect(result).toBe(key2) // Should return the topmost (last) key
     })
 
-    it('should handle J-shaped keys', () => {
+    it('should handle non-rectangular keys', () => {
       const key = {
         ...new Key(),
         x: 1,
@@ -343,7 +367,7 @@ describe('CanvasRenderer', () => {
       }
       const keys = [key]
 
-      // Test position in second part of J-shaped key
+      // Test position in second part of non-rectangular key
       const x = 20 + 54 * (1 - 0.25) + 27 // Second part position
       const y = 20 + 54 * (1 + 1) + 27 // Second part Y position
 
@@ -353,7 +377,7 @@ describe('CanvasRenderer', () => {
     })
   })
 
-  describe('J-shaped key rendering', () => {
+  describe('non-rectangular key rendering', () => {
     it('should render big-ass-enter key as two separate rectangles', () => {
       const bigAssEnterKey = {
         ...new Key(),
@@ -373,8 +397,9 @@ describe('CanvasRenderer', () => {
 
       renderer.render(keys, selectedKeys, metadata)
 
-      // Should call beginPath multiple times for J-shaped key (two rectangles plus borders)
-      expect(mockContext.beginPath.mock.calls.length).toBeGreaterThanOrEqual(4)
+      // Non-rectangular keys use vector union approach with Path2D
+      expect(mockContext.fill).toHaveBeenCalled()
+      expect(mockContext.stroke).toHaveBeenCalled()
       expect(mockContext.fillText).toHaveBeenCalledWith(
         'Enter',
         expect.any(Number),
@@ -416,9 +441,9 @@ describe('CanvasRenderer', () => {
       expect(allText).toContain('Enter')
     })
 
-    it('should identify J-shaped keys correctly', () => {
-      // Test J-shaped key
-      const jShapedKey = {
+    it('should identify non-rectangular keys correctly', () => {
+      // Test non-rectangular key
+      const nonRectangularKey = {
         ...new Key(),
         width: 1.5,
         height: 2,
@@ -431,12 +456,12 @@ describe('CanvasRenderer', () => {
       // Clear mocks to get clean slate
       vi.clearAllMocks()
 
-      // Render J-shaped key
-      renderer.render([jShapedKey], [], new KeyboardMetadata())
-      const jShapedCalls = mockContext.beginPath.mock.calls.length
+      // Render non-rectangular key
+      renderer.render([nonRectangularKey], [], new KeyboardMetadata())
 
-      // J-shaped key should result in multiple beginPath calls (two rectangles)
-      expect(jShapedCalls).toBeGreaterThan(0)
+      // Non-rectangular key should result in Path2D-based rendering
+      expect(mockContext.fill).toHaveBeenCalled()
+      expect(mockContext.stroke).toHaveBeenCalled()
     })
   })
 
@@ -504,7 +529,7 @@ describe('CanvasRenderer', () => {
       expect(bounds.maxY).toBeGreaterThan(54) // Should be taller than 1u key
     })
 
-    it('should handle J-shaped rotated keys', () => {
+    it('should handle non-rectangular rotated keys', () => {
       const key = {
         ...new Key(),
         x: 0,
@@ -534,7 +559,7 @@ describe('CanvasRenderer', () => {
         maxY: number
       }
 
-      // Should calculate bounds for all corners of J-shaped key
+      // Should calculate bounds for all corners of non-rectangular key
       expect(typeof bounds.minX).toBe('number')
       expect(typeof bounds.minY).toBe('number')
       expect(typeof bounds.maxX).toBe('number')
@@ -544,7 +569,7 @@ describe('CanvasRenderer', () => {
     })
   })
 
-  describe('key hit testing for J-shaped keys', () => {
+  describe('key hit testing for non-rectangular keys', () => {
     it('should detect clicks in both parts of big-ass-enter', () => {
       const bigAssEnterKey = {
         ...new Key(),
@@ -574,7 +599,7 @@ describe('CanvasRenderer', () => {
       expect(result2).toBe(bigAssEnterKey)
     })
 
-    it('should not detect clicks in the gap of J-shaped keys', () => {
+    it('should not detect clicks in the gap of non-rectangular keys', () => {
       const bigAssEnterKey = {
         ...new Key(),
         x: 0.75,
@@ -625,8 +650,8 @@ describe('CanvasRenderer', () => {
       }).not.toThrow()
 
       // Verify that the rendering logic executed properly
-      expect(mockContext.beginPath).toHaveBeenCalled()
       expect(mockContext.fill).toHaveBeenCalled()
+      expect(mockContext.stroke).toHaveBeenCalled()
     })
 
     it('should handle empty selected keys list', () => {
@@ -647,7 +672,7 @@ describe('CanvasRenderer', () => {
       }).not.toThrow()
 
       // Should still render the non-selected key
-      expect(mockContext.beginPath).toHaveBeenCalled()
+      expect(mockContext.fill).toHaveBeenCalled()
     })
   })
 

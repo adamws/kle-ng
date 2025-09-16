@@ -225,7 +225,7 @@ describe('KeyPropertiesPanel', () => {
 
   describe('Mode-specific behavior', () => {
     it('should show non-rectangular warning only in basic mode', async () => {
-      // Create a J-shaped key (ISO Enter)
+      // Create a non-rectangular key (ISO Enter)
       const isoKey = new Key()
       isoKey.width = 1.25
       isoKey.width2 = 1.5

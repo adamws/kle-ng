@@ -69,8 +69,8 @@ test.describe('Non-Rectangular Keys Rendering', () => {
     await expect(canvas).toHaveScreenshot('iso-enter-key.png')
   })
 
-  test('should render custom J-shaped key', async ({ page }) => {
-    // Create a custom J-shaped key with different dimensions
+  test('should render custom non-rectangular key', async ({ page }) => {
+    // Create a custom non-rectangular key with different dimensions
     const customJLayout = JSON.stringify([
       [{ x: 0, w: 2, h: 1, w2: 1, h2: 2, x2: 1, y2: 0.75 }, 'Custom J'],
     ])
@@ -88,10 +88,10 @@ test.describe('Non-Rectangular Keys Rendering', () => {
 
     // Take screenshot of the canvas area
     const canvas = page.locator('.keyboard-canvas')
-    await expect(canvas).toHaveScreenshot('custom-j-shaped-key.png')
+    await expect(canvas).toHaveScreenshot('custom-non-rectangular-key.png')
   })
 
-  test('should handle J-shaped key selection properly', async ({ page }) => {
+  test('should handle non-rectangular key selection properly', async ({ page }) => {
     // Fixed: Updating baseline for new canvas dimensions
     // Load the big-ass-enter layout
     const bigAssEnterLayout = JSON.stringify([
@@ -124,7 +124,7 @@ test.describe('Non-Rectangular Keys Rendering', () => {
     await expect(canvas).toHaveScreenshot('big-ass-enter-selected.png')
   })
 
-  test('should render multiple J-shaped keys in same layout', async ({ page }) => {
+  test('should render multiple non-rectangular keys in same layout', async ({ page }) => {
     // Create a layout with both ISO enter and big-ass-enter
     const mixedLayout = JSON.stringify([
       [{ w: 1.5 }, 'Tab', { w: 1, h: 1 }, 'Q', 'W', 'E'],
@@ -143,10 +143,10 @@ test.describe('Non-Rectangular Keys Rendering', () => {
     await page.waitForTimeout(1000)
 
     const canvas = page.locator('.keyboard-canvas')
-    await expect(canvas).toHaveScreenshot('mixed-j-shaped-keys.png')
+    await expect(canvas).toHaveScreenshot('mixed-non-rectangular-keys.png')
   })
 
-  test('should render J-shaped keys with custom colors', async ({ page }) => {
+  test('should render non-rectangular keys with custom colors', async ({ page }) => {
     // Load big-ass-enter with custom colors
     const coloredLayout = JSON.stringify([
       [

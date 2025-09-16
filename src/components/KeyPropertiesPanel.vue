@@ -905,23 +905,23 @@ const isDisabled = computed(() => {
 })
 const moveStep = computed(() => keyboardStore.moveStep)
 
-// Non-rectangular key detection - only for truly J-shaped keys, not stepped keys
+// Non-rectangular key detection - only for truly non-rectangular keys, not stepped keys
 const isNonRectangular = computed(() => {
   if (selectedKeys.value.length === 0) return false
   const key = selectedKeys.value[0]
 
   // Stepped keys are rectangular with visual steps - they should allow size editing
-  // Only truly J-shaped keys (like ISO Enter) are non-rectangular
+  // Only truly non-rectangular keys (like ISO Enter) are non-rectangular
 
-  // Check for J-shaped keys - these have position offsets (x2, y2) or height differences
-  const hasJShapeProperties =
+  // Check for non-rectangular keys - these have position offsets (x2, y2) or height differences
+  const hasNonRectangularProperties =
     (key.height2 !== undefined && key.height2 !== key.height) || // Different heights (like ISO Enter)
     (key.x2 !== undefined && key.x2 !== 0) || // X position offset
     (key.y2 !== undefined && key.y2 !== 0) // Y position offset
 
   // Stepped keys with only width differences are still rectangular
-  // Only keys with J-shape properties (height/position differences) are non-rectangular
-  return hasJShapeProperties
+  // Only keys with non-rectangular properties (height/position differences) are non-rectangular
+  return hasNonRectangularProperties
 })
 
 // Step property should be disabled for pure 1x1 keys (no secondary dimensions)

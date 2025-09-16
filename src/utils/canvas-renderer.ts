@@ -1,5 +1,7 @@
 import type { Key, KeyboardMetadata } from '@ijprest/kle-serial'
 import { D } from './decimal-math'
+import polygonClippingLib from 'polygon-clipping'
+import type { MultiPolygon } from 'polygon-clipping'
 
 export interface RenderOptions {
   unit: number
@@ -50,7 +52,7 @@ export interface KeyRenderParams {
   lightColor: string
 
   // Flags
-  jShaped: boolean
+  nonRectangular: boolean
 
   // Origin for rotation
   origin_x: number
@@ -67,7 +69,6 @@ interface DefaultSizes {
   padding: number
   roundOuter: number
   roundInner: number
-  gradientType: string
 }
 
 const defaultSizes: DefaultSizes = {
@@ -78,13 +79,11 @@ const defaultSizes: DefaultSizes = {
   padding: 3,
   roundOuter: 5,
   roundInner: 3,
-  gradientType: 'none',
 }
 
 export class CanvasRenderer {
   private ctx: CanvasRenderingContext2D
   private options: RenderOptions
-  private isJShapedContext: boolean = false
 
   constructor(canvas: HTMLCanvasElement, options: RenderOptions) {
     this.ctx = canvas.getContext('2d')!
@@ -113,14 +112,15 @@ export class CanvasRenderer {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const params: any = {}
 
-    params.jShaped = key.width !== key.width2 || key.height !== key.height2 || key.x2 || key.y2
+    params.nonRectangular =
+      key.width !== key.width2 || key.height !== key.height2 || key.x2 || key.y2
 
     params.capwidth = D.mul(sizes.unit, key.width)
     params.capheight = D.mul(sizes.unit, key.height)
     params.capx = D.mul(sizes.unit, key.x)
     params.capy = D.mul(sizes.unit, key.y)
 
-    if (params.jShaped) {
+    if (params.nonRectangular) {
       params.capwidth2 = D.mul(sizes.unit, key.width2 || key.width)
       params.capheight2 = D.mul(sizes.unit, key.height2 || key.height)
       params.capx2 = D.mul(sizes.unit, D.add(key.x, key.x2 || 0))
@@ -136,7 +136,7 @@ export class CanvasRenderer {
     params.outercapx = D.add(params.capx, actualKeySpacingX)
     params.outercapy = D.add(params.capy, actualKeySpacingY)
 
-    if (params.jShaped) {
+    if (params.nonRectangular) {
       params.outercapwidth2 = D.max(2, D.sub(params.capwidth2, D.mul(sizes.keySpacing, 2)))
       params.outercapheight2 = D.max(2, D.sub(params.capheight2, D.mul(sizes.keySpacing, 2)))
 
@@ -174,7 +174,7 @@ export class CanvasRenderer {
     params.innercapx = D.add(params.outercapx, actualBevelMarginX)
     params.innercapy = D.sub(D.add(params.outercapy, actualBevelMarginY), sizes.bevelOffsetTop)
 
-    if (params.jShaped) {
+    if (params.nonRectangular) {
       params.innercapwidth2 = D.max(1, D.sub(params.outercapwidth2, D.mul(sizes.bevelMargin, 2)))
       params.innercapheight2 = D.max(1, D.sub(params.outercapheight2, D.mul(sizes.bevelMargin, 2)))
 
@@ -300,10 +300,10 @@ export class CanvasRenderer {
     return { x: alignedX, y: alignedY, width: alignedWidth, height: alignedHeight }
   }
 
-  // Specialized alignment for J-shaped keys to ensure both rectangles align consistently
-  private alignJShapedKeyParams(params: KeyRenderParams) {
+  // Specialized alignment for non-rectangular keys to ensure both rectangles align consistently
+  private alignNonRectangularKeyParams(params: KeyRenderParams) {
     // Create aligned versions of the key parameters that maintain consistent positioning
-    // between the two rectangles of a J-shaped key
+    // between the two rectangles of a non-rectangular key
     const alignedParams = { ...params }
 
     // Align the main rectangle
@@ -369,22 +369,12 @@ export class CanvasRenderer {
     strokeStyle?: string,
     lineWidth = 1,
   ) {
-    // For J-shaped keys, alignment is handled at a higher level to ensure consistency
-    // For regular keys, align strokes to pixel boundaries
-    let drawX = x
-    let drawY = y
-    let drawWidth = width
-    let drawHeight = height
-
-    // Only apply individual rectangle alignment for regular (non-J-shaped) keys with strokes
-    // J-shaped keys get aligned at the parameter level to maintain layer consistency
-    if (strokeStyle && !this.isJShapedContext) {
-      const aligned = this.alignRectToPixels(x, y, width, height)
-      drawX = aligned.x
-      drawY = aligned.y
-      drawWidth = aligned.width
-      drawHeight = aligned.height
-    }
+    // Alignment is now handled consistently at the higher level (drawKey method)
+    // No additional alignment needed here
+    const drawX = x
+    const drawY = y
+    const drawWidth = width
+    const drawHeight = height
 
     this.ctx.beginPath()
     this.ctx.moveTo(drawX + radius, drawY)
@@ -417,98 +407,192 @@ export class CanvasRenderer {
     }
   }
 
-  private drawJShapedKeyOuterBorders(
-    params: KeyRenderParams,
+  private makeRoundedRectPolygon(
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    r: number,
+    segmentsPerQuarter = 8,
+  ): Array<[number, number]> {
+    // Create polygon approximation of rounded rectangle for vector union
+    const pts: Array<[number, number]> = []
+    const seg = Math.max(2, Math.floor(segmentsPerQuarter))
+    r = Math.min(r, w / 2, h / 2) // Clamp radius
+
+    // Helper for arc points between angles a0..a1 (radians)
+    const arc = (cx: number, cy: number, rr: number, a0: number, a1: number, segments: number) => {
+      const out: Array<[number, number]> = []
+      for (let i = 0; i <= segments; i++) {
+        const t = i / segments
+        const a = a0 + t * (a1 - a0)
+        out.push([cx + Math.cos(a) * rr, cy + Math.sin(a) * rr])
+      }
+      return out
+    }
+
+    // Build rounded rectangle polygon clockwise
+    // Top-left corner arc (180deg to 270deg)
+    pts.push(...arc(x + r, y + r, r, Math.PI, 1.5 * Math.PI, seg))
+    // Top edge to top-right corner
+    pts.push([x + w - r, y])
+    // Top-right arc (270deg to 360deg)
+    pts.push(...arc(x + w - r, y + r, r, 1.5 * Math.PI, 2 * Math.PI, seg))
+    // Right edge to bottom-right corner
+    pts.push([x + w, y + h - r])
+    // Bottom-right arc (0deg to 90deg)
+    pts.push(...arc(x + w - r, y + h - r, r, 0, 0.5 * Math.PI, seg))
+    // Bottom edge to bottom-left
+    pts.push([x + r, y + h])
+    // Bottom-left arc (90deg to 180deg)
+    pts.push(...arc(x + r, y + h - r, r, 0.5 * Math.PI, Math.PI, seg))
+    // Left edge back to start
+    pts.push([x, y + r])
+
+    return pts
+  }
+
+  private polygonToPath2D(polygons: MultiPolygon, scale = 1): Path2D {
+    // Convert polygon-clipping result to Path2D
+    const path = new Path2D()
+
+    const drawRing = (ring: Array<[number, number]>) => {
+      if (ring.length === 0) return
+      path.moveTo(ring[0][0] / scale, ring[0][1] / scale)
+      for (let i = 1; i < ring.length; i++) {
+        path.lineTo(ring[i][0] / scale, ring[i][1] / scale)
+      }
+      path.closePath()
+    }
+
+    // Handle polygon-clipping result structure
+    if (Array.isArray(polygons)) {
+      for (const polygon of polygons) {
+        if (Array.isArray(polygon)) {
+          for (const ring of polygon) {
+            if (Array.isArray(ring) && ring.length > 0) {
+              drawRing(ring)
+            }
+          }
+        }
+      }
+    }
+
+    return path
+  }
+
+  private createVectorUnionPath(
+    rectangles: Array<{ x: number; y: number; width: number; height: number }>,
     radius: number,
-    strokeStyle: string,
-    lineWidth = 1,
+  ): Path2D {
+    // Use vector union to create single non-rectangular path - eliminates all alignment issues
+    if (rectangles.length === 1) {
+      // Single rectangle - use regular path
+      const rect = rectangles[0]
+      const path = new Path2D()
+      path.moveTo(rect.x + radius, rect.y)
+      path.lineTo(rect.x + rect.width - radius, rect.y)
+      path.quadraticCurveTo(rect.x + rect.width, rect.y, rect.x + rect.width, rect.y + radius)
+      path.lineTo(rect.x + rect.width, rect.y + rect.height - radius)
+      path.quadraticCurveTo(
+        rect.x + rect.width,
+        rect.y + rect.height,
+        rect.x + rect.width - radius,
+        rect.y + rect.height,
+      )
+      path.lineTo(rect.x + radius, rect.y + rect.height)
+      path.quadraticCurveTo(rect.x, rect.y + rect.height, rect.x, rect.y + rect.height - radius)
+      path.lineTo(rect.x, rect.y + radius)
+      path.quadraticCurveTo(rect.x, rect.y, rect.x + radius, rect.y)
+      path.closePath()
+      return path
+    }
+
+    // Multiple rectangles - compute vector union
+    const scale = 1000 // Scale for integer precision in polygon ops
+    const polygons = rectangles.map((rect) =>
+      this.makeRoundedRectPolygon(
+        rect.x * scale,
+        rect.y * scale,
+        rect.width * scale,
+        rect.height * scale,
+        radius * scale,
+        Math.max(6, Math.ceil(radius / 2)), // Arc segments based on radius
+      ),
+    )
+
+    try {
+      // Compute union of all polygons using the default import
+      let result: MultiPolygon = [[polygons[0]]] // Start with first polygon as MultiPolygon format - wrap Ring in Polygon in MultiPolygon
+      for (let i = 1; i < polygons.length; i++) {
+        result = polygonClippingLib.union(result, [[polygons[i]]]) // union returns MultiPolygon - wrap Ring in Polygon
+      }
+
+      return this.polygonToPath2D(result, scale)
+    } catch (error) {
+      console.warn('Vector union calculation failed, using fallback rendering:', error)
+      // Fallback: render each rectangle individually
+      const path = new Path2D()
+      rectangles.forEach((rect) => {
+        path.moveTo(rect.x + radius, rect.y)
+        path.lineTo(rect.x + rect.width - radius, rect.y)
+        path.quadraticCurveTo(rect.x + rect.width, rect.y, rect.x + rect.width, rect.y + radius)
+        path.lineTo(rect.x + rect.width, rect.y + rect.height - radius)
+        path.quadraticCurveTo(
+          rect.x + rect.width,
+          rect.y + rect.height,
+          rect.x + rect.width - radius,
+          rect.y + rect.height,
+        )
+        path.lineTo(rect.x + radius, rect.y + rect.height)
+        path.quadraticCurveTo(rect.x, rect.y + rect.height, rect.x, rect.y + rect.height - radius)
+        path.lineTo(rect.x, rect.y + radius)
+        path.quadraticCurveTo(rect.x, rect.y, rect.x + radius, rect.y)
+        path.closePath()
+      })
+      return path
+    }
+  }
+
+  private drawKeyRectangleLayers(
+    rectangles: Array<{
+      x: number
+      y: number
+      width: number
+      height: number
+      type: 'outer' | 'inner'
+    }>,
+    radius: number,
+    borderColor: string,
+    fillColor: string,
+    innerColor: string,
+    strokeWidth: number,
   ) {
-    // Draw ONLY the outer borders of both rectangles
-    // This is the first layer to avoid overlapping edge artifacts
+    // Vector union approach: Create single path that eliminates all alignment issues
+    const outerRects = rectangles.filter((rect) => rect.type === 'outer')
+    const innerRects = rectangles.filter((rect) => rect.type === 'inner')
 
-    if (params.outercapx2 === undefined) return
+    // Draw outer layer using vector union
+    const outerPath = this.createVectorUnionPath(outerRects, radius)
 
-    // Draw first rectangle border only
-    this.drawRoundedRect(
-      params.outercapx,
-      params.outercapy,
-      params.outercapwidth,
-      params.outercapheight,
-      radius,
-      undefined, // No fill
-      strokeStyle,
-      lineWidth,
-    )
+    // Draw the unified outer path once - perfect alignment guaranteed
+    if (fillColor) {
+      this.ctx.fillStyle = fillColor
+      this.ctx.fill(outerPath)
+    }
 
-    // Draw second rectangle border only
-    this.drawRoundedRect(
-      params.outercapx2,
-      params.outercapy2!,
-      params.outercapwidth2!,
-      params.outercapheight2!,
-      radius,
-      undefined, // No fill
-      strokeStyle,
-      lineWidth,
-    )
-  }
+    if (borderColor) {
+      this.ctx.strokeStyle = borderColor
+      this.ctx.lineWidth = strokeWidth
+      this.ctx.stroke(outerPath)
+    }
 
-  private drawJShapedKeyFills(params: KeyRenderParams, radius: number, fillStyle: string) {
-    // Draw ONLY the fills of both rectangles
-    // This is the second layer - color areas without borders
-
-    if (params.outercapx2 === undefined) return
-
-    // Draw first rectangle fill only
-    this.drawRoundedRect(
-      params.outercapx,
-      params.outercapy,
-      params.outercapwidth,
-      params.outercapheight,
-      radius,
-      fillStyle,
-      undefined, // No stroke
-    )
-
-    // Draw second rectangle fill only
-    this.drawRoundedRect(
-      params.outercapx2,
-      params.outercapy2!,
-      params.outercapwidth2!,
-      params.outercapheight2!,
-      radius,
-      fillStyle,
-      undefined, // No stroke
-    )
-  }
-
-  private drawJShapedInnerLayer(params: KeyRenderParams, radius: number, fillStyle: string) {
-    // Draw both inner rectangles (lightened surfaces) as fill-only
-    // This is the third layer - lightened top surfaces
-
-    if (params.innercapx2 === undefined) return
-
-    // Draw first inner rectangle (fill only)
-    this.drawRoundedRect(
-      params.innercapx,
-      params.innercapy,
-      params.innercapwidth,
-      params.innercapheight,
-      radius,
-      fillStyle,
-      undefined, // No stroke to avoid edge artifacts
-    )
-
-    // Draw second inner rectangle (fill only)
-    this.drawRoundedRect(
-      params.innercapx2,
-      params.innercapy2!,
-      params.innercapwidth2!,
-      params.innercapheight2!,
-      radius,
-      fillStyle,
-      undefined, // No stroke to avoid edge artifacts
-    )
+    // Draw inner surfaces using same vector union approach
+    if (innerRects.length > 0 && innerColor) {
+      const innerPath = this.createVectorUnionPath(innerRects, radius)
+      this.ctx.fillStyle = innerColor
+      this.ctx.fill(innerPath)
+    }
   }
 
   private drawRotationOriginIndicator(key: Key) {
@@ -759,107 +843,120 @@ export class CanvasRenderer {
       this.ctx.globalAlpha = 0.3
     }
 
-    // Don't draw background for decals
-    if (!key.decal) {
-      // Draw outer layer - handle J-shaped keys with proper 3-layer approach
-      if (params.jShaped && params.outercapx2 !== undefined) {
-        // For J-shaped keys, align all parameters together for consistency across layers
-        const alignedParams = this.alignJShapedKeyParams(params)
-        this.isJShapedContext = true
+    // Unified rendering: same algorithm for all key types
 
-        // Layer 1: Draw outer borders first (stroke only) - prevents overlapping edges
-        this.drawJShapedKeyOuterBorders(
-          alignedParams,
-          sizes.roundOuter,
-          isSelected ? '#dc3545' : '#000000',
-          sizes.strokeWidth,
-        )
+    // Apply alignment for consistent pixel boundaries
+    if (params.nonRectangular && params.outercapx2 !== undefined) {
+      params = this.alignNonRectangularKeyParams(params)
+    } else {
+      // Apply same pixel alignment logic to rectangular keys
+      const originalOuterX = params.outercapx
+      const originalOuterY = params.outercapy
 
-        // Layer 2: Draw dark color fill for both rectangles (fill only)
-        this.drawJShapedKeyFills(alignedParams, sizes.roundOuter, params.darkColor)
+      const alignedOuter = this.alignRectToPixels(
+        params.outercapx,
+        params.outercapy,
+        params.outercapwidth,
+        params.outercapheight,
+      )
 
-        // Use aligned params for subsequent layers
-        params = alignedParams
-      } else {
-        // Regular rectangular key - draw both fill and stroke
-        this.drawRoundedRect(
-          params.outercapx,
-          params.outercapy,
-          params.outercapwidth,
-          params.outercapheight,
-          sizes.roundOuter,
-          params.darkColor,
-          isSelected ? '#dc3545' : '#000000',
-          sizes.strokeWidth,
-        )
-      }
+      // Calculate how much the outer rectangle moved
+      const deltaX = alignedOuter.x - originalOuterX
+      const deltaY = alignedOuter.y - originalOuterY
 
-      // Draw inner surface (lighter) if not ghosted
-      if (!key.ghost) {
-        // Layer 3: Draw inner surface (lightened top) - handle J-shaped keys properly
-        if (params.jShaped && !key.stepped && params.innercapx2 !== undefined) {
-          // Draw lightened surface for both rectangles (fill only)
-          this.drawJShapedInnerLayer(params, sizes.roundInner, params.lightColor)
-        } else {
-          // Regular rectangular key inner surface
-          this.drawRoundedRect(
-            params.innercapx,
-            params.innercapy,
-            params.innercapwidth,
-            params.innercapheight,
-            sizes.roundInner,
-            params.lightColor,
-            'rgba(0,0,0,0.1)',
-          )
-        }
-      }
+      // Update outer rectangle
+      params.outercapx = alignedOuter.x
+      params.outercapy = alignedOuter.y
+      params.outercapwidth = alignedOuter.width
+      params.outercapheight = alignedOuter.height
 
-      // Draw homing nub
-      if (key.nub) {
-        this.drawHomingNub(params)
-      }
+      // Update inner rectangle by the same offset
+      params.innercapx = params.innercapx + deltaX
+      params.innercapy = params.innercapy + deltaY
+      // Inner width/height don't change, just position
+    }
 
-      // For J-shaped keys, borders are already drawn with the outer layer
-      // For regular keys, draw the outline border (red if selected, black otherwise)
-      if (!params.jShaped) {
-        this.drawRoundedRect(
-          params.outercapx,
-          params.outercapy,
-          params.outercapwidth,
-          params.outercapheight,
-          sizes.roundOuter,
-          undefined,
-          isSelected ? '#dc3545' : '#000000',
-          sizes.strokeWidth,
-        )
+    // Build rectangles array - same structure for regular and non-rectangular keys
+    const rectangles = []
+
+    // Outer rectangles (always at least one)
+    rectangles.push({
+      x: params.outercapx,
+      y: params.outercapy,
+      width: params.outercapwidth,
+      height: params.outercapheight,
+      type: 'outer' as const,
+    })
+
+    // Second outer rectangle for non-rectangular keys
+    if (params.nonRectangular && params.outercapx2 !== undefined) {
+      rectangles.push({
+        x: params.outercapx2,
+        y: params.outercapy2!,
+        width: params.outercapwidth2!,
+        height: params.outercapheight2!,
+        type: 'outer' as const,
+      })
+    }
+
+    // Inner rectangles (if not ghosted)
+    if (!key.ghost) {
+      rectangles.push({
+        x: params.innercapx,
+        y: params.innercapy,
+        width: params.innercapwidth,
+        height: params.innercapheight,
+        type: 'inner' as const,
+      })
+
+      // Second inner rectangle for non-rectangular keys
+      if (params.nonRectangular && !key.stepped && params.innercapx2 !== undefined) {
+        rectangles.push({
+          x: params.innercapx2,
+          y: params.innercapy2!,
+          width: params.innercapwidth2!,
+          height: params.innercapheight2!,
+          type: 'inner' as const,
+        })
       }
     }
 
-    // For decal keys, draw selection outline if selected (since they skip background rendering)
+    // Render using unified vector union approach for all keys
+    if (!key.decal) {
+      this.drawKeyRectangleLayers(
+        rectangles,
+        sizes.roundOuter,
+        isSelected ? '#dc3545' : '#000000', // border color
+        params.darkColor, // fill color
+        params.lightColor, // inner color
+        sizes.strokeWidth,
+      )
+    }
+
+    // For decal keys, only draw selection outline if selected
     if (key.decal && isSelected) {
-      if (params.jShaped && params.outercapx2 !== undefined) {
-        // Handle J-shaped decal selection
-        this.drawJShapedKeyOuterBorders(params, sizes.roundOuter, '#dc3545', sizes.strokeWidth)
-      } else {
-        // Regular decal key selection outline
+      const outerRectangles = rectangles.filter((rect) => rect.type === 'outer')
+      outerRectangles.forEach((rect) => {
         this.drawRoundedRect(
-          params.outercapx,
-          params.outercapy,
-          params.outercapwidth,
-          params.outercapheight,
+          rect.x,
+          rect.y,
+          rect.width,
+          rect.height,
           sizes.roundOuter,
           undefined,
           '#dc3545',
           sizes.strokeWidth,
         )
-      }
+      })
+    }
+
+    // Draw homing nub
+    if (key.nub) {
+      this.drawHomingNub(params)
     }
 
     // Draw text labels
     this.drawKeyLabels(key, params)
-
-    // Reset J-shaped context flag
-    this.isJShapedContext = false
 
     this.ctx.restore()
   }
@@ -1301,7 +1398,7 @@ export class CanvasRenderer {
       let maxX = x2
       let maxY = y2
 
-      // For J-shaped keys, include secondary rectangle bounds
+      // For non-rectangular keys, include secondary rectangle bounds
       if (key.width2 && key.height2) {
         const x2_1 = (key.x + (key.x2 || 0)) * unit
         const y2_1 = (key.y + (key.y2 || 0)) * unit
@@ -1346,7 +1443,7 @@ export class CanvasRenderer {
       { x: D.add(keyX, keyWidth), y: D.add(keyY, keyHeight) }, // bottom-right
     ]
 
-    // For J-shaped keys, add the second rectangle corners
+    // For non-rectangular keys, add the second rectangle corners
     if (key.width2 && key.height2) {
       const keyX2 = D.mul(D.add(key.x, key.x2 || 0), unit)
       const keyY2 = D.mul(D.add(key.y, key.y2 || 0), unit)
@@ -1429,8 +1526,8 @@ export class CanvasRenderer {
         return key
       }
 
-      // Check second part for J-shaped keys
-      if (params.jShaped && params.outercapx2 !== undefined) {
+      // Check second part for non-rectangular keys
+      if (params.nonRectangular && params.outercapx2 !== undefined) {
         if (
           testX >= params.outercapx2 &&
           testX <= params.outercapx2 + params.outercapwidth2! &&
