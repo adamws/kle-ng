@@ -441,6 +441,48 @@ describe('CanvasRenderer', () => {
       expect(allText).toContain('Enter')
     })
 
+    it('should render Delete label on 1x1 key without wrapping', () => {
+      const deleteKey = {
+        ...new Key(),
+        x: 0,
+        y: 0,
+        width: 1,
+        height: 1,
+        labels: ['Delete', '', '', '', '', '', '', '', '', '', '', ''],
+        textSize: [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+      }
+      const keys = [deleteKey]
+      const selectedKeys: Key[] = []
+      const metadata = new KeyboardMetadata()
+
+      // Clear mocks to start fresh
+      vi.clearAllMocks()
+
+      renderer.render(keys, selectedKeys, metadata)
+
+      // Should render the Delete label
+      expect(mockContext.fillText).toHaveBeenCalled()
+
+      // Verify that "Delete" was rendered as a single word (not wrapped)
+      const fillTextCalls = mockContext.fillText.mock.calls
+      const renderedTexts = fillTextCalls.map((call) => call[0] as string)
+
+      // Verify the rendered texts
+
+      // "Delete" should appear as a single word, not split or truncated
+      const deleteRelatedCalls = renderedTexts.filter(
+        (text) => text.includes('Delete') || text.includes('Del') || text.includes('…'),
+      )
+
+      // Should be exactly one call with the full "Delete" text (no wrapping or truncation)
+      expect(deleteRelatedCalls.length).toBe(1)
+      expect(deleteRelatedCalls[0]).toBe('Delete')
+
+      // Make sure it's not truncated to "Del"
+      expect(renderedTexts).not.toContain('Del')
+      expect(renderedTexts).not.toContain('Del…')
+    })
+
     it('should identify non-rectangular keys correctly', () => {
       // Test non-rectangular key
       const nonRectangularKey = {

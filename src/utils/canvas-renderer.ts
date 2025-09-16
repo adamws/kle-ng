@@ -191,8 +191,10 @@ export class CanvasRenderer {
       params.innercapy2 = D.sub(D.add(params.outercapy2, actualBevelMarginY2), sizes.bevelOffsetTop)
     }
 
-    params.textcapwidth = D.max(1, D.sub(params.innercapwidth, D.mul(sizes.padding, 2)))
-    params.textcapheight = D.max(1, D.sub(params.innercapheight, D.mul(sizes.padding, 2)))
+    // Reduce text padding to match original KLE behavior for better text fit
+    const textPadding = Math.max(1, sizes.padding - 1) // Reduce by 1 pixel on each side
+    params.textcapwidth = D.max(1, D.sub(params.innercapwidth, D.mul(textPadding, 2)))
+    params.textcapheight = D.max(1, D.sub(params.innercapheight, D.mul(textPadding, 2)))
 
     const actualPaddingX = D.max(0, D.div(D.sub(params.innercapwidth, params.textcapwidth), 2))
     const actualPaddingY = D.max(0, D.div(D.sub(params.innercapheight, params.textcapheight), 2))
@@ -1007,15 +1009,16 @@ export class CanvasRenderer {
       let x: number
       let y: number
 
-      // Fixed margin for left/right labels - should be consistent regardless of key size
-      const fixedEdgeMargin = 1 // Fixed distance from edges for left/right/top/bottom labels
+      // Fixed margins for labels - should be consistent regardless of key size
+      const fixedHorizontalMargin = 1 // Fixed distance from left/right edges
+      const fixedVerticalMargin = 3 // Fixed distance from top/bottom edges
 
       if (pos.align === 'left') {
         // Left-aligned labels use fixed distance from left edge
-        x = params.textcapx + fixedEdgeMargin
+        x = params.textcapx + fixedHorizontalMargin
       } else if (pos.align === 'right') {
         // Right-aligned labels use fixed distance from right edge
-        x = params.textcapx + params.textcapwidth - fixedEdgeMargin
+        x = params.textcapx + params.textcapwidth - fixedHorizontalMargin
       } else {
         // Center-aligned labels move proportionally with key width
         x = params.textcapx + params.textcapwidth * 0.5
@@ -1038,9 +1041,10 @@ export class CanvasRenderer {
         y = params.innercapy + params.innercapheight + 1
       } else {
         // Calculate three fixed lines on the key surface
-        const topLine = params.textcapy + fixedEdgeMargin
-        const middleLine = params.textcapy + params.textcapheight * 0.5
-        const bottomLine = params.textcapy + params.textcapheight - fixedEdgeMargin
+        const topLine = params.textcapy + fixedVerticalMargin
+        // +1 is a workaround (looks better)
+        const middleLine = params.textcapy + params.textcapheight * 0.5 + 1
+        const bottomLine = params.textcapy + params.textcapheight - fixedVerticalMargin
 
         // Top labels (0-8): Use the appropriate fixed line
         if (index >= 0 && index <= 2) {
@@ -1079,14 +1083,15 @@ export class CanvasRenderer {
   }
 
   private calculateAvailableWidth(params: KeyRenderParams): number {
-    // Calculate available width - conservative approach with margins for readability
-    const margin = 2
+    // Calculate available width - minimal margins to match original KLE behavior
+    // Original KLE allows text very close to key edges for maximum fit
+    const margin = 0
     return Math.max(0, params.textcapwidth - margin * 2)
   }
 
   private calculateAvailableHeight(params: KeyRenderParams): number {
-    // Calculate available height - conservative approach with margins for readability
-    const margin = 2
+    // Calculate available height - reduced margins to match original KLE behavior
+    const margin = 1
     return Math.max(0, params.textcapheight - margin * 2)
   }
 
