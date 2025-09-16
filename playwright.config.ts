@@ -23,13 +23,13 @@ export default defineConfig({
      */
     timeout: 5000,
     /* Screenshot comparison tolerance for visual tests */
-    toHaveScreenshot: { 
-      maxDiffPixelRatio: 0.1,
+    toHaveScreenshot: {
+      maxDiffPixelRatio: 0.05,
       threshold: 0.2,
       animations: 'disabled'
     },
-    toMatchSnapshot: { 
-      threshold: 0.2 
+    toMatchSnapshot: {
+      threshold: 0.2
     }
   },
   /* Fail the build on CI if you accidentally left test.only in the source code. */
