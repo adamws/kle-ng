@@ -1231,6 +1231,19 @@ const adjustSelectedKeysSize = (dimension: 'width' | 'height', delta: number) =>
     // Prevent negative or zero dimensions
     if (newValue > 0) {
       key[dimension] = newValue
+
+      // Apply the same sync logic as updateWidth/updateHeight functions:
+      // If key has secondary dimensions and should remain rectangular,
+      // sync the secondary dimension to match primary dimension
+      if (dimension === 'width') {
+        if (key.width2 !== undefined && !key.stepped && !key.x2 && !key.y2) {
+          key.width2 = newValue
+        }
+      } else if (dimension === 'height') {
+        if (key.height2 !== undefined && !key.stepped && !key.x2 && !key.y2) {
+          key.height2 = newValue
+        }
+      }
     }
   })
   keyboardStore.saveState()
