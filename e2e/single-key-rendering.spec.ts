@@ -252,15 +252,15 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeyLabel('bottomRight', 'B')
 
       // Add front labels to test that they maintain original positioning
-      // Front labels are in separate .front-label-group divs, not in .labels-grid
-      const frontLabelInputs = helper.page.locator('.front-label-group .form-control')
+      // Front labels are at indices 9, 10, 11 in the main .labels-grid
+      const frontLabelInputs = helper.page.locator('.labels-grid .form-control')
       const frontInputsCount = await frontLabelInputs.count()
 
-      // Add front labels if available
-      if (frontInputsCount >= 3) {
-        await frontLabelInputs.nth(0).fill('F1') // Front left
-        await frontLabelInputs.nth(1).fill('F2') // Front center
-        await frontLabelInputs.nth(2).fill('F3') // Front right
+      // Add front labels if available (indices 9, 10, 11)
+      if (frontInputsCount >= 12) {
+        await frontLabelInputs.nth(9).fill('F1') // Front left (index 9)
+        await frontLabelInputs.nth(10).fill('F2') // Front center (index 10)
+        await frontLabelInputs.nth(11).fill('F3') // Front right (index 11)
       }
 
       // Set different text sizes for each position (non-default)
@@ -281,19 +281,19 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setLabelColor('bottomRight', '#8800ff') // Purple
 
       // Set colors for front labels to verify they work correctly
-      const frontColorPickers = helper.page.locator('.front-label-group .label-color-picker-small')
+      const frontColorPickers = helper.page.locator('.labels-grid .label-color-picker')
       const frontColorPickersCount = await frontColorPickers.count()
 
-      if (frontColorPickersCount >= 2) {
-        // Set color for front left label (index 0 in front group)
-        await frontColorPickers.nth(0).click()
+      if (frontColorPickersCount >= 12) {
+        // Set color for front left label (index 9)
+        await frontColorPickers.nth(9).click()
         await helper.page.locator('.color-picker-popup').waitFor({ state: 'visible' })
         await helper.page.locator('.color-picker-popup .vc-input__input').first().fill('00ffff')
         await helper.page.locator('.color-picker-popup .btn-primary').click()
         await helper.page.locator('.color-picker-popup').waitFor({ state: 'hidden' })
 
-        // Set color for front center label (index 1 in front group)
-        await frontColorPickers.nth(1).click()
+        // Set color for front center label (index 10)
+        await frontColorPickers.nth(10).click()
         await helper.page.locator('.color-picker-popup').waitFor({ state: 'visible' })
         await helper.page.locator('.color-picker-popup .vc-input__input').first().fill('ff00ff')
         await helper.page.locator('.color-picker-popup .btn-primary').click()
