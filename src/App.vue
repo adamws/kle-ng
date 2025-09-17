@@ -173,41 +173,14 @@ const closeHelp = () => {
   isHelpVisible.value = false
 }
 
+// Conservative minimum to ensure all tools fit comfortably
+const minLayoutEditorHeight = 530
+
 // Layout Editor container resize functionality
-const layoutEditorHeight = ref(600) // Initial height
+const layoutEditorHeight = ref(minLayoutEditorHeight) // Initial height
 const isResizing = ref(false)
 const resizeStartY = ref(0)
 const resizeStartHeight = ref(0)
-
-// Calculate minimum height for layout editor based on toolbar content
-const calculateMinLayoutEditorHeight = () => {
-  // Canvas toolbar minimum requirements for single-column layout:
-  // - 4 sections with gaps (3 × 16px = 48px)
-  // - Section labels (4 × 16px = 64px)
-  // - Tools section: 3 buttons + gaps (3×38 + 2×4 = 122px)
-  // - Edit section: Add key group + delete + gap (54 + 38 + 4 = 96px)
-  // - History section: 2 buttons + gap (2×38 + 4 = 80px)
-  // - Clipboard section: 3 buttons + gaps (3×38 + 2×4 = 122px)
-  // - Container padding: 32px
-  // - Footer height: ~50px
-  // Total: 48 + 64 + 122 + 96 + 80 + 122 + 32 + 50 = 614px
-  //
-  // For compact two-column layout, height would be approximately:
-  // - 4 sections with gaps: 48px
-  // - Section labels: 64px
-  // - Tools section: 2 rows (2×34 + 4 = 72px)
-  // - Edit section: 1 row (34 + gap = 38px)
-  // - History section: 1 row (34 + gap = 38px)
-  // - Clipboard section: 2 rows (2×34 + 4 = 72px)
-  // - Container padding: 24px
-  // - Footer: 50px
-  // Total compact: 48 + 64 + 72 + 38 + 38 + 72 + 24 + 50 = 406px
-  //
-  // We'll use the single-column requirement as minimum to ensure all tools are always visible
-  return 600 // Conservative minimum to ensure all tools fit comfortably
-}
-
-const minLayoutEditorHeight = calculateMinLayoutEditorHeight()
 
 const startResize = (event: MouseEvent) => {
   isResizing.value = true
