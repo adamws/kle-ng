@@ -902,6 +902,15 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     }
   }
 
+  // Helper functions for legend operations
+  const saveToHistory = () => {
+    saveState()
+  }
+
+  const markDirty = () => {
+    dirty.value = true
+  }
+
   initWithSample()
 
   return {
@@ -986,5 +995,9 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     // URL sharing
     generateShareUrl,
     loadFromShareUrl,
+
+    // Legend tools
+    saveToHistory,
+    markDirty,
   }
 })

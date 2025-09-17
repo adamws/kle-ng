@@ -140,12 +140,16 @@
       </div>
     </div>
   </div>
+
+  <!-- Legend Tools Panel -->
+  <LegendToolsPanel :visible="showLegendToolsPanel" @close="showLegendToolsPanel = false" />
 </template>
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useKeyboardStore } from '@/stores/keyboard'
 import { SPECIAL_KEYS, type SpecialKeyTemplate } from '@/data/specialKeys'
+import LegendToolsPanel from './LegendToolsPanel.vue'
 
 // Store
 const keyboardStore = useKeyboardStore()
@@ -161,6 +165,9 @@ const showExtraToolsDropdown = ref(false)
 const extraToolsDropdownRef = ref<HTMLElement>()
 const extraToolsBtnRef = ref<HTMLElement>()
 
+// Legend tools panel
+const showLegendToolsPanel = ref(false)
+
 // Define extra tools
 interface ExtraTool {
   id: string
@@ -171,6 +178,15 @@ interface ExtraTool {
 }
 
 const extraTools: ExtraTool[] = [
+  {
+    id: 'legend-tools',
+    name: 'Legend Tools',
+    description: 'Remove, align, and move legends on keys',
+    disabled: false,
+    action: () => {
+      showLegendToolsPanel.value = true
+    },
+  },
   {
     id: 'move-rotation-origins',
     name: 'Move rotation origins to key centers',
