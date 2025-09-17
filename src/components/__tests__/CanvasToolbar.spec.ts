@@ -166,11 +166,11 @@ describe('CanvasToolbar', () => {
       const store = useKeyboardStore()
 
       // Initially no keys selected - mirror tools should be disabled
-      const mirrorHBtn = wrapper.find('button[title="Mirror Horizontal"]')
-      const mirrorVBtn = wrapper.find('button[title="Mirror Vertical"]')
+      const mirrorBtn = wrapper.find('button[title="Mirror Vertical"]')
+      const mirrorDropdownBtn = wrapper.find('.mirror-group .dropdown-btn')
 
-      expect(mirrorHBtn.attributes('disabled')).toBeDefined()
-      expect(mirrorVBtn.attributes('disabled')).toBeDefined()
+      expect(mirrorBtn.attributes('disabled')).toBeDefined()
+      expect(mirrorDropdownBtn.attributes('disabled')).toBeDefined()
 
       // Add and select a key
       store.addKey()
@@ -178,16 +178,16 @@ describe('CanvasToolbar', () => {
       await wrapper.vm.$nextTick()
 
       // Mirror tools should now be enabled
-      expect(mirrorHBtn.attributes('disabled')).toBeUndefined()
-      expect(mirrorVBtn.attributes('disabled')).toBeUndefined()
+      expect(mirrorBtn.attributes('disabled')).toBeUndefined()
+      expect(mirrorDropdownBtn.attributes('disabled')).toBeUndefined()
 
       // Deselect all keys
       store.selectedKeys.length = 0
       await wrapper.vm.$nextTick()
 
       // Mirror tools should be disabled again
-      expect(mirrorHBtn.attributes('disabled')).toBeDefined()
-      expect(mirrorVBtn.attributes('disabled')).toBeDefined()
+      expect(mirrorBtn.attributes('disabled')).toBeDefined()
+      expect(mirrorDropdownBtn.attributes('disabled')).toBeDefined()
     })
   })
 })

@@ -23,8 +23,8 @@ test.describe('Canvas Toolbar', () => {
         page.locator('button[title="Selection Mode - Left click to select, middle drag to move"]'),
       ).toBeVisible()
       await expect(page.locator('button[title="Add Standard Key"]')).toBeVisible()
-      await expect(page.locator('button[title="Mirror Horizontal"]')).toBeVisible()
       await expect(page.locator('button[title="Mirror Vertical"]')).toBeVisible()
+      await expect(page.locator('.mirror-group .dropdown-btn')).toBeVisible()
     })
 
     test('should have selection tool active by default', async ({ page }) => {
@@ -39,8 +39,8 @@ test.describe('Canvas Toolbar', () => {
         page.locator('button[title="Selection Mode - Left click to select, middle drag to move"]'),
       ).toBeVisible()
       // Drag and drop functionality is integrated into Selection Mode
-      await expect(page.locator('button[title="Mirror Horizontal"]')).toBeVisible()
       await expect(page.locator('button[title="Mirror Vertical"]')).toBeVisible()
+      await expect(page.locator('.mirror-group .dropdown-btn')).toBeVisible()
     })
   })
 
@@ -103,26 +103,29 @@ test.describe('Canvas Toolbar', () => {
       const selectionButton = page.locator(
         'button[title="Selection Mode - Left click to select, middle drag to move"]',
       )
-      const mirrorHButton = page.locator('button[title="Mirror Horizontal"]')
-      const mirrorVButton = page.locator('button[title="Mirror Vertical"]')
+      const mirrorButton = page.locator('button[title="Mirror Vertical"]')
 
       // Initially Selection Mode should be active
       await expect(selectionButton).toHaveClass(/active/)
 
       // Switch to horizontal mirror
-      await mirrorHButton.click()
-      await expect(mirrorHButton).toHaveClass(/active/)
+      await page.locator('.mirror-group .dropdown-btn').click()
+      await page
+        .locator('.mirror-dropdown .dropdown-item')
+        .filter({ hasText: 'Mirror Horizontal' })
+        .click()
+      await expect(mirrorButton).toHaveClass(/active/)
       await expect(selectionButton).not.toHaveClass(/active/)
 
       // Switch to vertical mirror
-      await mirrorVButton.click()
-      await expect(mirrorVButton).toHaveClass(/active/)
-      await expect(mirrorHButton).not.toHaveClass(/active/)
+      await mirrorButton.click()
+      await expect(mirrorButton).toHaveClass(/active/)
+      await expect(selectionButton).not.toHaveClass(/active/)
 
       // Switch back to Selection Mode
       await selectionButton.click()
       await expect(selectionButton).toHaveClass(/active/)
-      await expect(mirrorVButton).not.toHaveClass(/active/)
+      await expect(mirrorButton).not.toHaveClass(/active/)
     })
   })
 
@@ -425,13 +428,16 @@ test.describe('Canvas Toolbar', () => {
       await canvasHelper.addKey()
       await canvasHelper.setKeyLabel('center', 'A')
 
-      const mirrorHButton = page.locator('button[title="Mirror Horizontal"]')
+      // Click the mirror dropdown and select horizontal
+      await page.locator('.mirror-group .dropdown-btn').click()
+      await page
+        .locator('.mirror-dropdown .dropdown-item')
+        .filter({ hasText: 'Mirror Horizontal' })
+        .click()
 
-      // Click the horizontal mirror tool
-      await mirrorHButton.click()
-
-      // Verify it's active
-      await expect(mirrorHButton).toHaveClass(/active/)
+      // Verify main mirror button is active
+      const mirrorButton = page.locator('button[title="Mirror Vertical"]')
+      await expect(mirrorButton).toHaveClass(/active/)
 
       // Other tools should not be active
       await expect(
@@ -446,9 +452,8 @@ test.describe('Canvas Toolbar', () => {
       await canvasHelper.addKey()
       await canvasHelper.setKeyLabel('center', 'B')
 
+      // Click the main mirror button (vertical is default)
       const mirrorVButton = page.locator('button[title="Mirror Vertical"]')
-
-      // Click the vertical mirror tool
       await mirrorVButton.click()
 
       // Verify it's active
@@ -469,8 +474,11 @@ test.describe('Canvas Toolbar', () => {
       await canvasHelper.setKeyLabel('center', 'C')
 
       // Switch to horizontal mirror mode
-      const mirrorHButton = page.locator('button[title="Mirror Horizontal"]')
-      await mirrorHButton.click()
+      await page.locator('.mirror-group .dropdown-btn').click()
+      await page
+        .locator('.mirror-dropdown .dropdown-item')
+        .filter({ hasText: 'Mirror Horizontal' })
+        .click()
 
       // Get canvas
       const canvas = canvasHelper.getCanvas()
@@ -498,11 +506,14 @@ test.describe('Canvas Toolbar', () => {
       await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
 
       // Switch to horizontal mirror mode
-      const mirrorHButton = page.locator('button[title="Mirror Horizontal"]')
-      await mirrorHButton.click()
+      await page.locator('.mirror-group .dropdown-btn').click()
+      await page
+        .locator('.mirror-dropdown .dropdown-item')
+        .filter({ hasText: 'Mirror Horizontal' })
+        .click()
 
       // Verify mode is active
-      await expect(mirrorHButton).toHaveClass(/active/)
+      await expect(page.locator('button[title="Mirror Vertical"]')).toHaveClass(/active/)
 
       // Get canvas and click to set mirror axis and create mirror
       const canvas = canvasHelper.getCanvas()
@@ -605,7 +616,7 @@ test.describe('Canvas Toolbar', () => {
       )
       await selectionButton.click()
 
-      const mirrorButton = page.locator('button[title="Mirror Horizontal"]')
+      const mirrorButton = page.locator('button[title="Mirror Vertical"]')
       await mirrorButton.click()
 
       // Move step should be preserved
@@ -673,8 +684,8 @@ test.describe('Canvas Toolbar', () => {
 
     test('should handle mirror operations with no keys selected', async ({ page }) => {
       // Mirror buttons should be disabled when no keys are selected
-      const mirrorHButton = page.locator('button[title="Mirror Horizontal"]')
-      await expect(mirrorHButton).toBeDisabled()
+      const mirrorButton = page.locator('button[title="Mirror Vertical"]')
+      await expect(mirrorButton).toBeDisabled()
 
       // Canvas should still be functional
       const canvas = canvasHelper.getCanvas()
@@ -692,9 +703,12 @@ test.describe('Canvas Toolbar', () => {
       await moveStepInput.fill('0.25')
 
       // Switch to horizontal mirror mode
-      const mirrorHButton = page.locator('button[title="Mirror Horizontal"]')
-      await mirrorHButton.click()
-      await expect(mirrorHButton).toHaveClass(/active/)
+      await page.locator('.mirror-group .dropdown-btn').click()
+      await page
+        .locator('.mirror-dropdown .dropdown-item')
+        .filter({ hasText: 'Mirror Horizontal' })
+        .click()
+      await expect(page.locator('button[title="Mirror Vertical"]')).toHaveClass(/active/)
 
       // Get canvas and hover over it to trigger mirror preview
       const canvas = canvasHelper.getCanvas()
@@ -715,7 +729,7 @@ test.describe('Canvas Toolbar', () => {
       await expect(canvas).toBeVisible()
 
       // Verify mode is still active
-      await expect(mirrorHButton).toHaveClass(/active/)
+      await expect(page.locator('button[title="Mirror Vertical"]')).toHaveClass(/active/)
     })
   })
 
@@ -733,7 +747,7 @@ test.describe('Canvas Toolbar', () => {
       await expect(page.locator('.canvas-toolbar')).toBeVisible()
 
       // Tools should still be clickable
-      const mirrorButton = page.locator('button[title="Mirror Horizontal"]')
+      const mirrorButton = page.locator('button[title="Mirror Vertical"]')
       await mirrorButton.click()
       await expect(mirrorButton).toHaveClass(/active/)
 

@@ -74,23 +74,58 @@
           <i class="bi bi-arrow-repeat"></i>
         </button>
 
-        <button
-          :class="{ 'tool-button': true, active: canvasMode === 'mirror-h' }"
-          :disabled="!canUseMirrorTools"
-          @click="setMode('mirror-h')"
-          title="Mirror Horizontal"
-        >
-          <i class="bi bi-symmetry-horizontal"></i>
-        </button>
+        <!-- Mirror Button Group -->
+        <div class="btn-group-vertical mirror-group">
+          <button
+            :class="{
+              'tool-button': true,
+              'primary-mirror-btn': true,
+              active: canvasMode === 'mirror-v' || canvasMode === 'mirror-h',
+            }"
+            :disabled="!canUseMirrorTools"
+            @click="setMode('mirror-v')"
+            title="Mirror Vertical"
+          >
+            <i class="bi bi-symmetry-vertical"></i>
+          </button>
+          <button
+            ref="mirrorDropdownBtnRef"
+            class="tool-button dropdown-btn"
+            :disabled="!canUseMirrorTools"
+            @click="toggleMirrorDropdown"
+            title="Mirror Options"
+          >
+            <i class="bi bi-chevron-down"></i>
+          </button>
+        </div>
 
-        <button
-          :class="{ 'tool-button': true, active: canvasMode === 'mirror-v' }"
-          :disabled="!canUseMirrorTools"
-          @click="setMode('mirror-v')"
-          title="Mirror Vertical"
+        <!-- Mirror Dropdown -->
+        <div
+          v-if="showMirrorDropdown"
+          ref="mirrorDropdownRef"
+          class="mirror-dropdown"
+          style="opacity: 0"
         >
-          <i class="bi bi-symmetry-vertical"></i>
-        </button>
+          <div class="dropdown-header">Mirror Direction</div>
+          <button
+            @click="selectMirrorMode('mirror-v')"
+            class="dropdown-item"
+            :class="{ active: canvasMode === 'mirror-v' }"
+            title="Mirror keys across a vertical line"
+          >
+            <i class="bi bi-symmetry-vertical"></i>
+            Mirror Vertical
+          </button>
+          <button
+            @click="selectMirrorMode('mirror-h')"
+            class="dropdown-item"
+            :class="{ active: canvasMode === 'mirror-h' }"
+            title="Mirror keys across a horizontal line"
+          >
+            <i class="bi bi-symmetry-horizontal"></i>
+            Mirror Horizontal
+          </button>
+        </div>
 
         <!-- Extra Tools Dropdown -->
         <div class="btn-group-vertical extra-tools-group">
@@ -159,6 +194,11 @@ const showSpecialKeysDropdown = ref(false)
 const specialKeys = SPECIAL_KEYS
 const dropdownRef = ref<HTMLElement>()
 const dropdownBtnRef = ref<HTMLElement>()
+
+// Mirror dropdown state
+const showMirrorDropdown = ref(false)
+const mirrorDropdownRef = ref<HTMLElement>()
+const mirrorDropdownBtnRef = ref<HTMLElement>()
 
 // Extra tools dropdown
 const showExtraToolsDropdown = ref(false)
@@ -290,6 +330,72 @@ const addSpecialKey = (specialKey: SpecialKeyTemplate) => {
   requestCanvasFocus()
 }
 
+// Mirror dropdown functions
+const toggleMirrorDropdown = () => {
+  if (showMirrorDropdown.value) {
+    // Hide dropdown
+    showMirrorDropdown.value = false
+    return
+  }
+
+  // Calculate position before showing dropdown
+  if (mirrorDropdownBtnRef.value) {
+    const buttonRect = mirrorDropdownBtnRef.value.getBoundingClientRect()
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+
+    // Estimate dropdown dimensions
+    const estimatedDropdownWidth = 180
+    const estimatedDropdownHeight = 100 // 2 items + header
+
+    // Calculate optimal position
+    let left = buttonRect.right + 10 // Default: to the right
+    let top = buttonRect.top // Default: align with button top
+
+    // Check if dropdown would overflow viewport on the right
+    if (left + estimatedDropdownWidth > viewportWidth) {
+      // Position to the left of button instead
+      left = buttonRect.left - estimatedDropdownWidth - 10
+    }
+
+    // Ensure dropdown doesn't overflow left edge
+    if (left < 10) {
+      left = 10
+    }
+
+    // Check if dropdown would overflow viewport on the bottom
+    if (top + estimatedDropdownHeight > viewportHeight) {
+      // Position above the button instead
+      top = buttonRect.bottom - estimatedDropdownHeight
+    }
+
+    // Ensure dropdown doesn't overflow top edge
+    if (top < 10) {
+      top = 10
+    }
+
+    // Show dropdown first, then position it immediately
+    showMirrorDropdown.value = true
+
+    // Use nextTick to ensure DOM is updated before positioning
+    nextTick(() => {
+      if (mirrorDropdownRef.value) {
+        const dropdown = mirrorDropdownRef.value
+        dropdown.style.left = `${left}px`
+        dropdown.style.top = `${top}px`
+        dropdown.style.opacity = '1'
+      }
+    })
+  }
+}
+
+const selectMirrorMode = (mode: 'mirror-v' | 'mirror-h') => {
+  setMode(mode)
+  // Close the dropdown after selection
+  showMirrorDropdown.value = false
+  requestCanvasFocus()
+}
+
 const deleteKeys = () => {
   keyboardStore.deleteKeys()
   requestCanvasFocus()
@@ -391,6 +497,16 @@ const handleClickOutside = (event: MouseEvent) => {
     }
   }
 
+  if (showMirrorDropdown.value) {
+    const target = event.target as Node
+    const dropdownBtn = mirrorDropdownBtnRef.value
+    const dropdown = mirrorDropdownRef.value
+
+    if (dropdownBtn && !dropdownBtn.contains(target) && dropdown && !dropdown.contains(target)) {
+      showMirrorDropdown.value = false
+    }
+  }
+
   if (showExtraToolsDropdown.value) {
     const target = event.target as Node
     const dropdownBtn = extraToolsBtnRef.value
@@ -482,6 +598,16 @@ onUnmounted(() => {
   }
 
   .primary-add-btn {
+    border-radius: 6px 2px 2px 6px;
+    border-right: 1px solid #adb5bd;
+  }
+
+  .mirror-group {
+    flex-direction: row;
+    gap: 2px;
+  }
+
+  .primary-mirror-btn {
     border-radius: 6px 2px 2px 6px;
     border-right: 1px solid #adb5bd;
   }
@@ -612,6 +738,48 @@ onUnmounted(() => {
 
 .dropdown-item:hover {
   background: var(--bs-tertiary-bg);
+}
+
+/* Mirror Dropdown */
+.mirror-dropdown {
+  position: fixed;
+  background-color: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
+  border-radius: 6px;
+  box-shadow: var(--bs-box-shadow);
+  z-index: 10000;
+  min-width: 180px;
+  max-height: 300px;
+  overflow-y: auto;
+  transition: opacity 0.2s ease;
+  /* Position will be calculated by JavaScript */
+}
+
+.mirror-dropdown .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mirror-dropdown .dropdown-item.active {
+  background: var(--bs-primary-bg-subtle);
+  color: var(--bs-primary-text);
+}
+
+.mirror-dropdown .dropdown-item.active:hover {
+  background: var(--bs-primary-bg-subtle);
+}
+
+/* Mirror Button Group */
+.mirror-group {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.primary-mirror-btn {
+  border-radius: 6px 6px 2px 2px;
 }
 
 /* Extra Tools Dropdown */

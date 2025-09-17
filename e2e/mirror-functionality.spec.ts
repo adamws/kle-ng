@@ -32,10 +32,14 @@ test.describe('Mirror Functionality', () => {
     // Verify key is selected
     await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
 
-    // Switch to horizontal mirror mode
-    await page.locator('button[title="Mirror Horizontal"]').click()
+    // Switch to horizontal mirror mode using dropdown
+    await page.locator('.mirror-group .dropdown-btn').click()
+    await page
+      .locator('.mirror-dropdown .dropdown-item')
+      .filter({ hasText: 'Mirror Horizontal' })
+      .click()
     // Wait for button to become active
-    await expect(page.locator('button[title="Mirror Horizontal"]')).toHaveClass(/active/)
+    await expect(page.locator('button[title="Mirror Vertical"]')).toHaveClass(/active/)
 
     // Verify key is still selected after switching to mirror mode
     await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
@@ -73,7 +77,7 @@ test.describe('Mirror Functionality', () => {
     // Verify key is selected
     await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
 
-    // Switch to vertical mirror mode
+    // Switch to vertical mirror mode (default button)
     await page.locator('button[title="Mirror Vertical"]').click()
     // Wait for button to become active
     await expect(page.locator('button[title="Mirror Vertical"]')).toHaveClass(/active/)
@@ -121,10 +125,14 @@ test.describe('Mirror Functionality', () => {
     // Wait for rotation value to be set
     await expect(rotationInput).toHaveValue('45')
 
-    // Switch to horizontal mirror mode
-    await page.locator('button[title="Mirror Horizontal"]').click()
+    // Switch to horizontal mirror mode using dropdown
+    await page.locator('.mirror-group .dropdown-btn').click()
+    await page
+      .locator('.mirror-dropdown .dropdown-item')
+      .filter({ hasText: 'Mirror Horizontal' })
+      .click()
     // Wait for button to become active
-    await expect(page.locator('button[title="Mirror Horizontal"]')).toHaveClass(/active/)
+    await expect(page.locator('button[title="Mirror Vertical"]')).toHaveClass(/active/)
 
     // Verify key is still selected after switching to mirror mode
     await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
@@ -169,7 +177,7 @@ test.describe('Mirror Functionality', () => {
     // Wait for rotation value to be set
     await expect(rotationInput).toHaveValue('-30')
 
-    // Switch to vertical mirror mode
+    // Switch to vertical mirror mode (default button)
     await page.locator('button[title="Mirror Vertical"]').click()
     // Wait for button to become active
     await expect(page.locator('button[title="Mirror Vertical"]')).toHaveClass(/active/)
@@ -241,10 +249,14 @@ test.describe('Mirror Functionality', () => {
     const selectedCount = parseInt(selectedText?.match(/Selected: (\d+)/)?.[1] || '0')
     expect(selectedCount).toBeGreaterThanOrEqual(2) // At least 2 keys should be selected
 
-    // Switch to horizontal mirror mode
-    await page.locator('button[title="Mirror Horizontal"]').click()
+    // Switch to horizontal mirror mode using dropdown
+    await page.locator('.mirror-group .dropdown-btn').click()
+    await page
+      .locator('.mirror-dropdown .dropdown-item')
+      .filter({ hasText: 'Mirror Horizontal' })
+      .click()
     // Wait for button to become active
-    await expect(page.locator('button[title="Mirror Horizontal"]')).toHaveClass(/active/)
+    await expect(page.locator('button[title="Mirror Vertical"]')).toHaveClass(/active/)
     await page.waitForTimeout(300)
 
     // Verify keys are still selected after switching to mirror mode
@@ -305,7 +317,7 @@ test.describe('Mirror Functionality', () => {
     const selectedCount = parseInt(selectedText?.match(/Selected: (\d+)/)?.[1] || '0')
     expect(selectedCount).toBeGreaterThanOrEqual(1) // At least 1 key should be selected
 
-    // Switch to vertical mirror mode
+    // Switch to vertical mirror mode (default button)
     await page.locator('button[title="Mirror Vertical"]').click()
     // Wait for button to become active
     await expect(page.locator('button[title="Mirror Vertical"]')).toHaveClass(/active/)
