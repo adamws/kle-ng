@@ -174,17 +174,12 @@ const lastUsedValues = ref({
 })
 
 // Dragging functionality with viewport bounds checking
-const {
-  position,
-  panelRef,
-  handleMouseDown,
-  handleHeaderMouseDown,
-  initializePosition,
-} = useDraggablePanel({
-  defaultPosition: { x: 100, y: 100 },
-  margin: 10,
-  headerHeight: 45, // Approximate height of the panel header
-})
+const { position, panelRef, handleMouseDown, handleHeaderMouseDown, initializePosition } =
+  useDraggablePanel({
+    defaultPosition: { x: 100, y: 100 },
+    margin: 10,
+    headerHeight: 45, // Approximate height of the panel header
+  })
 
 // Watch for modal visibility - restore last used values and auto-focus
 watch(

@@ -231,17 +231,12 @@ const fromPosition = ref<number | null>(null)
 const toPosition = ref<number | null>(null)
 
 // Dragging functionality with viewport bounds checking
-const {
-  position,
-  panelRef,
-  handleMouseDown,
-  handleHeaderMouseDown,
-  initializePosition,
-} = useDraggablePanel({
-  defaultPosition: { x: 100, y: 100 },
-  margin: 10,
-  headerHeight: 45, // Approximate height of the panel header
-})
+const { position, panelRef, handleMouseDown, handleHeaderMouseDown, initializePosition } =
+  useDraggablePanel({
+    defaultPosition: { x: 100, y: 100 },
+    margin: 10,
+    headerHeight: 45, // Approximate height of the panel header
+  })
 
 // Legend categories for removal
 interface LegendCategory {

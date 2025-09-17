@@ -123,17 +123,12 @@ const emit = defineEmits<Emits>()
 // Local state - this represents the rotation DELTA (change), not absolute angle
 const currentAngle = ref(0)
 // Dragging functionality with viewport bounds checking
-const {
-  position,
-  panelRef,
-  handleMouseDown,
-  handleHeaderMouseDown,
-  initializePosition,
-} = useDraggablePanel({
-  defaultPosition: { x: 100, y: 100 },
-  margin: 10,
-  headerHeight: 45, // Approximate height of the panel header
-})
+const { position, panelRef, handleMouseDown, handleHeaderMouseDown, initializePosition } =
+  useDraggablePanel({
+    defaultPosition: { x: 100, y: 100 },
+    margin: 10,
+    headerHeight: 45, // Approximate height of the panel header
+  })
 
 // Watch for modal visibility - reset delta when modal opens
 watch(
