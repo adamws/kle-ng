@@ -97,6 +97,7 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { useDraggablePanel } from '@/composables/useDraggablePanel'
 import CustomNumberInput from './CustomNumberInput.vue'
 
 // Props
@@ -121,10 +122,18 @@ const emit = defineEmits<Emits>()
 
 // Local state - this represents the rotation DELTA (change), not absolute angle
 const currentAngle = ref(0)
-const panelRef = ref<HTMLDivElement>()
-const position = ref({ x: 100, y: 100 }) // Default position
-const isDragging = ref(false)
-const dragOffset = ref({ x: 0, y: 0 })
+// Dragging functionality with viewport bounds checking
+const {
+  position,
+  panelRef,
+  handleMouseDown,
+  handleHeaderMouseDown,
+  initializePosition,
+} = useDraggablePanel({
+  defaultPosition: { x: 100, y: 100 },
+  margin: 10,
+  headerHeight: 45, // Approximate height of the panel header
+})
 
 // Watch for modal visibility - reset delta when modal opens
 watch(
@@ -159,45 +168,7 @@ const handleCancel = () => {
   emit('cancel')
 }
 
-// Dragging functionality
-const handleMouseDown = (event: MouseEvent) => {
-  // Only handle mousedown on the panel itself (not header or buttons)
-  if (event.target === panelRef.value) {
-    event.preventDefault()
-  }
-}
-
-const handleHeaderMouseDown = (event: MouseEvent) => {
-  // Start dragging when clicking on header
-  isDragging.value = true
-
-  const rect = panelRef.value?.getBoundingClientRect()
-  if (rect) {
-    dragOffset.value = {
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top,
-    }
-  }
-
-  document.addEventListener('mousemove', handleDocumentMouseMove)
-  document.addEventListener('mouseup', handleDocumentMouseUp)
-  event.preventDefault()
-}
-
-const handleDocumentMouseMove = (event: MouseEvent) => {
-  if (isDragging.value) {
-    position.value = {
-      x: event.clientX - dragOffset.value.x,
-      y: event.clientY - dragOffset.value.y,
-    }
-  }
-}
-
-const handleDocumentMouseUp = () => {
-  isDragging.value = false
-  document.removeEventListener('mousemove', handleDocumentMouseMove)
-  document.removeEventListener('mouseup', handleDocumentMouseUp)
-}
+// Dragging functionality is now handled by the useDraggablePanel composable
 
 // Watch for visibility changes to reset angle
 watch(
@@ -206,7 +177,7 @@ watch(
     if (isVisible) {
       currentAngle.value = 0
       // Position panel near the center-right of the screen
-      position.value = { x: window.innerWidth - 400, y: 100 }
+      initializePosition({ x: window.innerWidth - 400, y: 100 })
     }
   },
 )
@@ -228,8 +199,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('keydown', handleKeydown)
-  document.removeEventListener('mousemove', handleDocumentMouseMove)
-  document.removeEventListener('mouseup', handleDocumentMouseUp)
 })
 </script>
 
@@ -241,6 +210,39 @@ onUnmounted(() => {
   z-index: 1000;
   width: 320px;
   user-select: none;
+}
+
+/* Mobile anchoring - similar to Key Properties panel */
+@media (max-width: 767px) {
+  .rotation-panel {
+    position: fixed !important;
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: 50vh !important;
+    transform: none !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-bottom: none !important;
+  }
+
+  .rotation-panel .panel-content {
+    border-radius: 0 !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .rotation-panel .panel-body {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    max-height: none !important;
+  }
 }
 
 .panel-content {

@@ -205,6 +205,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useKeyboardStore, type Key } from '@/stores/keyboard'
+import { useDraggablePanel } from '@/composables/useDraggablePanel'
 
 // Props
 interface Props {
@@ -229,11 +230,18 @@ const activeTab = ref<'remove' | 'align' | 'move'>('remove')
 const fromPosition = ref<number | null>(null)
 const toPosition = ref<number | null>(null)
 
-// Panel positioning and dragging
-const panelRef = ref<HTMLDivElement>()
-const position = ref({ x: 100, y: 100 })
-const isDragging = ref(false)
-const dragOffset = ref({ x: 0, y: 0 })
+// Dragging functionality with viewport bounds checking
+const {
+  position,
+  panelRef,
+  handleMouseDown,
+  handleHeaderMouseDown,
+  initializePosition,
+} = useDraggablePanel({
+  defaultPosition: { x: 100, y: 100 },
+  margin: 10,
+  headerHeight: 45, // Approximate height of the panel header
+})
 
 // Legend categories for removal
 interface LegendCategory {
@@ -375,7 +383,7 @@ watch(
   () => props.visible,
   async (isVisible) => {
     if (isVisible) {
-      position.value = { x: window.innerWidth - 420, y: 100 }
+      initializePosition({ x: window.innerWidth - 420, y: 100 })
       await nextTick()
     }
   },
@@ -530,43 +538,7 @@ const handleClose = () => {
   emit('close')
 }
 
-// Dragging functionality
-const handleMouseDown = (event: MouseEvent) => {
-  if (event.target === panelRef.value) {
-    event.preventDefault()
-  }
-}
-
-const handleHeaderMouseDown = (event: MouseEvent) => {
-  isDragging.value = true
-
-  const rect = panelRef.value?.getBoundingClientRect()
-  if (rect) {
-    dragOffset.value = {
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top,
-    }
-  }
-
-  document.addEventListener('mousemove', handleDocumentMouseMove)
-  document.addEventListener('mouseup', handleDocumentMouseUp)
-  event.preventDefault()
-}
-
-const handleDocumentMouseMove = (event: MouseEvent) => {
-  if (isDragging.value) {
-    position.value = {
-      x: event.clientX - dragOffset.value.x,
-      y: event.clientY - dragOffset.value.y,
-    }
-  }
-}
-
-const handleDocumentMouseUp = () => {
-  isDragging.value = false
-  document.removeEventListener('mousemove', handleDocumentMouseMove)
-  document.removeEventListener('mouseup', handleDocumentMouseUp)
-}
+// Dragging functionality is now handled by the useDraggablePanel composable
 
 // Keyboard shortcuts
 const handleKeydown = (event: KeyboardEvent) => {
@@ -581,8 +553,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('keydown', handleKeydown)
-  document.removeEventListener('mousemove', handleDocumentMouseMove)
-  document.removeEventListener('mouseup', handleDocumentMouseUp)
 })
 </script>
 
@@ -594,6 +564,39 @@ onUnmounted(() => {
   z-index: 1000;
   width: 400px;
   user-select: none;
+}
+
+/* Mobile anchoring - similar to Key Properties panel */
+@media (max-width: 767px) {
+  .legend-tools-panel {
+    position: fixed !important;
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: 50vh !important;
+    transform: none !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-bottom: none !important;
+  }
+
+  .legend-tools-panel .panel-content {
+    border-radius: 0 !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .legend-tools-panel .panel-body {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    max-height: none !important;
+  }
 }
 
 .panel-content {
