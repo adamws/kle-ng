@@ -5,7 +5,7 @@
     >
       <!-- Left side: Keys status -->
       <div
-        class="canvas-status d-flex flex-wrap align-items-center gap-2 gap-sm-3 justify-content-center justify-content-lg-start"
+        class="canvas-status d-flex flex-wrap align-items-center gap-1 gap-sm-2 justify-content-center justify-content-lg-start"
       >
         <div class="canvas-focus-indicator d-flex align-items-center gap-1">
           <div
@@ -62,7 +62,7 @@
 
       <!-- Right side: Zoom controls and mouse position -->
       <div
-        class="d-flex flex-wrap align-items-center gap-2 gap-sm-3 justify-content-center justify-content-lg-end"
+        class="d-flex flex-wrap align-items-center gap-1 gap-sm-2 justify-content-center justify-content-lg-end"
       >
         <!-- Zoom Controls -->
         <div class="zoom-control d-flex align-items-center gap-1">
@@ -168,40 +168,49 @@ window.addEventListener('canvas-focus-change', (event: Event) => {
   background-color: var(--bs-tertiary-bg);
 }
 
-.zoom-control {
-  min-width: 110px;
+/* Base styles - flexible approach */
+.zoom-control,
+.move-step-control {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
-.zoom-label {
+.zoom-label,
+.move-step-label {
   font-size: 0.75rem;
-  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .position-indicator {
   background-color: var(--bs-body-bg);
   border: 1px solid var(--bs-border-color);
   border-radius: 4px;
-  padding: 4px 8px;
+  padding: 3px 6px;
   font-size: 0.75rem;
   font-weight: 500;
   font-family: monospace;
   display: flex;
   align-items: center;
   gap: 4px;
-  min-width: 140px;
+  flex-shrink: 1;
+  min-width: 0;
   justify-content: space-between;
 }
 
 .position-label {
   font-weight: normal;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .position-values {
   font-weight: 600;
   text-align: right;
-  min-width: 85px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* Lock Rotations Checkbox Alignment */
@@ -210,15 +219,16 @@ window.addEventListener('canvas-focus-change', (event: Event) => {
   margin-bottom: 0 !important;
 }
 
-.move-step-label {
-  font-size: 0.75rem;
+.lock-rotations-control {
+  flex-shrink: 0;
   white-space: nowrap;
 }
 
 /* Canvas Focus Indicator */
 .canvas-focus-indicator {
   font-size: 0.75rem;
-  min-width: 50px; /* Consistent width for "Inactive"/"Active" */
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .focus-status-dot {
@@ -233,45 +243,72 @@ window.addEventListener('canvas-focus-change', (event: Event) => {
   background-color: #28a745;
 }
 
-/* Keys counters consistent width */
-.keys-counter {
-  min-width: 60px; /* Assume max ~999 keys */
-}
-
+/* Keys counters - flexible */
+.keys-counter,
 .selected-counter {
-  min-width: 80px; /* Assume max ~999 selected */
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
-.move-step-control {
-  min-width: 110px;
+/* Responsive input sizing - set appropriate sizes for all screens */
+.move-step-control .custom-number-input,
+.zoom-control .custom-number-input {
+  width: 75px;
+  min-width: 75px;
+  flex-shrink: 0;
 }
 
-/* Mobile responsive adjustments */
-@media (max-width: 575.98px) {
-  .canvas-status > * {
-    flex: 0 0 auto;
-    min-width: fit-content;
+/* Tablet and mobile adjustments */
+@media (max-width: 767.98px) {
+  /* Reduce spacing to prevent overlap */
+  .canvas-status {
+    gap: 0.25rem !important;
   }
 
-  .position-indicator {
-    min-width: 120px;
-    font-size: 0.7rem;
+  .d-flex.flex-wrap.align-items-center {
+    gap: 0.25rem !important;
   }
 
-  .position-values {
-    min-width: 75px;
-  }
-
-  .zoom-control {
-    min-width: 100px;
-  }
-
-  .zoom-label {
-    font-size: 0.7rem;
-  }
-
+  /* Smaller text for space efficiency */
+  .zoom-label,
+  .move-step-label,
   .small {
     font-size: 0.7rem !important;
+  }
+
+  /* Compact position indicator */
+  .position-indicator {
+    padding: 2px 4px;
+    font-size: 0.65rem;
+    gap: 2px;
+  }
+
+  /* Appropriately sized inputs for mobile */
+  .move-step-control .custom-number-input,
+  .zoom-control .custom-number-input {
+    width: 55px;
+  }
+}
+
+/* Very small screens - more aggressive space saving */
+@media (max-width: 479.98px) {
+  /* Even smaller inputs */
+  .move-step-control .custom-number-input,
+  .zoom-control .custom-number-input {
+    width: 50px;
+  }
+
+  /* Minimal position indicator */
+  .position-indicator {
+    min-width: 80px;
+    padding: 1px 3px;
+    font-size: 0.6rem;
+  }
+
+  /* Tighter spacing */
+  .canvas-status,
+  .d-flex.flex-wrap.align-items-center {
+    gap: 0.125rem !important;
   }
 }
 
