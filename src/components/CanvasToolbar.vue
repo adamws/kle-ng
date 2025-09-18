@@ -151,12 +151,15 @@
         <button
           v-for="tool in extraTools"
           :key="tool.id"
-          @click="executeExtraTool(tool)"
-          class="dropdown-item"
+          @click="tool.disabled ? null : executeExtraTool(tool)"
+          :class="['dropdown-item', { disabled: tool.disabled }]"
           :title="tool.description"
           :disabled="tool.disabled"
         >
-          {{ tool.name }}
+          <div class="tool-main">{{ tool.name }}</div>
+          <div v-if="tool.disabled && tool.id === 'move-rotation-origins'" class="tool-subtitle">
+            Select keys first
+          </div>
         </button>
       </div>
     </div>
@@ -217,7 +220,7 @@ interface ExtraTool {
   action: () => void
 }
 
-const extraTools: ExtraTool[] = [
+const extraTools = computed((): ExtraTool[] => [
   {
     id: 'legend-tools',
     name: 'Legend Tools',
@@ -230,11 +233,14 @@ const extraTools: ExtraTool[] = [
   {
     id: 'move-rotation-origins',
     name: 'Move rotation origins to key centers',
-    description: 'Move rotation origins to key centers for selected keys',
-    disabled: false,
+    description:
+      keyboardStore.selectedKeys.length === 0
+        ? 'Select keys first to move their rotation origins to centers'
+        : 'Move rotation origins to key centers for selected keys',
+    disabled: keyboardStore.selectedKeys.length === 0,
     action: () => moveRotationsToKeyCenters(),
   },
-]
+])
 
 // Computed properties from store
 const canvasMode = computed(() => keyboardStore.canvasMode)
@@ -434,7 +440,7 @@ const toggleExtraToolsDropdown = () => {
 
     // Estimate dropdown dimensions (will be refined once rendered)
     const estimatedDropdownWidth = 200
-    const estimatedDropdownHeight = Math.min(300, extraTools.length * 32 + 40) // items + header
+    const estimatedDropdownHeight = Math.min(300, extraTools.value.length * 32 + 40) // items + header
 
     // Calculate optimal position
     let left = buttonRect.right + 10 // Default: to the right
@@ -715,7 +721,7 @@ onUnmounted(() => {
   padding: 8px 12px;
   font-size: 10px;
   font-weight: 600;
-  color: var(--bs-secondary);
+  color: var(--bs-primary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   border-bottom: 1px solid var(--bs-border-color);
@@ -736,8 +742,32 @@ onUnmounted(() => {
   transition: background-color 0.15s ease;
 }
 
-.dropdown-item:hover {
+.dropdown-item:hover:not(.disabled) {
   background: var(--bs-tertiary-bg);
+}
+
+.dropdown-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  color: var(--bs-secondary-color-emphasis);
+  background-color: var(--bs-secondary-bg);
+}
+
+.dropdown-item.disabled:hover {
+  background-color: var(--bs-secondary-bg);
+}
+
+.tool-main {
+  font-weight: 500;
+}
+
+.tool-subtitle {
+  font-size: 11px;
+  color: var(--bs-danger);
+  font-weight: 600;
+  margin-top: 2px;
+  line-height: 1.2;
+  opacity: 1;
 }
 
 /* Mirror Dropdown */
