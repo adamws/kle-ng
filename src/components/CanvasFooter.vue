@@ -65,18 +65,21 @@
         class="d-flex flex-wrap align-items-center gap-2 gap-sm-3 justify-content-center justify-content-lg-end"
       >
         <!-- Zoom Controls -->
-        <div class="btn-group btn-group-sm">
-          <button @click="zoomOut" class="btn btn-outline-secondary" title="Zoom Out">
-            <i class="bi bi-zoom-out"></i>
-          </button>
-          <button @click="resetView" class="btn btn-outline-secondary" title="Reset View">
-            <i class="bi bi-house"></i>
-          </button>
-          <button @click="zoomIn" class="btn btn-outline-secondary" title="Zoom In">
-            <i class="bi bi-zoom-in"></i>
-          </button>
+        <div class="zoom-control d-flex align-items-center gap-1">
+          <label class="zoom-label small text-muted mb-0">Zoom:</label>
+          <CustomNumberInput
+            :model-value="zoomPercent"
+            @change="updateZoom"
+            :step="10"
+            :min="10"
+            :max="500"
+            :value-on-clear="100"
+            :disable-wheel="true"
+            size="compact"
+          >
+            <template #suffix>%</template>
+          </CustomNumberInput>
         </div>
-        <div class="zoom-indicator">{{ Math.round(zoom * 100) }}%</div>
 
         <!-- Mouse position display -->
         <div class="position-indicator">
@@ -91,7 +94,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useKeyboardStore } from '@/stores/keyboard'
 import CustomNumberInput from './CustomNumberInput.vue'
 
@@ -104,30 +107,22 @@ const maxZoom = 5
 const mousePosition = ref({ x: 0, y: 0, visible: false })
 const canvasFocused = ref(false)
 
+// Computed property to convert zoom to percentage for the input
+const zoomPercent = computed(() => Math.round(zoom.value * 100))
+
 // Helper function to request canvas focus
 const requestCanvasFocus = () => {
   window.dispatchEvent(new CustomEvent('request-canvas-focus'))
 }
 
 // Zoom controls
-const zoomIn = () => {
-  const newZoom = Math.min(maxZoom, zoom.value * 1.2)
-  zoom.value = newZoom
-  window.dispatchEvent(new CustomEvent('canvas-zoom', { detail: newZoom }))
-  requestCanvasFocus()
-}
-
-const zoomOut = () => {
-  const newZoom = Math.max(minZoom, zoom.value * 0.8)
-  zoom.value = newZoom
-  window.dispatchEvent(new CustomEvent('canvas-zoom', { detail: newZoom }))
-  requestCanvasFocus()
-}
-
-const resetView = () => {
-  zoom.value = 1
-  window.dispatchEvent(new CustomEvent('canvas-reset-view'))
-  requestCanvasFocus()
+const updateZoom = (value: number | undefined) => {
+  if (value !== undefined) {
+    const newZoom = Math.max(minZoom, Math.min(maxZoom, value / 100))
+    zoom.value = newZoom
+    window.dispatchEvent(new CustomEvent('canvas-zoom', { detail: newZoom }))
+    requestCanvasFocus()
+  }
 }
 
 // Move step control
@@ -173,14 +168,13 @@ window.addEventListener('canvas-focus-change', (event: Event) => {
   background-color: var(--bs-tertiary-bg);
 }
 
-.zoom-indicator {
-  background-color: var(--bs-body-bg);
-  border: 1px solid var(--bs-border-color);
-  border-radius: 4px;
-  padding: 4px 8px;
+.zoom-control {
+  min-width: 110px;
+}
+
+.zoom-label {
   font-size: 0.75rem;
-  text-align: center;
-  font-weight: 500;
+  white-space: nowrap;
 }
 
 .position-indicator {
@@ -268,9 +262,12 @@ window.addEventListener('canvas-focus-change', (event: Event) => {
     min-width: 75px;
   }
 
-  .zoom-indicator {
+  .zoom-control {
+    min-width: 100px;
+  }
+
+  .zoom-label {
     font-size: 0.7rem;
-    padding: 3px 6px;
   }
 
   .small {

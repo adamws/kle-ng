@@ -387,31 +387,38 @@ export class CanvasTestHelper {
 
   // Zoom controls for regression testing
   async zoomIn(clicks: number = 1) {
-    const zoomInButton = this.page.locator('button[title="Zoom In"]')
-    for (let i = 0; i < clicks; i++) {
-      await zoomInButton.click()
-      await this.waitForRender()
-    }
+    // With new zoom input, simulate zoom in by increasing by 20% per click
+    const currentZoom = await this.getZoomLevel()
+    const targetZoom = Math.min(500, currentZoom + clicks * 20)
+    await this.setZoomLevel(targetZoom)
   }
 
   async zoomOut(clicks: number = 1) {
-    const zoomOutButton = this.page.locator('button[title="Zoom Out"]')
-    for (let i = 0; i < clicks; i++) {
-      await zoomOutButton.click()
-      await this.waitForRender()
-    }
+    // With new zoom input, simulate zoom out by decreasing by 20% per click
+    const currentZoom = await this.getZoomLevel()
+    const targetZoom = Math.max(10, currentZoom - clicks * 20)
+    await this.setZoomLevel(targetZoom)
   }
 
-  async resetZoom() {
-    const resetViewButton = this.page.locator('button[title="Reset View"]')
-    await resetViewButton.click()
+  async setZoomLevel(zoomPercent: number) {
+    // Set zoom level via the new custom number input
+    const zoomInput = this.page.locator('.zoom-control .custom-number-input input')
+    await zoomInput.clear()
+    await zoomInput.fill(zoomPercent.toString())
+    await zoomInput.dispatchEvent('change')
+    await zoomInput.blur()
     await this.waitForRender()
   }
 
+  async resetZoom() {
+    // Reset zoom by setting the zoom input to 100%
+    await this.setZoomLevel(100)
+  }
+
   async getZoomLevel() {
-    // Get zoom percentage from the zoom indicator
-    const zoomIndicator = this.page.locator('.zoom-indicator')
-    const zoomText = await zoomIndicator.textContent()
-    return parseInt(zoomText?.replace('%', '') || '100')
+    // Get zoom percentage from the zoom input value
+    const zoomInput = this.page.locator('.zoom-control .custom-number-input input')
+    const zoomValue = await zoomInput.inputValue()
+    return parseInt(zoomValue || '100')
   }
 }

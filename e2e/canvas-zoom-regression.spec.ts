@@ -44,9 +44,9 @@ test.describe('Canvas Zoom Regression Tests', () => {
     const initialZoom = await canvasHelper.getZoomLevel()
     expect(initialZoom).toBe(100)
 
-    // Zoom in to approximately 500% (each click is 1.2x, so ~8 clicks gets us to ~430%)
-    // Let's do 10 clicks to get over 500%
-    await canvasHelper.zoomIn(10)
+    // Zoom in to approximately 500% (each click adds 20%, so 20 clicks gets us to 500%)
+    // Let's do 15 clicks to get over 400%
+    await canvasHelper.zoomIn(15)
 
     // Verify we're at high zoom level (should be at least 400%+)
     const highZoom = await canvasHelper.getZoomLevel()
@@ -62,8 +62,8 @@ test.describe('Canvas Zoom Regression Tests', () => {
     await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
 
     // Verify zoom controls are still functional
-    const zoomIndicator = page.locator('.zoom-indicator')
-    await expect(zoomIndicator).toContainText(`${highZoom}%`)
+    const zoomInput = page.locator('.zoom-control .custom-number-input input')
+    await expect(zoomInput).toHaveValue(highZoom.toString())
   })
 
   test('should maintain proper borders at low zoom levels (<100%)', async ({ page }) => {
@@ -74,14 +74,14 @@ test.describe('Canvas Zoom Regression Tests', () => {
     // Set a label to make the key more visible in screenshots
     await canvasHelper.setKeyLabel('center', 'B')
 
-    // Zoom out to approximately 50% (each click is 0.8x, so ~9 clicks gets us to ~13%)
-    // Let's do 6 clicks to get to reasonable low zoom
-    await canvasHelper.zoomOut(6)
+    // Zoom out to approximately 50% (each click reduces by 20%, so 2-3 clicks gets us to reasonable low zoom)
+    // Let's do 3 clicks to get to 40%
+    await canvasHelper.zoomOut(3)
 
     // Verify we're at low zoom level
     const lowZoom = await canvasHelper.getZoomLevel()
     expect(lowZoom).toBeLessThan(100)
-    expect(lowZoom).toBeGreaterThan(20) // Should not go too low
+    expect(lowZoom).toBeGreaterThanOrEqual(10) // Should respect minimum of 10%
 
     // Wait for canvas to stabilize after zoom changes
     await canvasHelper.waitForCanvasStability()
@@ -93,8 +93,8 @@ test.describe('Canvas Zoom Regression Tests', () => {
     await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
 
     // Verify zoom controls are still functional
-    const zoomIndicator = page.locator('.zoom-indicator')
-    await expect(zoomIndicator).toContainText(`${lowZoom}%`)
+    const zoomInput = page.locator('.zoom-control .custom-number-input input')
+    await expect(zoomInput).toHaveValue(lowZoom.toString())
 
     // Reset zoom and verify it works
     await canvasHelper.resetZoom()
@@ -123,9 +123,9 @@ test.describe('Canvas Zoom Regression Tests', () => {
     await canvasHelper.expectCanvasScreenshot('zoom-regression-05-multiple-keys-baseline')
 
     // Perform multiple zoom operations
-    await canvasHelper.zoomIn(5) // Zoom in significantly
+    await canvasHelper.zoomIn(5) // Zoom in significantly (adds 100% to reach 200%)
     let currentZoom = await canvasHelper.getZoomLevel()
-    expect(currentZoom).toBeGreaterThan(200)
+    expect(currentZoom).toBe(200)
 
     await canvasHelper.zoomOut(3) // Zoom out partially
     currentZoom = await canvasHelper.getZoomLevel()
