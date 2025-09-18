@@ -18,7 +18,7 @@
               Project GitHub</a
             ><br />
             <a
-              href="https://github.com/ijprest/keyboard-layout-editor/issues"
+              href="https://github.com/adamws/kle-ng/issues"
               target="_blank"
               class="text-decoration-none"
             >
