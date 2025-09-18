@@ -94,6 +94,7 @@
                 @update:modelValue="updateMovementX"
                 @change="updateMovementX"
                 :step="0.1"
+                :value-on-clear="0"
               >
                 <template #suffix>{{ selectedUnit }}</template>
               </CustomNumberInput>
@@ -105,6 +106,7 @@
                 @update:modelValue="updateMovementY"
                 @change="updateMovementY"
                 :step="0.1"
+                :value-on-clear="0"
               >
                 <template #suffix>{{ selectedUnit }}</template>
               </CustomNumberInput>
@@ -240,23 +242,21 @@ const updateUSpacingY = (value: number | undefined) => {
 
 // Update movement values and emit changes
 const updateMovementX = (value: number | undefined) => {
-  if (value !== undefined) {
-    movementX.value = value
-    // Emit the delta for immediate preview (converted to internal units)
-    const deltaX = convertXToInternalUnits(movementX.value)
-    const deltaY = convertYToInternalUnits(movementY.value)
-    emit('movementChange', deltaX, deltaY)
-  }
+  // Treat undefined (cleared input) as 0 for natural no-movement behavior
+  movementX.value = value ?? 0
+  // Emit the delta for immediate preview (converted to internal units)
+  const deltaX = convertXToInternalUnits(movementX.value)
+  const deltaY = convertYToInternalUnits(movementY.value)
+  emit('movementChange', deltaX, deltaY)
 }
 
 const updateMovementY = (value: number | undefined) => {
-  if (value !== undefined) {
-    movementY.value = value
-    // Emit the delta for immediate preview (converted to internal units)
-    const deltaX = convertXToInternalUnits(movementX.value)
-    const deltaY = convertYToInternalUnits(movementY.value)
-    emit('movementChange', deltaX, deltaY)
-  }
+  // Treat undefined (cleared input) as 0 for natural no-movement behavior
+  movementY.value = value ?? 0
+  // Emit the delta for immediate preview (converted to internal units)
+  const deltaX = convertXToInternalUnits(movementX.value)
+  const deltaY = convertYToInternalUnits(movementY.value)
+  emit('movementChange', deltaX, deltaY)
 }
 
 const handleApply = () => {
