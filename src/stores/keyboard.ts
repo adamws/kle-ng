@@ -39,7 +39,7 @@ export interface KeyboardState {
   rotationPreviewAngle: number
   originalRotationStates: Map<
     Key,
-    { rotation_angle?: number; rotation_x?: number; rotation_y?: number }
+    { rotation_angle?: number; rotation_x?: number; rotation_y?: number; x?: number; y?: number }
   >
   showRotationPreview: boolean
 }
@@ -86,7 +86,10 @@ export const useKeyboardStore = defineStore('keyboard', () => {
   const rotationPreviewAngle = ref(0)
   const showRotationPreview = ref(false)
   const originalRotationStates: Ref<
-    Map<Key, { rotation_angle?: number; rotation_x?: number; rotation_y?: number }>
+    Map<
+      Key,
+      { rotation_angle?: number; rotation_x?: number; rotation_y?: number; x?: number; y?: number }
+    >
   > = ref(new Map())
 
   const canUndo = computed(() => historyIndex.value > 0)
@@ -702,6 +705,9 @@ export const useKeyboardStore = defineStore('keyboard', () => {
         rotation_angle: key.rotation_angle || 0,
         rotation_x: key.rotation_x,
         rotation_y: key.rotation_y,
+        // Also store original key position to restore on cancel
+        x: key.x,
+        y: key.y,
       })
 
       // For already-rotated keys, transform their rotation origins to the new point
@@ -754,6 +760,13 @@ export const useKeyboardStore = defineStore('keyboard', () => {
         }
         if (originalState.rotation_y !== undefined) {
           key.rotation_y = originalState.rotation_y
+        }
+        // Restore original key position to fix the bug where keys move on cancel
+        if (originalState.x !== undefined) {
+          key.x = originalState.x
+        }
+        if (originalState.y !== undefined) {
+          key.y = originalState.y
         }
       }
     })

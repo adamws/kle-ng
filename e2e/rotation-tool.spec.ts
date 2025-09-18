@@ -198,4 +198,86 @@ test.describe('Selection Rotation Tool', () => {
     const rotationToolButton = page.locator('button[title="Rotate Selection"]')
     await expect(rotationToolButton).toBeEnabled()
   })
+
+  test('should support cancellation after anchor selection - regression test for key movement bug', async ({
+    page,
+  }) => {
+    // REGRESSION TEST: This reproduces and tests the fix for a bug where cancelling rotation
+    // after selecting an anchor point would cause already-rotated keys to move from their positions
+
+    // BUG SCENARIO:
+    // 1. Create a key and move it to explicit coordinates (x: 2, y: 1)
+    // 2. Start rotation and select a new anchor point (this modifies key position internally)
+    // 3. Cancel rotation - without the fix, key would stay in wrong position
+    // 4. With the fix, key should return to its original position (x: 2, y: 1)
+
+    // Step 1: Create a key and move it to explicit coordinates
+    await canvasHelper.addKey()
+    await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
+
+    // Move key to explicit position (x: 2, y: 1) and rotation (15)
+    await page.locator('input[title="X Position"]').first().fill('2')
+    await page.locator('input[title="Y Position"]').first().fill('1')
+    await page.locator('input[title="Rotation Angle in Degrees"]').first().fill('15')
+    await canvasHelper.waitForRender()
+
+    // Step 2: Export current layout to capture key position before rotation attempt
+    await page.locator('button', { hasText: 'Export' }).click()
+    const downloadPromise = page.waitForEvent('download')
+    await page.locator('button', { hasText: 'Download JSON' }).click()
+    const download = await downloadPromise
+    const beforePath = `e2e/test-output/rotation-before-cancel-${Date.now()}.json`
+    await download.saveAs(beforePath)
+
+    const beforeContent = await fs.readFile(beforePath, 'utf-8')
+    const beforeLayout = JSON.parse(beforeContent)
+    const keyBeforeCancel = beforeLayout[0][0] // First key in layout
+
+    // Step 3: Start rotation, select anchor point, but then CANCEL
+    const rotationToolButton = page.locator('button[title="Rotate Selection"]')
+    await rotationToolButton.click()
+    const rotationModal = page.locator('.rotation-panel')
+    await expect(rotationModal).toBeVisible()
+    await expect(page.locator('.rotation-info')).toContainText('Select rotation anchor point')
+
+    // THIS IS THE CRITICAL STEP: Select a different anchor point
+    // This internally calls transformRotationOrigin which modifies key positions
+    const canvas = canvasHelper.getCanvas()
+
+    // Anchor point at (1.37, 2.52) in key coordinates -> (73.98 + 9, 136.08 + 9) canvas
+    await canvas.click({ position: { x: 83, y: 145 }, force: true })
+    await expect(page.locator('.rotation-info')).toContainText('Origin:')
+
+    // Now cancel - this should restore the original position
+    const cancelButton = page.locator('.rotation-panel .btn-secondary')
+    await cancelButton.click()
+    await expect(rotationModal).toBeHidden()
+    await canvasHelper.waitForRender()
+
+    // Step 4: Verify key position is unchanged after cancellation
+    await page.locator('button', { hasText: 'Export' }).click()
+    const downloadPromise2 = page.waitForEvent('download')
+    await page.locator('button', { hasText: 'Download JSON' }).click()
+    const download2 = await downloadPromise2
+    const afterPath = `e2e/test-output/rotation-after-cancel-${Date.now()}.json`
+    await download2.saveAs(afterPath)
+
+    const afterContent = await fs.readFile(afterPath, 'utf-8')
+    const afterLayout = JSON.parse(afterContent)
+    const keyAfterCancel = afterLayout[0][0] // First key in layout
+
+    // Assert that key position and rotation are exactly the same
+    expect(keyAfterCancel.x).toBe(keyBeforeCancel.x)
+    expect(keyAfterCancel.y).toBe(keyBeforeCancel.y)
+    expect(keyAfterCancel.rotation_angle).toBe(keyBeforeCancel.rotation_angle)
+    expect(keyAfterCancel.rotation_x).toBe(keyBeforeCancel.rotation_x)
+    expect(keyAfterCancel.rotation_y).toBe(keyBeforeCancel.rotation_y)
+
+    // Clean up test files
+    await fs.unlink(beforePath)
+    await fs.unlink(afterPath)
+
+    // Key should still be selected and functional
+    await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
+  })
 })
