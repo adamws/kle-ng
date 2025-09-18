@@ -373,7 +373,8 @@ const handleClickOutside = (event: MouseEvent) => {
 }
 
 .preset-dropdown .preset-select {
-  width: 200px;
+  width: 220px;
+  min-width: 220px;
   flex-shrink: 0;
   text-align: left;
   display: flex;
