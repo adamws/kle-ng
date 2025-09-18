@@ -35,6 +35,11 @@ What kle-ng tries to do better:
 - **Modern Features**
   - Better color picker with multiple format support
   - Improved visual feedback when editing keys
+  - Dark theme
+
+Watch this short demo to see it in action:
+
+[kle-ng-corne-demo.webm](https://github.com/user-attachments/assets/11bee053-c40e-4803-a07c-5e7ea1a0aa73)
 
 Future plans:
 
