@@ -234,28 +234,44 @@ const downloadKleInternalJson = () => {
   URL.revokeObjectURL(url)
 }
 
-const downloadPng = () => {
-  try {
-    // Find the canvas element from the keyboard canvas component
-    const canvas = document.querySelector('.keyboard-canvas') as HTMLCanvasElement
-    if (!canvas) {
-      toast.showError('Please make sure the keyboard is visible.', 'Canvas not found')
-      return
-    }
+const downloadPng = async () => {
+  const canvas = document.querySelector('.keyboard-canvas') as HTMLCanvasElement
+  if (!canvas) {
+    toast.showError('Please make sure the keyboard is visible.', 'Canvas not found')
+    return
+  }
 
-    // Create a download link
-    const link = document.createElement('a')
-    link.download = `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}.png`
-    link.href = canvas.toDataURL('image/png')
-    link.click()
+  if (typeof window.showSaveFilePicker === 'function') {
+    const handle = await window.showSaveFilePicker({
+      suggestedName: `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}.png`,
+      types: [
+        {
+          description: 'PNG image',
+          accept: { 'image/png': ['.png'] },
+        },
+      ],
+    })
 
-    console.log('PNG export completed')
+    const writable = await handle.createWritable()
+    const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), 'image/png'))
+    await writable.write(blob)
+    await writable.close()
+
     toast.showSuccess('PNG image downloaded successfully')
-  } catch (error) {
-    console.error('Error exporting PNG:', error)
-    toast.showError('Please try again.', 'Error exporting PNG')
+  } else {
+    // Fallback: download PNG directly if File System Access API is not available
+    const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), 'image/png'))
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}.png`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.showSuccess('PNG image downloaded successfully')
   }
 }
+
+
 
 // Dropdown positioning functions
 const calculateDropdownPosition = (buttonRef: HTMLElement) => {

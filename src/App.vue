@@ -15,6 +15,20 @@ import ThemeToggle from './components/ThemeToggle.vue'
 import { useKeyboardStore } from '@/stores/keyboard'
 import { useTheme } from '@/composables/useTheme'
 
+interface SaveFilePickerOptions {
+  suggestedName?: string;
+  types?: {
+    description: string;
+    accept: Record<string, string[]>;
+  }[];
+}
+
+declare global {
+  interface Window {
+    showSaveFilePicker?: (options?: SaveFilePickerOptions) => Promise<FileSystemFileHandle>;
+  }
+}
+
 const canvasRef = ref<InstanceType<typeof KeyboardCanvas>>()
 
 const keyboardStore = useKeyboardStore()
