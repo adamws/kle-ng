@@ -252,5 +252,31 @@ describe('KeyboardToolbar', () => {
       const expectedFilename = `${store.metadata.name}-internal.json`
       expect(expectedFilename).toBe('Test Layout-internal.json')
     })
+
+    it('should prioritize filename over metadata name for downloads', async () => {
+      const pinia = createPinia()
+      setActivePinia(pinia)
+
+      const store = useKeyboardStore()
+
+      store.filename = 'imported-layout'
+      store.metadata.name = 'Different Layout Name'
+
+      const expectedFilename = `${store.filename || store.metadata.name || 'keyboard-layout'}.json`
+      expect(expectedFilename).toBe('imported-layout.json')
+    })
+
+    it('should fallback to metadata name when no filename is set', async () => {
+      const pinia = createPinia()
+      setActivePinia(pinia)
+
+      const store = useKeyboardStore()
+
+      store.filename = ''
+      store.metadata.name = 'Layout Name'
+
+      const expectedFilename = `${store.filename || store.metadata.name || 'keyboard-layout'}.json`
+      expect(expectedFilename).toBe('Layout Name.json')
+    })
   })
 })

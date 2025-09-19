@@ -16,6 +16,7 @@ export interface KeyboardState {
   keys: Key[]
   selectedKeys: Key[]
   metadata: KeyboardMetadata
+  filename: string // Original filename for downloads
   clipboard: Key[]
   historyIndex: number
   history: { keys: Key[]; metadata: KeyboardMetadata }[]
@@ -48,6 +49,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
   const keys: Ref<Key[]> = ref([])
   const selectedKeys: Ref<Key[]> = ref([])
   const metadata: Ref<KeyboardMetadata> = ref(new KeyboardMetadata())
+  const filename: Ref<string> = ref('')
   const clipboard: Ref<Key[]> = ref([])
   const historyIndex = ref(-1)
   const history: Ref<
@@ -314,6 +316,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     keys.value = []
     selectedKeys.value = []
     metadata.value = new KeyboardMetadata()
+    filename.value = ''
     history.value = []
     historyIndex.value = -1
     saveState()
@@ -930,6 +933,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     keys,
     selectedKeys,
     metadata,
+    filename,
     clipboard,
     historyIndex,
     history,

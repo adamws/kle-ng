@@ -180,18 +180,25 @@ const handleFileUpload = async (event: Event) => {
     const text = await file.text()
     const data = parseJsonString(text)
 
+    // Extract filename without extension for downloads
+    const filenameWithoutExt = file.name.replace(/\.[^/.]+$/, '')
+
     // Auto-detect format and load accordingly
     if (isInternalKleFormat(data)) {
       // Internal KLE format with meta and keys
       console.log(`Loading internal KLE format from: ${file.name}`)
+      
       keyboardStore.loadLayout(data.keys, data.meta)
       toast.showSuccess(`Internal KLE layout loaded from ${file.name}`, 'Import successful')
     } else {
       // Raw KLE format (array-based)
       console.log(`Loading raw KLE format from: ${file.name}`)
       keyboardStore.loadKLELayout(data)
+      
       toast.showSuccess(`KLE layout loaded from ${file.name}`, 'Import successful')
     }
+
+    keyboardStore.filename = filenameWithoutExt
   } catch (error) {
     console.error('Error loading file:', error)
     toast.showError(
@@ -211,7 +218,7 @@ const downloadJson = () => {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `${keyboardStore.metadata.name || 'keyboard-layout'}.json`
+  a.download = `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}.json`
   a.click()
   URL.revokeObjectURL(url)
 }
@@ -222,7 +229,7 @@ const downloadKleInternalJson = () => {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `${keyboardStore.metadata.name || 'keyboard-layout'}-internal.json`
+  a.download = `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}-internal.json`
   a.click()
   URL.revokeObjectURL(url)
 }
@@ -238,7 +245,7 @@ const downloadPng = () => {
 
     // Create a download link
     const link = document.createElement('a')
-    link.download = `${keyboardStore.metadata.name || 'keyboard-layout'}.png`
+    link.download = `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}.png`
     link.href = canvas.toDataURL('image/png')
     link.click()
 
