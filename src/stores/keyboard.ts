@@ -3,10 +3,14 @@ import type { Ref } from 'vue'
 import { ref, computed } from 'vue'
 import { Key, KeyboardMetadata, Keyboard, Serial } from '@ijprest/kle-serial'
 import { D } from '../utils/decimal-math'
+import { toast } from '../composables/useToast'
 import {
   generateShareableUrl,
   extractLayoutFromCurrentUrl,
   clearShareFromUrl,
+  extractGistFromCurrentUrl,
+  fetchGistLayout,
+  clearGistFromUrl,
 } from '../utils/url-sharing'
 import type { LayoutData } from '../utils/url-sharing'
 
@@ -410,7 +414,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
   }
 
   // Initialize with a sample layout for development/demo (not in tests)
-  const initWithSample = () => {
+  const initWithSample = async () => {
     // Skip sample initialization if we're in test environment
     if (
       import.meta.env.MODE === 'test' ||
@@ -426,6 +430,11 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     // Check if there's a shared layout in the URL first
     if (loadFromShareUrl()) {
       return // Successfully loaded from share URL
+    }
+
+    // Check if there's a gist layout in the URL
+    if (await loadFromGistUrl()) {
+      return // Successfully loaded from gist URL
     }
 
     const sampleLayout = [
@@ -918,6 +927,118 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     }
   }
 
+  const loadFromGistUrl = async (): Promise<boolean> => {
+    try {
+      const gistId = extractGistFromCurrentUrl()
+      if (gistId) {
+        const startTime = Date.now()
+        let loadingToastId: string | null = null
+        let loadingToastTimer: number | null = null
+        let isLoadingToastVisible = false
+
+        // Delay showing loading toast to avoid flicker for quick loads
+        const showLoadingToast = () => {
+          if (!isLoadingToastVisible) {
+            loadingToastId = toast.showInfo(
+              'Loading keyboard layout from GitHub Gist...',
+              'Loading',
+              { duration: 0 },
+            )
+            isLoadingToastVisible = true
+          }
+        }
+
+        // Schedule loading toast to show after 500ms
+        loadingToastTimer = window.setTimeout(showLoadingToast, 500)
+
+        try {
+          const gistLayout = await fetchGistLayout(gistId)
+          loadLayout(gistLayout.keys, gistLayout.metadata)
+          clearGistFromUrl() // Clean up URL after loading
+
+          const loadTime = Date.now() - startTime
+
+          // Clear the pending loading toast timer
+          if (loadingToastTimer) {
+            clearTimeout(loadingToastTimer)
+          }
+
+          // Handle loading toast removal with minimum display time
+          const handleToastTransition = async () => {
+            if (isLoadingToastVisible && loadingToastId) {
+              // Ensure loading toast is visible for at least 1000ms
+              const minDisplayTime = 1000
+              const remainingTime = Math.max(0, minDisplayTime - loadTime)
+
+              if (remainingTime > 0) {
+                await new Promise((resolve) => setTimeout(resolve, remainingTime))
+              }
+
+              toast.removeToast(loadingToastId)
+            }
+
+            // Show success toast
+            toast.showSuccess('Keyboard layout loaded successfully from GitHub Gist!', 'Loaded')
+          }
+
+          // Handle toast transition asynchronously to not block the main loading
+          handleToastTransition().catch(console.error)
+
+          return true
+        } catch (fetchError) {
+          // Clear the pending loading toast timer
+          if (loadingToastTimer) {
+            clearTimeout(loadingToastTimer)
+          }
+
+          // Remove loading toast if it was shown
+          if (isLoadingToastVisible && loadingToastId) {
+            toast.removeToast(loadingToastId)
+          }
+
+          // Show specific error based on the type
+          const errorMessage =
+            fetchError instanceof Error ? fetchError.message : 'Unknown error occurred'
+
+          if (errorMessage.includes('Gist not found')) {
+            toast.showError(
+              'The specified GitHub Gist could not be found. Please check the gist ID and try again.',
+              'Gist Not Found',
+            )
+          } else if (errorMessage.includes('Rate limit exceeded')) {
+            toast.showError(
+              'GitHub API rate limit exceeded. Please try again later.',
+              'Rate Limit Exceeded',
+            )
+          } else if (errorMessage.includes('No keyboard layout file found')) {
+            toast.showError(
+              'The gist does not contain a valid keyboard layout file. Please ensure the gist has a JSON file with KLE layout data.',
+              'Invalid Gist',
+            )
+          } else if (errorMessage.includes('Invalid JSON format')) {
+            toast.showError(
+              'The layout file in the gist contains invalid JSON. Please check the file format.',
+              'Invalid JSON',
+            )
+          } else if (errorMessage.includes('Invalid KLE layout data structure')) {
+            toast.showError(
+              'The gist file is not in the correct KLE format. Expected an array structure.',
+              'Invalid Format',
+            )
+          } else {
+            toast.showError(`Failed to load gist layout: ${errorMessage}`, 'Load Failed')
+          }
+
+          throw fetchError
+        }
+      }
+      return false
+    } catch (error) {
+      console.error('Error loading layout from gist URL:', error)
+      return false
+    }
+  }
+
   // Helper functions for legend operations
   const saveToHistory = () => {
     saveState()
@@ -927,7 +1048,45 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     dirty.value = true
   }
 
-  initWithSample()
+  // Handle URL hash changes for dynamic gist loading
+  const handleHashChange = async () => {
+    // Only process gist URLs to avoid interfering with share URLs
+    const gistId = extractGistFromCurrentUrl()
+    if (gistId) {
+      try {
+        await loadFromGistUrl()
+      } catch (error) {
+        console.error('Error loading gist from hash change:', error)
+      }
+    }
+  }
+
+  // Initialize asynchronously to handle gist URLs
+  initWithSample().catch(console.error)
+
+  // Add hash change listener for dynamic gist loading
+  // Only add listener in browser environment, not during tests
+  if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+    window.addEventListener('hashchange', handleHashChange)
+  }
+
+  // Cleanup function for the hash change listener
+  const cleanup = () => {
+    if (typeof window !== 'undefined' && typeof window.removeEventListener === 'function') {
+      window.removeEventListener('hashchange', handleHashChange)
+    }
+  }
+
+  // Manual URL processing function for programmatic loading
+  const processCurrentUrl = async (): Promise<boolean> => {
+    // Try to load from share URL first
+    if (loadFromShareUrl()) {
+      return true
+    }
+
+    // Then try to load from gist URL
+    return await loadFromGistUrl()
+  }
 
   return {
     keys,
@@ -1012,6 +1171,11 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     // URL sharing
     generateShareUrl,
     loadFromShareUrl,
+    loadFromGistUrl,
+    processCurrentUrl,
+
+    // Store management
+    cleanup,
 
     // Legend tools
     saveToHistory,

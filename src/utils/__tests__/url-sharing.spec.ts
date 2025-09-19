@@ -6,6 +6,9 @@ import {
   generateShareableUrl,
   extractLayoutFromCurrentUrl,
   clearShareFromUrl,
+  extractGistFromCurrentUrl,
+  fetchGistLayout,
+  clearGistFromUrl,
 } from '../url-sharing'
 import { Key, KeyboardMetadata } from '@ijprest/kle-serial'
 import type { LayoutData } from '../url-sharing'
@@ -266,6 +269,280 @@ describe('url-sharing', () => {
       expect(decoded.keys[0].rotation_angle).toBe(45)
       expect(decoded.keys[0].rotation_x).toBe(3)
       expect(decoded.keys[0].rotation_y).toBe(2)
+    })
+  })
+
+  describe('gist functionality', () => {
+    // Mock fetch for testing gist API calls
+    const mockFetch = vi.fn()
+    global.fetch = mockFetch
+
+    beforeEach(() => {
+      mockFetch.mockClear()
+    })
+
+    describe('extractGistFromCurrentUrl', () => {
+      it('should extract gist ID from gist hash', () => {
+        mockLocation.hash = '#gist=d760b7f76f2b703cbceaefd3b6646416'
+
+        const gistId = extractGistFromCurrentUrl()
+
+        expect(gistId).toBe('d760b7f76f2b703cbceaefd3b6646416')
+      })
+
+      it('should extract gist ID from full gist URL', () => {
+        mockLocation.hash = '#gist=https://gist.github.com/tfuxu/d760b7f76f2b703cbceaefd3b6646416'
+
+        const gistId = extractGistFromCurrentUrl()
+
+        expect(gistId).toBe('d760b7f76f2b703cbceaefd3b6646416')
+      })
+
+      it('should return null when no gist hash present', () => {
+        mockLocation.hash = ''
+
+        const gistId = extractGistFromCurrentUrl()
+
+        expect(gistId).toBeNull()
+      })
+
+      it('should return null when hash is not a gist URL', () => {
+        mockLocation.hash = '#share=some-data'
+
+        const gistId = extractGistFromCurrentUrl()
+
+        expect(gistId).toBeNull()
+      })
+
+      it('should return null for invalid gist ID format', () => {
+        mockLocation.hash = '#gist=invalid-gist-id'
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+        const gistId = extractGistFromCurrentUrl()
+
+        expect(gistId).toBeNull()
+        expect(consoleSpy).toHaveBeenCalled()
+
+        consoleSpy.mockRestore()
+      })
+
+      it('should return null for invalid full gist URL', () => {
+        mockLocation.hash = '#gist=https://invalid-gist-url.com/test'
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+        const gistId = extractGistFromCurrentUrl()
+
+        expect(gistId).toBeNull()
+        expect(consoleSpy).toHaveBeenCalled()
+
+        consoleSpy.mockRestore()
+      })
+    })
+
+    describe('fetchGistLayout', () => {
+      const mockGistResponse = {
+        files: {
+          'layout.json': {
+            content: JSON.stringify([
+              ['Q', 'W', 'E', 'R'],
+              ['A', 'S', 'D', 'F'],
+            ]),
+          },
+        },
+      }
+
+      it('should fetch and parse gist layout successfully', async () => {
+        mockFetch.mockResolvedValue({
+          ok: true,
+          json: () => Promise.resolve(mockGistResponse),
+        })
+
+        const layout = await fetchGistLayout('test-gist-id')
+
+        expect(mockFetch).toHaveBeenCalledWith(
+          'https://api.github.com/gists/test-gist-id',
+          expect.objectContaining({
+            headers: expect.objectContaining({
+              Accept: 'application/vnd.github+json',
+            }),
+          }),
+        )
+        expect(layout.keys).toBeDefined()
+        expect(Array.isArray(layout.keys)).toBe(true)
+      })
+
+      it('should throw error for 404 gist not found', async () => {
+        mockFetch.mockResolvedValue({
+          ok: false,
+          status: 404,
+        })
+
+        await expect(fetchGistLayout('nonexistent-gist')).rejects.toThrow('Gist not found')
+      })
+
+      it('should throw error for 403 rate limit exceeded', async () => {
+        mockFetch.mockResolvedValue({
+          ok: false,
+          status: 403,
+        })
+
+        await expect(fetchGistLayout('test-gist-id')).rejects.toThrow(
+          'Rate limit exceeded or access denied',
+        )
+      })
+
+      it('should throw error when no layout file found in gist', async () => {
+        const emptyGistResponse = {
+          files: {
+            'readme.txt': {
+              content: 'This is just a readme',
+            },
+          },
+        }
+
+        mockFetch.mockResolvedValue({
+          ok: true,
+          json: () => Promise.resolve(emptyGistResponse),
+        })
+
+        await expect(fetchGistLayout('test-gist-id')).rejects.toThrow(
+          'No keyboard layout file found in gist',
+        )
+      })
+
+      it('should throw error for invalid JSON in layout file', async () => {
+        const invalidJsonGistResponse = {
+          files: {
+            'layout.json': {
+              content: 'invalid json content',
+            },
+          },
+        }
+
+        mockFetch.mockResolvedValue({
+          ok: true,
+          json: () => Promise.resolve(invalidJsonGistResponse),
+        })
+
+        await expect(fetchGistLayout('test-gist-id')).rejects.toThrow(
+          'Invalid JSON format in layout file',
+        )
+      })
+
+      it('should throw error for non-array KLE data', async () => {
+        const invalidKleResponse = {
+          files: {
+            'layout.json': {
+              content: JSON.stringify({ not: 'an array' }),
+            },
+          },
+        }
+
+        mockFetch.mockResolvedValue({
+          ok: true,
+          json: () => Promise.resolve(invalidKleResponse),
+        })
+
+        await expect(fetchGistLayout('test-gist-id')).rejects.toThrow(
+          'Invalid KLE layout data structure - expected array format',
+        )
+      })
+
+      it('should prioritize layout.json over other JSON files', async () => {
+        const multiFileGistResponse = {
+          files: {
+            'other.json': {
+              content: JSON.stringify([['Wrong', 'Layout']]),
+            },
+            'layout.json': {
+              content: JSON.stringify([['Correct', 'Layout']]),
+            },
+            'random.json': {
+              content: JSON.stringify([['Another', 'Wrong']]),
+            },
+          },
+        }
+
+        mockFetch.mockResolvedValue({
+          ok: true,
+          json: () => Promise.resolve(multiFileGistResponse),
+        })
+
+        const layout = await fetchGistLayout('test-gist-id')
+
+        expect(layout.keys).toBeDefined()
+        expect(Array.isArray(layout.keys)).toBe(true)
+        // Should have used layout.json, not other files
+      })
+
+      it('should handle network errors', async () => {
+        mockFetch.mockRejectedValue(new Error('Network error'))
+
+        await expect(fetchGistLayout('test-gist-id')).rejects.toThrow('Network error')
+      })
+    })
+
+    describe('clearGistFromUrl', () => {
+      it('should clear gist hash from URL', () => {
+        mockLocation.hash = '#gist=test-gist-id'
+        mockLocation.href = 'http://localhost:3000/#gist=test-gist-id'
+
+        clearGistFromUrl()
+
+        expect(mockHistory.replaceState).toHaveBeenCalledWith(
+          {},
+          document.title,
+          'http://localhost:3000/',
+        )
+      })
+
+      it('should not call replaceState when no gist hash present', () => {
+        mockLocation.hash = ''
+        mockLocation.href = 'http://localhost:3000/'
+
+        clearGistFromUrl()
+
+        expect(mockHistory.replaceState).not.toHaveBeenCalled()
+      })
+
+      it('should not clear non-gist hashes', () => {
+        mockLocation.hash = '#share=some-data'
+        mockLocation.href = 'http://localhost:3000/#share=some-data'
+
+        clearGistFromUrl()
+
+        expect(mockHistory.replaceState).not.toHaveBeenCalled()
+      })
+    })
+
+    describe('integration with hash changes', () => {
+      it('should extract gist ID after hash change simulation', () => {
+        // Simulate starting with no hash
+        mockLocation.hash = ''
+        expect(extractGistFromCurrentUrl()).toBeNull()
+
+        // Simulate hash change to gist URL (valid hex gist ID)
+        mockLocation.hash = '#gist=d760b7f76f2b703cbceaefd3b6646416'
+        expect(extractGistFromCurrentUrl()).toBe('d760b7f76f2b703cbceaefd3b6646416')
+      })
+
+      it('should handle switching between share and gist URLs', () => {
+        // Start with share URL
+        const encoded = encodeLayoutToUrl(sampleLayoutData)
+        mockLocation.hash = `#share=${encoded}`
+        expect(extractLayoutFromCurrentUrl()).toEqual(sampleLayoutData)
+        expect(extractGistFromCurrentUrl()).toBeNull()
+
+        // Switch to gist URL (valid hex gist ID)
+        mockLocation.hash = '#gist=d760b7f76f2b703cbceaefd3b6646416'
+        expect(extractLayoutFromCurrentUrl()).toBeNull()
+        expect(extractGistFromCurrentUrl()).toBe('d760b7f76f2b703cbceaefd3b6646416')
+
+        // Switch back to share URL
+        mockLocation.hash = `#share=${encoded}`
+        expect(extractLayoutFromCurrentUrl()).toEqual(sampleLayoutData)
+        expect(extractGistFromCurrentUrl()).toBeNull()
+      })
     })
   })
 })
