@@ -1,6 +1,7 @@
 import type { Key, KeyboardMetadata } from '@ijprest/kle-serial'
 import { D } from './decimal-math'
 import polygonClippingLib from 'polygon-clipping'
+import { parseBorderRadius, createRoundedRectanglePath } from './border-radius'
 import type { MultiPolygon } from 'polygon-clipping'
 
 export interface RenderOptions {
@@ -1293,9 +1294,20 @@ export class CanvasRenderer {
     if (clearCanvas) {
       this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height)
 
-      // Fill with background color
+      // Fill with background color, applying border radius (default 6px like original KLE)
       this.ctx.fillStyle = this.options.background
-      this.ctx.fillRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height)
+
+      const radiiValue = metadata.radii?.trim() || '6px'
+      const corners = parseBorderRadius(radiiValue, this.ctx.canvas.width, this.ctx.canvas.height)
+      createRoundedRectanglePath(
+        this.ctx,
+        0,
+        0,
+        this.ctx.canvas.width,
+        this.ctx.canvas.height,
+        corners,
+      )
+      this.ctx.fill()
     }
 
     this.ctx.save()

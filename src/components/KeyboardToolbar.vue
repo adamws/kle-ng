@@ -86,6 +86,7 @@ import { useKeyboardStore } from '@/stores/keyboard'
 import presetsMetadata from '@/data/presets.json'
 import { parseJsonString } from '@/utils/serialization'
 import { toast } from '@/composables/useToast'
+import { parseBorderRadius, createRoundedRectanglePath } from '@/utils/border-radius'
 
 // Store
 const keyboardStore = useKeyboardStore()
@@ -187,14 +188,14 @@ const handleFileUpload = async (event: Event) => {
     if (isInternalKleFormat(data)) {
       // Internal KLE format with meta and keys
       console.log(`Loading internal KLE format from: ${file.name}`)
-      
+
       keyboardStore.loadLayout(data.keys, data.meta)
       toast.showSuccess(`Internal KLE layout loaded from ${file.name}`, 'Import successful')
     } else {
       // Raw KLE format (array-based)
       console.log(`Loading raw KLE format from: ${file.name}`)
       keyboardStore.loadKLELayout(data)
-      
+
       toast.showSuccess(`KLE layout loaded from ${file.name}`, 'Import successful')
     }
 
@@ -243,11 +244,23 @@ const downloadPng = () => {
       return
     }
 
+    // Apply border-radius (use 6px default like original KLE)
+    const radiiValue = keyboardStore.metadata.radii?.trim() || '6px'
+    const originalBorderRadius = canvas.style.borderRadius
+    canvas.style.borderRadius = radiiValue
+
     // Create a download link
     const link = document.createElement('a')
     link.download = `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}.png`
-    link.href = canvas.toDataURL('image/png')
+
+    // Create PNG with rounded background (always applies, with 6px default)
+    const tempCanvas = createCanvasWithRoundedBackground(canvas, radiiValue)
+    link.href = tempCanvas.toDataURL('image/png')
+
     link.click()
+
+    // Restore original border-radius
+    canvas.style.borderRadius = originalBorderRadius
 
     console.log('PNG export completed')
     toast.showSuccess('PNG image downloaded successfully')
@@ -255,6 +268,31 @@ const downloadPng = () => {
     console.error('Error exporting PNG:', error)
     toast.showError('Please try again.', 'Error exporting PNG')
   }
+}
+
+// Helper function to create a canvas with rounded background
+const createCanvasWithRoundedBackground = (
+  sourceCanvas: HTMLCanvasElement,
+  radii: string,
+): HTMLCanvasElement => {
+  const tempCanvas = document.createElement('canvas')
+  tempCanvas.width = sourceCanvas.width
+  tempCanvas.height = sourceCanvas.height
+  const tempCtx = tempCanvas.getContext('2d')!
+
+  // Parse CSS border-radius format using shared utility
+  const corners = parseBorderRadius(radii, tempCanvas.width, tempCanvas.height)
+
+  // Create rounded rectangle path using shared utility
+  createRoundedRectanglePath(tempCtx, 0, 0, tempCanvas.width, tempCanvas.height, corners)
+
+  // Clip to rounded rectangle
+  tempCtx.clip()
+
+  // Draw the original canvas content
+  tempCtx.drawImage(sourceCanvas, 0, 0)
+
+  return tempCanvas
 }
 
 // Dropdown positioning functions

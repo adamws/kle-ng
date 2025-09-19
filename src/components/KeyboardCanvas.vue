@@ -51,6 +51,7 @@ import { useKeyboardStore, type Key } from '@/stores/keyboard'
 import { CanvasRenderer, type RenderOptions } from '@/utils/canvas-renderer'
 import { D } from '@/utils/decimal-math'
 import { keyIntersectsSelection } from '@/utils/geometry'
+import { parseBorderRadius, createRoundedRectanglePath } from '@/utils/border-radius'
 import RotationControlModal from '@/components/RotationControlModal.vue'
 import MoveExactlyModal from '@/components/MoveExactlyModal.vue'
 
@@ -138,6 +139,21 @@ onMounted(() => {
     window.addEventListener('canvas-zoom', handleExternalZoom as EventListener)
     window.addEventListener('canvas-reset-view', handleExternalResetView as EventListener)
     window.addEventListener('request-canvas-focus', handleCanvasFocusRequest as EventListener)
+
+    // Watch for theme changes via data-bs-theme attribute
+    themeObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'data-bs-theme') {
+          // Theme changed, re-render canvas to update background color
+          renderKeyboard()
+        }
+      })
+    })
+
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-bs-theme'],
+    })
   }
 })
 
@@ -259,6 +275,9 @@ watch(
   },
   { immediate: false },
 )
+
+// Watch for theme changes and re-render canvas background
+let themeObserver: MutationObserver | null = null
 
 const updateContainerWidth = () => {
   if (containerRef.value) {
@@ -526,9 +545,19 @@ const renderKeyboard = () => {
       ctx.setTransform(1, 0, 0, 1, 0, 0) // Reset to identity matrix
       ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
 
-      // Fill with background color
-      ctx.fillStyle = renderOptions.value.background
+      // Fill with background color, applying border radius (default 6px like original KLE)
+      const radiiValue = keyboardStore.metadata.radii?.trim() || '6px'
+
+      // Fill entire canvas with container background color first
+      const containerColor = getComputedStyle(containerRef.value!).backgroundColor
+      ctx.fillStyle = containerColor
       ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+
+      // Then draw rounded rectangle with keyboard background color on top
+      ctx.fillStyle = renderOptions.value.background
+      const corners = parseBorderRadius(radiiValue, ctx.canvas.width, ctx.canvas.height)
+      createRoundedRectanglePath(ctx, 0, 0, ctx.canvas.width, ctx.canvas.height, corners)
+      ctx.fill()
       ctx.restore()
 
       // Apply transformations before rendering
@@ -1437,6 +1466,12 @@ const cleanup = () => {
 // Handle component unmount
 onUnmounted(() => {
   cleanup()
+
+  // Clean up theme observer
+  if (themeObserver) {
+    themeObserver.disconnect()
+    themeObserver = null
+  }
 })
 
 // Expose functions to parent component

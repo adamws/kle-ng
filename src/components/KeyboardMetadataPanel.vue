@@ -43,6 +43,17 @@
             />
           </div>
         </div>
+        <div class="mb-3">
+          <label class="form-label small mb-1">Border Radii</label>
+          <input
+            v-model="currentRadii"
+            @input="updateMetadata('radii', currentRadii)"
+            type="text"
+            class="form-control form-control-sm"
+            placeholder="6px (default)"
+            title="CSS border-radius (e.g., '10px', '5px 10px', '10px 20px 30px 40px', '10px / 20px'). Defaults to 6px when empty. Supports separate corners and elliptical radii. Affects both canvas display and PNG export."
+          />
+        </div>
       </div>
 
       <!-- Right Column: Notes -->
@@ -62,6 +73,19 @@
   </div>
 </template>
 
+<style scoped>
+/* Improved placeholder styling for better visual distinction */
+.form-control::placeholder {
+  font-style: italic;
+  opacity: 0.6;
+  color: var(--bs-secondary-color);
+}
+
+.form-control:focus::placeholder {
+  opacity: 0.4;
+}
+</style>
+
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useKeyboardStore } from '@/stores/keyboard'
@@ -74,6 +98,7 @@ const currentName = ref('')
 const currentAuthor = ref('')
 const currentNotes = ref('')
 const currentBackcolor = ref('#ffffff')
+const currentRadii = ref('')
 
 // Update current values from store
 const updateCurrentValues = () => {
@@ -82,6 +107,7 @@ const updateCurrentValues = () => {
   currentAuthor.value = metadata.author || ''
   currentNotes.value = metadata.notes || ''
   currentBackcolor.value = metadata.backcolor || '#ffffff'
+  currentRadii.value = metadata.radii || ''
 }
 
 // Watch for metadata changes from store
@@ -140,7 +166,6 @@ const updateBackcolor = () => {
 
 .form-label.small {
   font-size: 0.7rem;
-  color: #666;
   font-weight: 500;
   margin-bottom: 0.25rem;
 }
