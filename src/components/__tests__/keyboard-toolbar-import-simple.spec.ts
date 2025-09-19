@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import KeyboardToolbar from '../KeyboardToolbar.vue'
+import { useKeyboardStore } from '@/stores/keyboard'
 
 // Mock presets data
 vi.mock('@/data/presets.json', () => ({
@@ -65,6 +66,16 @@ describe('KeyboardToolbar - JSON Import Format Auto-Detection', () => {
       )
     })
 
+    it('should store filename for downloads when importing raw KLE format', async () => {
+      const rawKleContent = JSON.stringify([['Q', 'W', 'E']])
+      await importJsonFile('my-keyboard-layout.json', rawKleContent)
+
+      const store = useKeyboardStore()
+
+      expect(store.filename).toBe('my-keyboard-layout')
+      expect(store.metadata.name).toBe('')
+    })
+
     it('should detect raw KLE format with key properties', async () => {
       const { toast } = await import('@/composables/useToast')
 
@@ -108,6 +119,55 @@ describe('KeyboardToolbar - JSON Import Format Auto-Detection', () => {
         'Internal KLE layout loaded from internal.json',
         'Import successful',
       )
+    })
+
+    it('should store filename for downloads when importing internal format', async () => {
+      const internalKle = JSON.stringify({
+        meta: {
+          author: 'Test User',
+        },
+        keys: [
+          {
+            labels: [null, null, null, null, 'Q'],
+            x: 0,
+            y: 0,
+            width: 1,
+            height: 1,
+          },
+        ],
+      })
+
+      await importJsonFile('custom-layout.json', internalKle)
+
+      const store = useKeyboardStore()
+
+      expect(store.filename).toBe('custom-layout')
+      expect(store.metadata.name).toBe('')
+    })
+
+    it('should store filename and preserve existing name when importing internal format with name', async () => {
+      const internalKle = JSON.stringify({
+        meta: {
+          name: 'Existing Layout Name',
+          author: 'Test User',
+        },
+        keys: [
+          {
+            labels: [null, null, null, null, 'Q'],
+            x: 0,
+            y: 0,
+            width: 1,
+            height: 1,
+          },
+        ],
+      })
+
+      await importJsonFile('filename-should-be-ignored.json', internalKle)
+
+      const store = useKeyboardStore()
+
+      expect(store.metadata.name).toBe('Existing Layout Name')
+      expect(store.filename).toBe('filename-should-be-ignored')
     })
 
     it('should detect internal format with minimal structure', async () => {
