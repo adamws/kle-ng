@@ -1176,6 +1176,114 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     }
   }
 
+  // VIA annotation detection
+  // Check if a label is in valid VIA format (row,col)
+  const isValidViaLabel = (label: string): boolean => {
+    if (!label || typeof label !== 'string') return false
+
+    // VIA format: "row,col" where row and col are integers
+    // Examples: "0,0", "1,5", "2,10"
+    const viaPattern = /^(\d+),(\d+)$/
+    return viaPattern.test(label.trim())
+  }
+
+  // Check if the layout is VIA annotated
+  // A layout is considered VIA annotated if all non-decal/non-ghost keys have valid VIA labels
+  const isViaAnnotated = computed((): boolean => {
+    // Need at least one key to be annotated
+    if (keys.value.length === 0) return false
+
+    // Filter out decal and ghost keys
+    const regularKeys = keys.value.filter((key) => !key.decal && !key.ghost)
+
+    // Need at least one regular key
+    if (regularKeys.length === 0) return false
+
+    // Check if all regular keys have valid VIA labels in position 0 (top-left)
+    return regularKeys.every((key) => {
+      const label = key.labels && key.labels[0]
+      return isValidViaLabel(label)
+    })
+  })
+
+  // Matrix coordinates functionality
+  const addMatrixCoordinates = () => {
+    // Save state before making changes
+    saveState()
+
+    // Calculate the center of each key and convert to matrix coordinates
+    keys.value.forEach((key) => {
+      // Calculate key center accounting for rotation
+      let centerX = D.add(key.x, D.div(key.width || 1, 2))
+      let centerY = D.add(key.y, D.div(key.height || 1, 2))
+
+      // Apply rotation transformation if key is rotated
+      if (key.rotation_angle && key.rotation_angle !== 0) {
+        const originX = key.rotation_x || centerX
+        const originY = key.rotation_y || centerY
+        const angleRad = D.degreesToRadians(key.rotation_angle)
+        const cos = Math.cos(angleRad)
+        const sin = Math.sin(angleRad)
+
+        // Translate center relative to rotation origin
+        const relativeX = D.sub(centerX, originX)
+        const relativeY = D.sub(centerY, originY)
+
+        // Apply rotation transformation
+        const rotatedX = D.sub(D.mul(relativeX, cos), D.mul(relativeY, sin))
+        const rotatedY = D.add(D.mul(relativeX, sin), D.mul(relativeY, cos))
+
+        // Translate back to absolute coordinates
+        centerX = D.add(originX, rotatedX)
+        centerY = D.add(originY, rotatedY)
+      }
+
+      // Convert to integer coordinates (rounding to nearest integer)
+      const row = Math.round(Number(centerY))
+      const col = Math.round(Number(centerX))
+
+      // Create new labels array with matrix coordinate at position 0
+      // This ensures proper Vue reactivity by replacing the entire array
+      key.labels = [`${row},${col}`, '', '', '', '', '', '', '', '', '', '', '']
+
+      // Clear text formatting for all positions
+      if (key.textColor) {
+        key.textColor = [
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+        ]
+      }
+      if (key.textSize) {
+        key.textSize = [
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+        ]
+      }
+    })
+
+    markDirty()
+  }
+
   // Helper functions for legend operations
   const saveToHistory = () => {
     saveState()
@@ -1319,5 +1427,9 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     // Legend tools
     saveToHistory,
     markDirty,
+
+    // Matrix coordinates
+    addMatrixCoordinates,
+    isViaAnnotated,
   }
 })

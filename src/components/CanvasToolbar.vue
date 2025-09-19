@@ -184,6 +184,13 @@
     :visible="showRotationOriginsPanel"
     @close="showRotationOriginsPanel = false"
   />
+
+  <!-- Matrix Coordinates Modal -->
+  <AddMatrixCoordinatesModal
+    :visible="showMatrixCoordinatesModal"
+    @apply="handleMatrixCoordinatesApply"
+    @cancel="showMatrixCoordinatesModal = false"
+  />
 </template>
 
 <script setup lang="ts">
@@ -192,6 +199,7 @@ import { useKeyboardStore } from '@/stores/keyboard'
 import { SPECIAL_KEYS, type SpecialKeyTemplate } from '@/data/specialKeys'
 import LegendToolsPanel from './LegendToolsPanel.vue'
 import RotationOriginsPanel from './RotationOriginsPanel.vue'
+import AddMatrixCoordinatesModal from './AddMatrixCoordinatesModal.vue'
 
 // Store
 const keyboardStore = useKeyboardStore()
@@ -218,6 +226,9 @@ const showLegendToolsPanel = ref(false)
 // Rotation origins panel
 const showRotationOriginsPanel = ref(false)
 
+// Matrix coordinates modal
+const showMatrixCoordinatesModal = ref(false)
+
 // Define extra tools
 interface ExtraTool {
   id: string
@@ -235,6 +246,15 @@ const extraTools = computed((): ExtraTool[] => [
     disabled: false,
     action: () => {
       showLegendToolsPanel.value = true
+    },
+  },
+  {
+    id: 'add-matrix-coordinates',
+    name: 'Add Switch Matrix Coordinates',
+    description: 'Remove all legends and add row,column matrix coordinates for VIA',
+    disabled: false,
+    action: () => {
+      showMatrixCoordinatesModal.value = true
     },
   },
   {
@@ -424,6 +444,13 @@ const undo = () => {
 
 const redo = () => {
   keyboardStore.redo()
+  requestCanvasFocus()
+}
+
+// Matrix coordinates functions
+const handleMatrixCoordinatesApply = () => {
+  keyboardStore.addMatrixCoordinates()
+  showMatrixCoordinatesModal.value = false
   requestCanvasFocus()
 }
 
