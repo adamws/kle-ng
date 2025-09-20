@@ -224,7 +224,7 @@ const stopResize = () => {
           class="w-100 d-flex flex-column flex-md-row align-items-stretch align-items-md-center gap-2"
         >
           <h1 class="navbar-brand mb-0 flex-shrink-0 text-center text-md-start">
-            <strong>Keyboard Layout Editor NG</strong>
+            <strong>Keyboard Layout Editor NG (test pr)</strong>
           </h1>
           <!-- On small screens: toolbar and theme toggle in same row -->
           <div class="d-flex flex-row flex-grow-1 align-items-center gap-2">
