@@ -187,14 +187,14 @@ const handleFileUpload = async (event: Event) => {
     if (isInternalKleFormat(data)) {
       // Internal KLE format with meta and keys
       console.log(`Loading internal KLE format from: ${file.name}`)
-      
+
       keyboardStore.loadLayout(data.keys, data.meta)
       toast.showSuccess(`Internal KLE layout loaded from ${file.name}`, 'Import successful')
     } else {
       // Raw KLE format (array-based)
       console.log(`Loading raw KLE format from: ${file.name}`)
       keyboardStore.loadKLELayout(data)
-      
+
       toast.showSuccess(`KLE layout loaded from ${file.name}`, 'Import successful')
     }
 
@@ -253,14 +253,18 @@ const downloadPng = async () => {
     })
 
     const writable = await handle.createWritable()
-    const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), 'image/png'))
+    const blob = await new Promise<Blob>((resolve) =>
+      canvas.toBlob((b) => resolve(b!), 'image/png'),
+    )
     await writable.write(blob)
     await writable.close()
 
     toast.showSuccess('PNG image downloaded successfully')
   } else {
     // Fallback: download PNG directly if File System Access API is not available
-    const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), 'image/png'))
+    const blob = await new Promise<Blob>((resolve) =>
+      canvas.toBlob((b) => resolve(b!), 'image/png'),
+    )
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -270,8 +274,6 @@ const downloadPng = async () => {
     toast.showSuccess('PNG image downloaded successfully')
   }
 }
-
-
 
 // Dropdown positioning functions
 const calculateDropdownPosition = (buttonRef: HTMLElement) => {
