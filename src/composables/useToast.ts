@@ -87,3 +87,8 @@ export function useToast() {
 
 // Global toast instance for use throughout the app
 export const toast = useToast()
+
+// Expose toast globally for e2e testing
+if (typeof window !== 'undefined') {
+  ;(window as typeof window & { __kleToast: typeof toast }).__kleToast = toast
+}

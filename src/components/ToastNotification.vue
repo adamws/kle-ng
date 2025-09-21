@@ -1,37 +1,33 @@
 <template>
-  <Teleport to="body">
-    <Transition name="toast" appear>
-      <div
-        v-if="visible"
-        class="toast-notification"
-        :class="[`toast-${type}`, { 'toast-with-icon': showIcon }]"
-        role="alert"
-        aria-live="polite"
-      >
-        <div class="toast-content">
-          <div v-if="showIcon" class="toast-icon">
-            <i v-if="type === 'success'" class="bi bi-check-circle-fill"></i>
-            <i v-else-if="type === 'error'" class="bi bi-exclamation-triangle-fill"></i>
-            <i v-else-if="type === 'warning'" class="bi bi-exclamation-triangle-fill"></i>
-            <i v-else class="bi bi-info-circle-fill"></i>
-          </div>
-          <div class="toast-message">
-            <div v-if="title" class="toast-title">{{ title }}</div>
-            <div class="toast-text">{{ message }}</div>
-          </div>
-          <button
-            v-if="showCloseButton"
-            @click="close"
-            class="toast-close"
-            type="button"
-            aria-label="Close notification"
-          >
-            <i class="bi bi-x"></i>
-          </button>
-        </div>
+  <div
+    v-if="visible"
+    class="toast-notification"
+    :class="[`toast-${type}`, { 'toast-with-icon': showIcon }]"
+    role="alert"
+    aria-live="polite"
+  >
+    <div class="toast-content">
+      <div v-if="showIcon" class="toast-icon">
+        <i v-if="type === 'success'" class="bi bi-check-circle-fill"></i>
+        <i v-else-if="type === 'error'" class="bi bi-exclamation-triangle-fill"></i>
+        <i v-else-if="type === 'warning'" class="bi bi-exclamation-triangle-fill"></i>
+        <i v-else class="bi bi-info-circle-fill"></i>
       </div>
-    </Transition>
-  </Teleport>
+      <div class="toast-message">
+        <div v-if="title" class="toast-title">{{ title }}</div>
+        <div class="toast-text">{{ message }}</div>
+      </div>
+      <button
+        v-if="showCloseButton"
+        @click="close"
+        class="toast-close"
+        type="button"
+        aria-label="Close notification"
+      >
+        <i class="bi bi-x"></i>
+      </button>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -89,9 +85,7 @@ onUnmounted(() => {
 
 <style scoped>
 .toast-notification {
-  position: fixed;
-  top: 20px;
-  right: 20px;
+  position: relative;
   min-width: 320px;
   max-width: 500px;
   background: var(--bs-body-bg);
@@ -100,8 +94,8 @@ onUnmounted(() => {
   border-radius: 8px;
   box-shadow: var(--bs-box-shadow);
   border-left: 4px solid;
-  z-index: 10001;
   overflow: hidden;
+  pointer-events: auto;
 }
 
 .toast-content {
@@ -205,54 +199,11 @@ onUnmounted(() => {
   color: var(--bs-info);
 }
 
-/* Transitions */
-.toast-enter-active {
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.toast-leave-active {
-  transition: all 0.3s ease-in;
-}
-
-.toast-enter-from {
-  opacity: 0;
-  transform: translateX(100%) scale(0.95);
-}
-
-.toast-leave-to {
-  opacity: 0;
-  transform: translateX(100%) scale(0.95);
-}
-
 /* Responsive adjustments */
 @media (max-width: 640px) {
   .toast-notification {
-    left: 20px;
-    right: 20px;
     min-width: auto;
     max-width: none;
   }
-
-  .toast-enter-from,
-  .toast-leave-to {
-    transform: translateY(-100%) scale(0.95);
-  }
-}
-
-/* Multiple toast stacking support */
-.toast-notification:nth-of-type(2) {
-  top: 110px;
-}
-
-.toast-notification:nth-of-type(3) {
-  top: 200px;
-}
-
-.toast-notification:nth-of-type(4) {
-  top: 290px;
-}
-
-.toast-notification:nth-of-type(n + 5) {
-  display: none; /* Hide excessive toasts */
 }
 </style>
