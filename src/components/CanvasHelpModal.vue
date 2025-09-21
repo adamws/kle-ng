@@ -12,28 +12,56 @@
         <div class="modal-body scrollable-content">
           <!-- Interactions Section -->
           <div class="interactions-grid">
-            <!-- Mouse Interactions -->
-            <div class="interaction-column">
-              <h6 class="section-title">Mouse Controls</h6>
-              <div class="controls-list">
-                <div class="control-item">
-                  <i class="bi bi-mouse control-icon"></i>
-                  <div>
-                    <strong>Left Click</strong>
-                    <div class="text-secondary">Select keys, drag for multi-select</div>
+            <!-- Left Column: Mouse Controls + Tips & Hints -->
+            <div class="left-column">
+              <!-- Mouse Controls -->
+              <div class="interaction-column">
+                <h6 class="section-title">Mouse Controls</h6>
+                <div class="controls-list">
+                  <div class="control-item">
+                    <i class="bi bi-mouse control-icon"></i>
+                    <div>
+                      <strong>Left Click</strong>
+                      <div class="text-secondary">Select keys, drag for multi-select</div>
+                    </div>
+                  </div>
+                  <div class="control-item">
+                    <i class="bi bi-mouse control-icon"></i>
+                    <div>
+                      <strong>Middle Click and Drag</strong>
+                      <div class="text-secondary">Move selected keys</div>
+                    </div>
                   </div>
                 </div>
-                <div class="control-item">
-                  <i class="bi bi-mouse control-icon"></i>
-                  <div>
-                    <strong>Middle Click and Drag</strong>
-                    <div class="text-secondary">Move selected keys</div>
+              </div>
+
+              <!-- Tips & Hints Section -->
+              <div class="interaction-column">
+                <h6 class="section-title">Tips & Hints</h6>
+                <div class="tips-list">
+                  <div class="tip-item">
+                    <i class="bi bi-github control-icon"></i>
+                    <div>
+                      <strong>Gist Support</strong>
+                      <div class="text-secondary">
+                        Load layouts by appending <code>#gist=abc123def...</code> to the URL
+                      </div>
+                    </div>
+                  </div>
+                  <div class="tip-item">
+                    <i class="bi bi-lightbulb control-icon text-warning"></i>
+                    <div>
+                      <strong>Export Resolution</strong>
+                      <div class="text-secondary">
+                        Zoom in on the canvas to increase PNG export resolution
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- Keyboard Shortcuts -->
+            <!-- Right Column: Keyboard Shortcuts -->
             <div class="interaction-column">
               <h6 class="section-title">Keyboard Shortcuts</h6>
               <div class="controls-list">
@@ -208,12 +236,18 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
-/* Two-column layout for interactions */
+/* Grid layout for interactions - two main columns */
 .interactions-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 2rem;
   margin-bottom: 1.5rem;
+}
+
+.left-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
 .interaction-column {
@@ -232,14 +266,16 @@ onUnmounted(() => {
   font-size: 1rem;
 }
 
-.controls-list {
+.controls-list,
+.tips-list {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 0.75rem 1rem;
   align-items: center;
 }
 
-.control-item {
+.control-item,
+.tip-item {
   display: contents;
 }
 

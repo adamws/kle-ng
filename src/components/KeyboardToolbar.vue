@@ -86,6 +86,7 @@ import { useKeyboardStore } from '@/stores/keyboard'
 import presetsMetadata from '@/data/presets.json'
 import { parseJsonString } from '@/utils/serialization'
 import { toast } from '@/composables/useToast'
+import { parseBorderRadius, createRoundedRectanglePath } from '@/utils/border-radius'
 
 // Store
 const keyboardStore = useKeyboardStore()
@@ -241,6 +242,10 @@ const downloadPng = async () => {
     return
   }
 
+  // Generar canvas con bordes redondeados
+  const radiiValue = keyboardStore.metadata.radii?.trim() || '6px'
+  const tempCanvas = createCanvasWithRoundedBackground(canvas, radiiValue)
+
   if (typeof window.showSaveFilePicker === 'function') {
     const handle = await window.showSaveFilePicker({
       suggestedName: `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}.png`,
@@ -254,16 +259,15 @@ const downloadPng = async () => {
 
     const writable = await handle.createWritable()
     const blob = await new Promise<Blob>((resolve) =>
-      canvas.toBlob((b) => resolve(b!), 'image/png'),
+      tempCanvas.toBlob((b) => resolve(b!), 'image/png'),
     )
     await writable.write(blob)
     await writable.close()
-
-    toast.showSuccess('PNG image downloaded successfully')
+    toast.showSuccess('PNG image saved successfully')
   } else {
-    // Fallback: download PNG directly if File System Access API is not available
+    // Fallback: download PNG directly
     const blob = await new Promise<Blob>((resolve) =>
-      canvas.toBlob((b) => resolve(b!), 'image/png'),
+      tempCanvas.toBlob((b) => resolve(b!), 'image/png'),
     )
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -273,6 +277,31 @@ const downloadPng = async () => {
     URL.revokeObjectURL(url)
     toast.showSuccess('PNG image downloaded successfully')
   }
+}
+
+// Helper function to create a canvas with rounded background
+const createCanvasWithRoundedBackground = (
+  sourceCanvas: HTMLCanvasElement,
+  radii: string,
+): HTMLCanvasElement => {
+  const tempCanvas = document.createElement('canvas')
+  tempCanvas.width = sourceCanvas.width
+  tempCanvas.height = sourceCanvas.height
+  const tempCtx = tempCanvas.getContext('2d')!
+
+  // Parse CSS border-radius format using shared utility
+  const corners = parseBorderRadius(radii, tempCanvas.width, tempCanvas.height)
+
+  // Create rounded rectangle path using shared utility
+  createRoundedRectanglePath(tempCtx, 0, 0, tempCanvas.width, tempCanvas.height, corners)
+
+  // Clip to rounded rectangle
+  tempCtx.clip()
+
+  // Draw the original canvas content
+  tempCtx.drawImage(sourceCanvas, 0, 0)
+
+  return tempCanvas
 }
 
 // Dropdown positioning functions
