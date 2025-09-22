@@ -3,7 +3,7 @@
     <div class="container">
       <div class="row">
         <div class="col-md-6">
-          <div><strong>Keyboard Layout Editor NG</strong> v{{ version }}</div>
+          <div><strong>Keyboard Layout Editor NG (test)</strong> v{{ version }}</div>
           Successor of
           <a
             href="https://www.keyboard-layout-editor.com/"
