@@ -235,38 +235,47 @@ const downloadKleInternalJson = () => {
   URL.revokeObjectURL(url)
 }
 
-const downloadPng = () => {
-  try {
-    // Find the canvas element from the keyboard canvas component
-    const canvas = document.querySelector('.keyboard-canvas') as HTMLCanvasElement
-    if (!canvas) {
-      toast.showError('Please make sure the keyboard is visible.', 'Canvas not found')
-      return
-    }
+const downloadPng = async () => {
+  const canvas = document.querySelector('.keyboard-canvas') as HTMLCanvasElement
+  if (!canvas) {
+    toast.showError('Please make sure the keyboard is visible.', 'Canvas not found')
+    return
+  }
 
-    // Apply border-radius (use 6px default like original KLE)
-    const radiiValue = keyboardStore.metadata.radii?.trim() || '6px'
-    const originalBorderRadius = canvas.style.borderRadius
-    canvas.style.borderRadius = radiiValue
+  // Generar canvas con bordes redondeados
+  const radiiValue = keyboardStore.metadata.radii?.trim() || '6px'
+  const tempCanvas = createCanvasWithRoundedBackground(canvas, radiiValue)
 
-    // Create a download link
-    const link = document.createElement('a')
-    link.download = `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}.png`
+  if (typeof window.showSaveFilePicker === 'function') {
+    const handle = await window.showSaveFilePicker({
+      suggestedName: `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}.png`,
+      types: [
+        {
+          description: 'PNG image',
+          accept: { 'image/png': ['.png'] },
+        },
+      ],
+    })
 
-    // Create PNG with rounded background (always applies, with 6px default)
-    const tempCanvas = createCanvasWithRoundedBackground(canvas, radiiValue)
-    link.href = tempCanvas.toDataURL('image/png')
-
-    link.click()
-
-    // Restore original border-radius
-    canvas.style.borderRadius = originalBorderRadius
-
-    console.log('PNG export completed')
+    const writable = await handle.createWritable()
+    const blob = await new Promise<Blob>((resolve) =>
+      tempCanvas.toBlob((b) => resolve(b!), 'image/png'),
+    )
+    await writable.write(blob)
+    await writable.close()
+    toast.showSuccess('PNG image saved successfully')
+  } else {
+    // Fallback: download PNG directly
+    const blob = await new Promise<Blob>((resolve) =>
+      tempCanvas.toBlob((b) => resolve(b!), 'image/png'),
+    )
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}.png`
+    a.click()
+    URL.revokeObjectURL(url)
     toast.showSuccess('PNG image downloaded successfully')
-  } catch (error) {
-    console.error('Error exporting PNG:', error)
-    toast.showError('Please try again.', 'Error exporting PNG')
   }
 }
 
