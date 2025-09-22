@@ -246,36 +246,57 @@ const downloadPng = async () => {
   const radiiValue = keyboardStore.metadata.radii?.trim() || '6px'
   const tempCanvas = createCanvasWithRoundedBackground(canvas, radiiValue)
 
-  if (typeof window.showSaveFilePicker === 'function') {
-    const handle = await window.showSaveFilePicker({
-      suggestedName: `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}.png`,
-      types: [
-        {
-          description: 'PNG image',
-          accept: { 'image/png': ['.png'] },
-        },
-      ],
-    })
+  try {
+    if (typeof window.showSaveFilePicker === 'function') {
+      // Modern File System Access API (Chrome/Edge)
+      const handle = await window.showSaveFilePicker({
+        suggestedName: `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}.png`,
+        types: [
+          {
+            description: 'PNG image',
+            accept: { 'image/png': ['.png'] },
+          },
+        ],
+      })
 
-    const writable = await handle.createWritable()
-    const blob = await new Promise<Blob>((resolve) =>
-      tempCanvas.toBlob((b) => resolve(b!), 'image/png'),
-    )
-    await writable.write(blob)
-    await writable.close()
-    toast.showSuccess('PNG image saved successfully')
-  } else {
-    // Fallback: download PNG directly
-    const blob = await new Promise<Blob>((resolve) =>
-      tempCanvas.toBlob((b) => resolve(b!), 'image/png'),
-    )
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}.png`
-    a.click()
-    URL.revokeObjectURL(url)
-    toast.showSuccess('PNG image downloaded successfully')
+      const writable = await handle.createWritable()
+      const blob = await new Promise<Blob>((resolve) =>
+        tempCanvas.toBlob((b) => resolve(b!), 'image/png'),
+      )
+      await writable.write(blob)
+      await writable.close()
+      toast.showSuccess('PNG image saved successfully')
+    } else {
+      // Fallback: download PNG directly (Firefox/older browsers)
+      // Note: We can't detect if user cancels the download dialog, so no success toast
+      const blob = await new Promise<Blob>((resolve) =>
+        tempCanvas.toBlob((b) => resolve(b!), 'image/png'),
+      )
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}.png`
+      a.click()
+      URL.revokeObjectURL(url)
+      // No toast here - we can't detect if the user actually saved or cancelled
+    }
+  } catch (error: unknown) {
+    // Handle cancellation and other errors
+    if (error instanceof Error) {
+      // Check for user cancellation (AbortError or similar)
+      if (error.name === 'AbortError' || error.message.includes('aborted') || error.message.includes('cancelled')) {
+        // User cancelled - don't show any toast
+        return
+      } else {
+        // Actual error occurred
+        console.error('Error downloading PNG:', error)
+        toast.showError(`Failed to save PNG: ${error.message}`, 'Save Failed')
+      }
+    } else {
+      // Unknown error type
+      console.error('Unknown error downloading PNG:', error)
+      toast.showError('Failed to save PNG image', 'Save Failed')
+    }
   }
 }
 

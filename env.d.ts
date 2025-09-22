@@ -1,3 +1,3 @@
 /// <reference types="vite/client" />
 
-import './src/types/filesystem-access'
+import type {} from './src/types/filesystem-access'
