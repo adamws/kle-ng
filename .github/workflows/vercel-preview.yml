@@ -1,7 +1,8 @@
 name: Vercel Preview Deployment
 
 on:
-  pull_request:
+  pull_request_target:
+    types: [opened, synchronize]
     branches: [ master ]
 
 env:
@@ -11,6 +12,8 @@ env:
 jobs:
   preview-deploy:
     runs-on: ubuntu-latest
+    # Use environment protection for PRs
+    environment: 'pr-approval'
     if: github.event.action != 'closed'
 
     steps:
