@@ -284,7 +284,11 @@ const downloadPng = async () => {
     // Handle cancellation and other errors
     if (error instanceof Error) {
       // Check for user cancellation (AbortError or similar)
-      if (error.name === 'AbortError' || error.message.includes('aborted') || error.message.includes('cancelled')) {
+      if (
+        error.name === 'AbortError' ||
+        error.message.includes('aborted') ||
+        error.message.includes('cancelled')
+      ) {
         // User cancelled - don't show any toast
         return
       } else {

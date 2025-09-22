@@ -57,6 +57,16 @@
                       </div>
                     </div>
                   </div>
+                  <div class="tip-item">
+                    <i class="bi bi-clipboard-plus control-icon text-info"></i>
+                    <div>
+                      <strong>Cross-Instance Copy & Paste</strong>
+                      <div class="text-secondary">
+                        Copy keys in one browser tab/window and paste them in another KLE-NG
+                        instance
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

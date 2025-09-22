@@ -27,6 +27,7 @@
   </div>
 
   <!-- Rotation control modal -->
+
   <RotationControlModal
     :visible="keyboardStore.canvasMode === 'rotate' && keyboardStore.selectedKeys.length > 0"
     :rotation-origin="keyboardStore.rotationOrigin"
@@ -139,6 +140,7 @@ onMounted(() => {
     window.addEventListener('canvas-zoom', handleExternalZoom as EventListener)
     window.addEventListener('canvas-reset-view', handleExternalResetView as EventListener)
     window.addEventListener('request-canvas-focus', handleCanvasFocusRequest as EventListener)
+    window.addEventListener('system-copy', handleSystemCopy as EventListener)
 
     // Watch for theme changes via data-bs-theme attribute
     themeObserver = new MutationObserver((mutations) => {
@@ -1076,7 +1078,7 @@ const handleCanvasBlur = () => {
   )
 }
 
-const handleKeyDown = (event: KeyboardEvent) => {
+const handleKeyDown = async (event: KeyboardEvent) => {
   // Handle Ctrl+[ and Ctrl+] for key navigation (like bracket matching in editors)
   if ((event.ctrlKey || event.metaKey) && (event.key === '[' || event.key === ']')) {
     event.preventDefault()
@@ -1097,15 +1099,15 @@ const handleKeyDown = (event: KeyboardEvent) => {
         break
       case 'c':
         event.preventDefault()
-        keyboardStore.copy()
+        await keyboardStore.copy()
         break
       case 'x':
         event.preventDefault()
-        keyboardStore.cut()
+        await keyboardStore.cut()
         break
       case 'v':
         event.preventDefault()
-        keyboardStore.paste()
+        await keyboardStore.paste()
         break
       case 'z':
         event.preventDefault()
@@ -1207,6 +1209,26 @@ const handleCanvasFocusRequest = () => {
   if (canvasRef.value) {
     canvasRef.value.focus()
   }
+}
+
+// System clipboard utility function for copy only
+const copyToSystemClipboard = async (rawKleData: string) => {
+  try {
+    // Try modern Clipboard API first
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(rawKleData)
+    } else {
+      console.warn('Clipboard API not available, copy not performed')
+    }
+  } catch (error) {
+    console.warn('System clipboard copy error:', error)
+  }
+}
+
+// Handle system copy event from store
+const handleSystemCopy = (event: Event) => {
+  const customEvent = event as CustomEvent
+  copyToSystemClipboard(customEvent.detail)
 }
 
 const resetView = () => {
@@ -1450,6 +1472,7 @@ const cleanup = () => {
   window.removeEventListener('canvas-zoom', handleExternalZoom as EventListener)
   window.removeEventListener('canvas-reset-view', handleExternalResetView as EventListener)
   window.removeEventListener('request-canvas-focus', handleCanvasFocusRequest as EventListener)
+  window.removeEventListener('system-copy', handleSystemCopy as EventListener)
 
   // Remove global mouse event listeners in case they weren't cleaned up
   document.removeEventListener('mousemove', handleGlobalMouseMove)

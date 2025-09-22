@@ -2,6 +2,25 @@ import { test, expect } from '@playwright/test'
 
 test.describe('Keyboard Layout Editor', () => {
   test.beforeEach(async ({ page }) => {
+    // Mock clipboard API for copy/paste tests
+    await page.addInitScript(() => {
+      let clipboardData = ''
+
+      // Mock the navigator.clipboard API
+      Object.defineProperty(navigator, 'clipboard', {
+        value: {
+          writeText: async (text: string) => {
+            clipboardData = text
+            return Promise.resolve()
+          },
+          readText: async () => {
+            return Promise.resolve(clipboardData)
+          },
+        },
+        writable: true,
+      })
+    })
+
     await page.goto('/')
   })
 

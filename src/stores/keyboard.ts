@@ -229,28 +229,135 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     selectedKeys.value = []
   }
 
-  const copy = () => {
+  const copy = async () => {
     if (selectedKeys.value.length === 0) return
+
+    // Keep existing internal clipboard for compatibility
     clipboard.value = JSON.parse(JSON.stringify(selectedKeys.value))
+
+    // Convert selected keys to raw KLE format and copy to system clipboard
+    try {
+      const tempKeyboard = new Keyboard()
+      tempKeyboard.keys = selectedKeys.value
+      const rawKleData = JSON.stringify(Serial.serialize(tempKeyboard))
+
+      // Try modern Clipboard API first
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(rawKleData)
+        // Show success toast
+        const keyCount = selectedKeys.value.length
+        toast.showSuccess(
+          `${keyCount} ${keyCount === 1 ? 'key' : 'keys'} copied to clipboard`,
+          'Copied',
+          { duration: 2000 },
+        )
+        return // Successfully copied to system clipboard
+      }
+
+      // Fallback to canvas event for older browsers
+      window.dispatchEvent(new CustomEvent('system-copy', { detail: rawKleData }))
+      // Show success toast for fallback method too
+      const keyCount = selectedKeys.value.length
+      toast.showSuccess(
+        `${keyCount} ${keyCount === 1 ? 'key' : 'keys'} copied to clipboard`,
+        'Copied',
+        { duration: 2000 },
+      )
+    } catch (error) {
+      // Keep internal clipboard only
+      console.warn('System clipboard copy failed:', error)
+    }
   }
 
-  const cut = () => {
-    copy()
+  const cut = async () => {
+    if (selectedKeys.value.length === 0) return
+
+    const keyCount = selectedKeys.value.length
+
+    // Keep existing internal clipboard for compatibility
+    clipboard.value = JSON.parse(JSON.stringify(selectedKeys.value))
+
+    // Convert selected keys to raw KLE format and copy to system clipboard
+    try {
+      const tempKeyboard = new Keyboard()
+      tempKeyboard.keys = selectedKeys.value
+      const rawKleData = JSON.stringify(Serial.serialize(tempKeyboard))
+
+      // Try modern Clipboard API first
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(rawKleData)
+      } else {
+        // Fallback to canvas event for older browsers
+        window.dispatchEvent(new CustomEvent('system-copy', { detail: rawKleData }))
+      }
+    } catch (error) {
+      console.warn('System clipboard copy failed:', error)
+    }
+
+    // Delete the keys
     deleteKeys()
+
+    // Show success toast for cut operation
+    toast.showSuccess(`${keyCount} ${keyCount === 1 ? 'key' : 'keys'} cut to clipboard`, 'Cut', {
+      duration: 2000,
+    })
   }
 
-  const paste = () => {
-    if (clipboard.value.length === 0) return
+  const paste = async () => {
+    // Try direct clipboard access
+    if (navigator.clipboard && window.isSecureContext) {
+      try {
+        const clipboardText = await navigator.clipboard.readText()
+        if (clipboardText && clipboardText.trim()) {
+          handleSystemClipboardData(clipboardText)
+        }
+      } catch (error) {
+        // Clipboard access failed
+        console.warn('Clipboard access failed:', error)
+      }
+    }
+  }
 
-    const pastedKeys = clipboard.value.map((key) => ({
-      ...JSON.parse(JSON.stringify(key)),
-      x: D.add(key.x, 1), // Offset to avoid overlap
-      y: D.add(key.y, 0.25),
-    }))
+  // New method to handle system clipboard paste data
+  const handleSystemClipboardData = (rawKleData: string): boolean => {
+    try {
+      const kleArray = JSON.parse(rawKleData)
+      const keyboard = Serial.deserialize(kleArray)
 
-    keys.value.push(...pastedKeys)
-    selectedKeys.value = pastedKeys
-    saveState()
+      if (keyboard && keyboard.keys && keyboard.keys.length > 0) {
+        // Use system clipboard data at original positions
+        const pastedKeys = keyboard.keys.map((key) => ({
+          ...key,
+        }))
+
+        keys.value.push(...pastedKeys)
+        selectedKeys.value = pastedKeys
+        saveState()
+
+        // Show success toast
+        const keyCount = pastedKeys.length
+        toast.showSuccess(
+          `${keyCount} ${keyCount === 1 ? 'key' : 'keys'} pasted from clipboard`,
+          'Pasted',
+          { duration: 2000 },
+        )
+        return true
+      }
+    } catch {
+      // Show error toast for invalid clipboard data
+      toast.showError('Clipboard data is not in a valid keyboard layout format', 'Paste Failed', {
+        duration: 3000,
+      })
+      return false
+    }
+
+    // Valid JSON but no valid keyboard data found
+    toast.showError(
+      'Clipboard data does not contain valid keyboard layout information',
+      'Paste Failed',
+      { duration: 3000 },
+    )
+    return false
   }
 
   const undo = () => {
@@ -1133,6 +1240,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     copy,
     cut,
     paste,
+    handleSystemClipboardData,
     undo,
     redo,
     updateKeyProperty,
