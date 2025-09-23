@@ -5,6 +5,11 @@
     @click="handleContainerClick"
     @mousedown="handleContainerMouseDown"
     @mouseup="handleContainerMouseUp"
+    @dragover="handleDragOver"
+    @dragenter="handleDragEnter"
+    @dragleave="handleDragLeave"
+    @drop="handleDrop"
+    :class="{ 'drag-target': isDragOver }"
   >
     <canvas
       ref="canvasRef"
@@ -48,11 +53,14 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { useKeyboardStore, type Key } from '@/stores/keyboard'
+import { useKeyboardStore, type Key, type KeyboardMetadata } from '@/stores/keyboard'
 import { CanvasRenderer, type RenderOptions } from '@/utils/canvas-renderer'
 import { D } from '@/utils/decimal-math'
 import { keyIntersectsSelection } from '@/utils/geometry'
 import { parseBorderRadius, createRoundedRectanglePath } from '@/utils/border-radius'
+import { extractKleLayout, hasKleMetadata } from '@/utils/png-metadata'
+import { parseJsonString } from '@/utils/serialization'
+import { toast } from '@/composables/useToast'
 import RotationControlModal from '@/components/RotationControlModal.vue'
 import MoveExactlyModal from '@/components/MoveExactlyModal.vue'
 
@@ -60,6 +68,23 @@ import MoveExactlyModal from '@/components/MoveExactlyModal.vue'
 const CANVAS_BORDER = 9
 
 const keyboardStore = useKeyboardStore()
+
+// Define a type for the internal KLE format
+interface InternalKleFormat {
+  meta: KeyboardMetadata
+  keys: Key[]
+}
+
+// Format detection helper
+const isInternalKleFormat = (data: unknown): data is InternalKleFormat => {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'meta' in data &&
+    'keys' in data &&
+    Array.isArray((data as Record<string, unknown>).keys)
+  )
+}
 
 const canvasRef = ref<HTMLCanvasElement>()
 const containerRef = ref<HTMLDivElement>()
@@ -86,6 +111,24 @@ const mouseDownOnKey = ref<{ key: Key; pos: { x: number; y: number } } | null>(n
 
 const mousePosition = ref({ x: 0, y: 0, visible: false })
 const canvasFocused = ref(false)
+
+// Drag and drop state
+const isDragOver = ref(false)
+const dragCounter = ref(0) // To handle dragenter/dragleave properly
+
+// Helper function to detect if this is a file drag event (not section reordering)
+const isFileDragEvent = (event: DragEvent): boolean => {
+  const dataTransfer = event.dataTransfer
+  if (!dataTransfer) return false
+
+  // Check if we have actual files being dragged
+  if (dataTransfer.files?.length > 0) return true
+
+  // Check if the drag operation includes file types
+  // This covers cases where files are being dragged from external sources
+  const types = Array.from(dataTransfer.types || [])
+  return types.includes('Files') && !types.includes('text/plain')
+}
 
 const canvasCursor = computed(() => {
   if (keyboardStore.canvasMode === 'select') {
@@ -1182,6 +1225,119 @@ const handleKeyDown = async (event: KeyboardEvent) => {
   }
 }
 
+// Drag and drop handlers for files
+const handleDragEnter = (event: DragEvent) => {
+  // Only handle file drops, not section reordering or other drag operations
+  if (isFileDragEvent(event)) {
+    event.preventDefault()
+    dragCounter.value++
+    if (dragCounter.value === 1) {
+      isDragOver.value = true
+    }
+  }
+}
+
+const handleDragOver = (event: DragEvent) => {
+  // Only handle file drops
+  if (isFileDragEvent(event)) {
+    event.preventDefault()
+    event.dataTransfer!.dropEffect = 'copy'
+  }
+  // Don't call preventDefault for non-file drags to allow section reordering
+}
+
+const handleDragLeave = (event: DragEvent) => {
+  // Only handle file drag leave
+  if (isFileDragEvent(event) || isDragOver.value) {
+    event.preventDefault()
+    dragCounter.value--
+    if (dragCounter.value === 0) {
+      isDragOver.value = false
+    }
+  }
+}
+
+const handleDrop = async (event: DragEvent) => {
+  dragCounter.value = 0
+  isDragOver.value = false
+
+  // Only handle file drops, let other drag operations (section reordering) pass through
+  if (!isFileDragEvent(event)) {
+    return
+  }
+
+  event.preventDefault()
+
+  const files = event.dataTransfer?.files
+  if (!files || files.length === 0) return
+
+  const file = files[0]
+
+  try {
+    // Extract filename without extension for downloads
+    const filenameWithoutExt = file.name.replace(/\.[^/.]+$/, '')
+
+    // Handle PNG files
+    if (file.type === 'image/png' || file.name.toLowerCase().endsWith('.png')) {
+      console.log(`Checking dropped PNG file for embedded layout: ${file.name}`)
+
+      // Check if PNG contains KLE metadata
+      if (await hasKleMetadata(file)) {
+        const layoutData = await extractKleLayout(file)
+
+        if (layoutData) {
+          console.log(`Loading layout from dropped PNG metadata: ${file.name}`)
+          keyboardStore.loadKLELayout(layoutData)
+          keyboardStore.filename = filenameWithoutExt
+          toast.showSuccess(`Layout imported from PNG: ${file.name}`, 'Import Successful')
+        } else {
+          toast.showError('Failed to extract layout data from PNG metadata', 'Import Failed')
+        }
+      } else {
+        toast.showError(
+          'This PNG file does not contain layout data. Only PNG files exported from this tool contain the necessary metadata to import layouts.',
+          'No Layout Data',
+        )
+      }
+      return
+    }
+
+    // Handle JSON files
+    if (file.type === 'application/json' || file.name.toLowerCase().endsWith('.json')) {
+      console.log(`Processing dropped JSON file: ${file.name}`)
+
+      const text = await file.text()
+      const data = parseJsonString(text)
+
+      // Auto-detect format and load accordingly (same logic as file upload)
+      if (isInternalKleFormat(data)) {
+        // Internal KLE format with meta and keys
+        console.log(`Loading internal KLE format from dropped file: ${file.name}`)
+        keyboardStore.loadLayout(data.keys, data.meta)
+        toast.showSuccess(`Internal KLE layout loaded from ${file.name}`, 'Import Successful')
+      } else {
+        // Raw KLE format (array-based)
+        console.log(`Loading raw KLE format from dropped file: ${file.name}`)
+        keyboardStore.loadKLELayout(data)
+        toast.showSuccess(`KLE layout loaded from ${file.name}`, 'Import Successful')
+      }
+
+      keyboardStore.filename = filenameWithoutExt
+      return
+    }
+
+    // Unsupported file type
+    toast.showError(
+      'Please drop a JSON or PNG file with keyboard layout data',
+      'Unsupported File Type',
+    )
+  } catch (error) {
+    console.error('Error processing dropped file:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Failed to process file'
+    toast.showError(errorMessage, 'Import Failed')
+  }
+}
+
 const handleExternalZoom = (event: Event) => {
   const customEvent = event as CustomEvent
   zoom.value = customEvent.detail
@@ -1519,5 +1675,44 @@ defineExpose({
   cursor: crosshair;
   outline: none;
   /* Canvas maintains its intrinsic dimensions based on key bounds */
+}
+
+/* Drag and drop styling for file uploads */
+.keyboard-canvas-container.drag-target {
+  background: rgba(40, 167, 69, 0.1);
+  border: 2px dashed #28a745;
+  position: relative;
+  border-radius: 8px;
+}
+
+.keyboard-canvas-container.drag-target::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(40, 167, 69, 0.05);
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 999;
+}
+
+.keyboard-canvas-container.drag-target::after {
+  content: 'Drop JSON or PNG file to import layout';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #28a745;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  pointer-events: none;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+  white-space: nowrap;
 }
 </style>

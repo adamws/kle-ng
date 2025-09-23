@@ -31,8 +31,7 @@
           @click="triggerFileUpload"
           type="button"
         >
-          <span class="d-none d-sm-inline">Import JSON File</span>
-          <span class="d-inline d-sm-none">Import</span>
+          Import
         </button>
 
         <div class="btn-group position-relative">
@@ -73,7 +72,7 @@
     <input
       ref="fileInput"
       type="file"
-      accept=".json"
+      accept=".json,.png"
       @change="handleFileUpload"
       style="display: none"
     />
@@ -87,6 +86,7 @@ import presetsMetadata from '@/data/presets.json'
 import { parseJsonString } from '@/utils/serialization'
 import { toast } from '@/composables/useToast'
 import { parseBorderRadius, createRoundedRectanglePath } from '@/utils/border-radius'
+import { createPngWithKleLayout, extractKleLayout, hasKleMetadata } from '@/utils/png-metadata'
 
 // Store
 const keyboardStore = useKeyboardStore()
@@ -178,11 +178,37 @@ const handleFileUpload = async (event: Event) => {
   if (!file) return
 
   try {
-    const text = await file.text()
-    const data = parseJsonString(text)
-
     // Extract filename without extension for downloads
     const filenameWithoutExt = file.name.replace(/\.[^/.]+$/, '')
+
+    // Handle PNG files
+    if (file.type === 'image/png' || file.name.toLowerCase().endsWith('.png')) {
+      console.log(`Checking PNG file for embedded layout: ${file.name}`)
+
+      // Check if PNG contains KLE metadata
+      if (await hasKleMetadata(file)) {
+        const layoutData = await extractKleLayout(file)
+
+        if (layoutData) {
+          console.log(`Loading layout from PNG metadata: ${file.name}`)
+          keyboardStore.loadKLELayout(layoutData)
+          keyboardStore.filename = filenameWithoutExt
+          toast.showSuccess(`Layout imported from PNG metadata: ${file.name}`, 'Import Successful')
+        } else {
+          toast.showError('Failed to extract layout data from PNG metadata', 'Import Failed')
+        }
+      } else {
+        toast.showError(
+          'This PNG file does not contain layout data. Only PNG files exported from this tool contain the necessary metadata to import layouts.',
+          'No Layout Data',
+        )
+      }
+      return
+    }
+
+    // Handle JSON files
+    const text = await file.text()
+    const data = parseJsonString(text)
 
     // Auto-detect format and load accordingly
     if (isInternalKleFormat(data)) {
@@ -202,10 +228,8 @@ const handleFileUpload = async (event: Event) => {
     keyboardStore.filename = filenameWithoutExt
   } catch (error) {
     console.error('Error loading file:', error)
-    toast.showError(
-      `${error instanceof Error ? error.message : 'Invalid JSON'}`,
-      'Error loading file',
-    )
+    const errorMessage = error instanceof Error ? error.message : 'Invalid file format'
+    toast.showError(errorMessage, 'Error loading file')
   } finally {
     // Clear the input
     input.value = ''
@@ -242,37 +266,44 @@ const downloadPng = async () => {
     return
   }
 
-  // Generar canvas con bordes redondeados
+  // Generate canvas with rounded background
   const radiiValue = keyboardStore.metadata.radii?.trim() || '6px'
   const tempCanvas = createCanvasWithRoundedBackground(canvas, radiiValue)
 
   try {
+    // Get base PNG blob
+    const basePngBlob = await new Promise<Blob>((resolve) =>
+      tempCanvas.toBlob((b) => resolve(b!), 'image/png'),
+    )
+
+    // Embed KLE layout metadata in PNG
+    const layoutData = keyboardStore.getSerializedData('kle')
+    const pngWithMetadata = await createPngWithKleLayout(basePngBlob, layoutData, {
+      Title: keyboardStore.metadata.name || 'Keyboard Layout',
+      Author: keyboardStore.metadata.author || '',
+      Description: 'Keyboard layout created with Keyboard Layout Editor NG',
+    })
+
     if (typeof window.showSaveFilePicker === 'function') {
       // Modern File System Access API (Chrome/Edge)
       const handle = await window.showSaveFilePicker({
         suggestedName: `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}.png`,
         types: [
           {
-            description: 'PNG image',
+            description: 'PNG image with embedded layout',
             accept: { 'image/png': ['.png'] },
           },
         ],
       })
 
       const writable = await handle.createWritable()
-      const blob = await new Promise<Blob>((resolve) =>
-        tempCanvas.toBlob((b) => resolve(b!), 'image/png'),
-      )
-      await writable.write(blob)
+      await writable.write(pngWithMetadata)
       await writable.close()
-      toast.showSuccess('PNG image saved successfully')
+      toast.showSuccess('PNG image with embedded layout saved successfully', 'Export Successful')
     } else {
       // Fallback: download PNG directly (Firefox/older browsers)
       // Note: We can't detect if user cancels the download dialog, so no success toast
-      const blob = await new Promise<Blob>((resolve) =>
-        tempCanvas.toBlob((b) => resolve(b!), 'image/png'),
-      )
-      const url = URL.createObjectURL(blob)
+      const url = URL.createObjectURL(pngWithMetadata)
       const a = document.createElement('a')
       a.href = url
       a.download = `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}.png`

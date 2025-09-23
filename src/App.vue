@@ -99,16 +99,23 @@ const handleDragStart = (sectionId: string) => {
 
 const handleDragOver = (event: DragEvent, sectionId: string) => {
   event.preventDefault()
-  dragOverSection.value = sectionId
+  // Only highlight sections when dragging sections (not files)
+  if (draggedSection.value) {
+    dragOverSection.value = sectionId
+  }
 }
 
 const handleDragLeave = () => {
-  dragOverSection.value = null
+  // Only clear section highlight when dragging sections (not files)
+  if (draggedSection.value) {
+    dragOverSection.value = null
+  }
 }
 
 const handleDrop = (event: DragEvent, targetSectionId: string) => {
   event.preventDefault()
 
+  // Only handle section reordering if we're dragging a section (not files)
   if (!draggedSection.value || draggedSection.value === targetSectionId) {
     draggedSection.value = null
     dragOverSection.value = null

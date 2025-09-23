@@ -27,7 +27,7 @@ test.describe('JSON Import/Export Functionality', () => {
       const filePath = path.resolve('e2e/fixtures/simple-layout.json')
 
       // Click import button and upload file
-      const importButton = page.locator('button', { hasText: 'Import JSON File' })
+      const importButton = page.locator('button', { hasText: 'Import' })
       await expect(importButton).toBeVisible()
 
       // Set up file chooser event handler
@@ -51,7 +51,7 @@ test.describe('JSON Import/Export Functionality', () => {
       const filePath = path.resolve('e2e/fixtures', 'complex-layout.json')
 
       const fileChooserPromise = page.waitForEvent('filechooser')
-      await page.locator('button', { hasText: 'Import JSON File' }).click()
+      await page.locator('button', { hasText: 'Import' }).click()
       const fileChooser = await fileChooserPromise
       await fileChooser.setFiles(filePath)
 
@@ -67,7 +67,7 @@ test.describe('JSON Import/Export Functionality', () => {
       const filePath = path.resolve('e2e/fixtures', 'empty-layout.json')
 
       const fileChooserPromise = page.waitForEvent('filechooser')
-      await page.locator('button', { hasText: 'Import JSON File' }).click()
+      await page.locator('button', { hasText: 'Import' }).click()
       const fileChooser = await fileChooserPromise
       await fileChooser.setFiles(filePath)
 
@@ -80,7 +80,7 @@ test.describe('JSON Import/Export Functionality', () => {
       const filePath = path.resolve('e2e/fixtures', 'invalid.json')
 
       const fileChooserPromise = page.waitForEvent('filechooser')
-      await page.locator('button', { hasText: 'Import JSON File' }).click()
+      await page.locator('button', { hasText: 'Import' }).click()
       const fileChooser = await fileChooserPromise
       await fileChooser.setFiles(filePath)
 
@@ -98,7 +98,7 @@ test.describe('JSON Import/Export Functionality', () => {
       const filePath = path.resolve('e2e/fixtures', 'rotated-keys.json')
 
       const fileChooserPromise = page.waitForEvent('filechooser')
-      await page.locator('button', { hasText: 'Import JSON File' }).click()
+      await page.locator('button', { hasText: 'Import' }).click()
       const fileChooser = await fileChooserPromise
       await fileChooser.setFiles(filePath)
 
@@ -150,7 +150,7 @@ test.describe('JSON Import/Export Functionality', () => {
       // Import a complex layout first
       const filePath = path.resolve('e2e/fixtures', 'complex-layout.json')
       const fileChooserPromise = page.waitForEvent('filechooser')
-      await page.locator('button', { hasText: 'Import JSON File' }).click()
+      await page.locator('button', { hasText: 'Import' }).click()
       const fileChooser = await fileChooserPromise
       await fileChooser.setFiles(filePath)
 
@@ -206,7 +206,7 @@ test.describe('JSON Import/Export Functionality', () => {
       const originalData = JSON.parse(originalContent)
 
       const fileChooserPromise = page.waitForEvent('filechooser')
-      await page.locator('button', { hasText: 'Import JSON File' }).click()
+      await page.locator('button', { hasText: 'Import' }).click()
       const fileChooser = await fileChooserPromise
       await fileChooser.setFiles(originalFile)
 
@@ -238,7 +238,7 @@ test.describe('JSON Import/Export Functionality', () => {
       const filePath = path.resolve('e2e/fixtures', 'rotated-keys.json')
 
       const fileChooserPromise = page.waitForEvent('filechooser')
-      await page.locator('button', { hasText: 'Import JSON File' }).click()
+      await page.locator('button', { hasText: 'Import' }).click()
       const fileChooser = await fileChooserPromise
       await fileChooser.setFiles(filePath)
 
@@ -266,7 +266,7 @@ test.describe('JSON Import/Export Functionality', () => {
       // Import simple layout
       const filePath = path.resolve('e2e/fixtures', 'simple-layout.json')
       const fileChooserPromise = page.waitForEvent('filechooser')
-      await page.locator('button', { hasText: 'Import JSON File' }).click()
+      await page.locator('button', { hasText: 'Import' }).click()
       const fileChooser = await fileChooserPromise
       await fileChooser.setFiles(filePath)
 
@@ -302,7 +302,7 @@ test.describe('JSON Import/Export Functionality', () => {
       // Import a layout
       const filePath = path.resolve('e2e/fixtures', 'simple-layout.json')
       const fileChooserPromise = page.waitForEvent('filechooser')
-      await page.locator('button', { hasText: 'Import JSON File' }).click()
+      await page.locator('button', { hasText: 'Import' }).click()
       const fileChooser = await fileChooserPromise
       await fileChooser.setFiles(filePath)
 
@@ -327,7 +327,7 @@ test.describe('JSON Import/Export Functionality', () => {
       // Import first layout
       let filePath = path.resolve('e2e/fixtures', 'simple-layout.json')
       let fileChooserPromise = page.waitForEvent('filechooser')
-      await page.locator('button', { hasText: 'Import JSON File' }).click()
+      await page.locator('button', { hasText: 'Import' }).click()
       let fileChooser = await fileChooserPromise
       await fileChooser.setFiles(filePath)
       await expect(page.locator('.keys-counter')).toContainText('Keys: 8')
@@ -335,7 +335,7 @@ test.describe('JSON Import/Export Functionality', () => {
       // Import second layout (should replace first)
       filePath = path.resolve('e2e/fixtures', 'rotated-keys.json')
       fileChooserPromise = page.waitForEvent('filechooser')
-      await page.locator('button', { hasText: 'Import JSON File' }).click()
+      await page.locator('button', { hasText: 'Import' }).click()
       fileChooser = await fileChooserPromise
       await fileChooser.setFiles(filePath)
       await expect(page.locator('.keys-counter')).toContainText('Keys: 3')
@@ -343,7 +343,7 @@ test.describe('JSON Import/Export Functionality', () => {
       // Import empty layout
       filePath = path.resolve('e2e/fixtures', 'empty-layout.json')
       fileChooserPromise = page.waitForEvent('filechooser')
-      await page.locator('button', { hasText: 'Import JSON File' }).click()
+      await page.locator('button', { hasText: 'Import' }).click()
       fileChooser = await fileChooserPromise
       await fileChooser.setFiles(filePath)
       await expect(page.locator('.keys-counter')).toContainText('Keys: 0')
