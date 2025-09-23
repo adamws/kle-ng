@@ -3,7 +3,17 @@
     <div class="container">
       <div class="row">
         <div class="col-md-6">
-          <div><strong>Keyboard Layout Editor NG</strong> v{{ version }}</div>
+          <div>
+            <strong>Keyboard Layout Editor NG</strong>
+            <a
+              :href="githubReleaseUrl"
+              target="_blank"
+              class="text-decoration-none"
+              :title="`View release v${version} on GitHub`"
+            >
+              v{{ version }}
+            </a>
+          </div>
           Successor of
           <a
             href="https://www.keyboard-layout-editor.com/"
@@ -32,10 +42,16 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import packageJson from '../../package.json'
 
 // Get version from package.json
 const version = packageJson.version
+
+// Generate GitHub release URL
+const githubReleaseUrl = computed(() => {
+  return `https://github.com/adamws/kle-ng/releases/tag/v${version}`
+})
 </script>
 
 <style scoped>
