@@ -162,38 +162,86 @@ test.describe('Theme switching functionality', () => {
   })
 
   test('theme switching should affect app appearance', async ({ page }) => {
-    // Switch to dark theme
     const themeToggle = page.locator('button[title*="Current theme"]')
+    const htmlElement = page.locator('html')
+
+    // Check that CSS variables are available before testing
+    const cssVarsWorking = await page.evaluate(() => {
+      const bodyStyles = window.getComputedStyle(document.body)
+      const bgVar = bodyStyles.getPropertyValue('--bs-body-bg')
+      const colorVar = bodyStyles.getPropertyValue('--bs-body-color')
+      return bgVar || colorVar // At least one Bootstrap CSS variable should be defined
+    })
+
+    if (!cssVarsWorking) {
+      throw new Error('Bootstrap CSS variables not found - theme system may not be properly loaded')
+    }
+
+    // Switch to dark theme
     await themeToggle.click()
     await page.locator('button:has-text("Dark")').click()
 
-    // Wait for theme to be applied
-    await page.waitForTimeout(100)
+    // Wait for dark theme to be applied to HTML element
+    await expect(htmlElement).toHaveAttribute('data-bs-theme', 'dark')
 
-    // Check that dark theme CSS variables are being used
-    // This can be verified by checking computed styles of body element
-    const bodyBackground = await page.evaluate(() => {
-      const body = document.body
-      const computedStyle = window.getComputedStyle(body)
-      return computedStyle.backgroundColor
+    // Verify theme toggle button reflects the change
+    await expect(themeToggle).toHaveAttribute('title', 'Current theme: dark')
+
+    // Wait for background color to actually change by checking computed style
+    await page
+      .waitForFunction(
+        () => {
+          const bgColor = window.getComputedStyle(document.body).backgroundColor
+          return bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent'
+        },
+        { timeout: 5000 },
+      )
+      .catch(() => {
+        throw new Error(
+          'Dark theme: Body background color never applied - CSS variables may not be working',
+        )
+      })
+
+    const darkBackground = await page.evaluate(() => {
+      return window.getComputedStyle(document.body).backgroundColor
     })
 
-    // Dark theme should have darker background
-    // The exact color may vary based on Bootstrap variables, but it should be dark
-    expect(bodyBackground).not.toBe('rgb(255, 255, 255)') // Not white
-
-    // Switch to light theme and verify
+    // Switch to light theme
     await themeToggle.click()
     await page.locator('button:has-text("Light")').click()
-    await page.waitForTimeout(100)
 
-    const lightBodyBackground = await page.evaluate(() => {
-      const body = document.body
-      const computedStyle = window.getComputedStyle(body)
-      return computedStyle.backgroundColor
+    // Wait for light theme to be applied to HTML element
+    await expect(htmlElement).toHaveAttribute('data-bs-theme', 'light')
+
+    // Verify theme toggle button reflects the change
+    await expect(themeToggle).toHaveAttribute('title', 'Current theme: light')
+
+    // Wait for background color to change to something different than dark
+    await page
+      .waitForFunction(
+        (prevBackground) => {
+          const bgColor = window.getComputedStyle(document.body).backgroundColor
+          return (
+            bgColor &&
+            bgColor !== prevBackground &&
+            bgColor !== 'rgba(0, 0, 0, 0)' &&
+            bgColor !== 'transparent'
+          )
+        },
+        darkBackground,
+        { timeout: 5000 },
+      )
+      .catch(() => {
+        throw new Error(
+          `Light theme: Background color never changed from dark theme. Current: ${darkBackground}`,
+        )
+      })
+
+    const lightBackground = await page.evaluate(() => {
+      return window.getComputedStyle(document.body).backgroundColor
     })
 
-    // Light and dark backgrounds should be different
-    expect(lightBodyBackground).not.toBe(bodyBackground)
+    // The main test: backgrounds should be different when themes change
+    expect(lightBackground).not.toBe(darkBackground)
   })
 })
