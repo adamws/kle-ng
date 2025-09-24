@@ -204,7 +204,13 @@ onMounted(() => {
 
 // Watch for changes and re-render
 watch(
-  [() => keyboardStore.keys, () => keyboardStore.selectedKeys, () => keyboardStore.metadata],
+  [
+    () => keyboardStore.keys,
+    () => keyboardStore.selectedKeys,
+    () => keyboardStore.tempSelectedKeys,
+    () => keyboardStore.mouseDragMode,
+    () => keyboardStore.metadata,
+  ],
   async (newValues, oldValues) => {
     await nextTick()
 
@@ -621,9 +627,15 @@ const renderKeyboard = () => {
         panY.value + coordinateOffset.y * zoom.value,
       )
 
+      // During rectangle selection, show tempSelectedKeys for dynamic highlighting
+      const keysToHighlight =
+        keyboardStore.mouseDragMode === 'rect-select'
+          ? keyboardStore.tempSelectedKeys
+          : keyboardStore.selectedKeys
+
       renderer.value.render(
         keyboardStore.keys,
-        keyboardStore.selectedKeys,
+        keysToHighlight,
         keyboardStore.metadata,
         false,
         keyboardStore.canvasMode === 'rotate' && keyboardStore.selectedKeys.length > 0,
@@ -941,10 +953,7 @@ const handleMouseMoveShared = (event: MouseEvent) => {
     // Auto-scroll when dragging near container edges
     handleAutoScroll(event)
 
-    // Force re-render to show rectangle
-    nextTick(() => {
-      renderKeyboard()
-    })
+    // Note: No need to manually call renderKeyboard() here as the watcher will handle it
     return
   }
 }
@@ -1034,10 +1043,7 @@ const handleMouseUpShared = () => {
   // Handle end of rectangle selection
   if (keyboardStore.mouseDragMode === 'rect-select') {
     keyboardStore.endRectSelect()
-    // Force re-render to show selection borders
-    nextTick(() => {
-      renderKeyboard()
-    })
+    // Note: No need to manually call renderKeyboard() here as the watcher will handle it
     // Don't reset the flag here - let click handler check it first
     return
   }
