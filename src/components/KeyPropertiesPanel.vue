@@ -1569,7 +1569,7 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
 .property-group-title {
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--bs-secondary-color);
+  color: var(--bs-body-color);
   margin-bottom: 8px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -1799,7 +1799,7 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
 
 .control-label {
   font-size: 0.65rem;
-  color: var(--bs-secondary);
+  color: var(--bs-body-color);
   font-weight: 500;
   display: block;
   margin-bottom: 1px;

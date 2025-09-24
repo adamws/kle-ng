@@ -126,7 +126,7 @@ onUnmounted(() => {
 .toast-text {
   font-size: 14px;
   line-height: 1.4;
-  color: var(--bs-secondary);
+  color: var(--bs-secondary-color);
 }
 
 .toast-close {
@@ -134,7 +134,7 @@ onUnmounted(() => {
   background: none;
   border: none;
   font-size: 16px;
-  color: var(--bs-secondary);
+  color: var(--bs-secondary-color);
   cursor: pointer;
   padding: 2px;
   border-radius: 2px;

@@ -356,7 +356,7 @@ const keysBySizeAndColor = computed(() => {
 
 .color-code {
   font-size: 0.7rem;
-  color: var(--bs-secondary);
+  color: var(--bs-secondary-color);
   background: var(--bs-tertiary-bg);
   padding: 0.1rem 0.2rem;
   border-radius: 0.25rem;

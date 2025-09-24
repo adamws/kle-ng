@@ -269,7 +269,7 @@ onUnmounted(() => {
 }
 
 .drag-handle {
-  color: var(--bs-secondary);
+  color: var(--bs-secondary-color);
   cursor: grab;
 }
 

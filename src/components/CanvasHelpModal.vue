@@ -22,14 +22,14 @@
                     <i class="bi bi-mouse control-icon"></i>
                     <div>
                       <strong>Left Click</strong>
-                      <div class="text-secondary">Select keys, drag for multi-select</div>
+                      <div>Select keys, drag for multi-select</div>
                     </div>
                   </div>
                   <div class="control-item">
                     <i class="bi bi-mouse control-icon"></i>
                     <div>
                       <strong>Middle Click and Drag</strong>
-                      <div class="text-secondary">Move selected keys</div>
+                      <div>Move selected keys</div>
                     </div>
                   </div>
                 </div>
@@ -43,7 +43,7 @@
                     <i class="bi bi-github control-icon"></i>
                     <div>
                       <strong>Gist Support</strong>
-                      <div class="text-secondary">
+                      <div>
                         Load layouts by appending <code>#gist=abc123def...</code> to the URL
                       </div>
                     </div>
@@ -52,16 +52,14 @@
                     <i class="bi bi-lightbulb control-icon text-warning"></i>
                     <div>
                       <strong>Export Resolution</strong>
-                      <div class="text-secondary">
-                        Zoom in on the canvas to increase PNG export resolution
-                      </div>
+                      <div>Zoom in on the canvas to increase PNG export resolution</div>
                     </div>
                   </div>
                   <div class="tip-item">
                     <i class="bi bi-clipboard-plus control-icon text-info"></i>
                     <div>
                       <strong>Cross-Instance Copy & Paste</strong>
-                      <div class="text-secondary">
+                      <div>
                         Copy keys in one browser tab/window and paste them in another KLE-NG
                         instance
                       </div>
@@ -79,77 +77,77 @@
                   <div class="kbd-combo"><kbd>Ctrl</kbd><kbd>C</kbd></div>
                   <div>
                     <strong>Copy</strong>
-                    <div class="text-secondary">Copy selected keys</div>
+                    <div>Copy selected keys</div>
                   </div>
                 </div>
                 <div class="control-item">
                   <div class="kbd-combo"><kbd>Ctrl</kbd><kbd>V</kbd></div>
                   <div>
                     <strong>Paste</strong>
-                    <div class="text-secondary">Paste keys from clipboard</div>
+                    <div>Paste keys from clipboard</div>
                   </div>
                 </div>
                 <div class="control-item">
                   <div class="kbd-combo"><kbd>Ctrl</kbd><kbd>X</kbd></div>
                   <div>
                     <strong>Cut</strong>
-                    <div class="text-secondary">Cut selected keys</div>
+                    <div>Cut selected keys</div>
                   </div>
                 </div>
                 <div class="control-item">
                   <div class="kbd-combo"><kbd>Del</kbd>/<kbd>Backspace</kbd></div>
                   <div>
                     <strong>Delete</strong>
-                    <div class="text-secondary">Remove selected keys</div>
+                    <div>Remove selected keys</div>
                   </div>
                 </div>
                 <div class="control-item">
                   <div class="kbd-combo"><kbd>Ctrl</kbd><kbd>]</kbd></div>
                   <div>
                     <strong>Next Key</strong>
-                    <div class="text-secondary">Select next key in layout order</div>
+                    <div>Select next key in layout order</div>
                   </div>
                 </div>
                 <div class="control-item">
                   <div class="kbd-combo"><kbd>Ctrl</kbd><kbd>[</kbd></div>
                   <div>
                     <strong>Previous Key</strong>
-                    <div class="text-secondary">Select previous key in layout order</div>
+                    <div>Select previous key in layout order</div>
                   </div>
                 </div>
                 <div class="control-item">
                   <div class="kbd-combo"><kbd>Ctrl</kbd><kbd>Z</kbd></div>
                   <div>
                     <strong>Undo</strong>
-                    <div class="text-secondary">Undo last action</div>
+                    <div>Undo last action</div>
                   </div>
                 </div>
                 <div class="control-item">
                   <div class="kbd-combo"><kbd>Arrows</kbd></div>
                   <div>
                     <strong>Move keys</strong>
-                    <div class="text-secondary">Nudge selected keys</div>
+                    <div>Nudge selected keys</div>
                   </div>
                 </div>
                 <div class="control-item">
                   <div class="kbd-combo"><kbd>A</kbd></div>
                   <div>
                     <strong>Add key</strong>
-                    <div class="text-secondary">Add new key to layout</div>
+                    <div>Add new key to layout</div>
                   </div>
                 </div>
                 <div class="control-item">
                   <div class="kbd-combo"><kbd>Shift</kbd><kbd>←</kbd><kbd>→</kbd></div>
                   <div>
                     <strong>Adjust width</strong>
-                    <div class="text-secondary">Change width of selected keys</div>
+                    <div>Change width of selected keys</div>
                   </div>
                 </div>
                 <div class="control-item">
                   <div class="kbd-combo"><kbd>Shift</kbd><kbd>↑</kbd><kbd>↓</kbd></div>
                   <div>
                     <strong>Adjust height</strong>
-                    <div class="text-secondary">Change height of selected keys</div>
+                    <div>Change height of selected keys</div>
                   </div>
                 </div>
               </div>
@@ -307,8 +305,8 @@ onUnmounted(() => {
 }
 
 .kbd-combo kbd {
-  background-color: var(--bs-secondary);
-  color: var(--bs-secondary-text, white);
+  background-color: var(--bs-dark);
+  color: var(--bs-light);
   padding: 0.125rem 0.375rem;
   border-radius: 3px;
   font-size: 0.75rem;

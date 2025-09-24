@@ -17,17 +17,17 @@
                 : 'Canvas is inactive (click to activate)'
             "
           ></div>
-          <span class="small text-muted">{{ canvasFocused ? 'Active' : 'Inactive' }}</span>
+          <span class="small">{{ canvasFocused ? 'Active' : 'Inactive' }}</span>
         </div>
-        <div class="keys-counter small text-muted">
+        <div class="keys-counter small">
           Keys: <span class="fw-semibold">{{ keyboardStore.keys.length }}</span>
         </div>
-        <div class="selected-counter small text-muted">
+        <div class="selected-counter small">
           Selected: <span class="fw-semibold">{{ keyboardStore.selectedKeys.length }}</span>
         </div>
         <!-- Move Step Control -->
         <div class="move-step-control d-flex align-items-center gap-1">
-          <label class="move-step-label small text-muted mb-0">Step:</label>
+          <label class="move-step-label small mb-0">Step:</label>
           <CustomNumberInput
             :model-value="keyboardStore.moveStep"
             @change="updateMoveStep"
@@ -52,7 +52,7 @@
           />
           <label
             for="lockRotations"
-            class="form-check-label small text-muted mb-0"
+            class="form-check-label small mb-0"
             title="When enabled, rotation origins move with keys to maintain relative offset"
           >
             Lock rotations
@@ -66,7 +66,7 @@
       >
         <!-- Zoom Controls -->
         <div class="zoom-control d-flex align-items-center gap-1">
-          <label class="zoom-label small text-muted mb-0">Zoom:</label>
+          <label class="zoom-label small mb-0">Zoom:</label>
           <CustomNumberInput
             :model-value="zoomPercent"
             @change="updateZoom"

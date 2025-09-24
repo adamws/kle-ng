@@ -435,7 +435,7 @@ const stopResize = () => {
 }
 
 .drag-grip {
-  color: var(--bs-secondary);
+  color: var(--bs-secondary-color);
   font-size: 14px;
   line-height: 1;
   cursor: grab;
@@ -567,7 +567,7 @@ const stopResize = () => {
 .tab-btn {
   background: none;
   border: none;
-  color: var(--bs-secondary);
+  color: var(--bs-secondary-color);
   padding: 0.25rem 0.5rem;
   font-size: 0.875rem;
   cursor: pointer;
