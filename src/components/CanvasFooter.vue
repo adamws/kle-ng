@@ -195,8 +195,8 @@ window.addEventListener('canvas-focus-change', (event: Event) => {
   display: flex;
   align-items: center;
   gap: 4px;
-  flex-shrink: 1;
-  min-width: 0;
+  flex-shrink: 0;
+  min-width: 150px;
   justify-content: space-between;
 }
 
@@ -229,6 +229,7 @@ window.addEventListener('canvas-focus-change', (event: Event) => {
   font-size: 0.75rem;
   flex-shrink: 0;
   white-space: nowrap;
+  min-width: 50px;
 }
 
 .focus-status-dot {
@@ -256,65 +257,5 @@ window.addEventListener('canvas-focus-change', (event: Event) => {
   width: 75px;
   min-width: 75px;
   flex-shrink: 0;
-}
-
-/* Tablet and mobile adjustments */
-@media (max-width: 767.98px) {
-  /* Reduce spacing to prevent overlap */
-  .canvas-status {
-    gap: 0.25rem !important;
-  }
-
-  .d-flex.flex-wrap.align-items-center {
-    gap: 0.25rem !important;
-  }
-
-  /* Smaller text for space efficiency */
-  .zoom-label,
-  .move-step-label,
-  .small {
-    font-size: 0.7rem !important;
-  }
-
-  /* Compact position indicator */
-  .position-indicator {
-    padding: 2px 4px;
-    font-size: 0.65rem;
-    gap: 2px;
-  }
-
-  /* Appropriately sized inputs for mobile */
-  .move-step-control .custom-number-input,
-  .zoom-control .custom-number-input {
-    width: 55px;
-  }
-}
-
-/* Very small screens - more aggressive space saving */
-@media (max-width: 479.98px) {
-  /* Even smaller inputs */
-  .move-step-control .custom-number-input,
-  .zoom-control .custom-number-input {
-    width: 50px;
-  }
-
-  /* Minimal position indicator */
-  .position-indicator {
-    min-width: 80px;
-    padding: 1px 3px;
-    font-size: 0.6rem;
-  }
-
-  /* Tighter spacing */
-  .canvas-status,
-  .d-flex.flex-wrap.align-items-center {
-    gap: 0.125rem !important;
-  }
-}
-
-@media (max-width: 991.98px) {
-  .card-footer {
-    padding: 0.5rem;
-  }
 }
 </style>
