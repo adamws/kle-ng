@@ -288,14 +288,14 @@ test.describe('Single Key Rendering Tests', () => {
         // Set color for front left label (index 9)
         await frontColorPickers.nth(9).click()
         await helper.page.locator('.color-picker-popup').waitFor({ state: 'visible' })
-        await helper.page.locator('.color-picker-popup .vc-input__input').first().fill('00ffff')
+        await helper.page.locator('.color-picker-popup input[placeholder="000000"]').first().fill('00ffff')
         await helper.page.locator('.color-picker-popup .btn-primary').click()
         await helper.page.locator('.color-picker-popup').waitFor({ state: 'hidden' })
 
         // Set color for front center label (index 10)
         await frontColorPickers.nth(10).click()
         await helper.page.locator('.color-picker-popup').waitFor({ state: 'visible' })
-        await helper.page.locator('.color-picker-popup .vc-input__input').first().fill('ff00ff')
+        await helper.page.locator('.color-picker-popup input[placeholder="000000"]').first().fill('ff00ff')
         await helper.page.locator('.color-picker-popup .btn-primary').click()
         await helper.page.locator('.color-picker-popup').waitFor({ state: 'hidden' })
       }

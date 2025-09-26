@@ -79,8 +79,8 @@ export class CanvasTestHelper {
       const colorPickerPopup = this.page.locator('.color-picker-popup')
       await expect(colorPickerPopup).toBeVisible()
 
-      // Enter hex value in the first Sketch color picker input (hex input)
-      const hexInput = this.page.locator('.color-picker-popup .vc-input__input').first()
+      // Enter hex value in the hex input field of the custom color picker
+      const hexInput = this.page.locator('.color-picker-popup input[placeholder="000000"]').first()
       await hexInput.fill(keyColor.replace('#', ''))
       await hexInput.press('Enter')
 
@@ -99,8 +99,8 @@ export class CanvasTestHelper {
       const colorPickerPopup = this.page.locator('.color-picker-popup')
       await expect(colorPickerPopup).toBeVisible()
 
-      // Enter hex value in the first Sketch color picker input (hex input)
-      const hexInput = this.page.locator('.color-picker-popup .vc-input__input').first()
+      // Enter hex value in the hex input field of the custom color picker
+      const hexInput = this.page.locator('.color-picker-popup input[placeholder="000000"]').first()
       await hexInput.fill(textColor.replace('#', ''))
       await hexInput.press('Enter')
 
@@ -187,8 +187,8 @@ export class CanvasTestHelper {
     const colorPickerPopup = this.page.locator('.color-picker-popup')
     await expect(colorPickerPopup).toBeVisible()
 
-    // Enter hex value in the color picker input
-    const hexInput = this.page.locator('.color-picker-popup .vc-input__input').first()
+    // Enter hex value in the hex input field of the custom color picker
+    const hexInput = this.page.locator('.color-picker-popup input[placeholder="000000"]').first()
     await hexInput.fill(color.replace('#', ''))
     await hexInput.press('Enter')
 

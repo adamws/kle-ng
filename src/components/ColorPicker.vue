@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { Sketch } from '@ckpack/vue-color'
+import CustomColorPicker from './CustomColorPicker.vue'
 
 interface Props {
   modelValue?: string
@@ -25,8 +25,8 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>()
 
 const showPicker = ref(false)
-const colorValue = ref(props.modelValue || '#000000')
-const originalValue = ref(props.modelValue || '#000000')
+const colorValue = ref(props.modelValue || '#CCCCCC')
+const originalValue = ref(props.modelValue || '#CCCCCC')
 
 // Watch for external changes
 watch(
@@ -39,14 +39,11 @@ watch(
   },
 )
 
-// Handle color changes from the Sketch picker (live preview)
-const handleColorChange = (color: { hex?: string } | string) => {
-  // @ckpack/vue-color returns different formats, get hex value
-  const hexColor = typeof color === 'string' ? color : color.hex || '#000000'
-  colorValue.value = hexColor
-  // Emit for live preview but don't emit 'change' event (which triggers state save)
-  emit('update:modelValue', hexColor)
-  emit('input', hexColor)
+// Handle color changes from the custom picker
+const handleColorChange = (color: string) => {
+  colorValue.value = color
+  emit('update:modelValue', color)
+  emit('input', color)
 }
 
 // Toggle picker visibility
@@ -138,14 +135,10 @@ onUnmounted(() => {
       <div class="color-preview-swatch" :style="{ backgroundColor: colorValue }"></div>
     </div>
 
-    <!-- Sketch color picker popup -->
+    <!-- Custom color picker popup -->
     <div v-if="showPicker" class="color-picker-popup">
-      <Sketch
-        v-model="colorValue"
-        @update:model-value="handleColorChange"
-        :disable-alpha="true"
-        class="vc-sketch-custom"
-      />
+      <CustomColorPicker :model-value="colorValue" @update:model-value="handleColorChange" />
+
       <div class="color-picker-footer">
         <button @click="cancelChanges" type="button" class="btn btn-secondary btn-sm me-2">
           Cancel
@@ -191,7 +184,6 @@ onUnmounted(() => {
   height: 100%;
   border-radius: 0;
   min-height: auto;
-  /* No background pattern - just solid color */
 }
 
 .color-picker-popup {
@@ -199,12 +191,13 @@ onUnmounted(() => {
   top: 100%;
   left: 0;
   z-index: 1000;
-  background: white;
+  background: var(--bs-body-bg);
   border: 1px solid var(--bs-border-color);
   border-radius: 4px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   padding: 15px;
   margin-top: 2px;
+  min-width: 280px;
 }
 
 .color-picker-footer {
@@ -212,10 +205,5 @@ onUnmounted(() => {
   text-align: center;
   border-top: 1px solid var(--bs-border-color);
   padding-top: 10px;
-}
-
-.vc-sketch-custom {
-  box-shadow: none !important;
-  padding: 0px !important;
 }
 </style>
