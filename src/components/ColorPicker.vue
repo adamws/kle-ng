@@ -207,11 +207,13 @@ onUnmounted(() => {
   height: 100%;
   min-height: auto;
   overflow: hidden;
+  position: relative;
 }
 
 .color-picker-button:hover:not(.disabled) {
   border-color: var(--input-focus-border-color);
   box-shadow: 0 0 0 0.25rem var(--bs-focus-ring-color);
+  z-index: 9999;
 }
 
 .color-picker-button.disabled {
