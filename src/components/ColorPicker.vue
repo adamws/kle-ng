@@ -88,12 +88,32 @@ const cancelChanges = () => {
   showPicker.value = false
 }
 
-// Close picker when clicking outside (accept changes)
+// Close picker when clicking outside (cancel changes)
 const pickerRef = ref<HTMLElement>()
+const lastMouseDownTarget = ref<EventTarget | null>(null)
+
 const handleClickOutside = (event: Event) => {
-  if (pickerRef.value && !pickerRef.value.contains(event.target as Node)) {
-    acceptChanges()
+  // Don't handle click-outside if the last mousedown was inside the picker
+  // This prevents closing when dragging from inside and releasing outside
+  if (lastMouseDownTarget.value && pickerRef.value?.contains(lastMouseDownTarget.value as Node)) {
+    return
   }
+
+  if (pickerRef.value && !pickerRef.value.contains(event.target as Node)) {
+    cancelChanges()
+  }
+}
+
+// Track where the mouse down event originated
+const handleMouseDown = (event: MouseEvent) => {
+  lastMouseDownTarget.value = event.target
+}
+
+const handleMouseUp = () => {
+  // Clear the mousedown target after a brief delay to allow click event to process
+  setTimeout(() => {
+    lastMouseDownTarget.value = null
+  }, 10)
 }
 
 // Handle keyboard events for the color picker
@@ -122,9 +142,13 @@ watch(showPicker, (newValue) => {
   if (newValue) {
     document.addEventListener('click', handleClickOutside)
     document.addEventListener('keydown', handleKeydown)
+    document.addEventListener('mousedown', handleMouseDown)
+    document.addEventListener('mouseup', handleMouseUp)
   } else {
     document.removeEventListener('click', handleClickOutside)
     document.removeEventListener('keydown', handleKeydown)
+    document.removeEventListener('mousedown', handleMouseDown)
+    document.removeEventListener('mouseup', handleMouseUp)
   }
 })
 
@@ -133,6 +157,8 @@ import { onUnmounted } from 'vue'
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
   document.removeEventListener('keydown', handleKeydown)
+  document.removeEventListener('mousedown', handleMouseDown)
+  document.removeEventListener('mouseup', handleMouseUp)
 })
 </script>
 

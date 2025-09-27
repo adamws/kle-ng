@@ -93,7 +93,7 @@ describe('ColorPicker', () => {
       expect(mockRecentlyUsedColorsManager.addColor).not.toHaveBeenCalled()
     })
 
-    it('tracks color when clicking outside (auto-accept)', async () => {
+    it('does not track color when clicking outside (auto-cancel)', async () => {
       // Open the picker
       await wrapper.find('.color-picker-button').trigger('click')
 
@@ -110,8 +110,8 @@ describe('ColorPicker', () => {
 
       await wrapper.vm.$nextTick()
 
-      // Should add to recently used colors
-      expect(mockRecentlyUsedColorsManager.addColor).toHaveBeenCalledWith('#ff0000')
+      // Should not add to recently used colors (cancels changes)
+      expect(mockRecentlyUsedColorsManager.addColor).not.toHaveBeenCalled()
     })
 
     it('tracks color when pressing Enter key', async () => {
