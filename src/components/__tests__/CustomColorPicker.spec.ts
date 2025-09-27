@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, VueWrapper } from '@vue/test-utils'
 import CustomColorPicker from '../CustomColorPicker.vue'
+import * as recentlyUsedColorsModule from '../../utils/recently-used-colors'
 
 // Mock CustomNumberInput
 vi.mock('../CustomNumberInput.vue', () => ({
@@ -21,10 +22,26 @@ vi.mock('../CustomNumberInput.vue', () => ({
   },
 }))
 
+// Mock recently used colors manager
+vi.mock('../../utils/recently-used-colors', () => ({
+  recentlyUsedColorsManager: {
+    getRecentlyUsedColors: vi.fn(() => []),
+    addColor: vi.fn(),
+    clear: vi.fn(),
+  },
+}))
+
+// Get references to the mocked functions
+const mockRecentlyUsedColorsManager = vi.mocked(recentlyUsedColorsModule.recentlyUsedColorsManager)
+
 describe('CustomColorPicker', () => {
   let wrapper: VueWrapper
 
   beforeEach(() => {
+    // Reset all mocks
+    vi.clearAllMocks()
+    mockRecentlyUsedColorsManager.getRecentlyUsedColors.mockReturnValue([])
+
     wrapper = mount(CustomColorPicker, {
       props: {
         modelValue: '#FF0000',
@@ -283,6 +300,105 @@ describe('CustomColorPicker', () => {
       expect(rgbInputs[0].props('modelValue')).toBe(128) // R
       expect(rgbInputs[1].props('modelValue')).toBe(64) // G
       expect(rgbInputs[2].props('modelValue')).toBe(192) // B
+    })
+  })
+
+  describe('Recently Used Colors', () => {
+    it('does not render recently used colors section when empty', () => {
+      expect(wrapper.find('.recently-used-colors').exists()).toBe(false)
+    })
+
+    it('renders recently used colors section when colors are available', async () => {
+      mockRecentlyUsedColorsManager.getRecentlyUsedColors.mockReturnValue(['#ff0000', '#00ff00'])
+
+      // Remount to trigger onMounted
+      wrapper = mount(CustomColorPicker, {
+        props: {
+          modelValue: '#FF0000',
+        },
+      })
+
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.find('.recently-used-colors').exists()).toBe(true)
+      expect(wrapper.find('.recently-used-header').text()).toBe('Recently used colors')
+      expect(wrapper.find('.recently-used-grid').findAll('.recently-used-color')).toHaveLength(2)
+    })
+
+    it('renders recently used colors with correct styles', async () => {
+      mockRecentlyUsedColorsManager.getRecentlyUsedColors.mockReturnValue(['#ff0000', '#00ff00'])
+
+      wrapper = mount(CustomColorPicker, {
+        props: {
+          modelValue: '#FF0000',
+        },
+      })
+
+      await wrapper.vm.$nextTick()
+
+      const lastUsedColors = wrapper.find('.recently-used-grid').findAll('.recently-used-color')
+      expect(lastUsedColors[0].attributes('style')).toContain('background-color: rgb(255, 0, 0)')
+      expect(lastUsedColors[1].attributes('style')).toContain('background-color: rgb(0, 255, 0)')
+    })
+
+    it('selects last used color when clicked', async () => {
+      mockRecentlyUsedColorsManager.getRecentlyUsedColors.mockReturnValue(['#ff0000', '#00ff00'])
+
+      wrapper = mount(CustomColorPicker, {
+        props: {
+          modelValue: '#000000',
+        },
+      })
+
+      await wrapper.vm.$nextTick()
+
+      const lastUsedColors = wrapper.find('.recently-used-grid').findAll('.recently-used-color')
+      await lastUsedColors[1].trigger('click')
+
+      expect(wrapper.emitted('update:modelValue')).toBeTruthy()
+      expect(wrapper.emitted('update:modelValue')![0]).toEqual(['#00ff00'])
+    })
+
+    it('does not add color to last used during color changes', async () => {
+      const hexInput = wrapper.find('input[placeholder="000000"]')
+
+      await hexInput.setValue('00FF00')
+      await hexInput.trigger('input')
+
+      expect(mockRecentlyUsedColorsManager.addColor).not.toHaveBeenCalled()
+    })
+
+    it('does not add color to last used when preset is selected', async () => {
+      const presetColors = wrapper.findAll('.preset-color')
+
+      await presetColors[1].trigger('click')
+
+      expect(mockRecentlyUsedColorsManager.addColor).not.toHaveBeenCalled()
+    })
+
+    it('does not add color to last used when RGB input changes', async () => {
+      const rgbInputs = wrapper.findAllComponents({ name: 'CustomNumberInput' })
+
+      await rgbInputs[0].vm.$emit('update:modelValue', 128)
+
+      expect(mockRecentlyUsedColorsManager.addColor).not.toHaveBeenCalled()
+    })
+
+    it('loads recently used colors on mount', () => {
+      expect(mockRecentlyUsedColorsManager.getRecentlyUsedColors).toHaveBeenCalled()
+    })
+
+    it('exposes refreshRecentlyUsedColors method', () => {
+      const vm = wrapper.vm as { refreshRecentlyUsedColors?: () => void }
+      expect(vm.refreshRecentlyUsedColors).toBeDefined()
+      expect(typeof vm.refreshRecentlyUsedColors).toBe('function')
+    })
+
+    it('refreshes recently used colors when method is called', () => {
+      vi.clearAllMocks()
+      const vm = wrapper.vm as unknown as { refreshRecentlyUsedColors: () => void }
+      vm.refreshRecentlyUsedColors()
+      expect(mockRecentlyUsedColorsManager.getRecentlyUsedColors).toHaveBeenCalled()
     })
   })
 })

@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import CustomColorPicker from './CustomColorPicker.vue'
+import { recentlyUsedColorsManager } from '../utils/recently-used-colors'
+import { isValidHex } from '../utils/color-utils'
 
 interface Props {
   modelValue?: string
@@ -27,6 +29,12 @@ const emit = defineEmits<Emits>()
 const showPicker = ref(false)
 const colorValue = ref(props.modelValue || '#CCCCCC')
 const originalValue = ref(props.modelValue || '#CCCCCC')
+const customColorPickerRef = ref<InstanceType<typeof CustomColorPicker>>()
+
+// Computed property to return a valid color for CSS or fallback
+const safeColorValue = computed(() => {
+  return isValidHex(colorValue.value) ? colorValue.value : '#CCCCCC'
+})
 
 // Watch for external changes
 watch(
@@ -60,6 +68,12 @@ const togglePicker = () => {
 
 // Accept changes and emit final events
 const acceptChanges = () => {
+  // Add to recently used colors when user accepts the color
+  recentlyUsedColorsManager.addColor(colorValue.value)
+
+  // Refresh the recently used colors in the custom color picker
+  customColorPickerRef.value?.refreshRecentlyUsedColors()
+
   emit('change', colorValue.value)
   emit('input', colorValue.value)
   showPicker.value = false
@@ -132,12 +146,16 @@ onUnmounted(() => {
       :title="title"
       class="color-picker-button"
     >
-      <div class="color-preview-swatch" :style="{ backgroundColor: colorValue }"></div>
+      <div class="color-preview-swatch" :style="{ backgroundColor: safeColorValue }"></div>
     </div>
 
     <!-- Custom color picker popup -->
     <div v-if="showPicker" class="color-picker-popup">
-      <CustomColorPicker :model-value="colorValue" @update:model-value="handleColorChange" />
+      <CustomColorPicker
+        ref="customColorPickerRef"
+        :model-value="colorValue"
+        @update:model-value="handleColorChange"
+      />
 
       <div class="color-picker-footer">
         <button @click="cancelChanges" type="button" class="btn btn-secondary btn-sm me-2">

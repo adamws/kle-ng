@@ -883,6 +883,8 @@ import { useKeyboardStore } from '@/stores/keyboard'
 import ColorPicker from './ColorPicker.vue'
 import CustomNumberInput from './CustomNumberInput.vue'
 import { D } from '@/utils/decimal-math'
+import { recentlyUsedColorsManager } from '@/utils/recently-used-colors'
+import { isValidHex, normalizeHex } from '@/utils/color-utils'
 
 const keyboardStore = useKeyboardStore()
 
@@ -1186,10 +1188,24 @@ const updateTextColorPreview = () => {
 const updateTextColor = () => {
   if (selectedKeys.value.length === 0) return
 
+  // Validate the color before applying it
+  const colorValue = currentTextColor.value.trim()
+  if (!isValidHex(colorValue)) {
+    return // Don't apply invalid colors
+  }
+
+  const normalizedColor = normalizeHex(colorValue)
+
   selectedKeys.value.forEach((key) => {
-    key.default.textColor = currentTextColor.value
+    key.default.textColor = normalizedColor
     key.textColor = key.textColor.map(() => undefined)
   })
+
+  // Update the input field with the normalized color
+  currentTextColor.value = normalizedColor
+
+  // Track color in recently used colors when changed via text input
+  recentlyUsedColorsManager.addColor(normalizedColor)
 
   keyboardStore.saveState()
 }
@@ -1305,9 +1321,23 @@ const updateColorPreview = () => {
 const updateColor = () => {
   if (selectedKeys.value.length === 0) return
 
+  // Validate the color before applying it
+  const colorValue = currentColor.value.trim()
+  if (!isValidHex(colorValue)) {
+    return // Don't apply invalid colors
+  }
+
+  const normalizedColor = normalizeHex(colorValue)
+
   selectedKeys.value.forEach((key) => {
-    key.color = currentColor.value
+    key.color = normalizedColor
   })
+
+  // Update the input field with the normalized color
+  currentColor.value = normalizedColor
+
+  // Track color in recently used colors when changed via text input
+  recentlyUsedColorsManager.addColor(normalizedColor)
 
   keyboardStore.saveState()
 }
@@ -1432,6 +1462,12 @@ const updateLabelColor = (index: number) => {
       key.textColor[index] = newColor
     }
   })
+
+  // Track color in recently used colors when changed
+  const newColor = labelColors.value[index]
+  if (newColor) {
+    recentlyUsedColorsManager.addColor(newColor)
+  }
 
   keyboardStore.saveState()
 }

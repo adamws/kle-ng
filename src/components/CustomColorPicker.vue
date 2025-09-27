@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted } from 'vue'
+import { ref, computed, watch, onUnmounted, onMounted } from 'vue'
 import CustomNumberInput from './CustomNumberInput.vue'
 import {
   hexToRgb,
@@ -9,6 +9,7 @@ import {
   isValidHex,
   normalizeHex,
 } from '../utils/color-utils'
+import { recentlyUsedColorsManager } from '../utils/recently-used-colors'
 
 interface Props {
   modelValue: string
@@ -66,6 +67,9 @@ const presetColors = [
   '#FFFFFF',
 ]
 
+// Recently used colors state
+const recentlyUsedColors = ref<string[]>([])
+
 // Computed values
 const saturationPercent = computed(() => saturation.value)
 const valuePercent = computed(() => 100 - value.value)
@@ -115,6 +119,21 @@ const emitColorChange = () => {
   const color = currentColor.value
   emit('update:modelValue', color)
 }
+
+// Load recently used colors from storage
+const loadRecentlyUsedColors = () => {
+  recentlyUsedColors.value = recentlyUsedColorsManager.getRecentlyUsedColors()
+}
+
+// Initialize recently used colors on mount
+onMounted(() => {
+  loadRecentlyUsedColors()
+})
+
+// Expose method to refresh recently used colors
+defineExpose({
+  refreshRecentlyUsedColors: loadRecentlyUsedColors,
+})
 
 // Saturation picker handlers
 const updateSaturation = (event: MouseEvent) => {
@@ -336,6 +355,21 @@ onUnmounted(() => {
         :title="`Color: ${color}`"
       ></div>
     </div>
+
+    <!-- Recently used colors -->
+    <div v-if="recentlyUsedColors.length > 0" class="recently-used-colors">
+      <div class="recently-used-header">Recently used colors</div>
+      <div class="recently-used-grid">
+        <div
+          v-for="color in recentlyUsedColors"
+          :key="color"
+          class="recently-used-color"
+          :style="{ backgroundColor: color }"
+          @click="handlePresetSelect(color)"
+          :title="`Color: ${color}`"
+        ></div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -507,12 +541,14 @@ onUnmounted(() => {
 
 /* Preset Colors */
 .color-presets {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 4px;
+  display: grid;
+  grid-template-columns: repeat(12, 16px);
+  grid-template-rows: repeat(2, 16px);
+  column-gap: calc((100% - 12 * 16px) / 11);
+  row-gap: 5.27px;
   margin: 10px 0 5px 0;
   width: 100%;
+  justify-content: start;
 }
 
 .preset-color {
@@ -526,6 +562,43 @@ onUnmounted(() => {
 }
 
 .preset-color:hover {
+  transform: scale(1.1);
+  border-color: var(--bs-primary);
+}
+
+/* Recently Used Colors */
+.recently-used-colors {
+  margin: 10px 0 5px 0;
+  width: 100%;
+}
+
+.recently-used-header {
+  font-size: 11px;
+  color: var(--bs-secondary-color);
+  margin-bottom: 6px;
+  text-transform: lowercase;
+}
+
+.recently-used-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 16px);
+  column-gap: calc((100% - 12 * 16px) / 11);
+  row-gap: calc((100% - 12 * 16px) / 11);
+  width: 100%;
+  justify-content: start;
+}
+
+.recently-used-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 2px;
+  cursor: pointer;
+  border: 1px solid var(--bs-border-color);
+  position: relative;
+  overflow: hidden;
+}
+
+.recently-used-color:hover {
   transform: scale(1.1);
   border-color: var(--bs-primary);
 }
