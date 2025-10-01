@@ -32,7 +32,7 @@
         class="spinner-btn spinner-up"
         @click="increment"
         @mousedown.prevent
-        :disabled="disabled || (max !== undefined && (modelValue ?? 0) >= max)"
+        :disabled="disabled || (max !== undefined && (modelValue ?? referenceValue ?? 0) >= max)"
         :title="`Increase by ${step}`"
         tabindex="-1"
       >
@@ -43,7 +43,7 @@
         class="spinner-btn spinner-down"
         @click="decrement"
         @mousedown.prevent
-        :disabled="disabled || (min !== undefined && (modelValue ?? 0) <= min)"
+        :disabled="disabled || (min !== undefined && (modelValue ?? referenceValue ?? 0) <= min)"
         :title="`Decrease by ${step}`"
         tabindex="-1"
       >
@@ -114,6 +114,13 @@ interface Props {
 
   /** Disable mouse wheel input when focused @default false */
   disableWheel?: boolean
+
+  /**
+   * Reference value to use as base when incrementing/decrementing from empty
+   * When modelValue is undefined and this is set, increment/decrement will use this as starting point
+   * For example, if referenceValue is 3 and field is empty, first increment gives 4, first decrement gives 2
+   */
+  referenceValue?: number
 }
 
 /**
@@ -335,8 +342,8 @@ const handleKeydown = (event: KeyboardEvent) => {
 
 const adjustValue = (delta: number, stepSize?: number) => {
   const actualStep = stepSize !== undefined ? stepSize : props.step || 1
-  // If modelValue is undefined and canBeEmpty is true, start from 0
-  const currentValue = props.modelValue ?? 0
+  // If modelValue is undefined, use referenceValue if available, otherwise default to 0
+  const currentValue = props.modelValue ?? props.referenceValue ?? 0
   const newValue = D.add(currentValue, D.mul(delta, actualStep))
 
   // Clear user input since we're setting a programmatic value

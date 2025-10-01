@@ -708,6 +708,7 @@
                       :max="9"
                       :step="1"
                       :value-on-clear="null"
+                      :reference-value="currentDefaultTextSize"
                       size="compact"
                       :title="`Text size for Top Left (default: ${currentDefaultTextSize})`"
                     />
@@ -720,6 +721,7 @@
                       :max="9"
                       :step="1"
                       :value-on-clear="null"
+                      :reference-value="currentDefaultTextSize"
                       size="compact"
                       :title="`Text size for Top Center (default: ${currentDefaultTextSize})`"
                     />
@@ -732,6 +734,7 @@
                       :max="9"
                       :step="1"
                       :value-on-clear="null"
+                      :reference-value="currentDefaultTextSize"
                       size="compact"
                       :title="`Text size for Top Right (default: ${currentDefaultTextSize})`"
                     />
@@ -745,6 +748,7 @@
                       :max="9"
                       :step="1"
                       :value-on-clear="null"
+                      :reference-value="currentDefaultTextSize"
                       size="compact"
                       :title="`Text size for Center Left (default: ${currentDefaultTextSize})`"
                     />
@@ -757,6 +761,7 @@
                       :max="9"
                       :step="1"
                       :value-on-clear="null"
+                      :reference-value="currentDefaultTextSize"
                       size="compact"
                       :title="`Text size for Center (default: ${currentDefaultTextSize})`"
                     />
@@ -769,6 +774,7 @@
                       :max="9"
                       :step="1"
                       :value-on-clear="null"
+                      :reference-value="currentDefaultTextSize"
                       size="compact"
                       :title="`Text size for Center Right (default: ${currentDefaultTextSize})`"
                     />
@@ -782,6 +788,7 @@
                       :max="9"
                       :step="1"
                       :value-on-clear="null"
+                      :reference-value="currentDefaultTextSize"
                       size="compact"
                       :title="`Text size for Bottom Left (default: ${currentDefaultTextSize})`"
                     />
@@ -794,6 +801,7 @@
                       :max="9"
                       :step="1"
                       :value-on-clear="null"
+                      :reference-value="currentDefaultTextSize"
                       size="compact"
                       :title="`Text size for Bottom Center (default: ${currentDefaultTextSize})`"
                     />
@@ -806,6 +814,7 @@
                       :max="9"
                       :step="1"
                       :value-on-clear="null"
+                      :reference-value="currentDefaultTextSize"
                       size="compact"
                       :title="`Text size for Bottom Right (default: ${currentDefaultTextSize})`"
                     />
