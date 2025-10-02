@@ -1083,6 +1083,309 @@ export class CanvasRenderer {
     return label.replace(/<br\s*\/?>/gi, '\n')
   }
 
+  /**
+   * Parse text with HTML formatting tags and extract text segments with their styles
+   * Supports: <b>, <i>, <b><i> (nested)
+   */
+  private parseHtmlText(text: string): Array<{ text: string; bold: boolean; italic: boolean }> {
+    const segments: Array<{ text: string; bold: boolean; italic: boolean }> = []
+    let currentBold = false
+    let currentItalic = false
+    let currentText = ''
+
+    // Regular expression to match HTML tags and text
+    const regex = /<\s*(\/?)([bi])\s*>|([^<]+)/gi
+    let match: RegExpExecArray | null
+
+    while ((match = regex.exec(text)) !== null) {
+      if (match[3]) {
+        // Plain text segment
+        currentText += match[3]
+      } else if (match[2]) {
+        // HTML tag (opening or closing)
+        const isClosing = match[1] === '/'
+        const tagName = match[2].toLowerCase()
+
+        // If we have accumulated text, save it with current styles
+        if (currentText) {
+          segments.push({ text: currentText, bold: currentBold, italic: currentItalic })
+          currentText = ''
+        }
+
+        // Update current style state
+        if (tagName === 'b') {
+          currentBold = !isClosing
+        } else if (tagName === 'i') {
+          currentItalic = !isClosing
+        }
+      }
+    }
+
+    // Add any remaining text
+    if (currentText) {
+      segments.push({ text: currentText, bold: currentBold, italic: currentItalic })
+    }
+
+    // If no segments were created (no valid HTML), return the original text as plain
+    if (segments.length === 0) {
+      segments.push({ text, bold: false, italic: false })
+    }
+
+    return segments
+  }
+
+  /**
+   * Check if text contains HTML formatting tags
+   */
+  private hasHtmlFormatting(text: string): boolean {
+    return /<\s*[bi]\s*>|<\s*\/\s*[bi]\s*>/i.test(text)
+  }
+
+  /**
+   * Strip HTML formatting tags from text
+   */
+  private stripHtmlTags(text: string): string {
+    return text.replace(/<\s*\/?[bi]\s*>/gi, '')
+  }
+
+  /**
+   * Measure the width of text with HTML formatting
+   */
+  private measureHtmlText(text: string): number {
+    const segments = this.parseHtmlText(text)
+    let totalWidth = 0
+
+    // Save current font
+    const originalFont = this.ctx.font
+
+    segments.forEach((segment) => {
+      // Apply font style for this segment
+      const fontStyle = this.buildFontStyle(segment.bold, segment.italic)
+      this.ctx.font = fontStyle
+
+      // Measure this segment
+      totalWidth += this.ctx.measureText(segment.text).width
+    })
+
+    // Restore original font
+    this.ctx.font = originalFont
+
+    return totalWidth
+  }
+
+  /**
+   * Build font style string based on bold and italic flags
+   */
+  private buildFontStyle(bold: boolean, italic: boolean): string {
+    const baseFontSize = parseInt(this.ctx.font.match(/\d+/)?.[0] || '12')
+    const fontFamily = '"Helvetica Neue", Helvetica, Arial, sans-serif'
+
+    const stylePrefix = `${italic ? 'italic ' : ''}${bold ? 'bold ' : ''}`
+    return `${stylePrefix}${baseFontSize}px ${fontFamily}`
+  }
+
+  /**
+   * Draw text with HTML formatting support
+   */
+  private drawHtmlText(text: string, x: number, y: number): void {
+    const segments = this.parseHtmlText(text)
+
+    // Save context state
+    const originalFont = this.ctx.font
+    const originalTextAlign = this.ctx.textAlign
+
+    // For center/right alignment, we need to calculate total width first
+    let totalWidth = 0
+    if (originalTextAlign === 'center' || originalTextAlign === 'right') {
+      totalWidth = this.measureHtmlText(text)
+    }
+
+    // Calculate starting x position based on alignment
+    let currentX = x
+    if (originalTextAlign === 'center') {
+      currentX = x - totalWidth / 2
+    } else if (originalTextAlign === 'right') {
+      currentX = x - totalWidth
+    }
+
+    // Temporarily set text align to left for segment-by-segment rendering
+    this.ctx.textAlign = 'left'
+
+    // Draw each segment
+    segments.forEach((segment) => {
+      // Apply font style for this segment
+      const fontStyle = this.buildFontStyle(segment.bold, segment.italic)
+      this.ctx.font = fontStyle
+
+      // Draw the text segment
+      this.ctx.fillText(segment.text, currentX, y)
+
+      // Move x position for next segment
+      currentX += this.ctx.measureText(segment.text).width
+    })
+
+    // Restore original font and text align
+    this.ctx.font = originalFont
+    this.ctx.textAlign = originalTextAlign
+  }
+
+  /**
+   * Wrap HTML text across multiple lines while preserving formatting
+   */
+  private wrapHtmlText(text: string, maxWidth: number, maxLines: number): string[] {
+    const segments = this.parseHtmlText(text)
+    const lines: string[] = []
+    let currentLine: Array<{ text: string; bold: boolean; italic: boolean }> = []
+    let currentLineWidth = 0
+
+    // Save current font
+    const originalFont = this.ctx.font
+
+    for (const segment of segments) {
+      // Split segment by words
+      const words = segment.text.split(' ')
+
+      for (let i = 0; i < words.length; i++) {
+        const word = words[i]
+
+        // Apply font style to measure this word
+        const fontStyle = this.buildFontStyle(segment.bold, segment.italic)
+        this.ctx.font = fontStyle
+
+        // Measure word with space (unless it's the first word on the line)
+        const wordText = currentLine.length === 0 ? word : ' ' + word
+        const wordWidth = this.ctx.measureText(wordText).width
+
+        if (currentLineWidth + wordWidth <= maxWidth) {
+          // Word fits on current line
+          currentLine.push({
+            text: wordText,
+            bold: segment.bold,
+            italic: segment.italic,
+          })
+          currentLineWidth += wordWidth
+        } else {
+          // Word doesn't fit, start new line
+          if (currentLine.length > 0) {
+            // Save current line
+            lines.push(this.reconstructHtmlLine(currentLine))
+            if (lines.length >= maxLines) {
+              break
+            }
+            // Start new line with this word
+            currentLine = [{ text: word, bold: segment.bold, italic: segment.italic }]
+            currentLineWidth = this.ctx.measureText(word).width
+          } else {
+            // Even a single word doesn't fit, add it anyway
+            currentLine.push({ text: word, bold: segment.bold, italic: segment.italic })
+            lines.push(this.reconstructHtmlLine(currentLine))
+            if (lines.length >= maxLines) {
+              break
+            }
+            currentLine = []
+            currentLineWidth = 0
+          }
+        }
+
+        // If we've reached max lines, stop
+        if (lines.length >= maxLines) {
+          break
+        }
+      }
+
+      // If we've reached max lines, stop
+      if (lines.length >= maxLines) {
+        break
+      }
+    }
+
+    // Add any remaining line
+    if (currentLine.length > 0 && lines.length < maxLines) {
+      lines.push(this.reconstructHtmlLine(currentLine))
+    }
+
+    // Restore original font
+    this.ctx.font = originalFont
+
+    return lines
+  }
+
+  /**
+   * Reconstruct HTML line from segments
+   */
+  private reconstructHtmlLine(
+    segments: Array<{ text: string; bold: boolean; italic: boolean }>,
+  ): string {
+    let html = ''
+    let currentBold = false
+    let currentItalic = false
+
+    segments.forEach((segment) => {
+      // Close tags if style changed
+      if (currentBold && !segment.bold) {
+        html += '</b>'
+        currentBold = false
+      }
+      if (currentItalic && !segment.italic) {
+        html += '</i>'
+        currentItalic = false
+      }
+
+      // Open tags if style changed
+      if (!currentBold && segment.bold) {
+        html += '<b>'
+        currentBold = true
+      }
+      if (!currentItalic && segment.italic) {
+        html += '<i>'
+        currentItalic = true
+      }
+
+      // Add text
+      html += segment.text
+    })
+
+    // Close any remaining tags
+    if (currentItalic) {
+      html += '</i>'
+    }
+    if (currentBold) {
+      html += '</b>'
+    }
+
+    return html
+  }
+
+  /**
+   * Draw multiple lines of HTML text
+   */
+  private drawMultiLineHtmlText(
+    lines: string[],
+    x: number,
+    y: number,
+    lineHeight: number,
+    pos: { align: string; baseline: string },
+  ): void {
+    let startY = y
+
+    // Adjust starting Y based on baseline
+    if (pos.baseline === 'middle') {
+      // Center the block of text vertically around the provided Y
+      const totalHeight = (lines.length - 1) * lineHeight
+      startY = y - totalHeight / 2
+    } else if (pos.baseline === 'alphabetic') {
+      // Position so the last line ends at the provided Y
+      const totalHeight = (lines.length - 1) * lineHeight
+      startY = y - totalHeight
+    }
+
+    // Draw each line with HTML formatting
+    lines.forEach((line, index) => {
+      const lineY = startY + index * lineHeight
+      this.drawHtmlText(line, x, lineY)
+    })
+  }
+
   private calculateAvailableWidth(params: KeyRenderParams): number {
     // Calculate available width - minimal margins to match original KLE behavior
     // Original KLE allows text very close to key edges for maximum fit
@@ -1112,11 +1415,14 @@ export class CanvasRenderer {
       return
     }
 
+    // Check if text contains HTML formatting tags
+    const hasHtml = this.hasHtmlFormatting(text)
+
     // Check if text contains explicit line breaks from <br> tags
     const hasLineBreaks = text.includes('\n')
 
-    if (!hasLineBreaks) {
-      // No line breaks - use original simple logic
+    if (!hasLineBreaks && !hasHtml) {
+      // No line breaks and no HTML - use original simple logic
       const textWidth = this.ctx.measureText(text).width
       if (textWidth <= maxWidth) {
         // Text fits on one line
@@ -1162,6 +1468,24 @@ export class CanvasRenderer {
       }
 
       this.drawMultiLineText(lines, x, y, lineHeight, pos)
+      return
+    } else if (hasHtml && !hasLineBreaks) {
+      // Has HTML formatting but no line breaks - render with formatting
+      const textWidth = this.measureHtmlText(text)
+      if (textWidth <= maxWidth) {
+        // Text fits on one line with HTML formatting
+        this.drawHtmlText(text, x, y)
+        return
+      }
+
+      // HTML text is too long - wrap with formatting preserved
+      const wrappedLines = this.wrapHtmlText(text, maxWidth, maxLines)
+      if (wrappedLines.length === 0) {
+        return
+      }
+
+      // Draw each line with HTML formatting
+      this.drawMultiLineHtmlText(wrappedLines, x, y, lineHeight, pos)
       return
     }
 

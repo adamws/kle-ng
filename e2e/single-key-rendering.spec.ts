@@ -202,6 +202,48 @@ test.describe('Single Key Rendering Tests', () => {
   })
 
   test.describe('Complex Labels', () => {
+    test('key with HTML bold tag', async () => {
+      await helper.addKey()
+      await helper.setKeyLabel('center', '<b>Bold</b>')
+      await helper.waitForRender()
+
+      await expect(helper.getCanvas()).toHaveScreenshot('labels/html-bold.png')
+    })
+
+    test('key with HTML italic tag', async () => {
+      await helper.addKey()
+      await helper.setKeyLabel('center', '<i>Italic</i>')
+      await helper.waitForRender()
+
+      await expect(helper.getCanvas()).toHaveScreenshot('labels/html-italic.png')
+    })
+
+    test('key with HTML bold and italic tags', async () => {
+      await helper.addKey()
+      await helper.setKeyLabel('center', '<b><i>Bold Italic</i></b>')
+      await helper.waitForRender()
+
+      await expect(helper.getCanvas()).toHaveScreenshot('labels/html-bold-italic.png')
+    })
+
+    test('key with mixed HTML formatting', async () => {
+      await helper.addKey()
+      await helper.setKeyLabel('center', 'Normal <b>Bold</b> <i>Italic</i>')
+      await helper.waitForRender()
+
+      await expect(helper.getCanvas()).toHaveScreenshot('labels/html-mixed.png')
+    })
+
+    test('key with HTML in multiple label positions', async () => {
+      await helper.addKey()
+      await helper.setKeyLabel('topCenter', '<b>Shift</b>')
+      await helper.setKeyLabel('center', '<i>Home</i>')
+      await helper.setKeyLabel('bottomCenter', '<b><i>F1</i></b>')
+      await helper.waitForRender()
+
+      await expect(helper.getCanvas()).toHaveScreenshot('labels/html-multiple-positions.png')
+    })
+
     test('key with all 9 labels', async () => {
       await helper.addKey()
 
