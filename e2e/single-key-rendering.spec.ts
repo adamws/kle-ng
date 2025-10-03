@@ -247,7 +247,7 @@ test.describe('Single Key Rendering Tests', () => {
     test('key with image in center label', async () => {
       await helper.addKey()
       const testImage =
-        'https://raw.githubusercontent.com/adamws/kle-ng/refs/heads/develop/public/data/icons/test.png'
+        'https://raw.githubusercontent.com/adamws/kle-ng/refs/heads/master/public/data/icons/test.png'
       await helper.setKeyLabel('center', `<img src="${testImage}">`)
 
       // Wait for network requests to complete
@@ -264,7 +264,7 @@ test.describe('Single Key Rendering Tests', () => {
     test('key with image in top-left label', async () => {
       await helper.addKey()
       const testImage =
-        'https://raw.githubusercontent.com/adamws/kle-ng/refs/heads/develop/public/data/icons/test.png'
+        'https://raw.githubusercontent.com/adamws/kle-ng/refs/heads/master/public/data/icons/test.png'
       await helper.setKeyLabel('topLeft', `<img src="${testImage}">`)
 
       await helper.page.waitForLoadState('networkidle')
@@ -278,7 +278,7 @@ test.describe('Single Key Rendering Tests', () => {
     test('key with image in bottom-right label', async () => {
       await helper.addKey()
       const testImage =
-        'https://raw.githubusercontent.com/adamws/kle-ng/refs/heads/develop/public/data/icons/test.png'
+        'https://raw.githubusercontent.com/adamws/kle-ng/refs/heads/master/public/data/icons/test.png'
       await helper.setKeyLabel('bottomRight', `<img src="${testImage}">`)
 
       await helper.page.waitForLoadState('networkidle')
@@ -292,7 +292,7 @@ test.describe('Single Key Rendering Tests', () => {
     test('key with images in multiple positions', async () => {
       await helper.addKey()
       const testImage =
-        'https://raw.githubusercontent.com/adamws/kle-ng/refs/heads/develop/public/data/icons/test.png'
+        'https://raw.githubusercontent.com/adamws/kle-ng/refs/heads/master/public/data/icons/test.png'
       await helper.setKeyLabel('topLeft', `<img src="${testImage}">`)
       await helper.setKeyLabel('center', `<img src="${testImage}">`)
       await helper.setKeyLabel('bottomRight', `<img src="${testImage}">`)
