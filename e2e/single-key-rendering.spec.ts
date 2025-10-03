@@ -244,6 +244,67 @@ test.describe('Single Key Rendering Tests', () => {
       await expect(helper.getCanvas()).toHaveScreenshot('labels/html-multiple-positions.png')
     })
 
+    test('key with image in center label', async () => {
+      await helper.addKey()
+      const testImage =
+        'https://raw.githubusercontent.com/adamws/kle-ng/refs/heads/develop/public/data/icons/test.png'
+      await helper.setKeyLabel('center', `<img src="${testImage}">`)
+
+      // Wait for network requests to complete
+      await helper.page.waitForLoadState('networkidle')
+
+      // Wait for image to load and re-render
+      await helper.page.waitForTimeout(3000)
+      await helper.waitForRender()
+      await helper.page.waitForTimeout(1000)
+
+      await expect(helper.getCanvas()).toHaveScreenshot('labels/html-image-center.png')
+    })
+
+    test('key with image in top-left label', async () => {
+      await helper.addKey()
+      const testImage =
+        'https://raw.githubusercontent.com/adamws/kle-ng/refs/heads/develop/public/data/icons/test.png'
+      await helper.setKeyLabel('topLeft', `<img src="${testImage}">`)
+
+      await helper.page.waitForLoadState('networkidle')
+      await helper.page.waitForTimeout(3000)
+      await helper.waitForRender()
+      await helper.page.waitForTimeout(1000)
+
+      await expect(helper.getCanvas()).toHaveScreenshot('labels/html-image-top-left.png')
+    })
+
+    test('key with image in bottom-right label', async () => {
+      await helper.addKey()
+      const testImage =
+        'https://raw.githubusercontent.com/adamws/kle-ng/refs/heads/develop/public/data/icons/test.png'
+      await helper.setKeyLabel('bottomRight', `<img src="${testImage}">`)
+
+      await helper.page.waitForLoadState('networkidle')
+      await helper.page.waitForTimeout(3000)
+      await helper.waitForRender()
+      await helper.page.waitForTimeout(1000)
+
+      await expect(helper.getCanvas()).toHaveScreenshot('labels/html-image-bottom-right.png')
+    })
+
+    test('key with images in multiple positions', async () => {
+      await helper.addKey()
+      const testImage =
+        'https://raw.githubusercontent.com/adamws/kle-ng/refs/heads/develop/public/data/icons/test.png'
+      await helper.setKeyLabel('topLeft', `<img src="${testImage}">`)
+      await helper.setKeyLabel('center', `<img src="${testImage}">`)
+      await helper.setKeyLabel('bottomRight', `<img src="${testImage}">`)
+
+      await helper.page.waitForLoadState('networkidle')
+      await helper.page.waitForTimeout(3000)
+      await helper.waitForRender()
+      await helper.page.waitForTimeout(1000)
+
+      await expect(helper.getCanvas()).toHaveScreenshot('labels/html-image-multiple.png')
+    })
+
     test('key with all 9 labels', async () => {
       await helper.addKey()
 

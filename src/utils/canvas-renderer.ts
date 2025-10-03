@@ -85,10 +85,30 @@ const defaultSizes: DefaultSizes = {
 export class CanvasRenderer {
   private ctx: CanvasRenderingContext2D
   private options: RenderOptions
+  private imageCache: Map<string, HTMLImageElement | 'loading' | 'error'>
+  private imageLoadCallbacks: Map<string, (() => void)[]>
+  private onImageLoadCallback?: () => void
+  private onImageErrorCallback?: (url: string) => void
 
   constructor(canvas: HTMLCanvasElement, options: RenderOptions) {
     this.ctx = canvas.getContext('2d')!
     this.options = options
+    this.imageCache = new Map()
+    this.imageLoadCallbacks = new Map()
+  }
+
+  /**
+   * Set a callback to be called when any image loads
+   */
+  public setImageLoadCallback(callback: () => void): void {
+    this.onImageLoadCallback = callback
+  }
+
+  /**
+   * Set a callback to be called when any image fails to load
+   */
+  public setImageErrorCallback(callback: (url: string) => void): void {
+    this.onImageErrorCallback = callback
   }
 
   public getContext(): CanvasRenderingContext2D {
@@ -101,6 +121,78 @@ export class CanvasRenderer {
 
   public updateOptions(options: RenderOptions): void {
     this.options = options
+  }
+
+  /**
+   * Load an image from a URL and cache it
+   */
+  private loadImage(url: string, onLoad?: () => void): void {
+    // Check if already in cache
+    const cached = this.imageCache.get(url)
+    if (cached === 'loading') {
+      // Already loading, add callback
+      if (onLoad) {
+        const callbacks = this.imageLoadCallbacks.get(url) || []
+        callbacks.push(onLoad)
+        this.imageLoadCallbacks.set(url, callbacks)
+      }
+      return
+    } else if (cached instanceof HTMLImageElement || cached === 'error') {
+      // Already loaded or failed, call callback immediately
+      if (onLoad) {
+        onLoad()
+      }
+      return
+    }
+
+    // Mark as loading
+    this.imageCache.set(url, 'loading')
+
+    // Create image element
+    const img = new Image()
+    // Don't set crossOrigin - it can taint the canvas if server doesn't send CORS headers
+    // This means we can't use images from external domains in a secure way,
+    // but it allows the images to be drawn
+    // TODO: Consider allowing configuration of which domains to trust
+
+    img.onload = () => {
+      this.imageCache.set(url, img)
+
+      // Call all callbacks
+      const callbacks = this.imageLoadCallbacks.get(url) || []
+      if (onLoad) callbacks.push(onLoad)
+      callbacks.forEach((cb) => cb())
+      this.imageLoadCallbacks.delete(url)
+    }
+
+    img.onerror = () => {
+      this.imageCache.set(url, 'error')
+      console.warn(`Failed to load image: ${url}`)
+
+      // Call error callback
+      if (this.onImageErrorCallback) {
+        this.onImageErrorCallback(url)
+      }
+
+      // Call callbacks even on error to allow re-render
+      const callbacks = this.imageLoadCallbacks.get(url) || []
+      if (onLoad) callbacks.push(onLoad)
+      callbacks.forEach((cb) => cb())
+      this.imageLoadCallbacks.delete(url)
+    }
+
+    img.src = url
+  }
+
+  /**
+   * Get a loaded image from cache
+   */
+  private getImage(url: string): HTMLImageElement | null {
+    const cached = this.imageCache.get(url)
+    if (cached instanceof HTMLImageElement) {
+      return cached
+    }
+    return null
   }
 
   private getRenderParams(key: Key): KeyRenderParams {
@@ -1068,10 +1160,83 @@ export class CanvasRenderer {
       const availableWidth = this.calculateAvailableWidth(params)
       const availableHeight = this.calculateAvailableHeight(params)
 
-      // Process label to handle line breaks, then draw with wrapping
-      const processedLabel = this.processLabelText(label)
-      this.drawWrappedText(processedLabel, x, y, availableWidth, availableHeight, pos)
+      // Check if label is image-only
+      const isImageOnly = /^<img\s+[^>]+>\s*$/.test(label)
+
+      if (isImageOnly) {
+        // Image-only label: position based on alignment
+        this.drawImageLabel(label, params, pos, index)
+      } else {
+        // Text or mixed content: use normal text rendering
+        const processedLabel = this.processLabelText(label)
+        this.drawWrappedText(processedLabel, x, y, availableWidth, availableHeight, pos)
+      }
     })
+  }
+
+  /**
+   * Draw image-only label with alignment-based positioning
+   */
+  private drawImageLabel(
+    label: string,
+    params: KeyRenderParams,
+    pos: { align: string; baseline: string },
+    index: number,
+  ): void {
+    // Parse the image tag
+    const segments = this.parseHtmlText(label)
+    const imageSegment = segments.find((s) => s.type === 'image')
+
+    if (!imageSegment || !imageSegment.src) {
+      return
+    }
+
+    const img = this.getImage(imageSegment.src)
+    if (!img) {
+      // Image not loaded yet, trigger loading
+      this.loadImage(imageSegment.src, this.onImageLoadCallback)
+      return
+    }
+
+    // Get image dimensions
+    const width = imageSegment.width || img.naturalWidth
+    const height = imageSegment.height || img.naturalHeight
+
+    let imgX: number
+    let imgY: number
+
+    // Horizontal alignment based on column (left/center/right)
+    if (pos.align === 'left') {
+      // Left column: image's left edge at key cap's left edge
+      imgX = params.capx
+    } else if (pos.align === 'center') {
+      // Center column: image's center at key cap's center
+      imgX = params.capx + params.capwidth / 2 - width / 2
+    } else {
+      // Right column: image's right edge at key cap's right edge
+      imgX = params.capx + params.capwidth - width
+    }
+
+    // Vertical alignment based on row (top/middle/bottom)
+    if (index >= 0 && index <= 2) {
+      // Top row: image's top edge at key cap's top edge
+      imgY = params.capy
+    } else if (index >= 3 && index <= 5) {
+      // Middle row: image's center at key cap's center
+      imgY = params.capy + params.capheight / 2 - height / 2
+    } else if (index >= 6 && index <= 8) {
+      // Bottom row: image's bottom edge at key cap's bottom edge
+      imgY = params.capy + params.capheight - height
+    } else if (index >= 9) {
+      // Front legends (9-11): position on front face
+      imgY = params.capy + params.capheight + 1
+    } else {
+      // Fallback
+      imgY = params.capy
+    }
+
+    // Draw the image
+    this.ctx.drawImage(img, imgX, imgY, width, height)
   }
 
   /**
@@ -1085,22 +1250,66 @@ export class CanvasRenderer {
 
   /**
    * Parse text with HTML formatting tags and extract text segments with their styles
-   * Supports: <b>, <i>, <b><i> (nested)
+   * Supports: <b>, <i>, <b><i> (nested), <img>
    */
-  private parseHtmlText(text: string): Array<{ text: string; bold: boolean; italic: boolean }> {
-    const segments: Array<{ text: string; bold: boolean; italic: boolean }> = []
+  private parseHtmlText(text: string): Array<{
+    type: 'text' | 'image'
+    text?: string
+    bold?: boolean
+    italic?: boolean
+    src?: string
+    width?: number
+    height?: number
+  }> {
+    const segments: Array<{
+      type: 'text' | 'image'
+      text?: string
+      bold?: boolean
+      italic?: boolean
+      src?: string
+      width?: number
+      height?: number
+    }> = []
     let currentBold = false
     let currentItalic = false
     let currentText = ''
 
     // Regular expression to match HTML tags and text
-    const regex = /<\s*(\/?)([bi])\s*>|([^<]+)/gi
+    // Updated to handle <img> tags with attributes
+    const regex = /<\s*(\/?)([bi])\s*>|<img\s+([^>]+)>|([^<]+)/gi
     let match: RegExpExecArray | null
 
     while ((match = regex.exec(text)) !== null) {
-      if (match[3]) {
+      if (match[4]) {
         // Plain text segment
-        currentText += match[3]
+        currentText += match[4]
+      } else if (match[3]) {
+        // <img> tag with attributes
+        // Save any accumulated text first
+        if (currentText) {
+          segments.push({
+            type: 'text',
+            text: currentText,
+            bold: currentBold,
+            italic: currentItalic,
+          })
+          currentText = ''
+        }
+
+        // Parse img attributes
+        const attrs = match[3]
+        const srcMatch = attrs.match(/src\s*=\s*["']([^"']+)["']/i)
+        const widthMatch = attrs.match(/width\s*=\s*["']?(\d+)["']?/i)
+        const heightMatch = attrs.match(/height\s*=\s*["']?(\d+)["']?/i)
+
+        if (srcMatch) {
+          segments.push({
+            type: 'image',
+            src: srcMatch[1],
+            width: widthMatch ? parseInt(widthMatch[1]) : undefined,
+            height: heightMatch ? parseInt(heightMatch[1]) : undefined,
+          })
+        }
       } else if (match[2]) {
         // HTML tag (opening or closing)
         const isClosing = match[1] === '/'
@@ -1108,7 +1317,12 @@ export class CanvasRenderer {
 
         // If we have accumulated text, save it with current styles
         if (currentText) {
-          segments.push({ text: currentText, bold: currentBold, italic: currentItalic })
+          segments.push({
+            type: 'text',
+            text: currentText,
+            bold: currentBold,
+            italic: currentItalic,
+          })
           currentText = ''
         }
 
@@ -1123,12 +1337,12 @@ export class CanvasRenderer {
 
     // Add any remaining text
     if (currentText) {
-      segments.push({ text: currentText, bold: currentBold, italic: currentItalic })
+      segments.push({ type: 'text', text: currentText, bold: currentBold, italic: currentItalic })
     }
 
     // If no segments were created (no valid HTML), return the original text as plain
     if (segments.length === 0) {
-      segments.push({ text, bold: false, italic: false })
+      segments.push({ type: 'text', text, bold: false, italic: false })
     }
 
     return segments
@@ -1138,13 +1352,14 @@ export class CanvasRenderer {
    * Check if text contains HTML formatting tags
    */
   private hasHtmlFormatting(text: string): boolean {
-    return /<\s*[bi]\s*>|<\s*\/\s*[bi]\s*>/i.test(text)
+    return /<\s*[bi]\s*>|<\s*\/\s*[bi]\s*>|<img\s+/i.test(text)
   }
 
   /**
-   * Strip HTML formatting tags from text
+   * Strip HTML formatting tags from text (but not img tags)
    */
   private stripHtmlTags(text: string): string {
+    // Only strip <b>, </b>, <i>, </i> tags, not <img>
     return text.replace(/<\s*\/?[bi]\s*>/gi, '')
   }
 
@@ -1159,12 +1374,24 @@ export class CanvasRenderer {
     const originalFont = this.ctx.font
 
     segments.forEach((segment) => {
-      // Apply font style for this segment
-      const fontStyle = this.buildFontStyle(segment.bold, segment.italic)
-      this.ctx.font = fontStyle
+      if (segment.type === 'text') {
+        // Apply font style for this segment
+        const fontStyle = this.buildFontStyle(segment.bold!, segment.italic!)
+        this.ctx.font = fontStyle
 
-      // Measure this segment
-      totalWidth += this.ctx.measureText(segment.text).width
+        // Measure this segment
+        totalWidth += this.ctx.measureText(segment.text!).width
+      } else if (segment.type === 'image') {
+        // Images contribute their width (or a default if not loaded)
+        const img = this.getImage(segment.src!)
+        if (img) {
+          const width = segment.width || img.naturalWidth
+          totalWidth += width
+        } else {
+          // Default placeholder width
+          totalWidth += segment.width || 16
+        }
+      }
     })
 
     // Restore original font
@@ -1185,7 +1412,7 @@ export class CanvasRenderer {
   }
 
   /**
-   * Draw text with HTML formatting support
+   * Draw text with HTML formatting support (for text with inline formatting, not image-only)
    */
   private drawHtmlText(text: string, x: number, y: number): void {
     const segments = this.parseHtmlText(text)
@@ -1193,6 +1420,7 @@ export class CanvasRenderer {
     // Save context state
     const originalFont = this.ctx.font
     const originalTextAlign = this.ctx.textAlign
+    const originalTextBaseline = this.ctx.textBaseline
 
     // For center/right alignment, we need to calculate total width first
     let totalWidth = 0
@@ -1213,20 +1441,50 @@ export class CanvasRenderer {
 
     // Draw each segment
     segments.forEach((segment) => {
-      // Apply font style for this segment
-      const fontStyle = this.buildFontStyle(segment.bold, segment.italic)
-      this.ctx.font = fontStyle
+      if (segment.type === 'text') {
+        // Apply font style for this segment
+        const fontStyle = this.buildFontStyle(segment.bold!, segment.italic!)
+        this.ctx.font = fontStyle
 
-      // Draw the text segment
-      this.ctx.fillText(segment.text, currentX, y)
+        // Draw the text segment
+        this.ctx.fillText(segment.text!, currentX, y)
 
-      // Move x position for next segment
-      currentX += this.ctx.measureText(segment.text).width
+        // Move x position for next segment
+        currentX += this.ctx.measureText(segment.text!).width
+      } else if (segment.type === 'image' && segment.src) {
+        // For mixed text+image content (not supported)
+        // Just skip images in mixed content - they should use image-only labels
+        const img = this.getImage(segment.src)
+        if (!img) {
+          // Trigger loading for next render
+          this.loadImage(segment.src, this.onImageLoadCallback)
+
+          // Draw placeholder rectangle
+          const width = segment.width || 16
+          const height = segment.height || 16
+
+          let imgY = y
+          if (originalTextBaseline === 'middle') {
+            imgY = y - height / 2
+          } else if (originalTextBaseline === 'alphabetic') {
+            imgY = y - height
+          }
+
+          // Draw a simple rectangle placeholder
+          this.ctx.save()
+          this.ctx.strokeStyle = '#ccc'
+          this.ctx.strokeRect(currentX, imgY, width, height)
+          this.ctx.restore()
+
+          currentX += width
+        }
+      }
     })
 
     // Restore original font and text align
     this.ctx.font = originalFont
     this.ctx.textAlign = originalTextAlign
+    this.ctx.textBaseline = originalTextBaseline
   }
 
   /**
@@ -1242,14 +1500,19 @@ export class CanvasRenderer {
     const originalFont = this.ctx.font
 
     for (const segment of segments) {
-      // Split segment by words
-      const words = segment.text.split(' ')
+      // Skip image segments - they don't wrap
+      if (segment.type === 'image') {
+        continue
+      }
+
+      // Split text segment by words
+      const words = segment.text!.split(' ')
 
       for (let i = 0; i < words.length; i++) {
         const word = words[i]
 
         // Apply font style to measure this word
-        const fontStyle = this.buildFontStyle(segment.bold, segment.italic)
+        const fontStyle = this.buildFontStyle(segment.bold!, segment.italic!)
         this.ctx.font = fontStyle
 
         // Measure word with space (unless it's the first word on the line)
@@ -1260,8 +1523,8 @@ export class CanvasRenderer {
           // Word fits on current line
           currentLine.push({
             text: wordText,
-            bold: segment.bold,
-            italic: segment.italic,
+            bold: segment.bold!,
+            italic: segment.italic!,
           })
           currentLineWidth += wordWidth
         } else {
@@ -1273,11 +1536,11 @@ export class CanvasRenderer {
               break
             }
             // Start new line with this word
-            currentLine = [{ text: word, bold: segment.bold, italic: segment.italic }]
+            currentLine = [{ text: word, bold: segment.bold!, italic: segment.italic! }]
             currentLineWidth = this.ctx.measureText(word).width
           } else {
             // Even a single word doesn't fit, add it anyway
-            currentLine.push({ text: word, bold: segment.bold, italic: segment.italic })
+            currentLine.push({ text: word, bold: segment.bold!, italic: segment.italic! })
             lines.push(this.reconstructHtmlLine(currentLine))
             if (lines.length >= maxLines) {
               break
@@ -1382,6 +1645,7 @@ export class CanvasRenderer {
     // Draw each line with HTML formatting
     lines.forEach((line, index) => {
       const lineY = startY + index * lineHeight
+      // Don't pass labelBounds for multi-line text - it would position each line incorrectly
       this.drawHtmlText(line, x, lineY)
     })
   }

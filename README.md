@@ -54,9 +54,9 @@ However, **100% compatibility is not a goal**.
 The following features are intentionally not supported:
 
 - Different key profiles (appearance of keycaps). There is single default keycap rendering style.
-- Any HTML content in key labels
-  - Support small subset of HTML tags: `<b>` and `<i>`
-- Backgrounds textures
+- Full HTML content in key labels
+  - Supports small subset of HTML tags: `<b>`, `<i>`, and `<img>` (for icons loaded from URLs)
+- Background textures
 - Legacy rendering quirks and edge cases
 
 ## Getting Started

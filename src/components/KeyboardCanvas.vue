@@ -159,6 +159,19 @@ onMounted(() => {
   if (canvasRef.value && containerRef.value) {
     renderer.value = new CanvasRenderer(canvasRef.value, renderOptions.value)
 
+    // Set up callback for when images load
+    renderer.value.setImageLoadCallback(() => {
+      nextTick(() => {
+        renderKeyboard()
+      })
+    })
+
+    // Set up callback for when images fail to load
+    renderer.value.setImageErrorCallback((url: string) => {
+      const filename = url.substring(url.lastIndexOf('/') + 1)
+      toast.showError(`Failed to load image: ${filename}`, 'Image Load Error')
+    })
+
     updateContainerWidth()
 
     updateCanvasSize()
