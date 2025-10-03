@@ -110,6 +110,137 @@ test.describe('JSON Import/Export Functionality', () => {
     })
   })
 
+  test.describe('PNG Export Tests', () => {
+    test('should export layout as PNG without errors', async ({ page }) => {
+      // Add some keys first
+      await page.locator('button[title="Add Standard Key"]').click()
+      await page.locator('button[title="Add Standard Key"]').click()
+      await expect(page.locator('.keys-counter')).toContainText('Keys: 2')
+
+      // Mock showSaveFilePicker to avoid file picker dialog in tests
+      // Instead, make it return undefined so the fallback download path is used
+      await page.evaluate(() => {
+        delete (window as Window & { showSaveFilePicker?: unknown }).showSaveFilePicker
+      })
+
+      // Set up download promise before clicking export
+      const downloadPromise = page.waitForEvent('download')
+
+      // Click export dropdown
+      const exportButton = page.locator('button', { hasText: 'Export' })
+      await exportButton.click()
+
+      // Click download PNG option
+      await page.locator('button', { hasText: 'Download PNG' }).click()
+
+      // Wait for download to start (should not throw DOMException)
+      const download = await downloadPromise
+
+      // Verify download properties
+      expect(download.suggestedFilename()).toMatch(/\.png$/)
+
+      // Save and verify the downloaded file exists and is valid PNG
+      const downloadPath = path.resolve('e2e/test-output', download.suggestedFilename())
+      await download.saveAs(downloadPath)
+
+      // Read file and verify it's a PNG (starts with PNG signature)
+      const fileBuffer = await fs.readFile(downloadPath)
+      // PNG signature: 89 50 4E 47 0D 0A 1A 0A
+      expect(fileBuffer[0]).toBe(0x89)
+      expect(fileBuffer[1]).toBe(0x50)
+      expect(fileBuffer[2]).toBe(0x4e)
+      expect(fileBuffer[3]).toBe(0x47)
+    })
+
+    test('should export PNG with image labels without taint error', async ({ page }) => {
+      // Import a simple layout first
+      const filePath = path.resolve('e2e/fixtures', 'simple-layout.json')
+      const fileChooserPromise = page.waitForEvent('filechooser')
+      await page.locator('button', { hasText: 'Import' }).click()
+      const fileChooser = await fileChooserPromise
+      await fileChooser.setFiles(filePath)
+      await expect(page.locator('.keys-counter')).toContainText('Keys: 8')
+
+      // Mock showSaveFilePicker to avoid file picker dialog
+      await page.evaluate(() => {
+        delete (window as Window & { showSaveFilePicker?: unknown }).showSaveFilePicker
+      })
+
+      // Wait a bit for canvas to render
+      await page.waitForTimeout(500)
+
+      // Set up download promise before clicking export
+      const downloadPromise = page.waitForEvent('download')
+
+      // Click export dropdown
+      const exportButton = page.locator('button', { hasText: 'Export' })
+      await exportButton.click()
+
+      // Click download PNG option - this should NOT throw DOMException
+      await page.locator('button', { hasText: 'Download PNG' }).click()
+
+      // Wait for download to start (should not throw DOMException)
+      const download = await downloadPromise
+
+      // Verify download succeeded
+      expect(download.suggestedFilename()).toMatch(/\.png$/)
+
+      // Save and verify the downloaded file
+      const downloadPath = path.resolve('e2e/test-output', 'png-export-test.png')
+      await download.saveAs(downloadPath)
+
+      // Verify it's a valid PNG
+      const fileBuffer = await fs.readFile(downloadPath)
+      expect(fileBuffer[0]).toBe(0x89)
+      expect(fileBuffer[1]).toBe(0x50)
+      expect(fileBuffer[2]).toBe(0x4e)
+      expect(fileBuffer[3]).toBe(0x47)
+    })
+
+    test('should roundtrip PNG export and import', async ({ page }) => {
+      // Import a layout
+      const filePath = path.resolve('e2e/fixtures', 'complex-layout.json')
+      const fileChooserPromise = page.waitForEvent('filechooser')
+      await page.locator('button', { hasText: 'Import' }).click()
+      const fileChooser = await fileChooserPromise
+      await fileChooser.setFiles(filePath)
+      await expect(page.locator('.keys-counter')).toContainText('Keys: 6')
+
+      // Mock showSaveFilePicker
+      await page.evaluate(() => {
+        delete (window as Window & { showSaveFilePicker?: unknown }).showSaveFilePicker
+      })
+
+      // Export as PNG
+      const downloadPromise = page.waitForEvent('download')
+      const exportButton = page.locator('button', { hasText: 'Export' })
+      await exportButton.click()
+      await page.locator('button', { hasText: 'Download PNG' }).click()
+      const download = await downloadPromise
+
+      // Save the PNG
+      const downloadPath = path.resolve('e2e/test-output', 'roundtrip-test.png')
+      await download.saveAs(downloadPath)
+
+      // Reload the page to get a clean state
+      await page.reload()
+      await expect(page.locator('.canvas-toolbar')).toBeVisible()
+      await expect(page.locator('.keys-counter')).toContainText('Keys: 0')
+
+      // Re-import the PNG
+      const fileChooserPromise2 = page.waitForEvent('filechooser')
+      await page.locator('button', { hasText: 'Import' }).click()
+      const fileChooser2 = await fileChooserPromise2
+      await fileChooser2.setFiles(downloadPath)
+
+      // Verify the layout was restored
+      await expect(page.locator('.keys-counter')).toContainText('Keys: 6')
+
+      // Verify it's the same layout by visual comparison
+      await expect(page.locator('.keyboard-canvas')).toHaveScreenshot('png-roundtrip-result.png')
+    })
+  })
+
   test.describe('JSON Export Tests', () => {
     test('should export simple layout as JSON', async ({ page }) => {
       // Add some keys first

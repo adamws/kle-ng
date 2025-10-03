@@ -150,10 +150,10 @@ export class CanvasRenderer {
 
     // Create image element
     const img = new Image()
-    // Don't set crossOrigin - it can taint the canvas if server doesn't send CORS headers
-    // This means we can't use images from external domains in a secure way,
-    // but it allows the images to be drawn
-    // TODO: Consider allowing configuration of which domains to trust
+    // Set crossOrigin to 'anonymous' to allow canvas export (toBlob/toDataURL)
+    // This works for same-origin images and cross-origin images with CORS headers
+    // Without this, the canvas becomes "tainted" and cannot be exported
+    img.crossOrigin = 'anonymous'
 
     img.onload = () => {
       this.imageCache.set(url, img)

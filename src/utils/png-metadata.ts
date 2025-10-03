@@ -248,17 +248,47 @@ export async function extractKleLayout(pngBlob: Blob): Promise<unknown | null> {
     // Try to decompress the layout data first (new format)
     const decompressed = LZString.decompressFromBase64(layoutData)
 
+    let parsedData
     if (decompressed) {
       // Successfully decompressed, parse the JSON
-      return JSON.parse(decompressed)
+      parsedData = JSON.parse(decompressed)
     } else {
       // If decompression fails, treat as uncompressed JSON (fallback for any existing files)
-      return JSON.parse(layoutData)
+      parsedData = JSON.parse(layoutData)
     }
+
+    // Clean null values from extracted data (for backwards compatibility with old PNGs)
+    return cleanNullValues(parsedData)
   } catch (error) {
     console.error('Error extracting KLE layout from PNG:', error)
     return null
   }
+}
+
+/**
+ * Clean null values from KLE layout data
+ * The KLE serial library can't handle null values in arrays during deserialization
+ */
+function cleanNullValues(data: unknown): unknown {
+  if (data === null || data === undefined) {
+    return undefined
+  }
+  if (Array.isArray(data)) {
+    return data
+      .map((item) => cleanNullValues(item))
+      .filter((item) => item !== undefined && item !== null)
+  }
+  if (typeof data === 'object') {
+    const cleaned: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
+      const cleanedValue = cleanNullValues(value)
+      if (cleanedValue !== undefined && cleanedValue !== null) {
+        cleaned[key] = cleanedValue
+      }
+    }
+    return cleaned
+  }
+  return data
 }
 
 /**
@@ -269,8 +299,11 @@ export async function createPngWithKleLayout(
   layoutData: unknown,
   additionalMetadata: PngMetadata = {},
 ): Promise<Blob> {
+  // Clean null values from layout data before embedding
+  const cleanedLayoutData = cleanNullValues(layoutData)
+
   // Compress the layout data using LZ-string
-  const compressedLayout = LZString.compressToBase64(JSON.stringify(layoutData))
+  const compressedLayout = LZString.compressToBase64(JSON.stringify(cleanedLayoutData))
 
   const metadata: PngMetadata = {
     ...additionalMetadata,

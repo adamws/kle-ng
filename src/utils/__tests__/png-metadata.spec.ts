@@ -419,5 +419,85 @@ describe('png-metadata', () => {
       expect(extractedProps.w).toBe(originalProps.w)
       expect(extractedProps.r).toBe(originalProps.r)
     })
+
+    it('should handle and clean null values in layout data', async () => {
+      const originalPng = createMockPngBlob()
+      // Create layout data with null values in arrays (like fa font array)
+      // This simulates the case where KLE serialization produces null values
+      const layoutWithNulls = [
+        [
+          {
+            fa: [2, null, null, null, null, null], // Font array with nulls
+            a: 5,
+          },
+          'Key with nulls',
+        ],
+        [
+          {
+            fa: [null, 3, null], // More nulls in different positions
+          },
+          'Another key',
+        ],
+      ]
+
+      // Create PNG with layout containing nulls
+      const pngWithLayout = await createPngWithKleLayout(originalPng, layoutWithNulls)
+      const extractedLayout = await extractKleLayout(pngWithLayout)
+
+      // Verify null values are cleaned (removed from arrays)
+      expect(extractedLayout).toBeDefined()
+      expect(Array.isArray(extractedLayout)).toBe(true)
+
+      // Check that the layout is usable (no nulls in fa arrays)
+      const row1 = (extractedLayout as unknown[][])[0]
+      const props1 = row1[0] as Record<string, unknown>
+      expect(props1.fa).toBeDefined()
+      expect(Array.isArray(props1.fa)).toBe(true)
+      // Should only contain non-null values
+      expect((props1.fa as unknown[]).every((v) => v !== null)).toBe(true)
+      expect((props1.fa as unknown[]).length).toBe(1) // Only the '2' should remain
+
+      const row2 = (extractedLayout as unknown[][])[1]
+      const props2 = row2[0] as Record<string, unknown>
+      expect(props2.fa).toBeDefined()
+      expect((props2.fa as unknown[]).length).toBe(1) // Only the '3' should remain
+    })
+
+    it('should handle legacy PNG files with null values in metadata', async () => {
+      // Simulate a legacy PNG created before null cleaning was added
+      const originalPng = createMockPngBlob()
+      const layoutWithNulls = [
+        [{ fa: [2, null, null, null, null, null], a: 5 }, 'Key 1'],
+        [{ fa: [null, 3, null] }, 'Key 2'],
+      ]
+
+      // Create PNG with the null-containing layout (simulating old export)
+      // First compress it manually without cleaning
+      const compressedLayout = LZString.compressToBase64(JSON.stringify(layoutWithNulls))
+      const metadata = {
+        'KLE-Layout': compressedLayout,
+        Software: 'Old Version',
+      }
+      const legacyPng = await addMetadataToPng(originalPng, metadata)
+
+      // Extract should clean the nulls
+      const extractedLayout = await extractKleLayout(legacyPng)
+
+      // Verify extraction succeeded
+      expect(extractedLayout).toBeDefined()
+      expect(Array.isArray(extractedLayout)).toBe(true)
+
+      // Verify null values were cleaned
+      const row1 = (extractedLayout as unknown[][])[0]
+      const props1 = row1[0] as Record<string, unknown>
+      expect((props1.fa as unknown[]).every((v) => v !== null)).toBe(true)
+      expect((props1.fa as unknown[]).length).toBe(1) // Only '2' remains
+
+      // Most importantly: verify it can be deserialized by KLE
+      const { Serial } = await import('@ijprest/kle-serial')
+      expect(() => {
+        Serial.deserialize(extractedLayout as Array<unknown>)
+      }).not.toThrow()
+    })
   })
 })
