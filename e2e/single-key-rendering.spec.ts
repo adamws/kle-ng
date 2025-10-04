@@ -305,6 +305,49 @@ test.describe('Single Key Rendering Tests', () => {
       await expect(helper.getCanvas()).toHaveScreenshot('labels/html-image-multiple.png')
     })
 
+    test('key with SVG image in center label', async () => {
+      await helper.addKey()
+      // Use local SVG file with proper dimensions
+      const testSvg = '/data/icons/test.svg'
+      await helper.setKeyLabel('center', `<img src="${testSvg}">`)
+
+      // Wait for image to load
+      await helper.page.waitForLoadState('networkidle')
+      await helper.page.waitForTimeout(1000)
+      await helper.waitForRender()
+      await helper.page.waitForTimeout(500)
+
+      await expect(helper.getCanvas()).toHaveScreenshot('labels/html-svg-center.png')
+    })
+
+    test('key with SVG image in top-left label', async () => {
+      await helper.addKey()
+      const testSvg = '/data/icons/test.svg'
+      await helper.setKeyLabel('topLeft', `<img src="${testSvg}">`)
+
+      await helper.page.waitForLoadState('networkidle')
+      await helper.page.waitForTimeout(1000)
+      await helper.waitForRender()
+      await helper.page.waitForTimeout(500)
+
+      await expect(helper.getCanvas()).toHaveScreenshot('labels/html-svg-top-left.png')
+    })
+
+    test('key with SVG images in multiple positions', async () => {
+      await helper.addKey()
+      const testSvg = '/data/icons/test.svg'
+      await helper.setKeyLabel('topLeft', `<img src="${testSvg}">`)
+      await helper.setKeyLabel('center', `<img src="${testSvg}">`)
+      await helper.setKeyLabel('bottomRight', `<img src="${testSvg}">`)
+
+      await helper.page.waitForLoadState('networkidle')
+      await helper.page.waitForTimeout(1000)
+      await helper.waitForRender()
+      await helper.page.waitForTimeout(500)
+
+      await expect(helper.getCanvas()).toHaveScreenshot('labels/html-svg-multiple.png')
+    })
+
     test('key with all 9 labels', async () => {
       await helper.addKey()
 

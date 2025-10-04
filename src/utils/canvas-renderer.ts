@@ -124,7 +124,16 @@ export class CanvasRenderer {
   }
 
   /**
+   * Check if a URL is likely an SVG file
+   */
+  private isSvgUrl(url: string): boolean {
+    return url.toLowerCase().endsWith('.svg') || url.includes('image/svg+xml')
+  }
+
+  /**
    * Load an image from a URL and cache it
+   * Tested formats: PNG, SVG
+   * Other formats may work but are not officially tested
    */
   private loadImage(url: string, onLoad?: () => void): void {
     // Check if already in cache
@@ -156,6 +165,16 @@ export class CanvasRenderer {
     img.crossOrigin = 'anonymous'
 
     img.onload = () => {
+      // Validate SVG dimensions (required for proper rendering in Firefox)
+      if (this.isSvgUrl(url)) {
+        if (!img.naturalWidth || !img.naturalHeight) {
+          console.warn(
+            `SVG image at ${url} may not render correctly in all browsers. ` +
+              `SVG files should have explicit width and height attributes (not percentages).`,
+          )
+        }
+      }
+
       this.imageCache.set(url, img)
 
       // Call all callbacks
@@ -1251,6 +1270,14 @@ export class CanvasRenderer {
   /**
    * Parse text with HTML formatting tags and extract text segments with their styles
    * Supports: <b>, <i>, <b><i> (nested), <img>
+   *
+   * Tested image formats: PNG, SVG
+   * Other raster formats (JPG, GIF, WebP) may work but are not officially tested
+   *
+   * SVG Requirements:
+   * - Must have explicit width and height attributes (not percentages)
+   * - External resources (CSS, images) must be inlined as data URLs
+   * - Server must support CORS for cross-origin SVG files
    */
   private parseHtmlText(text: string): Array<{
     type: 'text' | 'image'
