@@ -1256,33 +1256,35 @@ export class CanvasRenderer {
     let imgY: number
 
     // Horizontal alignment based on column (left/center/right)
+    // Using inner cap surface (without text padding) for precise alignment
     if (pos.align === 'left') {
-      // Left column: image's left edge at key cap's left edge
-      imgX = params.capx
+      // Left column: image's left edge at inner cap's left edge
+      imgX = params.innercapx
     } else if (pos.align === 'center') {
-      // Center column: image's center at key cap's center
-      imgX = params.capx + params.capwidth / 2 - width / 2
+      // Center column: image's center at inner cap's center
+      imgX = params.innercapx + params.innercapwidth / 2 - width / 2
     } else {
-      // Right column: image's right edge at key cap's right edge
-      imgX = params.capx + params.capwidth - width
+      // Right column: image's right edge at inner cap's right edge
+      imgX = params.innercapx + params.innercapwidth - width
     }
 
     // Vertical alignment based on row (top/middle/bottom)
+    // Using inner cap surface (without text padding) for precise alignment
     if (index >= 0 && index <= 2) {
-      // Top row: image's top edge at key cap's top edge
-      imgY = params.capy
+      // Top row: image's top edge at inner cap's top edge
+      imgY = params.innercapy
     } else if (index >= 3 && index <= 5) {
-      // Middle row: image's center at key cap's center
-      imgY = params.capy + params.capheight / 2 - height / 2
+      // Middle row: image's center at inner cap's center
+      imgY = params.innercapy + params.innercapheight / 2 - height / 2
     } else if (index >= 6 && index <= 8) {
-      // Bottom row: image's bottom edge at key cap's bottom edge
-      imgY = params.capy + params.capheight - height
+      // Bottom row: image's bottom edge at inner cap's bottom edge
+      imgY = params.innercapy + params.innercapheight - height
     } else if (index >= 9) {
       // Front legends (9-11): position on front face
       imgY = params.capy + params.capheight + 1
     } else {
       // Fallback
-      imgY = params.capy
+      imgY = params.innercapy
     }
 
     // Draw the image
