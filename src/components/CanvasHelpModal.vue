@@ -65,6 +65,16 @@
                       </div>
                     </div>
                   </div>
+                  <div class="tip-item">
+                    <i class="bi bi-image control-icon text-success"></i>
+                    <div>
+                      <strong>Image & SVG Labels</strong>
+                      <div>
+                        Use <code>&lt;img src="..."&gt;</code> for external images or
+                        <code>&lt;svg&gt;...&lt;/svg&gt;</code> for inline SVG graphics
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
