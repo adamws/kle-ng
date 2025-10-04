@@ -131,6 +131,16 @@ export class CanvasRenderer {
   }
 
   /**
+   * Convert inline SVG string to a data URL that can be used as an image source
+   */
+  private svgToDataUrl(svgContent: string): string {
+    // Encode the SVG content for use in a data URL
+    // Using encodeURIComponent ensures special characters are properly handled
+    const encoded = encodeURIComponent(svgContent)
+    return `data:image/svg+xml;charset=utf-8,${encoded}`
+  }
+
+  /**
    * Load an image from a URL and cache it
    * Tested formats: PNG, SVG
    * Other formats may work but are not officially tested
@@ -1179,10 +1189,11 @@ export class CanvasRenderer {
       const availableWidth = this.calculateAvailableWidth(params)
       const availableHeight = this.calculateAvailableHeight(params)
 
-      // Check if label is image-only
+      // Check if label is image-only or SVG-only
       const isImageOnly = /^<img\s+[^>]+>\s*$/.test(label)
+      const isSvgOnly = /^<svg[^>]*>[\s\S]*?<\/svg>\s*$/.test(label)
 
-      if (isImageOnly) {
+      if (isImageOnly || isSvgOnly) {
         // Image-only label: position based on alignment
         this.drawImageLabel(label, params, pos, index)
       } else {
@@ -1195,6 +1206,7 @@ export class CanvasRenderer {
 
   /**
    * Draw image-only label with alignment-based positioning
+   * Supports both external images (<img src="...">) and inline SVG (<svg>...</svg>)
    */
   private drawImageLabel(
     label: string,
@@ -1202,24 +1214,43 @@ export class CanvasRenderer {
     pos: { align: string; baseline: string },
     index: number,
   ): void {
-    // Parse the image tag
+    // Parse the image or SVG tag
     const segments = this.parseHtmlText(label)
-    const imageSegment = segments.find((s) => s.type === 'image')
+    const imageSegment = segments.find((s) => s.type === 'image' || s.type === 'svg')
 
-    if (!imageSegment || !imageSegment.src) {
+    if (!imageSegment) {
       return
     }
 
-    const img = this.getImage(imageSegment.src)
-    if (!img) {
-      // Image not loaded yet, trigger loading
-      this.loadImage(imageSegment.src, this.onImageLoadCallback)
+    let img: HTMLImageElement | null = null
+    let width: number
+    let height: number
+
+    if (imageSegment.type === 'svg' && imageSegment.svgContent) {
+      // Inline SVG: convert to data URL and load
+      const dataUrl = this.svgToDataUrl(imageSegment.svgContent)
+      img = this.getImage(dataUrl)
+      if (!img) {
+        // Image not loaded yet, trigger loading
+        this.loadImage(dataUrl, this.onImageLoadCallback)
+        return
+      }
+      // Use dimensions from SVG attributes or natural dimensions
+      width = imageSegment.width || img.naturalWidth || 32
+      height = imageSegment.height || img.naturalHeight || 32
+    } else if (imageSegment.type === 'image' && imageSegment.src) {
+      // External image
+      img = this.getImage(imageSegment.src)
+      if (!img) {
+        // Image not loaded yet, trigger loading
+        this.loadImage(imageSegment.src, this.onImageLoadCallback)
+        return
+      }
+      width = imageSegment.width || img.naturalWidth
+      height = imageSegment.height || img.naturalHeight
+    } else {
       return
     }
-
-    // Get image dimensions
-    const width = imageSegment.width || img.naturalWidth
-    const height = imageSegment.height || img.naturalHeight
 
     let imgX: number
     let imgY: number
@@ -1269,31 +1300,37 @@ export class CanvasRenderer {
 
   /**
    * Parse text with HTML formatting tags and extract text segments with their styles
-   * Supports: <b>, <i>, <b><i> (nested), <img>
+   * Supports: <b>, <i>, <b><i> (nested), <img>, <svg>...</svg>
    *
-   * Tested image formats: PNG, SVG
+   * Image formats:
+   * - External images: <img src="path/to/image.png"> or <img src="path/to/image.svg">
+   * - Inline SVG: <svg width="32" height="32">...</svg>
+   *
+   * Tested formats: PNG (external), SVG (external and inline)
    * Other raster formats (JPG, GIF, WebP) may work but are not officially tested
    *
-   * SVG Requirements:
+   * SVG Requirements (both external and inline):
    * - Must have explicit width and height attributes (not percentages)
    * - External resources (CSS, images) must be inlined as data URLs
-   * - Server must support CORS for cross-origin SVG files
+   * - Server must support CORS for cross-origin SVG files (external only)
    */
   private parseHtmlText(text: string): Array<{
-    type: 'text' | 'image'
+    type: 'text' | 'image' | 'svg'
     text?: string
     bold?: boolean
     italic?: boolean
     src?: string
+    svgContent?: string
     width?: number
     height?: number
   }> {
     const segments: Array<{
-      type: 'text' | 'image'
+      type: 'text' | 'image' | 'svg'
       text?: string
       bold?: boolean
       italic?: boolean
       src?: string
+      svgContent?: string
       width?: number
       height?: number
     }> = []
@@ -1302,14 +1339,40 @@ export class CanvasRenderer {
     let currentText = ''
 
     // Regular expression to match HTML tags and text
-    // Updated to handle <img> tags with attributes
-    const regex = /<\s*(\/?)([bi])\s*>|<img\s+([^>]+)>|([^<]+)/gi
+    // Updated to handle <img> tags, inline <svg> tags, and formatting tags
+    const regex = /<\s*(\/?)([bi])\s*>|<img\s+([^>]+)>|<svg[^>]*>([\s\S]*?)<\/svg>|([^<]+)/gi
     let match: RegExpExecArray | null
 
     while ((match = regex.exec(text)) !== null) {
-      if (match[4]) {
+      if (match[5]) {
         // Plain text segment
-        currentText += match[4]
+        currentText += match[5]
+      } else if (match[4] !== undefined) {
+        // Inline <svg> tag
+        // Save any accumulated text first
+        if (currentText) {
+          segments.push({
+            type: 'text',
+            text: currentText,
+            bold: currentBold,
+            italic: currentItalic,
+          })
+          currentText = ''
+        }
+
+        // Extract SVG content (match[0] is the full <svg>...</svg>)
+        const svgContent = match[0]
+
+        // Try to extract width and height from SVG attributes
+        const widthMatch = svgContent.match(/width\s*=\s*["']?(\d+)["']?/i)
+        const heightMatch = svgContent.match(/height\s*=\s*["']?(\d+)["']?/i)
+
+        segments.push({
+          type: 'svg',
+          svgContent,
+          width: widthMatch ? parseInt(widthMatch[1]) : undefined,
+          height: heightMatch ? parseInt(heightMatch[1]) : undefined,
+        })
       } else if (match[3]) {
         // <img> tag with attributes
         // Save any accumulated text first
@@ -1376,10 +1439,10 @@ export class CanvasRenderer {
   }
 
   /**
-   * Check if text contains HTML formatting tags
+   * Check if text contains HTML formatting tags or inline SVG
    */
   private hasHtmlFormatting(text: string): boolean {
-    return /<\s*[bi]\s*>|<\s*\/\s*[bi]\s*>|<img\s+/i.test(text)
+    return /<\s*[bi]\s*>|<\s*\/\s*[bi]\s*>|<img\s+|<svg[^>]*>/i.test(text)
   }
 
   /**

@@ -348,6 +348,50 @@ test.describe('Single Key Rendering Tests', () => {
       await expect(helper.getCanvas()).toHaveScreenshot('labels/html-svg-multiple.png')
     })
 
+    test('key with inline SVG in center label', async () => {
+      await helper.addKey()
+      const inlineSvg =
+        '<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="12" fill="#FF5722"/><path d="M12 16 L15 19 L20 13" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      await helper.setKeyLabel('center', inlineSvg)
+
+      // Wait for rendering
+      await helper.waitForRender()
+      await helper.page.waitForTimeout(1000)
+
+      await expect(helper.getCanvas()).toHaveScreenshot('labels/html-inline-svg-center.png')
+    })
+
+    test('key with inline SVG in top-left label', async () => {
+      await helper.addKey()
+      const inlineSvg =
+        '<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" fill="#2196F3"/><text x="12" y="16" text-anchor="middle" fill="white" font-size="14" font-weight="bold">A</text></svg>'
+      await helper.setKeyLabel('topLeft', inlineSvg)
+
+      await helper.waitForRender()
+      await helper.page.waitForTimeout(1000)
+
+      await expect(helper.getCanvas()).toHaveScreenshot('labels/html-inline-svg-top-left.png')
+    })
+
+    test('key with multiple inline SVGs', async () => {
+      await helper.addKey()
+      const svgRed =
+        '<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" fill="#F44336"/></svg>'
+      const svgGreen =
+        '<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" fill="#4CAF50"/></svg>'
+      const svgBlue =
+        '<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" fill="#2196F3"/></svg>'
+
+      await helper.setKeyLabel('topLeft', svgRed)
+      await helper.setKeyLabel('center', svgGreen)
+      await helper.setKeyLabel('bottomRight', svgBlue)
+
+      await helper.waitForRender()
+      await helper.page.waitForTimeout(1000)
+
+      await expect(helper.getCanvas()).toHaveScreenshot('labels/html-inline-svg-multiple.png')
+    })
+
     test('key with all 9 labels', async () => {
       await helper.addKey()
 
