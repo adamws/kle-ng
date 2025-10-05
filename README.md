@@ -47,6 +47,39 @@ Future plans:
 - **Advanced layout templates**: Add more pre-built templates for common keyboard layouts
 - **Add more editing tools**
 
+## Features
+
+### Image and SVG Label Support
+
+Key labels support embedding images and SVG graphics, allowing for rich visual representation of icons, symbols, and custom graphics.
+
+Images are aligned to the **inner keycap surface** (the top face of the key, excluding the border), not the outer key dimensions. This ensures precise visual placement on the visible key area.
+
+**Load images from external url:**
+
+<a href="http://editor.keyboard-tools.xyz/#share=NrDeCIENwLgdgL4BpwB4CWBbA5gAgM4BOAxgLwDkAFgC7UAO+MA9E4ZAO4B0261lArgCN++AKYkA9gDtqomZ2ITMTSABNImdviYBrADaiAtFOytRAM22VRa7Zkj5ZhJnSF70xJuuqQmH6dr6opx0JuS47OiqfKQAzABMuNbo2DRx8QB84AC62UA">
+  <img align="right" src="resources/label-external-image.png" hspace=10>
+</a>
+
+```json
+[[{"a":7},"<img src='https://raw.githubusercontent.com/adamws/kle-ng/refs/heads/master/public/data/icons/kle.png' width=32 height=32>"]]
+```
+
+- Image server must support CORS
+- Tested formats: PNG, SVG
+
+**Load images from the inline `<svg>`:**
+
+<a href="http://editor.keyboard-tools.xyz/#share=NrDeCIENwLgdgL4BpwB4DOA3A5gAgO4CWAJgC4AWAvADrgDMATLbuQKaHbmk31Pi6ZCrfACEA9gA8eABlyzGuRswkBbADYA7dDy6kADjAD0h-KYB0+OmbEAnbIYbSnhrNloA+VAGNCNr2tZcLylaAEYANmYvAE8eCOYbOL5cADNCNTUeAGIAMRyAVjgGPkNPFxx3cABdKqA">
+  <img align="right" src="resources/label-inline-svg.png" hspace=10>
+</a>
+
+```json
+[[{"a":7},"<svg width=\"32\" height=\"32\" viewBox=\"0 0 32 32\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"16\" cy=\"16\" r=\"12\" fill=\"#FF5722\"/></svg>"]]
+```
+
+- SVG must include explicit `width` and `height` attributes
+
 ## Compatibility
 
 The kle-ng maintains compatibility with standard KLE JSON format for layouts.
@@ -55,7 +88,7 @@ The following features are intentionally not supported:
 
 - Different key profiles (appearance of keycaps). There is single default keycap rendering style.
 - Full HTML content in key labels
-  - Supports small subset of HTML tags: `<b>`, `<i>`, and `<img>` (for icons loaded from URLs)
+  - Supports small subset of HTML tags: `<b>`, `<i>`, `<img>`, and `<svg>`
 - Background textures
 - Legacy rendering quirks and edge cases
 
