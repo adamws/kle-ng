@@ -47,6 +47,14 @@ Future plans:
 - **Advanced layout templates**: Add more pre-built templates for common keyboard layouts
 - **Add more editing tools**
 
+## Getting Started
+
+The kle-ng runs in your web browser - no installation required.
+Simply visit the application and start creating or editing your keyboard layouts.
+
+For existing KLE users: Your saved layouts will work in kle-ng.
+Just import your JSON files and continue where you left off.
+
 ## Features
 
 ### Image and SVG Label Support
@@ -91,14 +99,6 @@ The following features are intentionally not supported:
   - Supports small subset of HTML tags: `<b>`, `<i>`, `<img>`, and `<svg>`
 - Background textures
 - Legacy rendering quirks and edge cases
-
-## Getting Started
-
-The kle-ng runs in your web browser - no installation required.
-Simply visit the application and start creating or editing your keyboard layouts.
-
-For existing KLE users: Your saved layouts will work in kle-ng.
-Just import your JSON files and continue where you left off.
 
 ## Development
 
