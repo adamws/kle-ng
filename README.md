@@ -100,6 +100,13 @@ The following features are intentionally not supported:
 - Background textures
 - Legacy rendering quirks and edge cases
 
+## Support
+
+The best way to support this project is to:
+
+- **Star this repository on GitHub** - It helps others discover the project
+- **Use kle-ng share links** - When sharing your keyboard layouts, use kle-ng URLs. This helps spread awareness and grow the community
+
 ## Development
 
 ```bash
