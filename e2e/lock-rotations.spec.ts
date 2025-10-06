@@ -196,4 +196,134 @@ test.describe('Lock Rotations Feature', () => {
     const lockRotationsControl = page.locator('.lock-rotations-control')
     await expect(lockRotationsControl).toBeVisible()
   })
+
+  test('should move rotated key identically with mouse and keyboard when lock rotations enabled', async ({
+    page,
+  }) => {
+    // Regression test for bug where mouse movement applied rotation transformation
+    // even when lockRotations was enabled, causing different behavior than keyboard
+
+    // Add a key
+    await page.locator('button[title="Add Standard Key"]').click()
+    await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+    await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
+
+    // Set rotation to 30 degrees
+    const rotationAngleInput = page.locator('input[title="Rotation Angle in Degrees"]').first()
+    await rotationAngleInput.fill('30')
+    await rotationAngleInput.press('Enter')
+    await expect(rotationAngleInput).toHaveValue('30')
+
+    // Switch to absolute rotation origin mode to read rx/ry values
+    const rotationOriginToggle = page.locator('.toggle-switch').first()
+    const toggleInput = rotationOriginToggle.locator('.toggle-input')
+
+    // Check if we need to click to get to absolute mode (unchecked = absolute)
+    const isRelativeMode = await toggleInput.isChecked()
+    if (isRelativeMode) {
+      await rotationOriginToggle.click() // Switch to absolute mode
+    }
+    await expect(toggleInput).not.toBeChecked()
+
+    // Get initial positions
+    const rotationXInput = page.locator('input[title*="Rotation Origin X"]').first()
+    const rotationYInput = page.locator('input[title*="Rotation Origin Y"]').first()
+    const keyXInput = page
+      .locator('div')
+      .filter({ hasText: /^X$/ })
+      .locator('input[type="number"]')
+      .first()
+    const keyYInput = page
+      .locator('div')
+      .filter({ hasText: /^Y$/ })
+      .locator('input[type="number"]')
+      .first()
+
+    const initialX = parseFloat(await keyXInput.inputValue())
+    const initialY = parseFloat(await keyYInput.inputValue())
+    const initialRx = parseFloat(await rotationXInput.inputValue())
+    const initialRy = parseFloat(await rotationYInput.inputValue())
+
+    // Enable lock rotations
+    const lockRotationsCheckbox = page.locator('input[id="lockRotations"]')
+    await lockRotationsCheckbox.check()
+    await expect(lockRotationsCheckbox).toBeChecked()
+
+    // Test keyboard movement (4 steps right = 1U)
+    const canvas = page.locator('.keyboard-canvas')
+    await canvas.click() // Focus the canvas
+    await page.keyboard.press('ArrowRight')
+    await page.keyboard.press('ArrowRight')
+    await page.keyboard.press('ArrowRight')
+    await page.keyboard.press('ArrowRight')
+
+    // Verify keyboard movement: both x and rx should increase by 1.0
+    const keyboardX = parseFloat(await keyXInput.inputValue())
+    const keyboardY = parseFloat(await keyYInput.inputValue())
+    const keyboardRx = parseFloat(await rotationXInput.inputValue())
+    const keyboardRy = parseFloat(await rotationYInput.inputValue())
+
+    expect(keyboardX).toBeCloseTo(initialX + 1.0, 2)
+    expect(keyboardY).toBeCloseTo(initialY, 2) // Y unchanged
+    expect(keyboardRx).toBeCloseTo(initialRx + 1.0, 2)
+    expect(keyboardRy).toBeCloseTo(initialRy, 2) // RY unchanged
+
+    // Undo the keyboard movement
+    await page.keyboard.press('Control+z')
+
+    // Verify we're back to initial state
+    expect(parseFloat(await keyXInput.inputValue())).toBeCloseTo(initialX, 2)
+    expect(parseFloat(await keyYInput.inputValue())).toBeCloseTo(initialY, 2)
+    expect(parseFloat(await rotationXInput.inputValue())).toBeCloseTo(initialRx, 2)
+    expect(parseFloat(await rotationYInput.inputValue())).toBeCloseTo(initialRy, 2)
+
+    // Now test mouse movement with middle-button drag
+    // Select the key again (undo deselects)
+    await page.keyboard.press('Control+a')
+    await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
+
+    // Get canvas bounds for positioning
+    const canvasBounds = await canvas.boundingBox()
+    if (!canvasBounds) throw new Error('Canvas not found')
+
+    // Keys are rendered with some offset from canvas origin
+    // Use a position that should intersect with the rendered key
+    const startX = canvasBounds.x + 150
+    const startY = canvasBounds.y + 150
+
+    // Perform middle-button drag (54 pixels = 1U)
+    await page.mouse.move(startX, startY)
+    await page.mouse.down({ button: 'middle' })
+    await page.mouse.move(startX + 54, startY, { steps: 10 })
+    await page.mouse.up({ button: 'middle' })
+
+    // Wait for drag operation to complete
+    await page.waitForTimeout(200)
+
+    // Verify mouse movement: should match keyboard movement
+    const mouseX = parseFloat(await keyXInput.inputValue())
+    const mouseY = parseFloat(await keyYInput.inputValue())
+    const mouseRx = parseFloat(await rotationXInput.inputValue())
+    const mouseRy = parseFloat(await rotationYInput.inputValue())
+
+    // The critical assertion: mouse and keyboard should move in the same direction
+    // with similar magnitudes. The key test is that rx and x move by the same delta.
+    const mouseDeltaX = mouseX - initialX
+    const mouseDeltaRx = mouseRx - initialRx
+
+    // Verify mouse moved both x and rx by the same amount (within tolerance)
+    expect(mouseDeltaX).toBeCloseTo(mouseDeltaRx, 1)
+
+    // Verify the movement is in the correct direction and reasonable magnitude
+    expect(mouseDeltaX).toBeGreaterThan(0.5) // Moved right at least 0.5U
+    expect(mouseDeltaX).toBeLessThan(1.5) // But not more than 1.5U
+
+    // Y coordinates should not change
+    expect(mouseY).toBeCloseTo(initialY, 1)
+    expect(mouseRy).toBeCloseTo(initialRy, 1)
+
+    // Most importantly: the bug was that rx moved differently than x when rotated
+    // Now they should move by the same delta (that's what lockRotations means!)
+    expect(Math.abs(mouseDeltaX - mouseDeltaRx)).toBeLessThan(0.1)
+  })
 })

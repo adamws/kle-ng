@@ -657,25 +657,25 @@ export const useKeyboardStore = defineStore('keyboard', () => {
       draggedKeys.value.forEach((key) => {
         const originalPos = keysOriginalPositions.value.get(key)
         if (originalPos) {
-          let worldDeltaX = screenDeltaX
-          let worldDeltaY = screenDeltaY
+          let deltaX = screenDeltaX
+          let deltaY = screenDeltaY
 
-          // For rotated keys, transform screen-space delta to world-space delta
-          // This ensures the key moves in the same direction as the mouse cursor
-          if (key.rotation_angle && key.rotation_angle !== 0) {
-            // Convert rotation angle to radians (no inversion - we want screen to world)
+          // When lock rotations is enabled, move everything in screen coordinates
+          // When disabled, transform screen delta to world delta for rotated keys
+          if (!lockRotations.value && key.rotation_angle && key.rotation_angle !== 0) {
+            // Transform screen delta to world delta using rotation matrix
+            // This ensures the key moves in the same direction as the mouse cursor
             const rad = D.degreesToRadians(key.rotation_angle)
             const cos = D.cos(rad)
             const sin = D.sin(rad)
 
-            // Transform screen delta to world delta using rotation matrix
-            worldDeltaX = D.add(D.mul(screenDeltaX, cos), D.mul(screenDeltaY, sin))
-            worldDeltaY = D.add(D.mul(-screenDeltaX, sin), D.mul(screenDeltaY, cos))
+            deltaX = D.add(D.mul(screenDeltaX, cos), D.mul(screenDeltaY, sin))
+            deltaY = D.add(D.mul(-screenDeltaX, sin), D.mul(screenDeltaY, cos))
           }
 
           // Apply increment-based snapping like keyboard movement
-          const snappedDeltaX = D.roundToStep(worldDeltaX, moveStep.value)
-          const snappedDeltaY = D.roundToStep(worldDeltaY, moveStep.value)
+          const snappedDeltaX = D.roundToStep(deltaX, moveStep.value)
+          const snappedDeltaY = D.roundToStep(deltaY, moveStep.value)
 
           key.x = D.add(originalPos.x, snappedDeltaX) // Allow negative positions
           key.y = D.add(originalPos.y, snappedDeltaY)
