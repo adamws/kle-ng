@@ -156,10 +156,7 @@
           :title="tool.description"
           :disabled="tool.disabled"
         >
-          <div class="tool-main">{{ tool.name }}</div>
-          <div v-if="tool.disabled && tool.id === 'move-rotation-origins'" class="tool-subtitle">
-            Select keys first
-          </div>
+          {{ tool.name }}
         </button>
       </div>
     </div>
@@ -181,6 +178,12 @@
 
   <!-- Legend Tools Panel -->
   <LegendToolsPanel :visible="showLegendToolsPanel" @close="showLegendToolsPanel = false" />
+
+  <!-- Rotation Origins Panel -->
+  <RotationOriginsPanel
+    :visible="showRotationOriginsPanel"
+    @close="showRotationOriginsPanel = false"
+  />
 </template>
 
 <script setup lang="ts">
@@ -188,6 +191,7 @@ import { computed, ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useKeyboardStore } from '@/stores/keyboard'
 import { SPECIAL_KEYS, type SpecialKeyTemplate } from '@/data/specialKeys'
 import LegendToolsPanel from './LegendToolsPanel.vue'
+import RotationOriginsPanel from './RotationOriginsPanel.vue'
 
 // Store
 const keyboardStore = useKeyboardStore()
@@ -211,6 +215,9 @@ const extraToolsBtnRef = ref<HTMLElement>()
 // Legend tools panel
 const showLegendToolsPanel = ref(false)
 
+// Rotation origins panel
+const showRotationOriginsPanel = ref(false)
+
 // Define extra tools
 interface ExtraTool {
   id: string
@@ -232,13 +239,15 @@ const extraTools = computed((): ExtraTool[] => [
   },
   {
     id: 'move-rotation-origins',
-    name: 'Move rotation origins to key centers',
+    name: 'Move Rotation Origins',
     description:
       keyboardStore.selectedKeys.length === 0
-        ? 'Select keys first to move their rotation origins to centers'
-        : 'Move rotation origins to key centers for selected keys',
-    disabled: keyboardStore.selectedKeys.length === 0,
-    action: () => moveRotationsToKeyCenters(),
+        ? 'Move rotation origins for all keys'
+        : 'Move rotation origins for selected keys',
+    disabled: false,
+    action: () => {
+      showRotationOriginsPanel.value = true
+    },
   },
 ])
 
@@ -415,12 +424,6 @@ const undo = () => {
 
 const redo = () => {
   keyboardStore.redo()
-  requestCanvasFocus()
-}
-
-// Debug functions
-const moveRotationsToKeyCenters = () => {
-  keyboardStore.moveRotationsToKeyCenters()
   requestCanvasFocus()
 }
 
@@ -755,19 +758,6 @@ onUnmounted(() => {
 
 .dropdown-item.disabled:hover {
   background-color: var(--bs-secondary-bg);
-}
-
-.tool-main {
-  font-weight: 500;
-}
-
-.tool-subtitle {
-  font-size: 11px;
-  color: var(--bs-danger);
-  font-weight: 600;
-  margin-top: 2px;
-  line-height: 1.2;
-  opacity: 1;
 }
 
 /* Mirror Dropdown */

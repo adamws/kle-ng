@@ -16,9 +16,7 @@ test.describe('Legend Tools Panel', () => {
 
       // Verify legend tools are present
       await expect(page.locator('button:has-text("Legend Tools")')).toBeVisible()
-      await expect(
-        page.locator('button:has-text("Move rotation origins to key centers")'),
-      ).toBeVisible()
+      await expect(page.locator('button:has-text("Move Rotation Origins")')).toBeVisible()
     })
 
     test('should close dropdown when clicking outside', async ({ page }) => {
@@ -33,31 +31,25 @@ test.describe('Legend Tools Panel', () => {
       await expect(page.locator('.extra-tools-dropdown')).not.toBeVisible()
     })
 
-    test('should disable move rotation origins tool when no keys selected', async ({ page }) => {
+    test('should allow move rotation origins tool when no keys selected', async ({ page }) => {
       // Click the extra tools button (tools icon)
       await page.locator('[title="Extra Tools"]').click()
 
       // Verify the dropdown is visible
       await expect(page.locator('.extra-tools-dropdown')).toBeVisible()
 
-      // Verify move rotation origins tool is disabled when no keys are selected
-      const moveRotationOriginsBtn = page.locator(
-        'button:has-text("Move rotation origins to key centers")',
-      )
-      await expect(moveRotationOriginsBtn).toBeDisabled()
+      // Verify move rotation origins tool is enabled even when no keys are selected
+      // (the new behavior is that it affects all keys when none are selected)
+      const moveRotationOriginsBtn = page.locator('button:has-text("Move Rotation Origins")')
+      await expect(moveRotationOriginsBtn).toBeEnabled()
 
-      // Verify it has the disabled class for visual indication
-      await expect(moveRotationOriginsBtn).toHaveClass(/disabled/)
+      // Verify it doesn't have the disabled class
+      await expect(moveRotationOriginsBtn).not.toHaveClass(/disabled/)
 
-      // Verify the explanatory subtitle is shown
-      await expect(moveRotationOriginsBtn.locator('.tool-subtitle')).toContainText(
-        'Select keys first',
-      )
-
-      // Verify the tooltip explains why it's disabled
+      // Verify the tooltip explains that it affects all keys when none selected
       await expect(moveRotationOriginsBtn).toHaveAttribute(
         'title',
-        'Select keys first to move their rotation origins to centers',
+        'Move rotation origins for all keys',
       )
 
       // Add a key
@@ -71,22 +63,19 @@ test.describe('Legend Tools Panel', () => {
       // Click extra tools again (dropdown closes when a key is added/selected)
       await page.locator('[title="Extra Tools"]').click()
 
-      // Now the move rotation origins tool should be enabled
-      const moveRotationOriginsBtnEnabled = page.locator(
-        'button:has-text("Move rotation origins to key centers")',
+      // Now the move rotation origins tool should still be enabled but with different tooltip
+      const moveRotationOriginsBtnSelected = page.locator(
+        'button:has-text("Move Rotation Origins")',
       )
-      await expect(moveRotationOriginsBtnEnabled).toBeEnabled()
+      await expect(moveRotationOriginsBtnSelected).toBeEnabled()
 
       // Verify it doesn't have the disabled class
-      await expect(moveRotationOriginsBtnEnabled).not.toHaveClass(/disabled/)
+      await expect(moveRotationOriginsBtnSelected).not.toHaveClass(/disabled/)
 
-      // Verify the explanatory subtitle is not shown when enabled
-      await expect(moveRotationOriginsBtnEnabled.locator('.tool-subtitle')).not.toBeVisible()
-
-      // Verify the tooltip shows the normal description when enabled
-      await expect(moveRotationOriginsBtnEnabled).toHaveAttribute(
+      // Verify the tooltip shows the normal description when keys are selected
+      await expect(moveRotationOriginsBtnSelected).toHaveAttribute(
         'title',
-        'Move rotation origins to key centers for selected keys',
+        'Move rotation origins for selected keys',
       )
     })
   })

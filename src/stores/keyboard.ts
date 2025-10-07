@@ -961,46 +961,60 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     })
   }
 
-  // Debug function: Move rotation origins to key centers for selected keys without changing visual appearance
-  const moveRotationsToKeyCenters = () => {
+  // Move rotation origins to a specific position or key centers without changing visual appearance
+  // If position is null, moves to key centers (each key gets its own center)
+  // If position is provided, all keys use that shared position
+  // If targetKeys is provided, only those keys are affected; otherwise uses selectedKeys
+  const moveRotationOriginsToPosition = (
+    position: { x: number; y: number } | null,
+    targetKeys?: Key[],
+  ) => {
+    const keysToModify = targetKeys || selectedKeys.value
     let modifiedCount = 0
 
-    selectedKeys.value.forEach((key) => {
-      if (key.rotation_angle && key.rotation_angle !== 0) {
-        // Calculate visual center of the rotated key
-        const currentOriginX = key.rotation_x!
-        const currentOriginY = key.rotation_y!
-        const angle = key.rotation_angle
+    keysToModify.forEach((key) => {
+      if (position === null) {
+        // Mode 1: Move to key centers (each key uses its own center)
+        if (key.rotation_angle && key.rotation_angle !== 0) {
+          // Calculate visual center of the rotated key
+          const currentOriginX = key.rotation_x!
+          const currentOriginY = key.rotation_y!
+          const angle = key.rotation_angle
 
-        const angleRad = D.degreesToRadians(angle)
-        const cos = Math.cos(angleRad)
-        const sin = Math.sin(angleRad)
+          const angleRad = D.degreesToRadians(angle)
+          const cos = Math.cos(angleRad)
+          const sin = Math.sin(angleRad)
 
-        // Get unrotated center and transform it to visual center
-        const unrotatedCenterX = D.add(key.x, D.div(key.width || 1, 2))
-        const unrotatedCenterY = D.add(key.y, D.div(key.height || 1, 2))
+          // Get unrotated center and transform it to visual center
+          const unrotatedCenterX = D.add(key.x, D.div(key.width || 1, 2))
+          const unrotatedCenterY = D.add(key.y, D.div(key.height || 1, 2))
 
-        const dx_center = D.sub(unrotatedCenterX, currentOriginX)
-        const dy_center = D.sub(unrotatedCenterY, currentOriginY)
+          const dx_center = D.sub(unrotatedCenterX, currentOriginX)
+          const dy_center = D.sub(unrotatedCenterY, currentOriginY)
 
-        const visualCenterX = D.add(
-          currentOriginX,
-          D.sub(D.mul(dx_center, cos), D.mul(dy_center, sin)),
-        )
-        const visualCenterY = D.add(
-          currentOriginY,
-          D.add(D.mul(dx_center, sin), D.mul(dy_center, cos)),
-        )
+          const visualCenterX = D.add(
+            currentOriginX,
+            D.sub(D.mul(dx_center, cos), D.mul(dy_center, sin)),
+          )
+          const visualCenterY = D.add(
+            currentOriginY,
+            D.add(D.mul(dx_center, sin), D.mul(dy_center, cos)),
+          )
 
-        // Use generalized function to transform rotation origin
-        transformRotationOrigin(key, visualCenterX, visualCenterY)
-        modifiedCount++
+          // Use generalized function to transform rotation origin
+          transformRotationOrigin(key, visualCenterX, visualCenterY)
+          modifiedCount++
+        } else {
+          // For non-rotated keys, set rotation origin to their center
+          const centerX = D.add(key.x, D.div(key.width || 1, 2))
+          const centerY = D.add(key.y, D.div(key.height || 1, 2))
+          key.rotation_x = centerX
+          key.rotation_y = centerY
+          modifiedCount++
+        }
       } else {
-        // For non-rotated keys, set rotation origin to their center
-        const centerX = D.add(key.x, D.div(key.width || 1, 2))
-        const centerY = D.add(key.y, D.div(key.height || 1, 2))
-        key.rotation_x = centerX
-        key.rotation_y = centerY
+        // Mode 2: Move to specified position (all keys share this origin)
+        transformRotationOrigin(key, position.x, position.y)
         modifiedCount++
       }
     })
@@ -1008,6 +1022,11 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     if (modifiedCount > 0) {
       saveState()
     }
+  }
+
+  // Legacy method for backward compatibility
+  const moveRotationsToKeyCenters = () => {
+    moveRotationOriginsToPosition(null, selectedKeys.value)
   }
 
   // URL Sharing functionality
@@ -1272,6 +1291,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     cancelRotation,
     transformRotationOrigin,
     moveRotationsToKeyCenters,
+    moveRotationOriginsToPosition,
 
     // Movement functions
     moveSelectedKeys,
