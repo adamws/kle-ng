@@ -1086,14 +1086,17 @@ export class CanvasRenderer {
   }
 
   private drawHomingNub(params: KeyRenderParams) {
-    // Draw small dot or bar for homing keys (F and J)
+    // Draw horizontal line for homing keys, matching original KLE
+    // Original KLE uses a 10x2 pixel image positioned at center 90%
     const centerX = params.innercapx + params.innercapwidth / 2
-    const centerY = params.innercapy + params.innercapheight * 0.7
+    const centerY = params.innercapy + params.innercapheight * 0.9
+
+    // Draw a horizontal line (10 pixels wide, 2 pixels tall)
+    const lineWidth = 10
+    const lineHeight = 2
 
     this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'
-    this.ctx.beginPath()
-    this.ctx.arc(centerX, centerY, 2, 0, 2 * Math.PI)
-    this.ctx.fill()
+    this.ctx.fillRect(centerX - lineWidth / 2, centerY - lineHeight / 2, lineWidth, lineHeight)
   }
 
   private drawKeyLabels(key: Key, params: KeyRenderParams) {
