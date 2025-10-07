@@ -57,6 +57,12 @@ Just import your JSON files and continue where you left off.
 
 ## Features
 
+Keyboard canvas area support moving selection with mouse middle (scroll) click and drag.
+<img src="resources/gifs/mouse-move.gif">
+
+For precise movement use 'Move Exactly' tool.
+<img src="resources/gifs/move-with-tool.gif">
+
 ### Image and SVG Label Support
 
 Key labels support embedding images and SVG graphics, allowing for rich visual representation of icons, symbols, and custom graphics.
