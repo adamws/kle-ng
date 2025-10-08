@@ -80,11 +80,18 @@ It also supports movement in millimeters by defining the spacing (mm per U).
 
 By default, spacing is set to 19.05 mm/U for both X and Y, which is typical value for
 keyboards using Cherry MX style switches.
-<br><br><br><br><br><br><br><br><br><br>
+<br><br><br><br><br><br><br><br><br>
 
 ### Rotate Selection Tool
 Rotate selection around anchor points (key corners and centers) using the 'Rotate Selection' tool.
 <img src="resources/gifs/rotate-tool.gif">
+
+### Mirror Tool
+Create mirrored copies of selected keys by using 'Mirror Tool' and selecting a mirror axis position.
+Supports both vertical (default) and horizontal mirroring, which can be selected from the tool dropdown.
+The mirror axis position snaps to multiples of the step size.
+
+<img src="resources/gifs/mirror-tool.gif">
 
 ### Image and SVG Label Support
 
