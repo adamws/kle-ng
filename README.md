@@ -58,10 +58,18 @@ Just import your JSON files and continue where you left off.
 ## Features
 
 ### Selection Tool
+<img align="right" src="resources/gifs/key-selection.gif">
+
+Select keys with:
+- Click to select a single key
+- Use `Ctrl+[` and `Ctrl+]` to select previous/next key
+- Click and drag to create a rectangle selection
+- `Ctrl+Click` to add/remove keys from selection
+
 Move selected keys using:
 - Mouse middle (scroll) button click and drag
 - Arrow keys for keyboard-based movement
-- Select all, copy and paste with standard shortcuts (Ctrl+A, Ctrl+C, Ctrl+V)
+- Select all, copy and paste with standard shortcuts (`Ctrl+A`, `Ctrl+C`, `Ctrl+V`)
 
 <img src="resources/gifs/mouse-move.gif">
 
@@ -92,6 +100,7 @@ keyboards using Cherry MX style switches.
 
 ### Rotate Selection Tool
 Rotate selection around anchor points (key corners and centers) using the 'Rotate Selection' tool.
+
 <img src="resources/gifs/rotate-tool.gif">
 
 ### Mirror Tool
