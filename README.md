@@ -69,6 +69,14 @@ Movement snaps to a configurable step size (defined in U, where 1U is the width 
 
 <img src="resources/canvas-footer-left.png">
 
+The 'Lock rotations' option determines how movement of rotated keys is handled:
+- When **disabled**: The rotation origin (anchor) point remains stationary, and keys move in rotated coordinate space
+- When **enabled**: The rotation origin moves with the keys, maintaining a fixed relative position between keys and their rotation anchor. Movement occurs in normal coordinate space
+
+<img src="resources/gifs/lock-rotation-comparison.gif">
+
+In this example, keys are moved using arrow keys, but the same behavior applies when moving with the mouse.
+
 ### Move Exactly Tool
 For precise movement use 'Move Exactly' tool.
 
