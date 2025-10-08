@@ -57,11 +57,34 @@ Just import your JSON files and continue where you left off.
 
 ## Features
 
-Keyboard canvas area support moving selection with mouse middle (scroll) click and drag.
+### Selection Tool
+Move selected keys using:
+- Mouse middle (scroll) button click and drag
+- Arrow keys for keyboard-based movement
+- Select all, copy and paste with standard shortcuts (Ctrl+A, Ctrl+C, Ctrl+V)
+
 <img src="resources/gifs/mouse-move.gif">
 
+Movement snaps to a configurable step size (defined in U, where 1U is the width of a standard key) which can be set in the canvas footer.
+
+<img src="resources/canvas-footer-left.png">
+
+### Move Exactly Tool
 For precise movement use 'Move Exactly' tool.
+
 <img src="resources/gifs/move-with-tool.gif">
+
+<img align="left" src="resources/move-exactly-mm.png" height=300>
+The 'Move Exactly' tool allows movement to any position, not limited to step size multiples.
+It also supports movement in millimeters by defining the spacing (mm per U).
+
+By default, spacing is set to 19.05 mm/U for both X and Y, which is typical value for
+keyboards using Cherry MX style switches.
+<br><br><br><br><br><br><br><br><br><br>
+
+### Rotate Selection Tool
+Rotate selection around anchor points (key corners and centers) using the 'Rotate Selection' tool.
+<img src="resources/gifs/rotate-tool.gif">
 
 ### Image and SVG Label Support
 
