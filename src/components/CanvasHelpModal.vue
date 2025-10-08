@@ -40,6 +40,24 @@
                 <h6 class="section-title">Tips & Hints</h6>
                 <div class="tips-list">
                   <div class="tip-item">
+                    <i class="bi bi-book control-icon text-primary"></i>
+                    <div>
+                      <strong>Detailed Documentation</strong>
+                      <div>
+                        For comprehensive help, visit the
+                        <a
+                          href="https://github.com/adamws/kle-ng"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="github-link"
+                        >
+                          GitHub repository
+                          <i class="bi bi-box-arrow-up-right"></i>
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="tip-item">
                     <i class="bi bi-github control-icon"></i>
                     <div>
                       <strong>Gist Support</strong>
@@ -360,6 +378,25 @@ onUnmounted(() => {
 
 .feature-item strong {
   color: #007bff;
+}
+
+/* GitHub link styling */
+.github-link {
+  color: var(--bs-link-color);
+  text-decoration: none;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.github-link:hover {
+  text-decoration: underline;
+  color: var(--bs-link-hover-color);
+}
+
+.github-link i {
+  font-size: 0.875rem;
 }
 
 /* Responsive adjustments */
