@@ -37,16 +37,6 @@ What kle-ng tries to do better:
   - Improved visual feedback when editing keys
   - Dark theme
 
-Watch this short demo to see it in action:
-
-[kle-ng-corne-demo.webm](https://github.com/user-attachments/assets/11bee053-c40e-4803-a07c-5e7ea1a0aa73)
-
-Future plans:
-
-- **Import Ergogen layouts**: Direct integration with [ergogen](https://github.com/ergogen/ergogen) keyboard layouts
-- **Advanced layout templates**: Add more pre-built templates for common keyboard layouts
-- **Add more editing tools**
-
 ## Getting Started
 
 The kle-ng runs in your web browser - no installation required.
