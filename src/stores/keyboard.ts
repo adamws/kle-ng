@@ -16,6 +16,9 @@ import type { LayoutData } from '../utils/url-sharing'
 
 export { Key, KeyboardMetadata } from '@ijprest/kle-serial'
 
+// localStorage key for persisting lock rotations setting
+const LOCK_ROTATIONS_KEY = 'kle-ng-lock-rotations'
+
 export interface KeyboardState {
   keys: Key[]
   selectedKeys: Key[]
@@ -67,7 +70,13 @@ export const useKeyboardStore = defineStore('keyboard', () => {
 
   const canvasMode = ref<'select' | 'mirror-h' | 'mirror-v' | 'rotate' | 'move-exactly'>('select')
   const moveStep = ref(0.25)
-  const lockRotations = ref(false)
+
+  // Initialize lockRotations from localStorage
+  const getLockRotationsFromStorage = (): boolean => {
+    const stored = localStorage.getItem(LOCK_ROTATIONS_KEY)
+    return stored === 'true'
+  }
+  const lockRotations = ref(getLockRotationsFromStorage())
 
   const mouseDragMode = ref<'none' | 'key-move' | 'rect-select'>('none')
   const draggedKey: Ref<Key | null> = ref(null)
@@ -598,6 +607,8 @@ export const useKeyboardStore = defineStore('keyboard', () => {
 
   const setLockRotations = (locked: boolean) => {
     lockRotations.value = locked
+    // Persist to localStorage
+    localStorage.setItem(LOCK_ROTATIONS_KEY, String(locked))
   }
 
   const startKeyDrag = (key: Key, startPos: { x: number; y: number }) => {
