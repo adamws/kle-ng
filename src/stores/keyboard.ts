@@ -1212,7 +1212,13 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     saveState()
 
     // Calculate the center of each key and convert to matrix coordinates
+    // Skip decal and ghost keys as they don't represent physical switches
     keys.value.forEach((key) => {
+      // Ignore decal/ghost keys - they are decorative only
+      if (key.decal || key.ghost) {
+        return
+      }
+
       // Calculate key center accounting for rotation
       let centerX = D.add(key.x, D.div(key.width || 1, 2))
       let centerY = D.add(key.y, D.div(key.height || 1, 2))
