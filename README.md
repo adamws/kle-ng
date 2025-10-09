@@ -80,13 +80,13 @@ For precise movement use 'Move Exactly' tool.
 
 <img src="resources/gifs/move-with-tool.gif">
 
-<img align="left" src="resources/move-exactly-mm.png" height=300>
 The 'Move Exactly' tool allows movement to any position, not limited to step size multiples.
 It also supports movement in millimeters by defining the spacing (mm per U).
 
+<img src="resources/move-exactly-mm.png" height=300>
+
 By default, spacing is set to 19.05 mm/U for both X and Y, which is typical value for
 keyboards using Cherry MX style switches.
-<br><br><br><br><br><br><br><br><br>
 
 ### Rotate Selection Tool
 Rotate selection around anchor points (key corners and centers) using the 'Rotate Selection' tool.
