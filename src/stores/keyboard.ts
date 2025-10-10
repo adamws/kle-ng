@@ -411,13 +411,25 @@ export const useKeyboardStore = defineStore('keyboard', () => {
         // Legacy format: array of keys
         keys.value = JSON.parse(JSON.stringify(layout)) // Deep copy
         if (layoutMetadata) {
-          metadata.value = { ...metadata.value, ...layoutMetadata }
+          // Replace metadata entirely to clear any custom fields (like VIA metadata)
+          // Merge with defaults to ensure all standard properties exist
+          const defaults = new KeyboardMetadata()
+          metadata.value = { ...defaults, ...JSON.parse(JSON.stringify(layoutMetadata)) }
+        } else {
+          // No metadata provided, reset to defaults
+          metadata.value = new KeyboardMetadata()
         }
       } else {
         // New format: object with keys and metadata
         keys.value = JSON.parse(JSON.stringify(layout.keys)) // Deep copy
         if (layout.metadata) {
-          metadata.value = { ...metadata.value, ...layout.metadata }
+          // Replace metadata entirely to clear any custom fields (like VIA metadata)
+          // Merge with defaults to ensure all standard properties exist
+          const defaults = new KeyboardMetadata()
+          metadata.value = { ...defaults, ...JSON.parse(JSON.stringify(layout.metadata)) }
+        } else {
+          // No metadata provided, reset to defaults
+          metadata.value = new KeyboardMetadata()
         }
       }
       selectedKeys.value = []
@@ -518,7 +530,10 @@ export const useKeyboardStore = defineStore('keyboard', () => {
 
     try {
       keys.value = JSON.parse(JSON.stringify(keyboard.keys)) // Deep copy
-      metadata.value = { ...metadata.value, ...keyboard.meta }
+      // Replace metadata entirely to clear any custom fields (like VIA metadata)
+      // Merge with defaults to ensure all standard properties exist
+      const defaults = new KeyboardMetadata()
+      metadata.value = { ...defaults, ...JSON.parse(JSON.stringify(keyboard.meta)) }
       selectedKeys.value = []
       // Don't clear history - this preserves undo functionality
       saveState() // This adds current state to history

@@ -108,6 +108,26 @@ test.describe('JSON Import/Export Functionality', () => {
       // Take screenshot to verify rotated keys
       await expect(page.locator('.keyboard-canvas')).toHaveScreenshot('rotated-keys-imported.png')
     })
+
+    test('should import VIA format layout', async ({ page }) => {
+      // Import VIA format layout
+      const filePath = path.resolve('e2e/fixtures', 'via-layout.json')
+
+      const fileChooserPromise = page.waitForEvent('filechooser')
+      await page.locator('button', { hasText: 'Import' }).click()
+      const fileChooser = await fileChooserPromise
+      await fileChooser.setFiles(filePath)
+
+      // Should have 8 keys (2 rows x 4 keys each)
+      await expect(page.locator('.keys-counter')).toContainText('Keys: 8')
+
+      // Verify success message indicates VIA format
+      await expect(page.locator('.toast-notification')).toBeVisible()
+      await expect(page.locator('.toast-title')).toContainText('Import successful')
+
+      // Take screenshot to verify VIA layout was imported
+      await expect(page.locator('.keyboard-canvas')).toHaveScreenshot('via-layout-imported.png')
+    })
   })
 
   test.describe('PNG Export Tests', () => {

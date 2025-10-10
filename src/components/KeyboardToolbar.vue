@@ -55,6 +55,9 @@
             <button @click="handleExportAction(downloadKleInternalJson)" class="dropdown-item">
               Download KLE Internal JSON
             </button>
+            <button @click="handleExportAction(downloadViaJson)" class="dropdown-item">
+              Download VIA JSON
+            </button>
             <button @click="handleExportAction(downloadPng)" class="dropdown-item">
               Download PNG
             </button>
@@ -87,6 +90,8 @@ import { parseJsonString } from '@/utils/serialization'
 import { toast } from '@/composables/useToast'
 import { parseBorderRadius, createRoundedRectanglePath } from '@/utils/border-radius'
 import { createPngWithKleLayout, extractKleLayout, hasKleMetadata } from '@/utils/png-metadata'
+import { isViaFormat, convertViaToKle, convertKleToVia } from '@/utils/via-import'
+import LZString from 'lz-string'
 
 // Store
 const keyboardStore = useKeyboardStore()
@@ -154,6 +159,11 @@ const triggerFileUpload = () => {
 
 import type { Key, KeyboardMetadata } from '@/stores/keyboard'
 
+// Extend KeyboardMetadata to include VIA custom data
+interface ExtendedKeyboardMetadata extends KeyboardMetadata {
+  _kleng_via_data?: string
+}
+
 // Define a type for the internal KLE format
 interface InternalKleFormat {
   meta: KeyboardMetadata
@@ -211,7 +221,35 @@ const handleFileUpload = async (event: Event) => {
     const data = parseJsonString(text)
 
     // Auto-detect format and load accordingly
-    if (isInternalKleFormat(data)) {
+    if (isViaFormat(data)) {
+      // VIA format - convert to KLE with embedded VIA metadata
+      console.log(`Loading VIA format from: ${file.name}`)
+
+      try {
+        const kleData = convertViaToKle(data)
+        keyboardStore.loadKLELayout(kleData)
+
+        // Manually add the VIA metadata after kle-serial processes the data
+        // Extract the compressed VIA metadata from the converted KLE data
+        const viaDataObj = data as Record<string, unknown>
+        const viaCopy = JSON.parse(JSON.stringify(viaDataObj))
+        const layouts = viaCopy.layouts as Record<string, unknown>
+        delete layouts.keymap // Remove keymap to get only VIA-specific metadata
+
+        // Compress the VIA metadata
+        const viaMetadataJson = JSON.stringify(viaCopy)
+        const compressedViaData = LZString.compressToBase64(viaMetadataJson)
+
+        // Add it to the keyboard metadata using type assertion
+        ;(keyboardStore.metadata as ExtendedKeyboardMetadata)._kleng_via_data = compressedViaData
+
+        toast.showSuccess(`VIA layout loaded from ${file.name}`, 'Import successful')
+      } catch (error) {
+        console.error('Error converting VIA format:', error)
+        const errorMessage = error instanceof Error ? error.message : 'Failed to convert VIA format'
+        toast.showError(errorMessage, 'VIA Import Failed')
+      }
+    } else if (isInternalKleFormat(data)) {
       // Internal KLE format with meta and keys
       console.log(`Loading internal KLE format from: ${file.name}`)
 
@@ -255,6 +293,30 @@ const downloadKleInternalJson = () => {
   const a = document.createElement('a')
   a.href = url
   a.download = `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}-internal.json`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+const downloadViaJson = () => {
+  // Get the KLE data
+  const kleData = keyboardStore.getSerializedData('kle')
+
+  // Convert to VIA format
+  const viaData = convertKleToVia(kleData)
+
+  if (!viaData) {
+    toast.showError(
+      'VIA metadata not found. Import a VIA layout or add VIA metadata in the Keyboard Metadata tab.',
+      'Cannot export VIA JSON',
+    )
+    return
+  }
+
+  const blob = new Blob([JSON.stringify(viaData, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}-via.json`
   a.click()
   URL.revokeObjectURL(url)
 }

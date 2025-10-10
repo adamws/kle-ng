@@ -131,6 +131,88 @@ Images are aligned to the **inner keycap surface** (the top face of the key, exc
 
 - SVG must include explicit `width` and `height` attributes
 
+## Import/Export
+
+### Supported Formats
+
+kle-ng supports importing and exporting keyboard layouts in multiple formats:
+
+**Standard KLE Format**
+- Import and export layouts in the standard Keyboard Layout Editor JSON [format](https://github.com/ijprest/kle-serial)
+- Compatible with layouts from keyboard-layout-editor.com
+- Supports both raw array format and internal format with metadata
+
+**PNG Format**
+- Export layouts as PNG images with embedded layout data for documentation and sharing
+- Import PNG files with embedded layout data to recover the editable layout
+
+**VIA/Vial Format**
+
+[VIA](https://www.caniusevia.com/) and [Vial](https://get.vial.today/) are keyboard configuration tools
+that use a special JSON format.
+VIA format is a JSON structure that wraps KLE data with additional metadata.
+The `keymap` field contains standard KLE raw data (the layout), while the rest contains VIA-specific metadata.
+On import, kle-ng converts VIA format to KLE format, preserving extra metadata in a special KLE-compatible
+`_kleng_via_data` field.
+
+<table>
+<tr>
+<td>Imported file</td>
+<td>Import result</td>
+</tr>
+<tr>
+<td>
+
+```json
+{
+  "name": "Test VIA Layout",
+  "vendorId": "0x1234",
+  "productId": "0x5678",
+  "matrix": {
+    "rows": 2,
+    "cols": 4
+  },
+  "layouts": {
+    "keymap": [
+      ["0,0", "0,1", "0,2", "0,3"],
+      ["1,0", "1,1", "1,2", "1,3"]
+    ]
+  }
+}
+```
+</td>
+<td>
+
+```json
+[
+  {
+    "_kleng_via_data": "[compressed-base64-string]"
+  },
+  ["0,0", "0,1", "0,2", "0,3"],
+  ["1,0", "1,1", "1,2", "1,3"]
+]
+```
+
+<a href="http://editor.keyboard-tools.xyz/#share=NobwRA+g1gNgpgOwOYQG4EsCGEAmmAumYAXGAHIAsAkkjkgBZL5IAO6AQgMZUCCAjgFkAIgHkeADR7seZAIoApKgFEAYgJ4AtAMI8AKgHcAEgGd24nEp4BxejyGcAmvr2ck8gIwAPBwCUePBx4ABR4qZwBbHgFnAHURdH8RAHZOdAAGAHt2ACscFU8KHQAnO0Ck-woWAFUtEQQHdgAZADMkGHYATx4kviRdIQA2dAAOJHZ8ACNhzlkVAE4B3WMYcQBlVCQkgFcAVn8AXjAAXwAaYDA0k7SwE4uT9xu7gCZHy4BmMABdM7B3K8e-g9bn8XsCTh9Pp8gA">
+  <img src="resources/layout-with-via-metadata.png">
+</a>
+
+(click to open in editor)
+</td>
+</tr>
+</table>
+
+This way, kle-ng maintains KLE format compatibility and also allows you to edit and reconstruct (export) the layout back to VIA format.
+VIA metadata can be viewed and edited in the **Keyboard Metadata** panel under the **VIA Metadata** section.
+
+<img src="resources/keyboard-metadata-panel.png">
+
+At this moment, kle-ng does not validate the content of the **VIA Metadata** field.
+It is the user's responsibility to maintain VIA format [specification](https://www.caniusevia.com/docs/specification).
+
+Layouts which contain `_kleng_via_data` metadata can be exported back to VIA JSON format.
+Exporting works by decompressing the `_kleng_via_data` field and injecting layout data back to the `layouts` value.
+
 ## Compatibility
 
 The kle-ng maintains compatibility with standard KLE JSON format for layouts.
