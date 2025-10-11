@@ -224,7 +224,19 @@ It is the user's responsibility to maintain VIA format [specification](https://w
 Layouts which contain `_kleng_via_data` metadata can be exported back to VIA JSON format.
 Exporting works by decompressing the `_kleng_via_data` field and injecting layout data back to the `layouts` value.
 
-### Share Links
+### Importing
+
+kle-ng supports multiple ways to import keyboard layouts:
+
+- **File Import**: Click the `Import` button or drag and drop layout files directly to the editor
+- **Share Links**: Open layouts shared via URL (see Share Links section below)
+- **GitHub Gist**: Import directly from GitHub Gists via URL (see Import from GitHub Gist section below)
+
+<img src="resources/gifs/file-drag-and-drop.gif">
+
+Supported file formats: JSON (KLE format), PNG (with embedded layout data), VIA/Vial JSON
+
+#### Share Links
 
 kle-ng provides a quick way to share your keyboard layouts with others using compressed URL share links.
 
@@ -237,7 +249,7 @@ kle-ng provides a quick way to share your keyboard layouts with others using com
 The share link contains your entire layout encoded in the URL hash (e.g., [`#share=NrDeC...`](https://editor.keyboard-tools.xyz/#share=NrDeCICdwLgZgKwIDRQB6wIysgT1gCyoYwC024+ZR4AhrAAwC+q4AusmOCeS+O5wg9MfAV2GiOXaDAY4ScqFUUkKVUgwB0AJgSTB3LPvFHWUoaf7nDMbanUFjF205vbXJd2YMyakEnA4VHCaAOwolLCkjt7AVpzxcWIQMph+AZoAnJnhAGwEmPkMmXCh2UGwIQAcmDkIuXBwDIWNmQyBNuSa7QgExdlw2tm5CLUApqSh9lFa2XOZVQRVVdpVcLntrjLa6YRZuaFVCDkHCOuZxxUwBN25hYcEBNrahf3EUSEHL2dVuQuhaQYRwmVWmZEw3QYUOhy3qoVCfxEZjYQA)).
 The layout data is compressed using LZ-String compression to create compact, shareable URLs.
 
-### Import from GitHub Gist
+#### Import from GitHub Gist
 
 In addition to share links, kle-ng supports importing keyboard layouts directly from GitHub Gists.
 
