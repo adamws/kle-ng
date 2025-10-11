@@ -49,6 +49,7 @@
           <div class="d-flex align-items-center gap-3">
             <label class="form-label small mb-0 text-nowrap">Rotation Change:</label>
             <CustomNumberInput
+              ref="angleInputRef"
               :model-value="currentAngle"
               @update:modelValue="updateAngle"
               @change="updateAngle"
@@ -96,7 +97,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useDraggablePanel } from '@/composables/useDraggablePanel'
 import CustomNumberInput from './CustomNumberInput.vue'
 
@@ -122,6 +123,8 @@ const emit = defineEmits<Emits>()
 
 // Local state - this represents the rotation DELTA (change), not absolute angle
 const currentAngle = ref(0)
+// Ref to the angle input component
+const angleInputRef = ref<InstanceType<typeof CustomNumberInput>>()
 // Dragging functionality with viewport bounds checking
 const { position, panelRef, handleMouseDown, handleHeaderMouseDown, initializePosition } =
   useDraggablePanel({
@@ -173,6 +176,27 @@ watch(
       currentAngle.value = 0
       // Position panel near the center-right of the screen
       initializePosition({ x: window.innerWidth - 400, y: 100 })
+    }
+  },
+)
+
+// Watch for rotation origin changes to auto-focus the input
+watch(
+  () => props.rotationOrigin,
+  async (newOrigin, oldOrigin) => {
+    // Focus the input when rotation origin is set (changes from null to a value)
+    if (newOrigin && !oldOrigin) {
+      // Wait for DOM update to complete
+      await nextTick()
+
+      // Auto-focus and select the angle input for better UX
+      const angleInput = document.querySelector(
+        '.rotation-panel input[type="number"]',
+      ) as HTMLInputElement
+      if (angleInput) {
+        angleInput.focus()
+        angleInput.select() // Select the text for easy replacement
+      }
     }
   },
 )
