@@ -64,7 +64,7 @@
                       <CustomNumberInput
                         v-model="currentWidth"
                         @change="updateWidth"
-                        :step="moveStep"
+                        :step="0.25"
                         :min="0.25"
                         :max="24"
                         title="Width"
@@ -75,7 +75,7 @@
                       <CustomNumberInput
                         v-model="currentHeight"
                         @change="updateHeight"
-                        :step="moveStep"
+                        :step="0.25"
                         :min="0.25"
                         :max="24"
                         title="Height"
@@ -237,7 +237,7 @@
                       <CustomNumberInput
                         v-model="currentWidth"
                         @change="updateWidth"
-                        :step="moveStep"
+                        :step="0.25"
                         :min="0.25"
                         :max="24"
                         title="Width"
@@ -248,7 +248,7 @@
                       <CustomNumberInput
                         v-model="currentHeight"
                         @change="updateHeight"
-                        :step="moveStep"
+                        :step="0.25"
                         :min="0.25"
                         :max="24"
                         title="Height"
@@ -259,7 +259,7 @@
                       <CustomNumberInput
                         v-model="currentWidth2"
                         @change="updateWidth2"
-                        :step="moveStep"
+                        :step="0.25"
                         :min="0.25"
                         :max="24"
                         title="Secondary Width"
@@ -270,7 +270,7 @@
                       <CustomNumberInput
                         v-model="currentHeight2"
                         @change="updateHeight2"
-                        :step="moveStep"
+                        :step="0.25"
                         :min="0.25"
                         :max="24"
                         title="Secondary Height"
