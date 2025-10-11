@@ -24,18 +24,13 @@ What's wrong with the original Keyboard Layout Editor?
 What kle-ng tries to do better:
 
 - **Smoother Editing Experience**
-  - Fast, responsive canvas-based rendering that handles large layouts effortlessly
+  - Fast, responsive canvas-based rendering
   - Precise key selection and positioning with visual feedback
-  - Intuitive drag-and-drop for moving keys around
+  - Intuitive mouse based drag-and-drop for moving keys around
 - **Better Workflow**
-  - Improved keyboard shortcuts for faster editing, better mouse support
   - Cleaner, more organized interface that gets out of your way
-  - Extra tools for creating split layouts
-  - Minor tweaks improving key rotation handling
-- **Modern Features**
-  - Better color picker with multiple format support
-  - Improved visual feedback when editing keys
-  - Dark theme
+  - Improved keyboard shortcuts for faster editing, better mouse support
+  - Extra tools for key [rotations](#rotate-selection-tool) and creating [split](#mirror-tool) layouts
 
 ## Getting Started
 
