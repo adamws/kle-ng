@@ -12,6 +12,7 @@ import CanvasFooter from './components/CanvasFooter.vue'
 import CanvasHelpModal from './components/CanvasHelpModal.vue'
 import ToastContainer from './components/ToastContainer.vue'
 import ThemeToggle from './components/ThemeToggle.vue'
+import GitHubStarPopup from './components/GitHubStarPopup.vue'
 import { useKeyboardStore } from '@/stores/keyboard'
 import { useTheme } from '@/composables/useTheme'
 
@@ -387,6 +388,9 @@ const stopResize = () => {
 
     <!-- Toast Notifications -->
     <ToastContainer />
+
+    <!-- GitHub Star Encouragement Popup -->
+    <GitHubStarPopup />
   </div>
 </template>
 
