@@ -67,7 +67,7 @@ describe('AddMatrixCoordinatesModal', () => {
       const infoSection = wrapper.find('.info-section')
       expect(infoSection.exists()).toBe(true)
       expect(infoSection.text()).toContain('Matrix coordinates map')
-      expect(infoSection.text()).toContain('VIA firmware')
+      expect(infoSection.text()).toContain('VIA configurator')
     })
 
     it('should display help link to VIA documentation', () => {

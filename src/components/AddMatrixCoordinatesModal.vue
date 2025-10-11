@@ -45,11 +45,11 @@
               <h6 class="mb-2 text-warning">Important Notice</h6>
               <p class="mb-2 small">
                 Running this tool will <strong>remove all existing legends</strong> from all keys
-                and replace them with matrix coordinates in "row,column" format via annotations.
+                and replace them with matrix coordinates in "row,column" format.
               </p>
               <p class="mb-0 small">
                 The matrix coordinates will be placed in the top-left legend position (position 0)
-                on each key, following the VIA layout format standard.
+                on each key, following the VIA format standard.
               </p>
             </div>
           </div>
@@ -62,11 +62,11 @@
             <div class="flex-grow-1">
               <p class="mb-2 small">
                 Matrix coordinates map the physical layout to the electrical switch matrix, enabling
-                proper key mapping in VIA firmware configuration.
+                proper key mapping in VIA configurator.
               </p>
               <p class="mb-2 small">
-                The algorithm calculates coordinates based on each key's center position, accounting
-                for rotation and size.
+                The algorithm assigns matrix position based on each key's center position,
+                accounting for rotation and size.
               </p>
               <p class="mb-2 small">
                 Learn more about VIA layouts:
