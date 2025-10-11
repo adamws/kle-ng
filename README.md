@@ -48,15 +48,18 @@ Just import your JSON files and continue where you left off.
 ## Features
 
 ### Selection Tool
+
 <img align="right" src="resources/gifs/key-selection.gif">
 
 Select keys with:
+
 - Click to select a single key
 - Use `Ctrl+[` and `Ctrl+]` to select previous/next key
 - Click and drag to create a rectangle selection
 - `Ctrl+Click` to add/remove keys from selection
 
 Move selected keys using:
+
 - Mouse middle (scroll) button click and drag
 - Arrow keys for keyboard-based movement
 - Select all, copy and paste with standard shortcuts (`Ctrl+A`, `Ctrl+C`, `Ctrl+V`)
@@ -68,6 +71,7 @@ Movement snaps to a configurable step size (defined in U, where 1U is the width 
 <img src="resources/canvas-footer-left.png">
 
 The 'Lock rotations' option determines how movement of rotated keys is handled:
+
 - When **disabled**: The rotation origin (anchor) point remains stationary, and keys move in rotated coordinate space
 - When **enabled**: The rotation origin moves with the keys, maintaining a fixed relative position between keys and their rotation anchor. Movement occurs in normal coordinate space
 
@@ -76,6 +80,7 @@ The 'Lock rotations' option determines how movement of rotated keys is handled:
 In this example, keys are moved using arrow keys, but the same behavior applies when moving with the mouse.
 
 ### Move Exactly Tool
+
 For precise movement use 'Move Exactly' tool.
 
 <img src="resources/gifs/move-with-tool.gif">
@@ -89,11 +94,13 @@ By default, spacing is set to 19.05 mm/U for both X and Y, which is typical valu
 keyboards using Cherry MX style switches.
 
 ### Rotate Selection Tool
+
 Rotate selection around anchor points (key corners and centers) using the 'Rotate Selection' tool.
 
 <img src="resources/gifs/rotate-tool.gif">
 
 ### Mirror Tool
+
 Create mirrored copies of selected keys by using 'Mirror Tool' and selecting a mirror axis position.
 Supports both vertical (default) and horizontal mirroring, which can be selected from the tool dropdown.
 The mirror axis position snaps to multiples of the step size.
@@ -138,11 +145,13 @@ Images are aligned to the **inner keycap surface** (the top face of the key, exc
 kle-ng supports importing and exporting keyboard layouts in multiple formats:
 
 **Standard KLE Format**
+
 - Import and export layouts in the standard Keyboard Layout Editor JSON [format](https://github.com/ijprest/kle-serial)
 - Compatible with layouts from keyboard-layout-editor.com
 - Supports both raw array format and internal format with metadata
 
 **PNG Format**
+
 - Export layouts as PNG images with embedded layout data for documentation and sharing
 - Import PNG files with embedded layout data to recover the editable layout
 
@@ -180,6 +189,7 @@ On import, kle-ng converts VIA format to KLE format, preserving extra metadata i
   }
 }
 ```
+
 </td>
 <td>
 
@@ -198,6 +208,7 @@ On import, kle-ng converts VIA format to KLE format, preserving extra metadata i
 </a>
 
 (click to open in editor)
+
 </td>
 </tr>
 </table>
@@ -212,6 +223,43 @@ It is the user's responsibility to maintain VIA format [specification](https://w
 
 Layouts which contain `_kleng_via_data` metadata can be exported back to VIA JSON format.
 Exporting works by decompressing the `_kleng_via_data` field and injecting layout data back to the `layouts` value.
+
+### Share Links
+
+kle-ng provides a quick way to share your keyboard layouts with others using compressed URL share links.
+
+**Creating a Share Link:**
+
+1. Click the **Share Link** button in the toolbar (next to Import/Export)
+2. The shareable link will be automatically copied to your clipboard
+3. Share the link with others - they can open it to view your layout
+
+The share link contains your entire layout encoded in the URL hash (e.g., [`#share=NrDeC...`](https://editor.keyboard-tools.xyz/#share=NrDeCICdwLgZgKwIDRQB6wIysgT1gCyoYwC024+ZR4AhrAAwC+q4AusmOCeS+O5wg9MfAV2GiOXaDAY4ScqFUUkKVUgwB0AJgSTB3LPvFHWUoaf7nDMbanUFjF205vbXJd2YMyakEnA4VHCaAOwolLCkjt7AVpzxcWIQMph+AZoAnJnhAGwEmPkMmXCh2UGwIQAcmDkIuXBwDIWNmQyBNuSa7QgExdlw2tm5CLUApqSh9lFa2XOZVQRVVdpVcLntrjLa6YRZuaFVCDkHCOuZxxUwBN25hYcEBNrahf3EUSEHL2dVuQuhaQYRwmVWmZEw3QYUOhy3qoVCfxEZjYQA)).
+The layout data is compressed using LZ-String compression to create compact, shareable URLs.
+
+### Import from GitHub Gist
+
+In addition to share links, kle-ng supports importing keyboard layouts directly from GitHub Gists.
+
+**Importing from a Gist:**
+
+You can import a layout from a GitHub Gist by using a URL in following formats
+- [https://editor.keyboard-tools.xyz/#gist=GIST_ID](https://editor.keyboard-tools.xyz/#gist=e0ee43da3b3b096bfdd60d54c7487e8b)
+- [https://editor.keyboard-tools.xyz/#gist=https://gist.github.com/username/GIST_ID](https://editor.keyboard-tools.xyz/#gist=https://gist.github.com/adamws/e0ee43da3b3b096bfdd60d54c7487e8b)
+
+**Gist File Requirements:**
+
+- The gist must contain at least one JSON file with KLE layout data, for example:
+  - https://gist.github.com/adamws/e0ee43da3b3b096bfdd60d54c7487e8b
+- kle-ng will automatically search for layout files in this priority order:
+  1. `layout.json`
+  2. `keyboard.json`
+  3. `kle.json`
+  4. Any file containing "layout" or "keyboard" in the name
+  5. Any `.json` file
+- The JSON file must contain a valid KLE layout in array format
+
+**Note:** GitHub API has rate limits for unauthenticated requests. If you encounter rate limit errors, wait a few minutes before trying again.
 
 ## Compatibility
 
