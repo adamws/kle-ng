@@ -265,6 +265,7 @@ You can import a layout from a GitHub Gist by using a URL in following formats
 
 The kle-ng maintains compatibility with standard KLE JSON format for layouts.
 However, **100% compatibility is not a goal**.
+Same layout files might render slightly differently on [keyboard-layout-editor](https://www.keyboard-layout-editor.com/) and [kle-ng](https://editor.keyboard-tools.xyz/).
 The following features are intentionally not supported:
 
 - Different key profiles (appearance of keycaps). There is single default keycap rendering style.
