@@ -54,8 +54,12 @@
               @update:modelValue="updateAngle"
               @change="updateAngle"
               :step="1"
+              :ctrl-step="5"
               :min="-360"
               :max="360"
+              :wrap-around="true"
+              :wrap-min="-360"
+              :wrap-max="360"
               :disabled="!rotationOrigin"
             >
               <template #suffix>degrees</template>
