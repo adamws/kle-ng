@@ -13,6 +13,7 @@ import {
   clearGistFromUrl,
 } from '../utils/url-sharing'
 import type { LayoutData } from '../utils/url-sharing'
+import { useFontStore } from './font'
 
 export { Key, KeyboardMetadata } from '@ijprest/kle-serial'
 
@@ -415,6 +416,12 @@ export const useKeyboardStore = defineStore('keyboard', () => {
           // Merge with defaults to ensure all standard properties exist
           const defaults = new KeyboardMetadata()
           metadata.value = { ...defaults, ...JSON.parse(JSON.stringify(layoutMetadata)) }
+
+          // Apply font settings from CSS metadata if present
+          if (layoutMetadata.css) {
+            const fontStore = useFontStore()
+            fontStore.applyFromCssMetadata(layoutMetadata.css)
+          }
         } else {
           // No metadata provided, reset to defaults
           metadata.value = new KeyboardMetadata()
@@ -427,6 +434,12 @@ export const useKeyboardStore = defineStore('keyboard', () => {
           // Merge with defaults to ensure all standard properties exist
           const defaults = new KeyboardMetadata()
           metadata.value = { ...defaults, ...JSON.parse(JSON.stringify(layout.metadata)) }
+
+          // Apply font settings from CSS metadata if present
+          if (layout.metadata.css) {
+            const fontStore = useFontStore()
+            fontStore.applyFromCssMetadata(layout.metadata.css)
+          }
         } else {
           // No metadata provided, reset to defaults
           metadata.value = new KeyboardMetadata()

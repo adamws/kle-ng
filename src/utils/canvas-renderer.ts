@@ -9,6 +9,7 @@ export interface RenderOptions {
   background: string
   showGrid?: boolean
   scale?: number
+  fontFamily?: string
 }
 
 export interface KeyRenderParams {
@@ -1157,8 +1158,9 @@ export class CanvasRenderer {
         fontSize = Math.min(10, fontSize * 0.8) // Front labels are smaller
       }
 
-      // Use more web-safe fonts that match original better
-      this.ctx.font = `${fontSize}px "Helvetica Neue", Helvetica, Arial, sans-serif`
+      // Use font from options or fall back to default
+      const fontFamily = this.options.fontFamily || '"Helvetica Neue", Helvetica, Arial, sans-serif'
+      this.ctx.font = `${fontSize}px ${fontFamily}`
 
       // Apply new baseline positioning only to top labels (0-8), keep original for front labels (9-11)
       if (index >= 9) {
@@ -1500,7 +1502,7 @@ export class CanvasRenderer {
    */
   private buildFontStyle(bold: boolean, italic: boolean): string {
     const baseFontSize = parseInt(this.ctx.font.match(/\d+/)?.[0] || '12')
-    const fontFamily = '"Helvetica Neue", Helvetica, Arial, sans-serif'
+    const fontFamily = this.options.fontFamily || '"Helvetica Neue", Helvetica, Arial, sans-serif'
 
     const stylePrefix = `${italic ? 'italic ' : ''}${bold ? 'bold ' : ''}`
     return `${stylePrefix}${baseFontSize}px ${fontFamily}`

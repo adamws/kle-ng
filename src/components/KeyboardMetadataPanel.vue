@@ -61,17 +61,41 @@
               </div>
             </div>
 
-            <!-- Right sub-column: Notes -->
+            <!-- Right sub-column: Notes and CSS -->
             <div class="col-md-6">
               <div class="h-100 d-flex flex-column">
-                <label class="form-label small mb-1">Notes</label>
-                <textarea
-                  v-model="currentNotes"
-                  @input="updateMetadata('notes', currentNotes)"
-                  class="form-control form-control-sm flex-grow-1"
-                  placeholder="Add notes about your keyboard layout..."
-                  style="min-height: 120px; resize: none"
-                ></textarea>
+                <div class="mb-2">
+                  <label class="form-label small mb-1">Notes</label>
+                  <textarea
+                    v-model="currentNotes"
+                    @input="updateMetadata('notes', currentNotes)"
+                    class="form-control form-control-sm"
+                    placeholder="Add notes about your keyboard layout..."
+                    style="min-height: 60px; resize: none"
+                  ></textarea>
+                </div>
+                <div class="flex-grow-1 d-flex flex-column">
+                  <div class="d-flex justify-content-between">
+                    <label class="form-label small mb-1">CSS</label>
+                    <!-- TODO: CSS help modal
+                    <button
+                      class="btn btn-sm btn-outline-secondary css-help-btn"
+                      title="Help"
+                    >
+                      <i class="bi bi-question-circle"></i>
+                    </button>
+                    -->
+                  </div>
+                  <textarea
+                    v-model="currentCss"
+                    @input="updateCssInput"
+                    @blur="updateCssBlur"
+                    class="form-control form-control-sm font-monospace flex-grow-1"
+                    placeholder="Custom CSS (only fonts impact render, see help)..."
+                    style="min-height: 0; resize: none; font-size: 0.65rem"
+                    spellcheck="false"
+                  ></textarea>
+                </div>
               </div>
             </div>
           </div>
@@ -136,11 +160,13 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useKeyboardStore } from '@/stores/keyboard'
+import { useFontStore } from '@/stores/font'
 import ColorPicker from './ColorPicker.vue'
 import ViaHelpModal from './ViaHelpModal.vue'
 import LZString from 'lz-string'
 
 const keyboardStore = useKeyboardStore()
+const fontStore = useFontStore()
 
 // Help modal state
 const isViaHelpVisible = ref(false)
@@ -157,6 +183,7 @@ const closeViaHelp = () => {
 const currentName = ref('')
 const currentAuthor = ref('')
 const currentNotes = ref('')
+const currentCss = ref('')
 const currentBackcolor = ref('#ffffff')
 const currentRadii = ref('')
 
@@ -245,6 +272,7 @@ const updateCurrentValues = () => {
   currentName.value = metadata.name || ''
   currentAuthor.value = metadata.author || ''
   currentNotes.value = metadata.notes || ''
+  currentCss.value = metadata.css || ''
   currentBackcolor.value = metadata.backcolor || '#ffffff'
   currentRadii.value = metadata.radii || ''
 
@@ -266,6 +294,23 @@ const updateMetadata = (field: keyof typeof keyboardStore.metadata, value: strin
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(keyboardStore.metadata as any)[field] = value
   keyboardStore.saveState()
+}
+
+// Update CSS input (while typing) - save to store but don't reload fonts
+const updateCssInput = () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(keyboardStore.metadata as any).css = currentCss.value
+  keyboardStore.saveState()
+}
+
+// Update CSS on blur (when field loses focus) - apply font settings
+const updateCssBlur = () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(keyboardStore.metadata as any).css = currentCss.value
+  keyboardStore.saveState()
+
+  // Apply font settings when user finishes editing (with notification)
+  fontStore.applyFromCssMetadata(currentCss.value, true)
 }
 
 // Live preview background color update (no state save)
@@ -351,5 +396,19 @@ const updateBackcolor = () => {
 
 .help-btn i {
   font-size: 1rem;
+}
+
+.css-help-btn {
+  font-size: 0.7rem;
+  line-height: 1;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.css-help-btn i {
+  font-size: 0.7rem;
 }
 </style>

@@ -283,6 +283,39 @@ You can import a layout from a GitHub Gist by using a URL in following formats
 
 **Note:** GitHub API has rate limits for unauthenticated requests. If you encounter rate limit errors, wait a few minutes before trying again.
 
+## Custom Fonts
+
+The original Keyboard Layout Editor provided [fine grained](https://github.com/ijprest/keyboard-layout-editor/wiki/Custom-Styles)
+control over keyboard CSS style via `css` metadata field defined in a layout.
+This allowed to use any web font (like Google Fonts) for **any** label position
+to display international characters, special symbols, or stylistic typography on keyboard render.
+The kle-ng supports only a minimal subset of CSS specifically for loading fonts:
+
+**Supported CSS syntax:**
+- `@import url(...)` - Loads external font stylesheet (e.g., Google Fonts)
+
+The font name is automatically extracted from the URL and applied globally to all canvas text.
+It is not possible to define different fonts for different key labels.
+All other CSS expressions are ignored and have no effect.
+
+**Steps to add a custom font:**
+
+1. Open the **Keyboard Metadata** panel
+2. In the **CSS** field, add an `@import` statement with your font URL (from Google Fonts)
+3. The font name will be automatically extracted from the URL and applied to the canvas rendering
+
+Below image has been generated on a system **without** Japanese fonts installed:
+<a href="http://editor.keyboard-tools.xyz/#share=NobwRAxgzlYFxgAIEsC2AHA9gJwC4AIBXbAGwAoALXXdKOAenoDNMA7XKAOgHNNNuSAUwCG6ZFwiZU9aFABMAfibDUyEgE8AvADlMuTAGoAysNZQDAKQAKASgDcYAL4AaUGGHwA7M7BN4AFhcwAFEoCDBncAAPeABGIIAxWIiwBLkUhIBmDP8I6PgABk4AVkTijIA2DM8MgA48sBi4ItKfBIBODNiCruS22PTIxsLOOWKfPzhMoKs8I3CfeexMEhJ8ABlMCABrBo84QJ8rYUIoQQAdVgAhbBFdgF1XcHUR8fd4N8m5IMApZUAlyPol0ARPaAdW1LuDWBDABaKfz2AQmASCAEJLrEIYAbBhS5zAlzkEMArgwpACll0yl0AggyXQBCDCkACSXfyXQCiDJdAGIMKQApJdipdAOIMl0AEgwpAB6lwql0AkgyXQBSDCkAGSXTyXQDBDJdACEMKQAVJdapdAKEMl0AYQwpMiXdqXQDhDJdABEMKRslwKl0ASQyXQDxDCkAPqXAC0EMA3gwpAyXTQQwAeDCkAD7g84QwA-DHC4J4goBqYnwV22UHQDSaRTGCKmQQAkmYUgAJKSCFJWbgAVSzjzcyngwGKjzAAHc4iUggAVYQAI3wgFPCBP+fOHMAARQhl0A+gwpADqM9YgDMGFLBCGAYQZLoARBhSACVl4BNBhSPeXgGkGFIATWXgGSGFI15eAKwYUoXl4BrBhSAHll4BIhiry6ANoMKQgJcwCXIAMAyXIA2QwpI4lz3JcgCwDJcgA5DNmIx5u8ib5m8nZwLEoxvBQ8ByD47bpARJQ+BQlGxD4USUd6uatCE7CCNg+CAHPEGHNER+bTD4AAiggkOurAACZVtwQmsGADbgE2cAtm2+GEZ4rEAMKiFAGxbNsgCPQYADqajuOQQAILLoAhgwpEYy6ABYMKRCcugDqDBky6APYMKQAOLLoAsgxlsugDyDCkFjLoAfgwpAA0sugB2DCk6zLoAUQwpHAlx2BCgAxDCkiCXAA5BCgCKDCkAB+lwAMQQoAAQzyU82HeB2XZjEEgDnhPgRgUMgTC4KOQRRpCMaQqw8Y+AAWsugAmDCkAAay6AKoMKSacugC6DCkABqy6AE4MKRXMugDKDCk2jLoA-gwpAAssugBBDCkAA8lzOBCgC2DCkAB8lycBCgDRDCkCiXICQ2AIEMKQADWXAABhCgCxDAmDVqZwGmte1nXdbxhFYZMrGAE2ktWNvCjVUc1PiabgpApEwclDBjQSAGrkDSTBO5kkD1lPwIJYCAISOgCQmoA28YJgU5EBN2Pgw0EPMJp8pECwTrGANUMgD9DDLgBTDJcgC3DLGgB7DGCQ1bb+gAyDC+Qz7A19MWUz3nYHTHxBIAJaSWwcQTE6TQw5vxvhWz4gADpCkgA9pCkgBtpPJ9xAA">
+  <img src="resources/keyboard-layout-iso-jis-tkl.png">
+</a>
+
+<img align="right" src="resources/keyboard-metadata-css.png" width=50%>
+
+**Notes:**
+- This allows to use fonts not installed on the system
+- Custom fonts only affect the canvas rendering and exported PNG images - they don't change the UI font
+- Font settings are embedded in the layout's CSS metadata, making your layouts portable and shareable
+
 ## Compatibility
 
 The kle-ng maintains compatibility with standard KLE JSON format for layouts.
@@ -293,7 +326,8 @@ The following features are intentionally not supported:
 - Different key profiles (appearance of keycaps). There is single default keycap rendering style.
 - Full HTML content in key labels
   - Supports small subset of HTML tags: `<b>`, `<i>`, `<img>`, and `<svg>`
-- Background textures
+- Background textures, highly customizable CSS label styling
+  - kle-ng provides [minimal `css` metadata support](#custom-fonts)
 - Legacy rendering quirks and edge cases
 
 ## Support

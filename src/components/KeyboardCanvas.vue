@@ -54,6 +54,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useKeyboardStore, type Key, type KeyboardMetadata } from '@/stores/keyboard'
+import { useFontStore } from '@/stores/font'
 import { CanvasRenderer, type RenderOptions } from '@/utils/canvas-renderer'
 import { D } from '@/utils/decimal-math'
 import { keyIntersectsSelection } from '@/utils/geometry'
@@ -68,6 +69,7 @@ import MoveExactlyModal from '@/components/MoveExactlyModal.vue'
 const CANVAS_BORDER = 9
 
 const keyboardStore = useKeyboardStore()
+const fontStore = useFontStore()
 
 // Define a type for the internal KLE format
 interface InternalKleFormat {
@@ -153,6 +155,7 @@ const canvasCursor = computed(() => {
 const renderOptions = computed<RenderOptions>(() => ({
   unit: 54,
   background: keyboardStore.metadata?.backcolor || '#ffffff',
+  fontFamily: fontStore.canvasFontFamily,
 }))
 
 onMounted(() => {
@@ -335,6 +338,20 @@ watch(
     if (renderer.value && newBackcolor !== oldBackcolor) {
       renderer.value.updateOptions(renderOptions.value)
       renderKeyboard()
+    }
+  },
+  { immediate: false },
+)
+
+// Watch for font changes and update renderer
+watch(
+  () => fontStore.canvasFontFamily,
+  (newFont, oldFont) => {
+    if (renderer.value && newFont !== oldFont) {
+      renderer.value.updateOptions(renderOptions.value)
+      nextTick(() => {
+        renderKeyboard()
+      })
     }
   },
   { immediate: false },
