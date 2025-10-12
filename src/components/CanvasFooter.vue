@@ -229,7 +229,7 @@ window.addEventListener('canvas-focus-change', (event: Event) => {
   font-size: 0.75rem;
   flex-shrink: 0;
   white-space: nowrap;
-  min-width: 50px;
+  min-width: 55px;
 }
 
 .focus-status-dot {
