@@ -92,7 +92,7 @@ export const useFontStore = defineStore('font', () => {
       const loadSuccess = await loadFontFromUrl(googleFontsUrl, fontFamily)
 
       if (loadSuccess) {
-        // Font loaded successfully
+        // Font loaded successfully - update font settings AFTER font is loaded
         fontSettings.value = {
           fontFamily: `"${fontFamily}"`,
           googleFontsUrl: googleFontsUrl,
@@ -128,6 +128,44 @@ export const useFontStore = defineStore('font', () => {
   }
 
   /**
+   * Create a hidden font loader element
+   */
+  const createFontLoaderElement = (
+    fontFamily: string,
+    text: string,
+    options: { fontWeight?: string; fontStyle?: string } = {},
+  ): HTMLDivElement => {
+    const element = document.createElement('div')
+    element.style.fontFamily = `"${fontFamily}", sans-serif`
+    element.style.fontSize = '16px'
+    element.style.position = 'absolute'
+    element.style.left = '-9999px'
+    element.style.top = '-9999px'
+    element.style.visibility = 'hidden'
+
+    if (options.fontWeight) {
+      element.style.fontWeight = options.fontWeight
+    }
+    if (options.fontStyle) {
+      element.style.fontStyle = options.fontStyle
+    }
+
+    element.textContent = text
+    return element
+  }
+
+  /**
+   * Clean up font loader elements
+   */
+  const cleanupFontLoaderElements = (elements: HTMLDivElement[]): void => {
+    elements.forEach((element) => {
+      if (element.parentNode === document.body) {
+        document.body.removeChild(element)
+      }
+    })
+  }
+
+  /**
    * Load font stylesheet from URL
    *
    * @param url - Font stylesheet URL (e.g., Google Fonts URL)
@@ -156,22 +194,55 @@ export const useFontStore = defineStore('font', () => {
       link.onload = () => {
         clearTimeout(timeout)
 
-        // Try to verify the font actually loaded by checking document.fonts
-        if (document.fonts && document.fonts.check) {
-          // Wait a bit for font to be parsed
+        // Force the browser to load the actual font files by creating multiple hidden elements
+        // that use the font in different ways. This ensures the WOFF2 files are downloaded immediately.
+        const fontLoaderElements = [
+          createFontLoaderElement(fontFamily, 'Font Loader Test'),
+          createFontLoaderElement(fontFamily, 'Font Loader Bold', { fontWeight: 'bold' }),
+          createFontLoaderElement(fontFamily, 'Font Loader Italic', { fontStyle: 'italic' }),
+        ]
+
+        // Append all elements to the DOM
+        fontLoaderElements.forEach((element) => {
+          document.body.appendChild(element)
+        })
+
+        // Use the Font Loading API if available for more reliable font loading detection
+        if (document.fonts && document.fonts.load) {
+          // Load the font using the Font Loading API
+          document.fonts
+            .load(`16px "${fontFamily}"`)
+            .then(() => {
+              // Font loaded successfully
+              cleanupFontLoaderElements(fontLoaderElements)
+              resolve(true)
+            })
+            .catch(() => {
+              // Font loading failed, but the stylesheet loaded so we'll assume success
+              cleanupFontLoaderElements(fontLoaderElements)
+              resolve(true)
+            })
+        } else {
+          // Fallback for browsers without Font Loading API
+          // Wait longer to ensure font files are downloaded
           setTimeout(() => {
-            try {
-              // Try to check if font is available
-              const fontLoaded = document.fonts.check(`12px "${fontFamily}"`)
-              resolve(fontLoaded)
-            } catch {
-              // If check fails, assume font loaded since the stylesheet loaded
+            // Clean up the font loader elements
+            cleanupFontLoaderElements(fontLoaderElements)
+
+            // Try to verify font loading using document.fonts.check if available
+            if (document.fonts && document.fonts.check) {
+              try {
+                const fontLoaded = document.fonts.check(`16px "${fontFamily}"`)
+                resolve(fontLoaded)
+              } catch {
+                // If check fails, assume font loaded since the stylesheet loaded
+                resolve(true)
+              }
+            } else {
+              // No way to verify, assume success
               resolve(true)
             }
-          }, 100)
-        } else {
-          // Browser doesn't support document.fonts API, assume success
-          resolve(true)
+          }, 1000) // Wait 1 second for font files to download
         }
       }
 

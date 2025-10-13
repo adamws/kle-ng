@@ -408,6 +408,8 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     layoutMetadata?: KeyboardMetadata,
   ) => {
     try {
+      const fontStore = useFontStore()
+
       if (Array.isArray(layout)) {
         // Legacy format: array of keys
         keys.value = JSON.parse(JSON.stringify(layout)) // Deep copy
@@ -419,12 +421,16 @@ export const useKeyboardStore = defineStore('keyboard', () => {
 
           // Apply font settings from CSS metadata if present
           if (layoutMetadata.css) {
-            const fontStore = useFontStore()
             fontStore.applyFromCssMetadata(layoutMetadata.css)
+          } else {
+            // No CSS metadata, reset to default font
+            fontStore.resetToDefault()
           }
         } else {
           // No metadata provided, reset to defaults
           metadata.value = new KeyboardMetadata()
+          // Reset to default font when loading layout without metadata
+          fontStore.resetToDefault()
         }
       } else {
         // New format: object with keys and metadata
@@ -437,12 +443,16 @@ export const useKeyboardStore = defineStore('keyboard', () => {
 
           // Apply font settings from CSS metadata if present
           if (layout.metadata.css) {
-            const fontStore = useFontStore()
             fontStore.applyFromCssMetadata(layout.metadata.css)
+          } else {
+            // No CSS metadata, reset to default font
+            fontStore.resetToDefault()
           }
         } else {
           // No metadata provided, reset to defaults
           metadata.value = new KeyboardMetadata()
+          // Reset to default font when loading layout without metadata
+          fontStore.resetToDefault()
         }
       }
       selectedKeys.value = []
@@ -464,6 +474,11 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     filename.value = ''
     history.value = []
     historyIndex.value = -1
+
+    // Reset to default font when clearing layout
+    const fontStore = useFontStore()
+    fontStore.resetToDefault()
+
     saveState()
     dirty.value = false
     resetViewTrigger.value++ // Trigger view reset
@@ -548,6 +563,16 @@ export const useKeyboardStore = defineStore('keyboard', () => {
       const defaults = new KeyboardMetadata()
       metadata.value = { ...defaults, ...JSON.parse(JSON.stringify(keyboard.meta)) }
       selectedKeys.value = []
+
+      // Apply font settings from CSS metadata if present
+      const fontStore = useFontStore()
+      if (keyboard.meta?.css) {
+        fontStore.applyFromCssMetadata(keyboard.meta.css)
+      } else {
+        // No CSS metadata, reset to default font
+        fontStore.resetToDefault()
+      }
+
       // Don't clear history - this preserves undo functionality
       saveState() // This adds current state to history
       dirty.value = true // Mark as dirty since user made changes
