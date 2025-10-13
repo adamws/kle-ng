@@ -285,14 +285,14 @@ You can import a layout from a GitHub Gist by using a URL in following formats
 
 ## Custom Fonts
 
-The original Keyboard Layout Editor provided [fine grained](https://github.com/ijprest/keyboard-layout-editor/wiki/Custom-Styles)
+The original Keyboard Layout Editor provided [fine-grained](https://github.com/ijprest/keyboard-layout-editor/wiki/Custom-Styles)
 control over keyboard CSS style via `css` metadata field defined in a layout.
 This allowed to use any web font (like Google Fonts) for **any** label position
 to display international characters, special symbols, or stylistic typography on keyboard render.
 The kle-ng supports only a minimal subset of CSS specifically for loading fonts:
 
 **Supported CSS syntax:**
-- `@import url(...)` - Loads external font stylesheet (e.g., Google Fonts)
+- `@import url(...);` - Loads external font stylesheet (e.g., Google Fonts)
 
 The font name is automatically extracted from the URL and applied globally to all canvas text.
 It is not possible to define different fonts for different key labels.

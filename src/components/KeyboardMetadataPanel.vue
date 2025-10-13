@@ -77,14 +77,13 @@
                 <div class="flex-grow-1 d-flex flex-column">
                   <div class="d-flex justify-content-between">
                     <label class="form-label small mb-1">CSS</label>
-                    <!-- TODO: CSS help modal
                     <button
+                      @click="showCssHelp"
                       class="btn btn-sm btn-outline-secondary css-help-btn"
                       title="Help"
                     >
                       <i class="bi bi-question-circle"></i>
                     </button>
-                    -->
                   </div>
                   <textarea
                     v-model="currentCss"
@@ -139,6 +138,9 @@
       </div>
     </div>
 
+    <!-- CSS Help Modal -->
+    <CssHelpModal :is-visible="isCssHelpVisible" @close="closeCssHelp" />
+
     <!-- VIA Help Modal -->
     <ViaHelpModal :is-visible="isViaHelpVisible" @close="closeViaHelp" />
   </div>
@@ -162,14 +164,24 @@ import { ref, watch } from 'vue'
 import { useKeyboardStore } from '@/stores/keyboard'
 import { useFontStore } from '@/stores/font'
 import ColorPicker from './ColorPicker.vue'
+import CssHelpModal from './CssHelpModal.vue'
 import ViaHelpModal from './ViaHelpModal.vue'
 import LZString from 'lz-string'
 
 const keyboardStore = useKeyboardStore()
 const fontStore = useFontStore()
 
-// Help modal state
+// Help modals state
+const isCssHelpVisible = ref(false)
 const isViaHelpVisible = ref(false)
+
+const showCssHelp = () => {
+  isCssHelpVisible.value = true
+}
+
+const closeCssHelp = () => {
+  isCssHelpVisible.value = false
+}
 
 const showViaHelp = () => {
   isViaHelpVisible.value = true
