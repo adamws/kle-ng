@@ -28,7 +28,7 @@ describe('KLE Round-trip Compatibility Tests', () => {
       'should produce identical results for %s',
       (standardFile, expectedInternalFile) => {
         // Read test files - raw layouts from presets directory, internal from fixtures
-        const standardPath = resolve(__dirname, '../../data/presets', standardFile)
+        const standardPath = resolve(__dirname, '../../../public/data/presets', standardFile)
         const expectedInternalPath = resolve(
           __dirname,
           'fixtures/kle-layouts',
@@ -133,7 +133,7 @@ describe('KLE Round-trip Compatibility Tests', () => {
 
   describe('Compatibility with standard KLE format', () => {
     it('should maintain round-trip compatibility: KLE → Internal → KLE → Internal', () => {
-      const testFile = resolve(__dirname, '../../data/presets/ergodox.json')
+      const testFile = resolve(__dirname, '../../../public/data/presets/ergodox.json')
       const originalLayout = JSON.parse(readFileSync(testFile, 'utf-8'))
 
       // First round-trip: KLE → Internal
