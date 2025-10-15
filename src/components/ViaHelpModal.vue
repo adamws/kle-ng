@@ -16,12 +16,20 @@
               What is VIA Metadata?
             </h6>
             <div class="help-content">
+              <img align="right" src="/via-layout-example.png" />
               <p>
                 <a href="https://www.caniusevia.com/" target="_blank">VIA</a> and
                 <a href="https://get.vial.today/" target="_blank">Vial</a> are keyboard
                 configuration tools that use a special JSON format. VIA format wraps KLE layout data
                 with additional metadata like keyboard name, vendor/product IDs, and matrix
                 configuration.
+              </p>
+              <p>
+                It also uses special label format which maps physical arrangment of keys to the
+                switch matrix co-ordinates. To learn more visit
+                <a href="https://www.caniusevia.com/docs/layouts" target="_blank">
+                  VIA specification</a
+                >.
               </p>
               <p>
                 When you import a VIA file, kle-ng converts it to KLE format and preserves the
@@ -91,8 +99,8 @@
                   <i class="bi bi-exclamation-triangle-fill text-warning flex-shrink-0"></i>
                   <div>
                     <small>
-                      kle-ng does not validate the content against VIA specification. It is your
-                      responsibility to maintain proper VIA format as defined in the
+                      kle-ng does not validate the <b>content</b> of JSON. It is your responsibility
+                      to maintain VIA format convention as defined in the
                       <a href="https://www.caniusevia.com/docs/specification" target="_blank"
                         >VIA specification</a
                       >.
