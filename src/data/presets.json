@@ -5,6 +5,7 @@
     { "name": "ANSI 104 (big-ass enter)", "file": "ansi-104-big-ass-enter.json" },
     { "name": "ISO 105", "file": "iso-105.json" },
     { "name": "Default 60%", "file": "default-60.json" },
+    { "name": "Default 60% (VIA)", "file": "default-60-via.json" },
     { "name": "ISO 60%", "file": "iso-60.json" },
     { "name": "JD40", "file": "jd40.json" },
     { "name": "ErgoDox", "file": "ergodox.json" },
