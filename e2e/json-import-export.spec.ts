@@ -26,13 +26,16 @@ test.describe('JSON Import/Export Functionality', () => {
       // Get the file path
       const filePath = path.resolve('e2e/fixtures/simple-layout.json')
 
-      // Click import button and upload file
+      // Click import dropdown and select "From File"
       const importButton = page.locator('button', { hasText: 'Import' })
       await expect(importButton).toBeVisible()
 
       // Set up file chooser event handler
       const fileChooserPromise = page.waitForEvent('filechooser')
       await importButton.click()
+      // Wait for dropdown to be visible
+      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
+      await page.locator('a', { hasText: 'From File' }).click()
       const fileChooser = await fileChooserPromise
       await fileChooser.setFiles(filePath)
 
@@ -52,6 +55,9 @@ test.describe('JSON Import/Export Functionality', () => {
 
       const fileChooserPromise = page.waitForEvent('filechooser')
       await page.locator('button', { hasText: 'Import' }).click()
+      // Wait for dropdown to be visible
+      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
+      await page.locator('a', { hasText: 'From File' }).click()
       const fileChooser = await fileChooserPromise
       await fileChooser.setFiles(filePath)
 
@@ -68,6 +74,9 @@ test.describe('JSON Import/Export Functionality', () => {
 
       const fileChooserPromise = page.waitForEvent('filechooser')
       await page.locator('button', { hasText: 'Import' }).click()
+      // Wait for dropdown to be visible
+      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
+      await page.locator('a', { hasText: 'From File' }).click()
       const fileChooser = await fileChooserPromise
       await fileChooser.setFiles(filePath)
 
@@ -81,6 +90,9 @@ test.describe('JSON Import/Export Functionality', () => {
 
       const fileChooserPromise = page.waitForEvent('filechooser')
       await page.locator('button', { hasText: 'Import' }).click()
+      // Wait for dropdown to be visible
+      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
+      await page.locator('a', { hasText: 'From File' }).click()
       const fileChooser = await fileChooserPromise
       await fileChooser.setFiles(filePath)
 
@@ -99,6 +111,9 @@ test.describe('JSON Import/Export Functionality', () => {
 
       const fileChooserPromise = page.waitForEvent('filechooser')
       await page.locator('button', { hasText: 'Import' }).click()
+      // Wait for dropdown to be visible
+      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
+      await page.locator('a', { hasText: 'From File' }).click()
       const fileChooser = await fileChooserPromise
       await fileChooser.setFiles(filePath)
 
@@ -115,6 +130,9 @@ test.describe('JSON Import/Export Functionality', () => {
 
       const fileChooserPromise = page.waitForEvent('filechooser')
       await page.locator('button', { hasText: 'Import' }).click()
+      // Wait for dropdown to be visible
+      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
+      await page.locator('a', { hasText: 'From File' }).click()
       const fileChooser = await fileChooserPromise
       await fileChooser.setFiles(filePath)
 
@@ -151,7 +169,7 @@ test.describe('JSON Import/Export Functionality', () => {
       await exportButton.click()
 
       // Click download PNG option
-      await page.locator('button', { hasText: 'Download PNG' }).click()
+      await page.locator('a', { hasText: 'Download PNG' }).click()
 
       // Wait for download to start (should not throw DOMException)
       const download = await downloadPromise
@@ -177,6 +195,9 @@ test.describe('JSON Import/Export Functionality', () => {
       const filePath = path.resolve('e2e/fixtures', 'simple-layout.json')
       const fileChooserPromise = page.waitForEvent('filechooser')
       await page.locator('button', { hasText: 'Import' }).click()
+      // Wait for dropdown to be visible
+      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
+      await page.locator('a', { hasText: 'From File' }).click()
       const fileChooser = await fileChooserPromise
       await fileChooser.setFiles(filePath)
       await expect(page.locator('.keys-counter')).toContainText('Keys: 8')
@@ -197,7 +218,7 @@ test.describe('JSON Import/Export Functionality', () => {
       await exportButton.click()
 
       // Click download PNG option - this should NOT throw DOMException
-      await page.locator('button', { hasText: 'Download PNG' }).click()
+      await page.locator('a', { hasText: 'Download PNG' }).click()
 
       // Wait for download to start (should not throw DOMException)
       const download = await downloadPromise
@@ -222,6 +243,9 @@ test.describe('JSON Import/Export Functionality', () => {
       const filePath = path.resolve('e2e/fixtures', 'complex-layout.json')
       const fileChooserPromise = page.waitForEvent('filechooser')
       await page.locator('button', { hasText: 'Import' }).click()
+      // Wait for dropdown to be visible
+      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
+      await page.locator('a', { hasText: 'From File' }).click()
       const fileChooser = await fileChooserPromise
       await fileChooser.setFiles(filePath)
       await expect(page.locator('.keys-counter')).toContainText('Keys: 6')
@@ -235,7 +259,7 @@ test.describe('JSON Import/Export Functionality', () => {
       const downloadPromise = page.waitForEvent('download')
       const exportButton = page.locator('button', { hasText: 'Export' })
       await exportButton.click()
-      await page.locator('button', { hasText: 'Download PNG' }).click()
+      await page.locator('a', { hasText: 'Download PNG' }).click()
       const download = await downloadPromise
 
       // Save the PNG
@@ -250,6 +274,9 @@ test.describe('JSON Import/Export Functionality', () => {
       // Re-import the PNG
       const fileChooserPromise2 = page.waitForEvent('filechooser')
       await page.locator('button', { hasText: 'Import' }).click()
+      // Wait for dropdown to be visible
+      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
+      await page.locator('a', { hasText: 'From File' }).click()
       const fileChooser2 = await fileChooserPromise2
       await fileChooser2.setFiles(downloadPath)
 
@@ -276,7 +303,7 @@ test.describe('JSON Import/Export Functionality', () => {
       await exportButton.click()
 
       // Click download JSON option
-      await page.locator('button', { hasText: 'Download JSON' }).click()
+      await page.locator('a', { hasText: 'Download JSON' }).click()
 
       // Wait for download to start
       const download = await downloadPromise
@@ -302,6 +329,9 @@ test.describe('JSON Import/Export Functionality', () => {
       const filePath = path.resolve('e2e/fixtures', 'complex-layout.json')
       const fileChooserPromise = page.waitForEvent('filechooser')
       await page.locator('button', { hasText: 'Import' }).click()
+      // Wait for dropdown to be visible
+      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
+      await page.locator('a', { hasText: 'From File' }).click()
       const fileChooser = await fileChooserPromise
       await fileChooser.setFiles(filePath)
 
@@ -310,7 +340,7 @@ test.describe('JSON Import/Export Functionality', () => {
       // Export the layout
       const downloadPromise = page.waitForEvent('download')
       await page.locator('button', { hasText: 'Export' }).click()
-      await page.locator('button', { hasText: 'Download JSON' }).click()
+      await page.locator('a', { hasText: 'Download JSON' }).click()
 
       const download = await downloadPromise
       const downloadPath = path.resolve('e2e/test-output', download.suggestedFilename())
@@ -334,7 +364,7 @@ test.describe('JSON Import/Export Functionality', () => {
       // Export empty layout
       const downloadPromise = page.waitForEvent('download')
       await page.locator('button', { hasText: 'Export' }).click()
-      await page.locator('button', { hasText: 'Download JSON' }).click()
+      await page.locator('a', { hasText: 'Download JSON' }).click()
 
       const download = await downloadPromise
       const downloadPath = path.resolve('e2e/test-output', download.suggestedFilename())
@@ -358,6 +388,9 @@ test.describe('JSON Import/Export Functionality', () => {
 
       const fileChooserPromise = page.waitForEvent('filechooser')
       await page.locator('button', { hasText: 'Import' }).click()
+      // Wait for dropdown to be visible
+      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
+      await page.locator('a', { hasText: 'From File' }).click()
       const fileChooser = await fileChooserPromise
       await fileChooser.setFiles(originalFile)
 
@@ -366,7 +399,7 @@ test.describe('JSON Import/Export Functionality', () => {
       // Export the imported layout
       const downloadPromise = page.waitForEvent('download')
       await page.locator('button', { hasText: 'Export' }).click()
-      await page.locator('button', { hasText: 'Download JSON' }).click()
+      await page.locator('a', { hasText: 'Download JSON' }).click()
 
       const download = await downloadPromise
       const exportPath = path.resolve('e2e/test-output', 'round-trip-export.json')
@@ -390,6 +423,9 @@ test.describe('JSON Import/Export Functionality', () => {
 
       const fileChooserPromise = page.waitForEvent('filechooser')
       await page.locator('button', { hasText: 'Import' }).click()
+      // Wait for dropdown to be visible
+      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
+      await page.locator('a', { hasText: 'From File' }).click()
       const fileChooser = await fileChooserPromise
       await fileChooser.setFiles(filePath)
 
@@ -398,7 +434,7 @@ test.describe('JSON Import/Export Functionality', () => {
       // Export the layout
       const downloadPromise = page.waitForEvent('download')
       await page.locator('button', { hasText: 'Export' }).click()
-      await page.locator('button', { hasText: 'Download JSON' }).click()
+      await page.locator('a', { hasText: 'Download JSON' }).click()
 
       const download = await downloadPromise
       const exportPath = path.resolve('e2e/test-output', 'rotated-keys-export.json')
@@ -418,6 +454,9 @@ test.describe('JSON Import/Export Functionality', () => {
       const filePath = path.resolve('e2e/fixtures', 'simple-layout.json')
       const fileChooserPromise = page.waitForEvent('filechooser')
       await page.locator('button', { hasText: 'Import' }).click()
+      // Wait for dropdown to be visible
+      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
+      await page.locator('a', { hasText: 'From File' }).click()
       const fileChooser = await fileChooserPromise
       await fileChooser.setFiles(filePath)
 
@@ -430,7 +469,7 @@ test.describe('JSON Import/Export Functionality', () => {
       // Export modified layout
       const downloadPromise = page.waitForEvent('download')
       await page.locator('button', { hasText: 'Export' }).click()
-      await page.locator('button', { hasText: 'Download JSON' }).click()
+      await page.locator('a', { hasText: 'Download JSON' }).click()
 
       const download = await downloadPromise
       const exportPath = path.resolve('e2e/test-output', 'modified-layout.json')
@@ -454,6 +493,9 @@ test.describe('JSON Import/Export Functionality', () => {
       const filePath = path.resolve('e2e/fixtures', 'simple-layout.json')
       const fileChooserPromise = page.waitForEvent('filechooser')
       await page.locator('button', { hasText: 'Import' }).click()
+      // Wait for dropdown to be visible
+      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
+      await page.locator('a', { hasText: 'From File' }).click()
       const fileChooser = await fileChooserPromise
       await fileChooser.setFiles(filePath)
 
@@ -479,6 +521,9 @@ test.describe('JSON Import/Export Functionality', () => {
       let filePath = path.resolve('e2e/fixtures', 'simple-layout.json')
       let fileChooserPromise = page.waitForEvent('filechooser')
       await page.locator('button', { hasText: 'Import' }).click()
+      // Wait for dropdown to be visible
+      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
+      await page.locator('a', { hasText: 'From File' }).click()
       let fileChooser = await fileChooserPromise
       await fileChooser.setFiles(filePath)
       await expect(page.locator('.keys-counter')).toContainText('Keys: 8')
@@ -487,6 +532,9 @@ test.describe('JSON Import/Export Functionality', () => {
       filePath = path.resolve('e2e/fixtures', 'rotated-keys.json')
       fileChooserPromise = page.waitForEvent('filechooser')
       await page.locator('button', { hasText: 'Import' }).click()
+      // Wait for dropdown to be visible
+      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
+      await page.locator('a', { hasText: 'From File' }).click()
       fileChooser = await fileChooserPromise
       await fileChooser.setFiles(filePath)
       await expect(page.locator('.keys-counter')).toContainText('Keys: 3')
@@ -495,6 +543,9 @@ test.describe('JSON Import/Export Functionality', () => {
       filePath = path.resolve('e2e/fixtures', 'empty-layout.json')
       fileChooserPromise = page.waitForEvent('filechooser')
       await page.locator('button', { hasText: 'Import' }).click()
+      // Wait for dropdown to be visible
+      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
+      await page.locator('a', { hasText: 'From File' }).click()
       fileChooser = await fileChooserPromise
       await fileChooser.setFiles(filePath)
       await expect(page.locator('.keys-counter')).toContainText('Keys: 0')

@@ -318,13 +318,13 @@ export class CanvasTestHelper {
   }
 
   async loadPreset(presetIndex: number) {
-    await this.page.selectOption(
-      'select:has(option:has-text("Choose Preset..."))',
-      presetIndex.toString(),
-    )
+    // Open the presets dropdown
+    const presetButton = this.page.locator('.preset-dropdown button.preset-select')
+    await presetButton.click()
 
-    // Small wait to ensure the selection event is processed
-    await this.page.waitForTimeout(100)
+    // Click the specific preset item
+    const presetItems = this.page.locator('.preset-dropdown .dropdown-item')
+    await presetItems.nth(presetIndex).click()
 
     // Wait for layout to load with increased timeout for CI environments
     await this.page.waitForFunction(

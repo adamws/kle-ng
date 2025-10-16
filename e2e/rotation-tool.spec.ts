@@ -101,7 +101,7 @@ test.describe('Selection Rotation Tool', () => {
 
     // Set up download handler
     const downloadPromise = page.waitForEvent('download')
-    await page.locator('button', { hasText: 'Download JSON' }).click()
+    await page.locator('a', { hasText: 'Download JSON' }).click()
 
     const download = await downloadPromise
     const downloadPath = `e2e/test-output/rotation-test-${Date.now()}.json`
@@ -224,7 +224,7 @@ test.describe('Selection Rotation Tool', () => {
     // Step 2: Export current layout to capture key position before rotation attempt
     await page.locator('button', { hasText: 'Export' }).click()
     const downloadPromise = page.waitForEvent('download')
-    await page.locator('button', { hasText: 'Download JSON' }).click()
+    await page.locator('a', { hasText: 'Download JSON' }).click()
     const download = await downloadPromise
     const beforePath = `e2e/test-output/rotation-before-cancel-${Date.now()}.json`
     await download.saveAs(beforePath)
@@ -257,7 +257,7 @@ test.describe('Selection Rotation Tool', () => {
     // Step 4: Verify key position is unchanged after cancellation
     await page.locator('button', { hasText: 'Export' }).click()
     const downloadPromise2 = page.waitForEvent('download')
-    await page.locator('button', { hasText: 'Download JSON' }).click()
+    await page.locator('a', { hasText: 'Download JSON' }).click()
     const download2 = await downloadPromise2
     const afterPath = `e2e/test-output/rotation-after-cancel-${Date.now()}.json`
     await download2.saveAs(afterPath)

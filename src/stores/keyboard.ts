@@ -9,8 +9,10 @@ import {
   extractLayoutFromCurrentUrl,
   clearShareFromUrl,
   extractGistFromCurrentUrl,
+  extractUrlFromCurrentUrl,
   fetchGistLayout,
   clearGistFromUrl,
+  clearUrlFromHash,
 } from '../utils/url-sharing'
 import type { LayoutData } from '../utils/url-sharing'
 import { useFontStore } from './font'
@@ -601,7 +603,12 @@ export const useKeyboardStore = defineStore('keyboard', () => {
       return // Successfully loaded from share URL
     }
 
-    // Check if there's a gist layout in the URL
+    // Check for #url= or #gist= formats (both are valid, #gist= is preferred for gists)
+    if (await loadFromUrlHash()) {
+      return // Successfully loaded from URL hash
+    }
+
+    // Direct #gist=ID format (shorter, preferred for gists)
     if (await loadFromGistUrl()) {
       return // Successfully loaded from gist URL
     }
@@ -1113,6 +1120,173 @@ export const useKeyboardStore = defineStore('keyboard', () => {
       return false
     } catch (error) {
       console.error('Error loading layout from share URL:', error)
+      return false
+    }
+  }
+
+  const loadFromUrlHash = async (): Promise<boolean> => {
+    try {
+      // Try #url= format first
+      let urlParam = extractUrlFromCurrentUrl()
+      let isGistFormat = false
+
+      // Also check #gist= format (both are valid, #gist= is preferred for gists)
+      if (!urlParam) {
+        const gistId = extractGistFromCurrentUrl()
+        if (gistId) {
+          urlParam = gistId
+          isGistFormat = true
+        }
+      }
+
+      if (urlParam) {
+        const startTime = Date.now()
+        let loadingToastId: string | null = null
+        let loadingToastTimer: number | null = null
+        let isLoadingToastVisible = false
+
+        // Delay showing loading toast to avoid flicker for quick loads
+        const showLoadingToast = () => {
+          if (!isLoadingToastVisible) {
+            loadingToastId = toast.showInfo('Loading keyboard layout from URL...', 'Loading', {
+              duration: 0,
+            })
+            isLoadingToastVisible = true
+          }
+        }
+
+        // Schedule loading toast to show after 500ms
+        loadingToastTimer = window.setTimeout(showLoadingToast, 500)
+
+        try {
+          let layoutData: LayoutData
+
+          // Determine the type of URL and load accordingly
+          if (urlParam.includes('gist.github.com')) {
+            // Full GitHub Gist URL
+            const gistMatch = urlParam.match(/gist\.github\.com\/[^/]+\/([a-f0-9]+)/)
+            if (gistMatch && gistMatch[1]) {
+              layoutData = await fetchGistLayout(gistMatch[1])
+            } else {
+              throw new Error('Invalid GitHub Gist URL format')
+            }
+          } else if (/^[a-f0-9]+$/i.test(urlParam)) {
+            // Gist ID format (preferred for gists as it's shorter)
+            layoutData = await fetchGistLayout(urlParam)
+          } else {
+            // Direct URL to JSON file
+            const response = await fetch(urlParam)
+            if (!response.ok) {
+              throw new Error(`Failed to fetch layout: ${response.status} ${response.statusText}`)
+            }
+
+            const kleData = await response.json()
+
+            if (!Array.isArray(kleData)) {
+              throw new Error('Invalid KLE layout data structure - expected array format')
+            }
+
+            // Deserialize using KLE's standard format
+            const keyboard = Serial.deserialize(kleData)
+            layoutData = {
+              keys: keyboard.keys,
+              metadata: keyboard.meta,
+            }
+          }
+
+          loadLayout(layoutData.keys, layoutData.metadata)
+
+          // Clean up URL after loading
+          if (isGistFormat) {
+            clearGistFromUrl()
+          } else {
+            clearUrlFromHash()
+          }
+
+          const loadTime = Date.now() - startTime
+
+          // Clear the pending loading toast timer
+          if (loadingToastTimer) {
+            clearTimeout(loadingToastTimer)
+          }
+
+          // Handle loading toast removal with minimum display time
+          const handleToastTransition = async () => {
+            if (isLoadingToastVisible && loadingToastId) {
+              // Ensure loading toast is visible for at least 1000ms
+              const minDisplayTime = 1000
+              const remainingTime = Math.max(0, minDisplayTime - loadTime)
+
+              if (remainingTime > 0) {
+                await new Promise((resolve) => setTimeout(resolve, remainingTime))
+              }
+
+              toast.removeToast(loadingToastId)
+            }
+
+            // Show success toast
+            toast.showSuccess('Keyboard layout loaded successfully from URL!', 'Loaded')
+          }
+
+          // Handle toast transition asynchronously to not block the main loading
+          handleToastTransition().catch(console.error)
+
+          return true
+        } catch (fetchError) {
+          // Clear the pending loading toast timer
+          if (loadingToastTimer) {
+            clearTimeout(loadingToastTimer)
+          }
+
+          // Remove loading toast if it was shown
+          if (isLoadingToastVisible && loadingToastId) {
+            toast.removeToast(loadingToastId)
+          }
+
+          // Show specific error based on the type
+          const errorMessage =
+            fetchError instanceof Error ? fetchError.message : 'Unknown error occurred'
+
+          if (errorMessage.includes('Gist not found')) {
+            toast.showError(
+              'The specified GitHub Gist could not be found. Please check the URL and try again.',
+              'Gist Not Found',
+            )
+          } else if (errorMessage.includes('Rate limit exceeded')) {
+            toast.showError(
+              'GitHub API rate limit exceeded. Please try again later.',
+              'Rate Limit Exceeded',
+            )
+          } else if (errorMessage.includes('No keyboard layout file found')) {
+            toast.showError(
+              'The gist does not contain a valid keyboard layout file. Please ensure the gist has a JSON file with KLE layout data.',
+              'Invalid Gist',
+            )
+          } else if (errorMessage.includes('Invalid JSON format')) {
+            toast.showError(
+              'The layout file contains invalid JSON. Please check the file format.',
+              'Invalid JSON',
+            )
+          } else if (errorMessage.includes('Invalid KLE layout data structure')) {
+            toast.showError(
+              'The file is not in the correct KLE format. Expected an array structure.',
+              'Invalid Format',
+            )
+          } else if (errorMessage.includes('Failed to fetch')) {
+            toast.showError(
+              'Failed to fetch the layout from the URL. Please check the URL and try again.',
+              'Fetch Failed',
+            )
+          } else {
+            toast.showError(`Failed to load layout from URL: ${errorMessage}`, 'Load Failed')
+          }
+
+          throw fetchError
+        }
+      }
+      return false
+    } catch (error) {
+      console.error('Error loading layout from URL hash:', error)
       return false
     }
   }

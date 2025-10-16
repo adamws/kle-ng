@@ -238,13 +238,33 @@ Exporting works by decompressing the `_kleng_via_data` field and injecting layou
 
 kle-ng supports multiple ways to import keyboard layouts:
 
-- **File Import**: Click the `Import` button or drag and drop layout files directly to the editor
-- **Share Links**: Open layouts shared via URL (see Share Links section below)
-- **GitHub Gist**: Import directly from GitHub Gists via URL (see Import from GitHub Gist section below)
+- **Import Dropdown**: Click the **Import** button in the toolbar and select:
+  - **From File**: Browse for files on your computer
+  - **From URL**: Enter any of the supported URL formats:
+    - **Direct JSON URLs**: Any publicly accessible JSON file
+    - **GitHub Gists URL**: Link to a gist with a layout file (see gist requirements below)
+    - **Share Links**: Existing share links from other kle-ng instances
+- **Drag and Drop**: Drag layout files directly onto the editor
+- **Share Links**: Open layouts shared via URL (see Share Links section below):
+  - **Universal URL format**: [https://editor.keyboard-tools.xyz/#url=https://gist.github.com/adamws/e0ee43da3b3b096bfdd60d54c7487e8b](https://editor.keyboard-tools.xyz/#url=https://gist.github.com/adamws/e0ee43da3b3b096bfdd60d54c7487e8b)
+  - **Direct Gist ID**: [https://editor.keyboard-tools.xyz/#gist=e0ee43da3b3b096bfdd60d54c7487e8b](https://editor.keyboard-tools.xyz/#gist=e0ee43da3b3b096bfdd60d54c7487e8b)
 
 <img src="resources/gifs/file-drag-and-drop.gif">
 
 Supported file formats: JSON (KLE format), PNG (with embedded layout data), VIA/Vial JSON
+
+**Gist File Requirements:**
+
+When importing from GitHub Gists, kle-ng will automatically search for layout files in this priority order:
+  1. `layout.json`
+  2. `keyboard.json`
+  3. `kle.json`
+  4. Any file containing "layout" or "keyboard" in the name
+  5. Any `.json` file
+
+The JSON file may contain any recognizable layout format.
+
+**Note:** GitHub API has rate limits for unauthenticated requests. If you encounter rate limit errors, wait a few minutes before trying again.
 
 #### Share Links
 
@@ -258,30 +278,6 @@ kle-ng provides a quick way to share your keyboard layouts with others using com
 
 The share link contains your entire layout encoded in the URL hash (e.g., [`#share=NrDeC...`](https://editor.keyboard-tools.xyz/#share=NrDeCICdwLgZgKwIDRQB6wIysgT1gCyoYwC024+ZR4AhrAAwC+q4AusmOCeS+O5wg9MfAV2GiOXaDAY4ScqFUUkKVUgwB0AJgSTB3LPvFHWUoaf7nDMbanUFjF205vbXJd2YMyakEnA4VHCaAOwolLCkjt7AVpzxcWIQMph+AZoAnJnhAGwEmPkMmXCh2UGwIQAcmDkIuXBwDIWNmQyBNuSa7QgExdlw2tm5CLUApqSh9lFa2XOZVQRVVdpVcLntrjLa6YRZuaFVCDkHCOuZxxUwBN25hYcEBNrahf3EUSEHL2dVuQuhaQYRwmVWmZEw3QYUOhy3qoVCfxEZjYQA)).
 The layout data is compressed using LZ-String compression to create compact, shareable URLs.
-
-#### Import from GitHub Gist
-
-In addition to share links, kle-ng supports importing keyboard layouts directly from GitHub Gists.
-
-**Importing from a Gist:**
-
-You can import a layout from a GitHub Gist by using a URL in following formats
-- [https://editor.keyboard-tools.xyz/#gist=GIST_ID](https://editor.keyboard-tools.xyz/#gist=e0ee43da3b3b096bfdd60d54c7487e8b)
-- [https://editor.keyboard-tools.xyz/#gist=https://gist.github.com/username/GIST_ID](https://editor.keyboard-tools.xyz/#gist=https://gist.github.com/adamws/e0ee43da3b3b096bfdd60d54c7487e8b)
-
-**Gist File Requirements:**
-
-- The gist must contain at least one JSON file with KLE layout data, for example:
-  - https://gist.github.com/adamws/e0ee43da3b3b096bfdd60d54c7487e8b
-- kle-ng will automatically search for layout files in this priority order:
-  1. `layout.json`
-  2. `keyboard.json`
-  3. `kle.json`
-  4. Any file containing "layout" or "keyboard" in the name
-  5. Any `.json` file
-- The JSON file must contain a valid KLE layout in array format
-
-**Note:** GitHub API has rate limits for unauthenticated requests. If you encounter rate limit errors, wait a few minutes before trying again.
 
 ## Custom Fonts
 

@@ -47,10 +47,10 @@ describe('KeyboardToolbar', () => {
       const dropdownButton = wrapper.find('button.preset-select')
       expect(dropdownButton.exists()).toBe(true)
 
-      const dropdownMenu = wrapper.find('.dropdown-menu')
+      const dropdownMenu = wrapper.find('.preset-dropdown .dropdown-menu')
       expect(dropdownMenu.exists()).toBe(true)
 
-      const dropdownItems = wrapper.findAll('.dropdown-item')
+      const dropdownItems = dropdownMenu.findAll('.dropdown-item')
       expect(dropdownItems.length).toBeGreaterThan(0)
     })
 
@@ -77,7 +77,10 @@ describe('KeyboardToolbar', () => {
 
       await wrapper.vm.$nextTick()
 
-      const dropdownItems = wrapper.findAll('.dropdown-item')
+      const presetDropdown = wrapper.find('.preset-dropdown .dropdown-menu')
+      expect(presetDropdown.exists()).toBe(true)
+
+      const dropdownItems = presetDropdown.findAll('.dropdown-item')
       expect(dropdownItems.length).toBeGreaterThan(0)
 
       // Click the first preset
@@ -104,7 +107,11 @@ describe('KeyboardToolbar', () => {
 
       await wrapper.vm.$nextTick()
 
-      const dropdownItems = wrapper.findAll('.dropdown-item')
+      // Find only the preset dropdown items (not import/export dropdowns)
+      const presetDropdown = wrapper.find('.preset-dropdown .dropdown-menu')
+      expect(presetDropdown.exists()).toBe(true)
+
+      const dropdownItems = presetDropdown.findAll('.dropdown-item')
 
       // Should have 2 preset options
       expect(dropdownItems.length).toBe(2)

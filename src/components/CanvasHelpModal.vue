@@ -58,15 +58,6 @@
                     </div>
                   </div>
                   <div class="tip-item">
-                    <i class="bi bi-github control-icon"></i>
-                    <div>
-                      <strong>Gist Support</strong>
-                      <div>
-                        Load layouts by appending <code>#gist=abc123def...</code> to the URL
-                      </div>
-                    </div>
-                  </div>
-                  <div class="tip-item">
                     <i class="bi bi-lightbulb control-icon text-warning"></i>
                     <div>
                       <strong>Export Resolution</strong>

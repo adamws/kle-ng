@@ -96,6 +96,30 @@ export function clearShareFromUrl(): void {
 }
 
 /**
+ * Extract URL from current URL hash if present (#url=...)
+ * Supports GitHub Gists, raw GitHub URLs, and any other JSON URL
+ */
+export function extractUrlFromCurrentUrl(): string | null {
+  try {
+    const hash = window.location.hash
+    if (!hash.startsWith('#url=')) {
+      return null
+    }
+
+    const urlParam = hash.substring(5) // Remove '#url='
+
+    // Decode the URL in case it's URL-encoded
+    const decodedUrl = decodeURIComponent(urlParam)
+
+    return decodedUrl
+  } catch (error) {
+    console.error('Error extracting URL from hash:', error)
+    return null
+  }
+}
+
+/**
+ * @deprecated Use extractUrlFromCurrentUrl() instead. This function is kept for backward compatibility.
  * Extract gist ID from current URL if present
  */
 export function extractGistFromCurrentUrl(): string | null {
@@ -211,6 +235,18 @@ export async function fetchGistLayout(gistId: string): Promise<LayoutData> {
 }
 
 /**
+ * Clear URL import data from hash without page reload
+ */
+export function clearUrlFromHash(): void {
+  if (window.location.hash.startsWith('#url=')) {
+    // Remove the hash without triggering a page reload
+    const url = window.location.href.split('#')[0]
+    window.history.replaceState({}, document.title, url)
+  }
+}
+
+/**
+ * @deprecated Use clearUrlFromHash() instead. This function is kept for backward compatibility.
  * Clear gist data from URL without page reload
  */
 export function clearGistFromUrl(): void {

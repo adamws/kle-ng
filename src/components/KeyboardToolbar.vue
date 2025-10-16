@@ -25,47 +25,57 @@
 
       <!-- Import/Export/Share buttons -->
       <div class="btn-group" role="group">
-        <button
-          class="btn btn-outline-primary"
-          style="border-right-width: 1px"
-          @click="triggerFileUpload"
-          type="button"
-        >
-          Import
-        </button>
-
-        <div class="btn-group position-relative">
+        <div class="dropdown">
           <button
-            ref="exportBtnRef"
             class="btn btn-outline-primary dropdown-toggle"
-            @click="toggleExportDropdown"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+            style="border-right-width: 0px"
+            type="button"
+          >
+            Import
+          </button>
+          <ul class="dropdown-menu">
+            <li>
+              <a class="dropdown-item" href="#" @click.prevent="triggerFileUpload"> From File </a>
+            </li>
+            <li>
+              <a class="dropdown-item" href="#" @click.prevent="openUrlImportModal"> From URL </a>
+            </li>
+          </ul>
+        </div>
+
+        <div class="dropdown">
+          <button
+            class="btn btn-outline-primary dropdown-toggle"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
             type="button"
           >
             Export
           </button>
-          <div
-            v-if="showExportDropdown"
-            ref="exportDropdownRef"
-            class="custom-dropdown-menu"
-            style="opacity: 0"
-          >
-            <button @click="handleExportAction(downloadJson)" class="dropdown-item">
-              Download JSON
-            </button>
-            <button @click="handleExportAction(downloadKleInternalJson)" class="dropdown-item">
-              Download KLE Internal JSON
-            </button>
-            <button @click="handleExportAction(downloadViaJson)" class="dropdown-item">
-              Download VIA JSON
-            </button>
-            <button @click="handleExportAction(downloadPng)" class="dropdown-item">
-              Download PNG
-            </button>
-          </div>
+          <ul class="dropdown-menu">
+            <li>
+              <a class="dropdown-item" href="#" @click.prevent="downloadJson"> Download JSON </a>
+            </li>
+            <li>
+              <a class="dropdown-item" href="#" @click.prevent="downloadKleInternalJson">
+                Download KLE Internal JSON
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item" href="#" @click.prevent="downloadViaJson">
+                Download VIA JSON
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item" href="#" @click.prevent="downloadPng"> Download PNG </a>
+            </li>
+          </ul>
         </div>
 
         <button class="btn btn-primary" @click="shareLayout" type="button">
-          <span class="d-none d-sm-inline">Share Link</span>
+          <span class="d-none d-sm-inline" style="white-space: nowrap">Share Link</span>
           <span class="d-inline d-sm-none">Share</span>
         </button>
       </div>
@@ -79,11 +89,63 @@
       @change="handleFileUpload"
       style="display: none"
     />
+
+    <!-- URL Import Modal -->
+    <div
+      v-if="showUrlImportModal"
+      class="modal fade show d-block"
+      tabindex="-1"
+      @click.self="closeUrlImportModal"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Import from URL</h5>
+            <button
+              type="button"
+              class="btn-close"
+              @click="closeUrlImportModal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="urlInput" class="form-label">Enter URL</label>
+              <input
+                id="urlInput"
+                v-model="urlImportInput"
+                type="url"
+                class="form-control"
+                placeholder="https://..."
+                @keyup.enter="importFromUrl"
+              />
+              <div class="form-text">
+                Paste a link to a JSON file, GitHub Gist, or a share link. All formats are
+                automatically detected.
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" @click="closeUrlImportModal">
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              @click="importFromUrl"
+              :disabled="!urlImportInput"
+            >
+              Import
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick, watch } from 'vue'
 import { useKeyboardStore } from '@/stores/keyboard'
 import presetsMetadata from '@/data/presets.json'
 import { parseJsonString } from '@/utils/serialization'
@@ -91,6 +153,7 @@ import { toast } from '@/composables/useToast'
 import { parseBorderRadius, createRoundedRectanglePath } from '@/utils/border-radius'
 import { createPngWithKleLayout, extractKleLayout, hasKleMetadata } from '@/utils/png-metadata'
 import { isViaFormat, convertViaToKle, convertKleToVia } from '@/utils/via-import'
+import { decodeLayoutFromUrl, fetchGistLayout } from '@/utils/url-sharing'
 import LZString from 'lz-string'
 
 // Store
@@ -102,19 +165,13 @@ const selectedPresetName = ref('')
 const availablePresets = ref<{ name: string; file: string }[]>([])
 const fileInput = ref<HTMLInputElement>()
 
-// Dropdown state
-const showExportDropdown = ref(false)
-const exportDropdownRef = ref<HTMLElement>()
-const exportBtnRef = ref<HTMLElement>()
+// URL Import modal state
+const showUrlImportModal = ref(false)
+const urlImportInput = ref('')
 
-// Load presets on mount and setup event listeners
+// Load presets on mount
 onMounted(() => {
   availablePresets.value = presetsMetadata.presets || []
-  document.addEventListener('click', handleClickOutside)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
 })
 
 // Actions
@@ -218,52 +275,7 @@ const handleFileUpload = async (event: Event) => {
 
     // Handle JSON files
     const text = await file.text()
-    const data = parseJsonString(text)
-
-    // Auto-detect format and load accordingly
-    if (isViaFormat(data)) {
-      // VIA format - convert to KLE with embedded VIA metadata
-      console.log(`Loading VIA format from: ${file.name}`)
-
-      try {
-        const kleData = convertViaToKle(data)
-        keyboardStore.loadKLELayout(kleData)
-
-        // Manually add the VIA metadata after kle-serial processes the data
-        // Extract the compressed VIA metadata from the converted KLE data
-        const viaDataObj = data as Record<string, unknown>
-        const viaCopy = JSON.parse(JSON.stringify(viaDataObj))
-        const layouts = viaCopy.layouts as Record<string, unknown>
-        delete layouts.keymap // Remove keymap to get only VIA-specific metadata
-
-        // Compress the VIA metadata
-        const viaMetadataJson = JSON.stringify(viaCopy)
-        const compressedViaData = LZString.compressToBase64(viaMetadataJson)
-
-        // Add it to the keyboard metadata using type assertion
-        ;(keyboardStore.metadata as ExtendedKeyboardMetadata)._kleng_via_data = compressedViaData
-
-        toast.showSuccess(`VIA layout loaded from ${file.name}`, 'Import successful')
-      } catch (error) {
-        console.error('Error converting VIA format:', error)
-        const errorMessage = error instanceof Error ? error.message : 'Failed to convert VIA format'
-        toast.showError(errorMessage, 'VIA Import Failed')
-      }
-    } else if (isInternalKleFormat(data)) {
-      // Internal KLE format with meta and keys
-      console.log(`Loading internal KLE format from: ${file.name}`)
-
-      keyboardStore.loadLayout(data.keys, data.meta)
-      toast.showSuccess(`Internal KLE layout loaded from ${file.name}`, 'Import successful')
-    } else {
-      // Raw KLE format (array-based)
-      console.log(`Loading raw KLE format from: ${file.name}`)
-      keyboardStore.loadKLELayout(data)
-
-      toast.showSuccess(`KLE layout loaded from ${file.name}`, 'Import successful')
-    }
-
-    keyboardStore.filename = filenameWithoutExt
+    await processJsonLayout(text, file.name, filenameWithoutExt)
   } catch (error) {
     console.error('Error loading file:', error)
     const errorMessage = error instanceof Error ? error.message : 'Invalid file format'
@@ -422,69 +434,306 @@ const createCanvasWithRoundedBackground = (
   return tempCanvas
 }
 
-// Dropdown positioning functions
-const calculateDropdownPosition = (buttonRef: HTMLElement) => {
-  const buttonRect = buttonRef.getBoundingClientRect()
-  const viewportWidth = window.innerWidth
-  const viewportHeight = window.innerHeight
+// URL Import functions
+const openUrlImportModal = () => {
+  showUrlImportModal.value = true
+  urlImportInput.value = ''
+  document.body.classList.add('modal-open')
 
-  // Estimate dropdown dimensions
-  const estimatedDropdownWidth = 200
-  const estimatedDropdownHeight = 120 // 3 items + padding
-
-  // Calculate optimal position
-  let left = buttonRect.left // Default: align with button left
-  let top = buttonRect.bottom + 5 // Default: below button
-
-  // Check if dropdown would overflow viewport on the right
-  if (left + estimatedDropdownWidth > viewportWidth - 10) {
-    // Align to right edge of button instead
-    left = buttonRect.right - estimatedDropdownWidth
-  }
-
-  // Ensure dropdown doesn't overflow left edge
-  if (left < 10) {
-    left = 10
-  }
-
-  // Check if dropdown would overflow viewport on the bottom
-  if (top + estimatedDropdownHeight > viewportHeight - 10) {
-    // Position above the button instead
-    top = buttonRect.top - estimatedDropdownHeight - 5
-  }
-
-  // Ensure dropdown doesn't overflow top edge
-  if (top < 10) {
-    top = buttonRect.bottom + 5 // Force below if no room above
-  }
-
-  return { left, top }
+  // Focus the input field after modal opens
+  nextTick(() => {
+    const urlInput = document.getElementById('urlInput') as HTMLInputElement
+    if (urlInput) {
+      urlInput.focus()
+    }
+  })
 }
 
-const toggleExportDropdown = () => {
-  if (showExportDropdown.value) {
-    showExportDropdown.value = false
-    return
-  }
+const closeUrlImportModal = () => {
+  showUrlImportModal.value = false
+  urlImportInput.value = ''
+  document.body.classList.remove('modal-open')
+}
 
-  if (exportBtnRef.value) {
-    const { left, top } = calculateDropdownPosition(exportBtnRef.value)
-
-    showExportDropdown.value = true
-
-    nextTick(() => {
-      if (exportDropdownRef.value) {
-        exportDropdownRef.value.style.left = `${left}px`
-        exportDropdownRef.value.style.top = `${top}px`
-        exportDropdownRef.value.style.opacity = '1'
-      }
-    })
+// Close modal on Escape key
+const handleKeyDown = (event: KeyboardEvent) => {
+  if (event.key === 'Escape' && showUrlImportModal.value) {
+    closeUrlImportModal()
   }
 }
 
-const handleExportAction = (action: () => void) => {
-  action()
-  showExportDropdown.value = false
+// Add/remove escape key listener when modal visibility changes
+watch(
+  () => showUrlImportModal.value,
+  (visible) => {
+    if (visible) {
+      document.addEventListener('keydown', handleKeyDown)
+    } else {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  },
+)
+
+/**
+ * Convert GitHub blob URLs to raw URLs for direct file access
+ * Example: https://github.com/user/repo/blob/branch/file.json
+ *       -> https://raw.githubusercontent.com/user/repo/branch/file.json
+ */
+const convertGitHubBlobToRaw = (url: string): string => {
+  // Match GitHub blob URLs
+  const blobMatch = url.match(/^https?:\/\/github\.com\/([^/]+)\/([^/]+)\/blob\/([^/]+)\/(.+)$/)
+
+  if (blobMatch) {
+    const [, owner, repo, branch, path] = blobMatch
+    const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`
+    console.log(`Converted GitHub blob URL to raw URL: ${rawUrl}`)
+    toast.showInfo(
+      'Detected GitHub blob URL - automatically converting to raw URL for import',
+      'URL Converted',
+      { duration: 3000 },
+    )
+    return rawUrl
+  }
+
+  return url
+}
+
+const importFromUrl = async () => {
+  if (!urlImportInput.value) return
+
+  try {
+    let url = urlImportInput.value.trim()
+
+    // Convert GitHub blob URLs to raw URLs
+    url = convertGitHubBlobToRaw(url)
+
+    // Check if it's a share link with encoded data (#share=...)
+    if (url.includes('#share=')) {
+      await importFromShareLink(url)
+    }
+    // Check if it's a URL import link (#url=...) or old gist format (#gist=...) for backward compatibility
+    else if (url.includes('#url=') || url.includes('#gist=')) {
+      await importFromUrlHash(url)
+    }
+    // Check if it's a GitHub Gist URL
+    else if (url.includes('gist.github.com')) {
+      await importFromGist(url)
+    }
+    // Direct URL import (JSON file)
+    else {
+      await importFromDirectUrl(url)
+    }
+  } catch (error) {
+    console.error('Error importing from URL:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Failed to import from URL'
+    toast.showError(errorMessage, 'Import Failed')
+  } finally {
+    closeUrlImportModal()
+  }
+}
+
+const importFromShareLink = async (shareUrl: string) => {
+  try {
+    // Check if this is the current page URL - if so, it's already loaded
+    if (shareUrl.includes(window.location.hash) && window.location.hash.startsWith('#share=')) {
+      toast.showInfo('This layout is already loaded in the current page', 'Already Loaded')
+      return
+    }
+
+    // Extract the encoded data from the URL
+    const hashIndex = shareUrl.indexOf('#share=')
+    if (hashIndex === -1) {
+      throw new Error('Invalid share link format')
+    }
+
+    const encodedData = shareUrl.substring(hashIndex + 7) // Remove '#share='
+
+    // Decode the layout data
+    const layoutData = decodeLayoutFromUrl(encodedData)
+
+    // Load the layout
+    keyboardStore.loadLayout(layoutData.keys, layoutData.metadata)
+    keyboardStore.filename = 'shared-layout'
+
+    toast.showSuccess('Layout imported from share link', 'Import Successful')
+  } catch (error) {
+    console.error('Error importing from share link:', error)
+    throw error
+  }
+}
+
+const importFromUrlHash = async (urlWithHash: string) => {
+  try {
+    // Check if this is the current page URL - if so, it's already loaded
+    const currentHash = window.location.hash
+    if (
+      urlWithHash.includes(currentHash) &&
+      (currentHash.startsWith('#url=') || currentHash.startsWith('#gist='))
+    ) {
+      toast.showInfo('This layout is already loaded in the current page', 'Already Loaded')
+      return
+    }
+
+    // Extract the URL from the hash - supports both #url= and #gist= formats
+    let hashIndex = urlWithHash.indexOf('#url=')
+    let prefix = '#url='
+
+    if (hashIndex === -1) {
+      // Try #gist= format (preferred for gists)
+      hashIndex = urlWithHash.indexOf('#gist=')
+      prefix = '#gist='
+    }
+
+    if (hashIndex === -1) {
+      throw new Error('Invalid URL hash format')
+    }
+
+    const urlParam = urlWithHash.substring(hashIndex + prefix.length)
+    const decodedUrl = decodeURIComponent(urlParam)
+
+    // The decoded URL could be:
+    // 1. A full GitHub Gist URL (e.g., https://gist.github.com/username/abc123)
+    // 2. A gist ID (e.g., abc123def456) - preferred format for gists
+    // 3. Any direct JSON file URL (e.g., https://raw.githubusercontent.com/...)
+
+    // Check if it's a gist URL or ID
+    if (decodedUrl.includes('gist.github.com')) {
+      await importFromGist(decodedUrl)
+    } else if (/^[a-f0-9]+$/i.test(decodedUrl)) {
+      // Gist ID format (preferred for gists as it's shorter)
+      const layoutData = await fetchGistLayout(decodedUrl)
+      keyboardStore.loadLayout(layoutData.keys, layoutData.metadata)
+      keyboardStore.filename = `gist-${decodedUrl}`
+      toast.showSuccess(`Layout imported from gist: ${decodedUrl}`, 'Import Successful')
+    } else {
+      // Direct URL to JSON file
+      await importFromDirectUrl(decodedUrl)
+    }
+  } catch (error) {
+    console.error('Error importing from URL hash:', error)
+    throw error
+  }
+}
+
+const importFromGist = async (gistUrl: string) => {
+  try {
+    // Extract Gist ID from URL
+    const gistIdMatch = gistUrl.match(/gist\.github\.com\/(?:[^\/]+\/)?([a-f0-9]+)/i)
+    if (!gistIdMatch) {
+      throw new Error('Invalid GitHub Gist URL')
+    }
+
+    const gistId = gistIdMatch[1]
+    const apiUrl = `https://api.github.com/gists/${gistId}`
+
+    // Fetch Gist data
+    const response = await fetch(apiUrl)
+    if (!response.ok) {
+      throw new Error(`Failed to fetch Gist: ${response.status} ${response.statusText}`)
+    }
+
+    const gistData = (await response.json()) as {
+      files: Record<string, { filename: string; content: string }>
+    }
+
+    // Find the first JSON file in the Gist
+    const jsonFile = Object.values(gistData.files).find((file) =>
+      file.filename.toLowerCase().endsWith('.json'),
+    )
+
+    if (!jsonFile) {
+      throw new Error('No JSON file found in Gist')
+    }
+
+    // Process the JSON layout using shared logic
+    await processJsonLayout(jsonFile.content, `gist-${gistId}`, `gist-${gistId}`)
+  } catch (error) {
+    console.error('Error importing from Gist:', error)
+    throw error
+  }
+}
+
+/**
+ * Process and load JSON layout data with automatic format detection
+ * Handles VIA, Internal KLE, and Raw KLE formats
+ * @param jsonText - The JSON string to parse
+ * @param displayFilename - The filename to display in messages (with extension)
+ * @param storedFilename - The filename to store (without extension)
+ */
+const processJsonLayout = async (
+  jsonText: string,
+  displayFilename: string,
+  storedFilename: string,
+) => {
+  const data = parseJsonString(jsonText)
+
+  // Auto-detect format and load accordingly
+  if (isViaFormat(data)) {
+    // VIA format - convert to KLE with embedded VIA metadata
+    console.log(`Loading VIA format from: ${displayFilename}`)
+
+    try {
+      const kleData = convertViaToKle(data)
+      keyboardStore.loadKLELayout(kleData)
+
+      // Manually add the VIA metadata after kle-serial processes the data
+      // Extract the compressed VIA metadata from the converted KLE data
+      const viaDataObj = data as Record<string, unknown>
+      const viaCopy = JSON.parse(JSON.stringify(viaDataObj))
+      const layouts = viaCopy.layouts as Record<string, unknown>
+      delete layouts.keymap // Remove keymap to get only VIA-specific metadata
+
+      // Compress the VIA metadata
+      const viaMetadataJson = JSON.stringify(viaCopy)
+      const compressedViaData = LZString.compressToBase64(viaMetadataJson)
+
+      // Add it to the keyboard metadata using type assertion
+      ;(keyboardStore.metadata as ExtendedKeyboardMetadata)._kleng_via_data = compressedViaData
+
+      toast.showSuccess(`VIA layout loaded from ${displayFilename}`, 'Import successful')
+    } catch (error) {
+      console.error('Error converting VIA format:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Failed to convert VIA format'
+      toast.showError(errorMessage, 'VIA Import Failed')
+      throw error
+    }
+  } else if (isInternalKleFormat(data)) {
+    // Internal KLE format with meta and keys
+    console.log(`Loading internal KLE format from: ${displayFilename}`)
+
+    keyboardStore.loadLayout(data.keys, data.meta)
+    toast.showSuccess(`Internal KLE layout loaded from ${displayFilename}`, 'Import successful')
+  } else {
+    // Raw KLE format (array-based)
+    console.log(`Loading raw KLE format from: ${displayFilename}`)
+    keyboardStore.loadKLELayout(data)
+
+    toast.showSuccess(`KLE layout loaded from ${displayFilename}`, 'Import successful')
+  }
+
+  keyboardStore.filename = storedFilename
+}
+
+const importFromDirectUrl = async (url: string) => {
+  try {
+    // Fetch the JSON file directly
+    const response = await fetch(url)
+    if (!response.ok) {
+      throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`)
+    }
+
+    const jsonText = await response.text()
+
+    // Extract filename from URL
+    const urlParts = url.split('/')
+    const filenameWithExt = urlParts[urlParts.length - 1]
+    const filenameWithoutExt = filenameWithExt.replace(/\.json$/, '')
+
+    await processJsonLayout(jsonText, filenameWithExt, filenameWithoutExt)
+  } catch (error) {
+    console.error('Error importing from direct URL:', error)
+    throw error
+  }
 }
 
 // Share function
@@ -515,25 +764,6 @@ const shareLayout = async () => {
   } catch (error) {
     console.error('Error generating share link:', error)
     toast.showError('Please try again.', 'Error generating share link')
-  }
-}
-
-// Close dropdowns when clicking outside
-const handleClickOutside = (event: MouseEvent) => {
-  const target = event.target as Node
-
-  if (showExportDropdown.value) {
-    const exportBtn = exportBtnRef.value
-    const exportDropdown = exportDropdownRef.value
-
-    if (
-      exportBtn &&
-      !exportBtn.contains(target) &&
-      exportDropdown &&
-      !exportDropdown.contains(target)
-    ) {
-      showExportDropdown.value = false
-    }
   }
 }
 </script>
@@ -600,44 +830,31 @@ const handleClickOutside = (event: MouseEvent) => {
   text-align: right;
 }
 
-/* Custom Dropdown Styles */
-.custom-dropdown-menu {
-  position: fixed;
-  background-color: var(--bs-body-bg);
-  border: 1px solid var(--bs-border-color);
-  border-radius: 6px;
-  box-shadow: var(--bs-box-shadow);
-  z-index: 10000;
-  min-width: 180px;
-  max-height: 300px;
-  overflow-y: auto;
-  transition: opacity 0.2s ease;
-  padding: 4px 0;
-}
-
-.custom-dropdown-menu .dropdown-item {
-  display: block;
-  width: 100%;
-  padding: 8px 16px;
-  text-align: left;
-  background: none;
-  border: none;
-  font-size: 14px;
-  color: var(--bs-body-color);
-  cursor: pointer;
-  transition: background-color 0.15s ease;
-  text-decoration: none;
-}
-
-.custom-dropdown-menu .dropdown-item:hover {
-  background: var(--bs-tertiary-bg);
-}
-
-.custom-dropdown-menu .dropdown-item:active {
-  background-color: var(--bs-secondary-bg);
-}
-
 .keyboard-toolbar .btn-outline-primary {
   border-width: 2px;
+}
+
+/* Import/Export/Share button group corner rounding */
+.btn-group > .dropdown:first-child .btn {
+  border-top-left-radius: 6px !important;
+  border-bottom-left-radius: 6px !important;
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+.btn-group > .dropdown:nth-child(2) .btn {
+  border-radius: 0 !important;
+}
+
+.btn-group > .btn:last-child {
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+  border-top-right-radius: 6px !important;
+  border-bottom-right-radius: 6px !important;
+}
+
+/* Modal Styles */
+.modal {
+  background: rgba(0, 0, 0, 0.5);
 }
 </style>

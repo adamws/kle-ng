@@ -16,7 +16,7 @@ async function verifyKeyCoordinates(
 
   // Set up download handler
   const downloadPromise = page.waitForEvent('download')
-  await page.locator('button', { hasText: 'Download JSON' }).click()
+  await page.locator('a', { hasText: 'Download JSON' }).click()
 
   const download = await downloadPromise
   const downloadPath = `e2e/test-output/${testName}-${Date.now()}.json`
@@ -71,7 +71,7 @@ async function verifyMultipleKeyCoordinates(
 
   // Set up download handler
   const downloadPromise = page.waitForEvent('download')
-  await page.locator('button', { hasText: 'Download JSON' }).click()
+  await page.locator('a', { hasText: 'Download JSON' }).click()
 
   const download = await downloadPromise
   const downloadPath = `e2e/test-output/${testName}-${Date.now()}.json`

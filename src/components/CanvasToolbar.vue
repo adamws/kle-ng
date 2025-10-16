@@ -739,7 +739,7 @@ onUnmounted(() => {
   border: 1px solid var(--bs-border-color);
   border-radius: 6px;
   box-shadow: var(--bs-box-shadow);
-  z-index: 10000;
+  z-index: 10002; /* Above toasts (10001) */
   min-width: 150px;
   max-height: 300px;
   overflow-y: auto;
@@ -794,7 +794,7 @@ onUnmounted(() => {
   border: 1px solid var(--bs-border-color);
   border-radius: 6px;
   box-shadow: var(--bs-box-shadow);
-  z-index: 10000;
+  z-index: 10002; /* Above toasts (10001) */
   min-width: 180px;
   max-height: 300px;
   overflow-y: auto;
@@ -836,7 +836,7 @@ onUnmounted(() => {
   border: 1px solid var(--bs-border-color);
   border-radius: 6px;
   box-shadow: var(--bs-box-shadow);
-  z-index: 10000;
+  z-index: 10002; /* Above toasts (10001) */
   min-width: 200px;
   max-height: 300px;
   overflow-y: auto;

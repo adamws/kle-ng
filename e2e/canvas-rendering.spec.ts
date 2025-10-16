@@ -49,22 +49,19 @@ test.describe('Canvas Rendering - Layout Tests', () => {
   })
 
   test('should render ANSI 104 layout', async ({ page }) => {
-    // Load ANSI 104 preset by directly dispatching click event
-    // Wait for dropdown items to be in DOM
-    await page.waitForSelector('.dropdown-item', { state: 'attached', timeout: 5000 })
+    // Open the presets dropdown
+    const presetButton = page.locator('.preset-dropdown button.preset-select')
+    await presetButton.click()
 
-    // Dispatch click event directly to ANSI 104 preset
-    await page.evaluate(() => {
-      const ansiItem = Array.from(document.querySelectorAll('.dropdown-item')).find((item) =>
-        item.textContent?.includes('ANSI 104'),
-      )
-      if (ansiItem) {
-        ansiItem.click()
-      }
+    // Wait for dropdown items to be in DOM
+    await page.waitForSelector('.preset-dropdown .dropdown-item', {
+      state: 'attached',
+      timeout: 5000,
     })
 
-    // Small wait to ensure the selection event is processed
-    await page.waitForTimeout(100)
+    // Click the ANSI 104 preset item (exact match to avoid "ANSI 104 (big-ass enter)")
+    const ansiItem = page.locator('.preset-dropdown .dropdown-item', { hasText: /^ANSI 104$/ })
+    await ansiItem.click()
 
     // Wait for layout to load with increased timeout for CI environments
     await page.waitForFunction(
