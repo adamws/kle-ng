@@ -29,6 +29,22 @@
       @focus="handleCanvasFocus"
       @blur="handleCanvasBlur"
     />
+
+    <!-- Debug Overlay (development mode only) -->
+    <DebugOverlay
+      v-if="isDevMode"
+      ref="debugOverlayRef"
+      :visible="true"
+      :canvasWidth="canvasWidth"
+      :canvasHeight="canvasHeight"
+      :zoom="zoom"
+      :panX="panX"
+      :panY="panY"
+      :coordinateOffset="getCoordinateSystemOffset()"
+    />
+
+    <!-- Debug Control Button (development mode only) -->
+    <DebugControlButton v-if="isDevMode" :debugOverlayRef="debugOverlayRef" />
   </div>
 
   <!-- Rotation control modal -->
@@ -64,9 +80,14 @@ import { parseJsonString } from '@/utils/serialization'
 import { toast } from '@/composables/useToast'
 import RotationControlModal from '@/components/RotationControlModal.vue'
 import MoveExactlyModal from '@/components/MoveExactlyModal.vue'
+import DebugOverlay from '@/components/DebugOverlay.vue'
+import DebugControlButton from '@/components/DebugControlButton.vue'
 
 // Visual border around rendered keycaps (in pixels)
 const CANVAS_BORDER = 9
+
+// Development mode flag
+const isDevMode = import.meta.env.DEV
 
 const keyboardStore = useKeyboardStore()
 const fontStore = useFontStore()
@@ -90,6 +111,7 @@ const isInternalKleFormat = (data: unknown): data is InternalKleFormat => {
 
 const canvasRef = ref<HTMLCanvasElement>()
 const containerRef = ref<HTMLDivElement>()
+const debugOverlayRef = ref<InstanceType<typeof DebugOverlay>>()
 
 const canvasWidth = ref(800)
 const canvasHeight = ref(600)

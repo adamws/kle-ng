@@ -11,8 +11,8 @@ test.describe('Delete Label Text Wrapping', () => {
   test('should render Delete label on 1x1 key without wrapping', async ({ page }) => {
     await page.goto('/')
 
-    // Wait for the canvas to be rendered
-    const canvas = page.locator('canvas')
+    // Wait for the keyboard canvas to be rendered (first canvas element)
+    const canvas = page.locator('canvas.keyboard-canvas')
     await expect(canvas).toBeVisible()
 
     // Clear the keyboard first
