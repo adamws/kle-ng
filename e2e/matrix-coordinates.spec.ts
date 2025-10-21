@@ -300,7 +300,7 @@ test.describe('Matrix Coordinates Tool', () => {
     ).toBeVisible()
   })
 
-  test('should show warning when layout is already annotated', async ({ page }) => {
+  test('should skip to completion state when layout is already annotated', async ({ page }) => {
     // Add keys first
     await page.click('button[title="Add Standard Key"]')
     await page.click('button[title="Add Standard Key"]')
@@ -320,11 +320,8 @@ test.describe('Matrix Coordinates Tool', () => {
     // Wait for modal content to load
     await page.waitForTimeout(500)
 
-    // Warning should NOT be visible on first run (no annotations yet)
-    await expect(page.locator('.already-annotated-warning')).not.toBeVisible()
-
     // Since we have no labels, we should be in drawing step directly
-    // No need to click OK - proceed directly to automatic annotation
+    await expect(page.locator('.draw-section')).toBeVisible()
 
     // Click Annotate Automatically to apply coordinates
     await page.locator('.matrix-modal button').filter({ hasText: 'Annotate Automatically' }).click()
@@ -353,11 +350,13 @@ test.describe('Matrix Coordinates Tool', () => {
     // Wait for modal content to load
     await page.waitForTimeout(500)
 
-    // Warning SHOULD be visible on second run (already annotated warning)
-    const warning = page.locator('.alert-success')
-    await expect(warning).toBeVisible()
-    await expect(warning).toContainText('Layout Already Annotated')
-    await expect(warning).toContainText('valid "row,column" annotations')
+    // Should skip warning and go directly to draw step with "Layout Already Annotated" message
+    await expect(page.locator('.draw-section')).toBeVisible()
+
+    const completionAlert = page.locator('.alert-success')
+    await expect(completionAlert).toBeVisible()
+    await expect(completionAlert).toContainText('Layout Already Annotated')
+    await expect(completionAlert).toContainText('valid "row,column" annotations')
   })
 
   test('should NOT clear labels when modal opens with warning step', async ({ page }) => {
@@ -530,5 +529,109 @@ test.describe('Matrix Coordinates Tool', () => {
         ),
     )
     expect(hasClearedLabels).toBe(false)
+  })
+
+  test('should show "Annotation Complete!" after automatic annotation', async ({ page }) => {
+    // Add some keys to annotate
+    await page.click('button[title="Add Standard Key"]')
+    await page.click('button[title="Add Standard Key"]')
+    await page.click('button[title="Add Standard Key"]')
+    await page.waitForTimeout(500)
+
+    // Open matrix coordinates modal
+    await page.locator('.extra-tools-group button').click()
+    await page
+      .locator('.extra-tools-dropdown .dropdown-item')
+      .filter({
+        hasText: 'Add Switch Matrix Coordinates',
+      })
+      .click()
+
+    await expect(page.locator('.matrix-modal')).toBeVisible()
+    await page.waitForTimeout(500)
+
+    // Should be in draw step (no labels means skip warning)
+    await expect(page.locator('.draw-section')).toBeVisible()
+
+    // Click Annotate Automatically
+    await page.locator('.matrix-modal button').filter({ hasText: 'Annotate Automatically' }).click()
+
+    // Wait for annotation to complete and success message to appear
+    const completionAlert = page.locator('.alert-success')
+    await expect(completionAlert).toBeVisible({ timeout: 10000 })
+    await expect(completionAlert).toContainText('Annotation Complete!')
+    await expect(completionAlert).toContainText('All 3 keys have been assigned')
+  })
+
+  test('should show matrix preview for already annotated Default 60% (VIA) preset', async ({
+    page,
+    browserName,
+  }) => {
+    // Skip this test on non-Chromium browsers since we're asserting screenshots
+    test.skip(browserName !== 'chromium', 'Screenshots only verified on Chromium')
+
+    // Open the presets dropdown
+    const presetButton = page.locator('.preset-dropdown button.preset-select')
+    await presetButton.click()
+
+    // Wait for dropdown items to be in DOM
+    await page.waitForSelector('.preset-dropdown .dropdown-item', {
+      state: 'attached',
+      timeout: 5000,
+    })
+
+    // Click the Default 60% (VIA) preset item
+    const viaItem = page.locator('.preset-dropdown .dropdown-item', {
+      hasText: 'Default 60% (VIA)',
+    })
+    await viaItem.click()
+
+    // Wait for layout to load - Default 60% has 61 keys
+    await page.waitForFunction(
+      () => {
+        const keysCounter = document.querySelector('.keys-counter')?.textContent
+        if (!keysCounter) return false
+        const match = keysCounter.match(/Keys: (\d+)/)
+        return match ? parseInt(match[1]) === 61 : false
+      },
+      { timeout: 10000 },
+    )
+
+    // Wait a bit more to ensure layout is fully rendered
+    await page.waitForTimeout(500)
+
+    // Open matrix coordinates modal
+    await page.locator('.extra-tools-group button').click()
+    await page
+      .locator('.extra-tools-dropdown .dropdown-item')
+      .filter({
+        hasText: 'Add Switch Matrix Coordinates',
+      })
+      .click()
+
+    await expect(page.locator('.matrix-modal')).toBeVisible()
+
+    // Wait for modal content to load
+    await page.waitForTimeout(500)
+
+    // Should skip warning step and go directly to draw step
+    const drawSection = page.locator('.draw-section')
+    await expect(drawSection).toBeVisible()
+
+    // Should show "Layout Already Annotated" since Default 60% (VIA) is pre-annotated
+    const completionAlert = page.locator('.alert-success')
+    await expect(completionAlert).toBeVisible()
+    await expect(completionAlert).toContainText('Layout Already Annotated')
+    await expect(completionAlert).toContainText('valid "row,column" annotations')
+
+    // Wait for matrix overlay to be rendered on canvas
+    await page.waitForTimeout(1000)
+
+    // Take a screenshot of the keyboard canvas to verify matrix preview is rendered
+    const canvas = page.locator('.keyboard-canvas-container')
+    await expect(canvas).toBeVisible()
+
+    // Take screenshot and compare with baseline
+    await expect(canvas).toHaveScreenshot('default-60-via-matrix-preview.png')
   })
 })

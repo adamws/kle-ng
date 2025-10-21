@@ -31,9 +31,14 @@
               <i class="bi bi-check-circle-fill text-success" style="font-size: 1.5rem"></i>
               <div class="flex-grow-1">
                 <h6 class="mb-2 text-success fw-bold">Layout Already Annotated</h6>
-                <p class="mb-0 small">
+                <p class="mb-2 small">
                   This layout appears to already have VIA matrix coordinates. All keys have valid
                   "row,column" annotations in the top-left position.
+                </p>
+                <p class="mb-0 small">
+                  <i class="bi bi-eye me-1"></i>
+                  The matrix overlay is currently visible on the canvas showing the existing row and
+                  column connections.
                 </p>
               </div>
             </div>
@@ -133,7 +138,24 @@
 
             <!-- Completion Message -->
             <div v-if="isAnnotationComplete" class="alert alert-success mb-3">
-              <div class="d-flex align-items-center gap-2">
+              <!-- Already Annotated (opened with existing annotations) -->
+              <div v-if="isShowingExistingAnnotation" class="d-flex align-items-start gap-3">
+                <i class="bi bi-check-circle-fill text-success" style="font-size: 1.5rem"></i>
+                <div class="flex-grow-1">
+                  <h6 class="mb-2 text-success fw-bold">Layout Already Annotated</h6>
+                  <p class="mb-2 small">
+                    This layout appears to already have VIA matrix coordinates. All keys have valid
+                    "row,column" annotations in the top-left position.
+                  </p>
+                  <p class="mb-0 small">
+                    <i class="bi bi-eye me-1"></i>
+                    The matrix overlay is currently visible on the canvas showing the existing row
+                    and column connections.
+                  </p>
+                </div>
+              </div>
+              <!-- Just Completed Annotation -->
+              <div v-else class="d-flex align-items-center gap-2">
                 <i class="bi bi-check-circle-fill" style="font-size: 1.2rem"></i>
                 <div class="flex-grow-1">
                   <strong>Annotation Complete!</strong>
@@ -255,6 +277,7 @@ import { useDraggablePanel } from '@/composables/useDraggablePanel'
 import { useKeyboardStore, type Key } from '@/stores/keyboard'
 import { useMatrixDrawingStore } from '@/stores/matrix-drawing'
 import { getKeyCenter } from '@/utils/keyboard-geometry'
+import { extractMatrixAssignments } from '@/utils/matrix-utils'
 
 // Props
 interface Props {
@@ -293,6 +316,7 @@ interface MatrixItem {
 const step = ref<'warning' | 'draw'>('warning')
 const rows = ref<MatrixItem[]>([])
 const cols = ref<MatrixItem[]>([])
+const isShowingExistingAnnotation = ref(false)
 
 // Dragging functionality
 const { position, panelRef, handleMouseDown, handleHeaderMouseDown, initializePosition } =
@@ -357,6 +381,9 @@ const isAnnotationComplete = computed(() => {
 
 // Methods
 const acceptWarning = () => {
+  // Hide the existing matrix overlay since we're about to remove all legends
+  exitPreviewMode()
+
   // Remove all legends from all keys
   keyboardStore.keys.forEach((key) => {
     key.labels = []
@@ -410,6 +437,9 @@ const applyCoordinatesToKeys = () => {
 }
 
 const handleAutomaticAnnotation = () => {
+  // Mark that we're NOT showing existing annotations anymore (user is creating new ones)
+  isShowingExistingAnnotation.value = false
+
   // Calculate center positions for all keys and assign matrix coordinates
   // Create a map of matrix positions to keys
   const matrixMap = new Map<string, Key[]>()
@@ -518,6 +548,58 @@ const handleAutomaticAnnotation = () => {
   applyCoordinatesToKeys()
 }
 
+const showExistingMatrixOverlay = () => {
+  // Mark that we're showing pre-existing annotations
+  isShowingExistingAnnotation.value = true
+
+  // Extract existing matrix assignments from the already annotated layout
+  const { rows: existingRows, cols: existingCols } = extractMatrixAssignments(keyboardStore.keys)
+
+  // Convert the extracted Map<number, Key[]> to MatrixItem[] format
+  rows.value = Array.from(existingRows.entries())
+    .sort(([a], [b]) => a - b) // Sort by row index
+    .map(([index, keySequence]) => ({
+      id: `row-${index}-${Date.now()}`,
+      index,
+      keySequence,
+    }))
+
+  cols.value = Array.from(existingCols.entries())
+    .sort(([a], [b]) => a - b) // Sort by column index
+    .map(([index, keySequence]) => ({
+      id: `col-${index}-${Date.now()}`,
+      index,
+      keySequence,
+    }))
+
+  // Sync to matrixDrawingStore so the canvas overlay renders automatically
+  matrixDrawingStore.clearDrawings()
+
+  // Add rows
+  matrixDrawingStore.enableDrawing('row')
+  rows.value.forEach((row) => {
+    row.keySequence.forEach((key) => {
+      matrixDrawingStore.addKeyToSequence(key)
+    })
+    matrixDrawingStore.completeSequence()
+  })
+
+  // Add columns
+  matrixDrawingStore.enableDrawing('column')
+  cols.value.forEach((col) => {
+    col.keySequence.forEach((key) => {
+      matrixDrawingStore.addKeyToSequence(key)
+    })
+    matrixDrawingStore.completeSequence()
+  })
+  matrixDrawingStore.disableDrawing()
+}
+
+const exitPreviewMode = () => {
+  // Clear the matrix drawing store to hide the overlay
+  matrixDrawingStore.clearDrawings()
+}
+
 const handleClose = () => {
   // Close the modal and clear drawings (but keep labels on keys)
   // Stop drawing if active
@@ -540,6 +622,7 @@ const resetState = () => {
   step.value = 'warning'
   rows.value = []
   cols.value = []
+  isShowingExistingAnnotation.value = false
   // Also stop any active drawing and clear drawings
   if (matrixDrawingStore.isDrawing) {
     matrixDrawingStore.disableDrawing()
@@ -565,6 +648,9 @@ const toggleDrawing = () => {
 }
 
 const clearDrawings = () => {
+  // Mark that we're no longer showing existing annotations when user clears
+  isShowingExistingAnnotation.value = false
+
   matrixDrawingStore.clearDrawings()
   // Also clear the modal's rows/cols that came from drawings
   syncDrawingsToModal()
@@ -630,10 +716,17 @@ watch(
       initializePosition({ x: window.innerWidth - modalWidth - margin, y: 100 })
       resetState()
 
-      // If there are no labels, skip warning and go directly to drawing step
-      if (!hasLabels.value) {
+      // If the layout is already annotated, show the matrix overlay and skip to draw step
+      if (keyboardStore.isViaAnnotated) {
+        showExistingMatrixOverlay()
+        step.value = 'draw'
+      } else if (!hasLabels.value) {
+        // If there are no labels, skip warning and go directly to drawing step
         step.value = 'draw'
       }
+    } else {
+      // Hide matrix overlay when modal closes
+      exitPreviewMode()
     }
   },
 )
