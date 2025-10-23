@@ -597,9 +597,15 @@ const syncDrawingsToModal = () => {
 }
 
 // Watch for changes in store's completed drawings and sync to modal
-// We watch the array lengths to avoid deep watching which can cause recursion
+// Watch both length changes AND content changes (for row/column continuation)
 watch(
-  () => [matrixDrawingStore.completedRows.length, matrixDrawingStore.completedColumns.length],
+  () => [
+    matrixDrawingStore.completedRows.length,
+    matrixDrawingStore.completedColumns.length,
+    // Also watch the total number of keys across all rows/columns to detect additions
+    matrixDrawingStore.completedRows.reduce((sum, row) => sum + row.length, 0),
+    matrixDrawingStore.completedColumns.reduce((sum, col) => sum + col.length, 0),
+  ],
   () => {
     // Only sync and apply if modal is visible AND in draw step
     // Don't apply in warning step - labels should only be cleared when user clicks OK

@@ -137,8 +137,12 @@ const handleMouseMove = (event: MouseEvent) => {
     matrixDrawingStore.sensitivity,
   )
 
-  // Filter out keys already in current sequence
-  const newKeys = keysAlongLine.filter((key) => !matrixDrawingStore.currentSequence.includes(key))
+  // Filter out keys already in current sequence AND keys that would violate matrix rules
+  const newKeys = keysAlongLine.filter(
+    (key) =>
+      !matrixDrawingStore.currentSequence.includes(key) &&
+      matrixDrawingStore.canAddKeyToSequence(key, keyboardStore.keys),
+  )
 
   // Update preview if it changed
   if (
@@ -158,6 +162,12 @@ const handleClick = (event: MouseEvent) => {
   const closestKey = findClosestKey(canvasPos.x, canvasPos.y, keyboardStore.keys)
 
   if (!closestKey) return
+
+  // Check if this key can be added (doesn't violate matrix rules)
+  if (!matrixDrawingStore.canAddKeyToSequence(closestKey, keyboardStore.keys)) {
+    // Key is unavailable - ignore the click
+    return
+  }
 
   // If clicking on a key already in the sequence, finish the sequence
   if (matrixDrawingStore.currentSequence.includes(closestKey)) {
@@ -187,15 +197,19 @@ const handleClick = (event: MouseEvent) => {
       matrixDrawingStore.sensitivity,
     )
 
-    // Add all intersecting keys that aren't already in the sequence
+    // Add all intersecting keys that aren't already in the sequence AND don't violate matrix rules
     keysAlongLine.forEach((key) => {
-      if (!matrixDrawingStore.currentSequence.includes(key)) {
+      if (
+        !matrixDrawingStore.currentSequence.includes(key) &&
+        matrixDrawingStore.canAddKeyToSequence(key, keyboardStore.keys)
+      ) {
         matrixDrawingStore.addKeyToSequence(key)
       }
     })
 
     // ALWAYS add the clicked key itself, even if not in keysAlongLine
     // (This can happen with higher sensitivity where the clicked key doesn't intersect the line)
+    // The clicked key has already been validated above, so we can safely add it
     if (!matrixDrawingStore.currentSequence.includes(closestKey)) {
       matrixDrawingStore.addKeyToSequence(closestKey)
     }
