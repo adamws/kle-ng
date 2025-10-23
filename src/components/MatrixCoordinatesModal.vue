@@ -601,8 +601,9 @@ const syncDrawingsToModal = () => {
 watch(
   () => [matrixDrawingStore.completedRows.length, matrixDrawingStore.completedColumns.length],
   () => {
-    // Only sync and apply if modal is visible
-    if (!props.visible) return
+    // Only sync and apply if modal is visible AND in draw step
+    // Don't apply in warning step - labels should only be cleared when user clicks OK
+    if (!props.visible || step.value !== 'draw') return
 
     syncDrawingsToModal()
     // Apply coordinates immediately after syncing to show labels while drawing

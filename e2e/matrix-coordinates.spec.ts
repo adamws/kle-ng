@@ -1,4 +1,58 @@
 import { test, expect } from '@playwright/test'
+import { promises as fs } from 'fs'
+
+// Helper function to export and parse layout JSON
+async function exportLayoutJSON(page: import('@playwright/test').Page) {
+  // Click Export button
+  const exportButton = page.locator('button', { hasText: 'Export' })
+  await expect(exportButton).toBeVisible()
+  await exportButton.click()
+
+  // Set up download handler
+  const downloadPromise = page.waitForEvent('download')
+  await page.locator('a', { hasText: 'Download JSON' }).click()
+
+  const download = await downloadPromise
+  const downloadPath = `e2e/test-output/matrix-coordinates-${Date.now()}.json`
+  await download.saveAs(downloadPath)
+
+  // Read and parse the exported JSON
+  const exportedContent = await fs.readFile(downloadPath, 'utf-8')
+  const layout = JSON.parse(exportedContent)
+
+  // Clean up test file
+  await fs.unlink(downloadPath)
+
+  return layout
+}
+
+// Helper function to import layout via JSON file
+async function importLayoutJSON(page: import('@playwright/test').Page, layoutData: unknown) {
+  // Create temporary JSON file
+  const tempFilePath = `e2e/test-output/temp-import-${Date.now()}.json`
+  await fs.writeFile(tempFilePath, JSON.stringify(layoutData))
+
+  // Set up file chooser handler
+  const fileChooserPromise = page.waitForEvent('filechooser')
+
+  // Click Import button and select "From File"
+  const importButton = page.locator('button', { hasText: 'Import' })
+  await expect(importButton).toBeVisible()
+  await importButton.click()
+
+  // Wait for dropdown to be visible
+  await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
+  await page.locator('a', { hasText: 'From File' }).click()
+
+  const fileChooser = await fileChooserPromise
+  await fileChooser.setFiles(tempFilePath)
+
+  // Wait for import to complete
+  await page.waitForTimeout(500)
+
+  // Clean up temporary file
+  await fs.unlink(tempFilePath)
+}
 
 test.describe('Matrix Coordinates Tool', () => {
   test.beforeEach(async ({ page }) => {
@@ -304,5 +358,177 @@ test.describe('Matrix Coordinates Tool', () => {
     await expect(warning).toBeVisible()
     await expect(warning).toContainText('Layout Already Annotated')
     await expect(warning).toContainText('valid "row,column" annotations')
+  })
+
+  test('should NOT clear labels when modal opens with warning step', async ({ page }) => {
+    // Load a layout with labels using KLE format
+    const fixtureWithLabels = [
+      ['A', 'B', 'C'],
+      ['D', 'E', 'F'],
+      ['G', 'H', 'I'],
+    ]
+
+    // Load layout with labels via JSON import
+    await importLayoutJSON(page, fixtureWithLabels)
+    await page.waitForTimeout(500)
+
+    // Get initial layout via JSON export
+    const initialLayout = await exportLayoutJSON(page)
+
+    // Open Matrix Coordinates Modal
+    await page.locator('.extra-tools-group button').click()
+    await page
+      .locator('.extra-tools-dropdown .dropdown-item')
+      .filter({ hasText: 'Add Switch Matrix Coordinates' })
+      .click()
+
+    await expect(page.locator('.matrix-modal')).toBeVisible()
+    await page.waitForTimeout(500)
+
+    // Should be in warning step (because there are labels)
+    const warningAlert = page.locator('.alert-warning')
+    await expect(warningAlert).toBeVisible()
+    await expect(warningAlert).toContainText('remove all existing legends')
+
+    // Verify labels are STILL present (not cleared yet) via JSON export
+    const currentLayout = await exportLayoutJSON(page)
+
+    // Labels should be unchanged - compare the layout structure
+    expect(JSON.stringify(currentLayout)).toBe(JSON.stringify(initialLayout))
+
+    // Check that labels are present in the layout
+    const hasLabels = currentLayout.some(
+      (row: unknown) =>
+        Array.isArray(row) &&
+        row.some(
+          (cell: unknown) =>
+            typeof cell === 'string' &&
+            ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'].some((label) => cell.includes(label)),
+        ),
+    )
+    expect(hasLabels).toBe(true)
+  })
+
+  test('should preserve labels when user clicks Cancel in warning step', async ({ page }) => {
+    // Load a layout with labels
+    const fixtureWithLabels = [
+      ['X', 'Y', 'Z'],
+      ['1', '2', '3'],
+    ]
+
+    // Ensure the app is fully loaded by waiting for a visible element
+    await page.waitForSelector('.keyboard-canvas-container', { state: 'visible', timeout: 15000 })
+
+    // Wait a bit for Vue/Pinia to initialize after the DOM is ready
+    await page.waitForTimeout(1000)
+
+    // Load layout with labels via JSON import
+    await importLayoutJSON(page, fixtureWithLabels)
+    await page.waitForTimeout(500)
+
+    // Get initial layout via JSON export
+    const initialLayout = await exportLayoutJSON(page)
+
+    // Open modal
+    await page.locator('.extra-tools-group button').click()
+    await page
+      .locator('.extra-tools-dropdown .dropdown-item')
+      .filter({ hasText: 'Add Switch Matrix Coordinates' })
+      .click()
+
+    await expect(page.locator('.matrix-modal')).toBeVisible()
+    await page.waitForTimeout(500)
+
+    // Should show warning
+    await expect(page.locator('.alert-warning')).toBeVisible()
+
+    // Click Cancel button
+    const cancelButton = page
+      .locator('.matrix-modal .panel-footer button')
+      .filter({ hasText: 'Cancel' })
+    await cancelButton.click()
+
+    // Modal should close
+    await expect(page.locator('.matrix-modal')).not.toBeVisible()
+
+    // Verify labels are PRESERVED via JSON export
+    const finalLayout = await exportLayoutJSON(page)
+
+    // Layout should be unchanged after cancellation
+    expect(JSON.stringify(finalLayout)).toBe(JSON.stringify(initialLayout))
+
+    // Check that specific labels are still present
+    const hasLabels = finalLayout.some(
+      (row: unknown) =>
+        Array.isArray(row) &&
+        row.some(
+          (cell: unknown) =>
+            typeof cell === 'string' &&
+            ['X', 'Y', 'Z', '1', '2', '3'].some((label) => cell.includes(label)),
+        ),
+    )
+    expect(hasLabels).toBe(true)
+  })
+
+  test('should clear labels ONLY when user clicks OK in warning step', async ({ page }) => {
+    // Load a layout with labels
+    const fixtureWithLabels = [
+      ['Q', 'W', 'E'],
+      ['A', 'S', 'D'],
+    ]
+
+    // Load layout with labels via JSON import
+    await importLayoutJSON(page, fixtureWithLabels)
+    await page.waitForTimeout(500)
+
+    // Verify initial labels exist via JSON export
+    const initialLayout = await exportLayoutJSON(page)
+    const hasInitialLabels = initialLayout.some(
+      (row: unknown) =>
+        Array.isArray(row) &&
+        row.some(
+          (cell: unknown) =>
+            typeof cell === 'string' &&
+            ['Q', 'W', 'E', 'A', 'S', 'D'].some((label) => cell.includes(label)),
+        ),
+    )
+    expect(hasInitialLabels).toBe(true)
+
+    // Open modal
+    await page.locator('.extra-tools-group button').click()
+    await page
+      .locator('.extra-tools-dropdown .dropdown-item')
+      .filter({ hasText: 'Add Switch Matrix Coordinates' })
+      .click()
+
+    await expect(page.locator('.matrix-modal')).toBeVisible()
+    await page.waitForTimeout(500)
+
+    // Should show warning
+    await expect(page.locator('.alert-warning')).toBeVisible()
+
+    // Click OK button to proceed
+    const okButton = page.locator('.matrix-modal .panel-footer button').filter({ hasText: 'OK' })
+    await okButton.click()
+
+    await page.waitForTimeout(500)
+
+    // Should now be in draw step
+    await expect(page.locator('.draw-section')).toBeVisible()
+
+    // Verify labels are NOW CLEARED via JSON export
+    const clearedLayout = await exportLayoutJSON(page)
+
+    // All labels should be cleared - check that no cell contains the original labels
+    const hasClearedLabels = clearedLayout.some(
+      (row: unknown) =>
+        Array.isArray(row) &&
+        row.some(
+          (cell: unknown) =>
+            typeof cell === 'string' &&
+            ['Q', 'W', 'E', 'A', 'S', 'D'].some((label) => cell.includes(label)),
+        ),
+    )
+    expect(hasClearedLabels).toBe(false)
   })
 })
