@@ -186,10 +186,11 @@
   />
 
   <!-- Matrix Coordinates Modal -->
-  <AddMatrixCoordinatesModal
-    :visible="showMatrixCoordinatesModal"
-    @apply="handleMatrixCoordinatesApply"
-    @cancel="showMatrixCoordinatesModal = false"
+  <MatrixCoordinatesModal
+    ref="matrixModalRef"
+    :visible="showMatrixModal"
+    @apply="handleMatrixApply"
+    @cancel="handleMatrixCancel"
   />
 </template>
 
@@ -199,7 +200,7 @@ import { useKeyboardStore } from '@/stores/keyboard'
 import { SPECIAL_KEYS, type SpecialKeyTemplate } from '@/data/specialKeys'
 import LegendToolsPanel from './LegendToolsPanel.vue'
 import RotationOriginsPanel from './RotationOriginsPanel.vue'
-import AddMatrixCoordinatesModal from './AddMatrixCoordinatesModal.vue'
+import MatrixCoordinatesModal from './MatrixCoordinatesModal.vue'
 
 // Store
 const keyboardStore = useKeyboardStore()
@@ -227,7 +228,8 @@ const showLegendToolsPanel = ref(false)
 const showRotationOriginsPanel = ref(false)
 
 // Matrix coordinates modal
-const showMatrixCoordinatesModal = ref(false)
+const showMatrixModal = ref(false)
+const matrixModalRef = ref<InstanceType<typeof MatrixCoordinatesModal> | null>(null)
 
 // Define extra tools
 interface ExtraTool {
@@ -251,10 +253,10 @@ const extraTools = computed((): ExtraTool[] => [
   {
     id: 'add-matrix-coordinates',
     name: 'Add Switch Matrix Coordinates',
-    description: 'Remove all legends and add row,column matrix coordinates for VIA',
+    description: 'Assign matrix coordinates for VIA - automatic or manual drawing',
     disabled: false,
     action: () => {
-      showMatrixCoordinatesModal.value = true
+      showMatrixModal.value = true
     },
   },
   {
@@ -448,10 +450,13 @@ const redo = () => {
 }
 
 // Matrix coordinates functions
-const handleMatrixCoordinatesApply = () => {
-  keyboardStore.addMatrixCoordinates()
-  showMatrixCoordinatesModal.value = false
+const handleMatrixApply = () => {
+  showMatrixModal.value = false
   requestCanvasFocus()
+}
+
+const handleMatrixCancel = () => {
+  showMatrixModal.value = false
 }
 
 // Extra tools functions
