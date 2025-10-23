@@ -32,7 +32,6 @@
 
     <!-- Matrix Annotation Overlay -->
     <MatrixAnnotationOverlay
-      v-if="isDevMode"
       ref="matrixOverlayRef"
       :visible="matrixAnnotationVisible"
       :canvasWidth="canvasWidth"
@@ -84,6 +83,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useKeyboardStore, type Key, type KeyboardMetadata } from '@/stores/keyboard'
+import { useMatrixDrawingStore } from '@/stores/matrix-drawing'
 import { useFontStore } from '@/stores/font'
 import { CanvasRenderer, type RenderOptions } from '@/utils/canvas-renderer'
 import { D } from '@/utils/decimal-math'
@@ -106,6 +106,7 @@ const CANVAS_BORDER = 9
 const isDevMode = import.meta.env.DEV
 
 const keyboardStore = useKeyboardStore()
+const matrixDrawingStore = useMatrixDrawingStore()
 const fontStore = useFontStore()
 
 // Define a type for the internal KLE format
@@ -139,6 +140,16 @@ const resizeObserver = ref<ResizeObserver>()
 
 // Matrix annotation state
 const matrixAnnotationVisible = ref(false)
+
+// Auto-show overlay when drawing is enabled or when there are completed drawings
+watch(
+  () => [matrixDrawingStore.isDrawing, matrixDrawingStore.hasDrawings],
+  ([isDrawing, hasDrawings]) => {
+    if (isDrawing || hasDrawings) {
+      matrixAnnotationVisible.value = true
+    }
+  },
+)
 
 const dragCoordinateOffset = ref<{ x: number; y: number } | null>(null)
 
@@ -231,6 +242,41 @@ const isMatrixOverlayActive = (): boolean => {
   return matrixAnnotationVisible.value
 }
 
+// Matrix drawing methods
+const enableMatrixDrawing = (type: 'row' | 'column') => {
+  // Enable overlay visibility
+  matrixAnnotationVisible.value = true
+
+  // Enable drawing mode on the overlay
+  if (matrixOverlayRef.value) {
+    matrixOverlayRef.value.enableDrawing(type)
+  }
+}
+
+const disableMatrixDrawing = () => {
+  // Disable drawing mode on the overlay
+  if (matrixOverlayRef.value) {
+    matrixOverlayRef.value.disableDrawing()
+  }
+}
+
+const isMatrixDrawingActive = (): boolean => {
+  // Check if drawing is active by checking pointer events
+  return matrixOverlayRef.value?.getCompletedDrawings !== undefined
+}
+
+const clearMatrixDrawings = () => {
+  if (matrixOverlayRef.value) {
+    matrixOverlayRef.value.clearDrawings()
+  }
+}
+
+const hasMatrixDrawings = (): boolean => {
+  if (!matrixOverlayRef.value) return false
+  const drawings = matrixOverlayRef.value.getCompletedDrawings()
+  return drawings.rows.length > 0 || drawings.columns.length > 0
+}
+
 // Create a proxy ref that combines debugOverlayRef with matrix overlay methods
 const debugOverlayProxyRef = computed(() => {
   if (!debugOverlayRef.value) return undefined
@@ -239,6 +285,11 @@ const debugOverlayProxyRef = computed(() => {
     ...debugOverlayRef.value,
     toggleMatrixOverlay,
     isMatrixOverlayActive,
+    enableMatrixDrawing,
+    disableMatrixDrawing,
+    isMatrixDrawingActive,
+    clearMatrixDrawings,
+    hasMatrixDrawings,
   }
 })
 
@@ -249,6 +300,10 @@ watch(
     // Clear matrix overlay when layout changes (e.g., new layout loaded)
     if (matrixAnnotationVisible.value) {
       matrixAnnotationVisible.value = false
+    }
+    // Also clear any matrix drawings
+    if (matrixOverlayRef.value) {
+      matrixOverlayRef.value.clearDrawings()
     }
   },
 )
@@ -1784,10 +1839,8 @@ onUnmounted(() => {
   }
 })
 
-// Expose functions to parent component
-defineExpose({
-  // No longer exposing resizeCanvas as it's automatic now
-})
+// Expose functions to parent component (currently none needed)
+defineExpose({})
 </script>
 
 <style scoped>

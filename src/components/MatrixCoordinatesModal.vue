@@ -161,6 +161,46 @@
                 Auto-assigns based on key center positions
               </p>
             </div>
+
+            <!-- Manual Drawing Controls -->
+            <div class="manual-drawing-section mb-0">
+              <div class="section-divider mb-2">
+                <span class="divider-text">Manual Drawing</span>
+              </div>
+              <div class="drawing-controls">
+                <div class="radio-group mb-2">
+                  <label>
+                    <input v-model="drawingType" type="radio" value="row" />
+                    Row
+                  </label>
+                  <label>
+                    <input v-model="drawingType" type="radio" value="column" />
+                    Column
+                  </label>
+                </div>
+                <div class="button-group">
+                  <button
+                    type="button"
+                    class="btn btn-sm"
+                    :class="drawingActive ? 'btn-success' : 'btn-outline-primary'"
+                    @click="toggleDrawing"
+                    @mousedown.stop
+                  >
+                    {{ drawingActive ? 'Stop' : 'Draw' }}
+                    {{ drawingType === 'row' ? 'Rows' : 'Cols' }}
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-outline-danger btn-sm"
+                    @click="clearDrawings"
+                    @mousedown.stop
+                    :disabled="!hasDrawings"
+                  >
+                    Clear Drawings
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -213,6 +253,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useDraggablePanel } from '@/composables/useDraggablePanel'
 import { useKeyboardStore, type Key } from '@/stores/keyboard'
+import { useMatrixDrawingStore } from '@/stores/matrix-drawing'
 import { getKeyCenter } from '@/utils/keyboard-geometry'
 
 // Props
@@ -232,8 +273,9 @@ interface Emits {
 
 const emit = defineEmits<Emits>()
 
-// Store
+// Stores
 const keyboardStore = useKeyboardStore()
+const matrixDrawingStore = useMatrixDrawingStore()
 
 // Types
 interface MatrixAssignment {
@@ -450,12 +492,41 @@ const handleAutomaticAnnotation = () => {
     }
   })
 
+  // Sync to store so overlay can render the lines
+  matrixDrawingStore.clearDrawings()
+
+  // Add rows - need to enable row mode first
+  matrixDrawingStore.enableDrawing('row')
+  rows.value.forEach((row) => {
+    row.keySequence.forEach((key) => {
+      matrixDrawingStore.addKeyToSequence(key)
+    })
+    matrixDrawingStore.completeSequence()
+  })
+
+  // Switch to column mode for adding columns
+  matrixDrawingStore.enableDrawing('column')
+  cols.value.forEach((col) => {
+    col.keySequence.forEach((key) => {
+      matrixDrawingStore.addKeyToSequence(key)
+    })
+    matrixDrawingStore.completeSequence()
+  })
+  matrixDrawingStore.disableDrawing()
+
   // Apply coordinates immediately
   applyCoordinatesToKeys()
 }
 
 const handleClose = () => {
-  // Simply close the modal without resetting - coordinates are already applied
+  // Close the modal and clear drawings (but keep labels on keys)
+  // Stop drawing if active
+  if (matrixDrawingStore.isDrawing) {
+    matrixDrawingStore.disableDrawing()
+  }
+  // Clear the store drawings so overlay hides
+  matrixDrawingStore.clearDrawings()
+
   emit('cancel')
 }
 
@@ -469,7 +540,77 @@ const resetState = () => {
   step.value = 'warning'
   rows.value = []
   cols.value = []
+  // Also stop any active drawing and clear drawings
+  if (matrixDrawingStore.isDrawing) {
+    matrixDrawingStore.disableDrawing()
+  }
+  matrixDrawingStore.clearDrawings()
 }
+
+// Drawing state and methods
+const drawingType = ref<'row' | 'column'>('row')
+
+// Use computed to directly reference store state
+const drawingActive = computed(() => matrixDrawingStore.isDrawing)
+const hasDrawings = computed(() => matrixDrawingStore.hasDrawings)
+
+const toggleDrawing = () => {
+  if (matrixDrawingStore.isDrawing) {
+    // Disable drawing
+    matrixDrawingStore.disableDrawing()
+  } else {
+    // Enable drawing
+    matrixDrawingStore.enableDrawing(drawingType.value)
+  }
+}
+
+const clearDrawings = () => {
+  matrixDrawingStore.clearDrawings()
+  // Also clear the modal's rows/cols that came from drawings
+  syncDrawingsToModal()
+}
+
+// Watch drawing type changes - update if already drawing
+watch(drawingType, (newType) => {
+  if (matrixDrawingStore.isDrawing) {
+    matrixDrawingStore.enableDrawing(newType)
+  }
+})
+
+// Sync completed drawings from store to modal's rows/cols
+const syncDrawingsToModal = () => {
+  const drawings = matrixDrawingStore.getCompletedDrawings()
+
+  // Convert completed rows to MatrixItems
+  rows.value = drawings.rows.map((keySequence, idx) => ({
+    id: `row-${idx}-${Date.now()}`,
+    index: idx,
+    keySequence,
+  }))
+
+  // Convert completed columns to MatrixItems
+  cols.value = drawings.columns.map((keySequence, idx) => ({
+    id: `col-${idx}-${Date.now()}`,
+    index: idx,
+    keySequence,
+  }))
+}
+
+// Watch for changes in store's completed drawings and sync to modal
+// We watch the array lengths to avoid deep watching which can cause recursion
+watch(
+  () => [matrixDrawingStore.completedRows.length, matrixDrawingStore.completedColumns.length],
+  () => {
+    // Only sync and apply if modal is visible
+    if (!props.visible) return
+
+    syncDrawingsToModal()
+    // Apply coordinates immediately after syncing to show labels while drawing
+    // This is safe because applyCoordinatesToKeys only modifies key.labels,
+    // which doesn't affect the store's completedRows/completedColumns arrays
+    applyCoordinatesToKeys()
+  },
+)
 
 // Watch for modal visibility
 watch(
@@ -497,8 +638,8 @@ watch(
   (isComplete) => {
     if (isComplete && !hasShownCompletionMessage) {
       hasShownCompletionMessage = true
-      // The completion message is already displayed in the UI
-      // We could add additional effects here if needed
+      // Apply coordinates when annotation is complete
+      applyCoordinatesToKeys()
     }
     if (!isComplete) {
       hasShownCompletionMessage = false
@@ -726,6 +867,74 @@ defineExpose({
 /* Animation for button press feedback */
 .btn:active {
   transform: translateY(1px);
+}
+
+/* Manual drawing section */
+.manual-drawing-section {
+  background: var(--bs-tertiary-bg);
+  padding: 12px;
+  border-radius: 6px;
+  border-left: 4px solid var(--bs-success);
+}
+
+.section-divider {
+  position: relative;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.section-divider::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: var(--bs-border-color);
+}
+
+.divider-text {
+  position: relative;
+  background: var(--bs-tertiary-bg);
+  padding: 0 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--bs-secondary-color);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.drawing-controls {
+  display: flex;
+  flex-direction: column;
+}
+
+.radio-group {
+  display: flex;
+  gap: 12px;
+}
+
+.radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.radio-group input[type='radio'] {
+  cursor: pointer;
+  margin: 0;
+}
+
+.button-group {
+  display: flex;
+  gap: 6px;
+}
+
+.button-group button {
+  flex: 1;
 }
 
 /* Responsive adjustments */
