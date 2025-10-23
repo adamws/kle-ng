@@ -13,19 +13,22 @@ import type { Key } from '@/stores/keyboard'
  * @param lineStart - Start point {x, y} in layout units
  * @param lineEnd - End point {x, y} in layout units
  * @param key - The key to check intersection with
+ * @param sensitivity - Optional sensitivity (0.0 = most permissive, 1.0 = strictest), default 0.0
  * @returns true if line intersects the key
  *
  * @example
  * const intersects = lineIntersectsKey(
  *   { x: 0, y: 0 },
  *   { x: 10, y: 0 },
- *   { x: 5, y: 0, width: 1, height: 1 }
- * ) // true - horizontal line passes through key
+ *   { x: 5, y: 0, width: 1, height: 1 },
+ *   0.5
+ * ) // true - horizontal line passes through key with medium sensitivity
  */
 export function lineIntersectsKey(
   lineStart: { x: number; y: number },
   lineEnd: { x: number; y: number },
   key: Key,
+  sensitivity: number = 0.0,
 ): boolean {
   // Get the key center in layout units
   const keyCenter = getKeyCenter(key)
@@ -84,15 +87,25 @@ export function lineIntersectsKey(
     const absLineDirY = Math.abs(lineDirY)
 
     // Weight by how perpendicular each dimension is to the line
-    const threshold =
+    const baseThreshold =
       (absLineDirX * keyHeight) / 2 + // Horizontal line component uses height
       (absLineDirY * keyWidth) / 2 // Vertical line component uses width
 
-    return distance <= threshold
+    // Apply sensitivity: higher sensitivity = stricter = smaller threshold
+    // sensitivity 0.0 = full threshold (most permissive)
+    // sensitivity 1.0 = near-zero threshold (strictest, almost point-on-line)
+    const effectiveThreshold = baseThreshold * (1 - sensitivity)
+
+    return distance <= effectiveThreshold
   } else {
     // Rotated key - use diagonal for safety (conservative approach)
     const keyDiagonal = Math.sqrt(Math.pow(keyWidth, 2) + Math.pow(keyHeight, 2))
-    return distance <= keyDiagonal / 2
+    const baseThreshold = keyDiagonal / 2
+
+    // Apply sensitivity
+    const effectiveThreshold = baseThreshold * (1 - sensitivity)
+
+    return distance <= effectiveThreshold
   }
 }
 
@@ -102,19 +115,22 @@ export function lineIntersectsKey(
  * @param lineStart - Start point in layout units
  * @param lineEnd - End point in layout units
  * @param keys - Array of keys to check
+ * @param sensitivity - Optional sensitivity (0.0 = most permissive, 1.0 = strictest), default 0.0
  * @returns Array of keys along the line, sorted by distance from start
  *
  * @example
  * const keysAlongLine = findKeysAlongLine(
  *   { x: 0, y: 0 },
  *   { x: 10, y: 0 },
- *   keyboardStore.keys
- * ) // Returns keys in order from left to right
+ *   keyboardStore.keys,
+ *   0.5
+ * ) // Returns keys in order from left to right with medium sensitivity
  */
 export function findKeysAlongLine(
   lineStart: { x: number; y: number },
   lineEnd: { x: number; y: number },
   keys: Key[],
+  sensitivity: number = 0.0,
 ): Key[] {
   const intersectingKeys: Array<{ key: Key; distance: number }> = []
 
@@ -122,7 +138,7 @@ export function findKeysAlongLine(
     // Filter out ghost and decal keys
     if (key.decal || key.ghost) continue
 
-    if (lineIntersectsKey(lineStart, lineEnd, key)) {
+    if (lineIntersectsKey(lineStart, lineEnd, key, sensitivity)) {
       const keyCenter = getKeyCenter(key)
       // Calculate distance from start point (in layout units)
       const distance = Math.sqrt(

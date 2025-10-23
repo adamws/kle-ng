@@ -9,6 +9,10 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
   const completedRows = ref<Key[][]>([])
   const completedColumns = ref<Key[][]>([])
 
+  // Sensitivity for line intersection (0.0 = most permissive, 1.0 = strictest)
+  // Default 0.5 provides good balance between catching intended keys and avoiding "barely touched" keys
+  const sensitivity = ref<number>(0.5)
+
   // Computed
   const isDrawing = computed(() => drawingType.value !== null)
   const hasDrawings = computed(
@@ -59,12 +63,18 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
     }
   }
 
+  const setSensitivity = (value: number) => {
+    // Clamp between 0 and 1
+    sensitivity.value = Math.max(0, Math.min(1, value))
+  }
+
   return {
     // State
     drawingType,
     currentSequence,
     completedRows,
     completedColumns,
+    sensitivity,
 
     // Computed
     isDrawing,
@@ -78,5 +88,6 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
     clearCurrentSequence,
     clearDrawings,
     getCompletedDrawings,
+    setSensitivity,
   }
 })

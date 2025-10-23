@@ -130,7 +130,12 @@ const handleMouseMove = (event: MouseEvent) => {
   const newKeyCenter = calculateKeyCenter(closestKey)
 
   // Find all keys along the line between the last key and the new key
-  const keysAlongLine = findKeysAlongLine(lastKeyCenter, newKeyCenter, keyboardStore.keys)
+  const keysAlongLine = findKeysAlongLine(
+    lastKeyCenter,
+    newKeyCenter,
+    keyboardStore.keys,
+    matrixDrawingStore.sensitivity,
+  )
 
   // Filter out keys already in current sequence
   const newKeys = keysAlongLine.filter((key) => !matrixDrawingStore.currentSequence.includes(key))
@@ -175,7 +180,12 @@ const handleClick = (event: MouseEvent) => {
     const newKeyCenter = calculateKeyCenter(closestKey)
 
     // Find all keys along the line between the last key and the new key
-    const keysAlongLine = findKeysAlongLine(lastKeyCenter, newKeyCenter, keyboardStore.keys)
+    const keysAlongLine = findKeysAlongLine(
+      lastKeyCenter,
+      newKeyCenter,
+      keyboardStore.keys,
+      matrixDrawingStore.sensitivity,
+    )
 
     // Add all intersecting keys that aren't already in the sequence
     keysAlongLine.forEach((key) => {
@@ -183,6 +193,12 @@ const handleClick = (event: MouseEvent) => {
         matrixDrawingStore.addKeyToSequence(key)
       }
     })
+
+    // ALWAYS add the clicked key itself, even if not in keysAlongLine
+    // (This can happen with higher sensitivity where the clicked key doesn't intersect the line)
+    if (!matrixDrawingStore.currentSequence.includes(closestKey)) {
+      matrixDrawingStore.addKeyToSequence(closestKey)
+    }
 
     // Automatically finish the sequence after second click
     matrixDrawingStore.completeSequence()

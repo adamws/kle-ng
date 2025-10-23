@@ -59,6 +59,17 @@
             />
           </div>
         </div>
+        <div class="input-with-label full-width">
+          <label>Sensitivity (0.0 = permissive, 1.0 = strict)</label>
+          <CustomNumberInput
+            v-model="lineOptions.sensitivity"
+            :step="0.1"
+            :min="0"
+            :max="1"
+            placeholder="Sensitivity"
+            class="form-control form-control-sm"
+          />
+        </div>
         <label>
           <input v-model="lineOptions.showKeyLabels" type="checkbox" />
           Key Labels
@@ -131,6 +142,7 @@ const lineOptions = ref({
   point2: { x: 5, y: 5 },
   lineColor: '#ff0000',
   showKeyLabels: true,
+  sensitivity: 0.0,
 })
 
 const markKeyCenters = () => {
@@ -151,6 +163,7 @@ const drawLine = () => {
       lineOptions.value.point1,
       lineOptions.value.point2,
       keyboardStore.keys,
+      lineOptions.value.sensitivity,
     )
 
     props.debugOverlayRef.drawDebugLine({
@@ -282,6 +295,11 @@ input[type='checkbox'] {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+.input-with-label.full-width {
+  grid-column: 1 / -1;
+  margin-bottom: 4px;
 }
 
 .input-with-label > label {
