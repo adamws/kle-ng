@@ -30,6 +30,20 @@
       @blur="handleCanvasBlur"
     />
 
+    <!-- Matrix Annotation Overlay -->
+    <MatrixAnnotationOverlay
+      v-if="isDevMode"
+      ref="matrixOverlayRef"
+      :visible="matrixAnnotationVisible"
+      :canvasWidth="canvasWidth"
+      :canvasHeight="canvasHeight"
+      :zoom="zoom"
+      :panX="panX"
+      :panY="panY"
+      :coordinateOffset="getCoordinateSystemOffset()"
+      :renderer="renderer || null"
+    />
+
     <!-- Debug Overlay (development mode only) -->
     <DebugOverlay
       v-if="isDevMode"
@@ -44,7 +58,7 @@
     />
 
     <!-- Debug Control Button (development mode only) -->
-    <DebugControlButton v-if="isDevMode" :debugOverlayRef="debugOverlayRef" />
+    <DebugControlButton v-if="isDevMode" :debugOverlayRef="debugOverlayProxyRef" />
   </div>
 
   <!-- Rotation control modal -->
@@ -80,8 +94,10 @@ import { parseJsonString } from '@/utils/serialization'
 import { toast } from '@/composables/useToast'
 import RotationControlModal from '@/components/RotationControlModal.vue'
 import MoveExactlyModal from '@/components/MoveExactlyModal.vue'
+import MatrixAnnotationOverlay from '@/components/MatrixAnnotationOverlay.vue'
 import DebugOverlay from '@/components/DebugOverlay.vue'
 import DebugControlButton from '@/components/DebugControlButton.vue'
+import { extractMatrixAssignments } from '@/utils/matrix-utils'
 
 // Visual border around rendered keycaps (in pixels)
 const CANVAS_BORDER = 9
@@ -111,6 +127,7 @@ const isInternalKleFormat = (data: unknown): data is InternalKleFormat => {
 
 const canvasRef = ref<HTMLCanvasElement>()
 const containerRef = ref<HTMLDivElement>()
+const matrixOverlayRef = ref<InstanceType<typeof MatrixAnnotationOverlay>>()
 const debugOverlayRef = ref<InstanceType<typeof DebugOverlay>>()
 
 const canvasWidth = ref(800)
@@ -119,6 +136,9 @@ const renderer = ref<CanvasRenderer>()
 const containerWidth = ref(0)
 const containerHeight = ref(0)
 const resizeObserver = ref<ResizeObserver>()
+
+// Matrix annotation state
+const matrixAnnotationVisible = ref(false)
 
 const dragCoordinateOffset = ref<{ x: number; y: number } | null>(null)
 
@@ -179,6 +199,59 @@ const renderOptions = computed<RenderOptions>(() => ({
   background: keyboardStore.metadata?.backcolor || '#ffffff',
   fontFamily: fontStore.canvasFontFamily,
 }))
+
+// Matrix overlay methods
+const toggleMatrixOverlay = (): boolean => {
+  // Check if layout is VIA-annotated
+  if (!keyboardStore.isViaAnnotated) {
+    toast.showWarning(
+      'Layout must be VIA-annotated (all keys have "row,col" labels)',
+      'Matrix Overlay',
+    )
+    return false
+  }
+
+  // Toggle visibility
+  matrixAnnotationVisible.value = !matrixAnnotationVisible.value
+
+  if (matrixAnnotationVisible.value) {
+    // Extract matrix data from VIA labels
+    const { rows, cols } = extractMatrixAssignments(keyboardStore.keys)
+
+    // Update overlay with matrix data
+    if (matrixOverlayRef.value) {
+      matrixOverlayRef.value.setMatrixData(rows, cols)
+    }
+  }
+
+  return matrixAnnotationVisible.value
+}
+
+const isMatrixOverlayActive = (): boolean => {
+  return matrixAnnotationVisible.value
+}
+
+// Create a proxy ref that combines debugOverlayRef with matrix overlay methods
+const debugOverlayProxyRef = computed(() => {
+  if (!debugOverlayRef.value) return undefined
+
+  return {
+    ...debugOverlayRef.value,
+    toggleMatrixOverlay,
+    isMatrixOverlayActive,
+  }
+})
+
+// Watch for layout changes and clear matrix overlay
+watch(
+  () => keyboardStore.keys.length,
+  () => {
+    // Clear matrix overlay when layout changes (e.g., new layout loaded)
+    if (matrixAnnotationVisible.value) {
+      matrixAnnotationVisible.value = false
+    }
+  },
+)
 
 onMounted(() => {
   if (canvasRef.value && containerRef.value) {
