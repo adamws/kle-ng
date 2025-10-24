@@ -124,3 +124,164 @@ export function getKeyColumn(key: Key): number | undefined {
   const parsed = parseViaLabel(key.labels?.[0])
   return parsed?.col
 }
+
+/**
+ * Interface for rotation group information
+ */
+export interface RotationGroup {
+  rotationAngle: number
+  rotationX: number | undefined
+  rotationY: number | undefined
+  keys: Key[]
+}
+
+/**
+ * Split layout into groups with same rotation value and rotation reference point
+ * @param keys - Array of keys to process
+ * @returns Array of rotation groups
+ */
+export function splitLayoutByRotation(keys: Key[]): RotationGroup[] {
+  const groups: RotationGroup[] = []
+  const processedKeys = new Set<Key>()
+
+  for (const key of keys) {
+    if (processedKeys.has(key)) continue
+
+    const rotationAngle = key.rotation_angle || 0
+    const rotationX = key.rotation_x
+    const rotationY = key.rotation_y
+
+    // Find all keys with the same rotation properties
+    const groupKeys = keys.filter((otherKey) => {
+      if (processedKeys.has(otherKey)) return false
+
+      const otherRotationAngle = otherKey.rotation_angle || 0
+      const otherRotationX = otherKey.rotation_x
+      const otherRotationY = otherKey.rotation_y
+
+      // Compare rotation angles (handle floating point precision)
+      const angleMatch = Math.abs(rotationAngle - otherRotationAngle) < 1e-6
+
+      // Compare rotation origins (handle undefined values)
+      const xMatch =
+        (rotationX === undefined && otherRotationX === undefined) ||
+        (rotationX !== undefined &&
+          otherRotationX !== undefined &&
+          Math.abs(rotationX - otherRotationX) < 1e-6)
+      const yMatch =
+        (rotationY === undefined && otherRotationY === undefined) ||
+        (rotationY !== undefined &&
+          otherRotationY !== undefined &&
+          Math.abs(rotationY - otherRotationY) < 1e-6)
+
+      return angleMatch && xMatch && yMatch
+    })
+
+    // Add group if we found any keys
+    if (groupKeys.length > 0) {
+      groups.push({
+        rotationAngle,
+        rotationX,
+        rotationY,
+        keys: groupKeys,
+      })
+
+      // Mark keys as processed
+      groupKeys.forEach((k) => processedKeys.add(k))
+    }
+  }
+
+  return groups
+}
+
+/**
+ * De-rotate layout groups by setting rotation to 0 for each group with non-zero rotation
+ * This function stores the original rotation angle in the middle key label (index 6)
+ * for proper restoration later.
+ * @param groups - Array of rotation groups to process
+ * @returns Array of processed keys with rotation set to 0
+ */
+export function deRotateLayoutGroups(groups: RotationGroup[]): Key[] {
+  const processedKeys: Key[] = []
+
+  for (const group of groups) {
+    const { rotationAngle, keys } = group
+
+    // Only process groups with non-zero rotation
+    if (Math.abs(rotationAngle) < 1e-6) {
+      processedKeys.push(...keys)
+      continue
+    }
+
+    for (const key of keys) {
+      // Store original rotation angle in middle key label (index 6) with a marker
+      // Format: "DEROTATE:<angle>" to distinguish from other uses of label[6]
+      const originalRotationAngle = `DEROTATE:${rotationAngle}`
+
+      // Ensure labels array exists and has at least 7 elements
+      if (!key.labels) {
+        key.labels = Array(12).fill('')
+      } else if (key.labels.length < 7) {
+        // Extend labels array to have at least 7 elements
+        key.labels = [...key.labels, ...Array(12 - key.labels.length).fill('')]
+      }
+
+      key.labels[6] = originalRotationAngle
+
+      // Simply set rotation_angle to 0, keep all other properties unchanged
+      key.rotation_angle = 0
+
+      processedKeys.push(key)
+    }
+  }
+
+  return processedKeys
+}
+
+/**
+ * Restore original rotation from stored information in middle key label (index 6)
+ * This function reads the stored rotation angle and restores the key to its original state
+ * @param keys - Array of keys to restore
+ * @returns Array of restored keys with original rotation
+ */
+export function restoreOriginalRotation(keys: Key[]): Key[] {
+  const restoredKeys: Key[] = []
+
+  for (const key of keys) {
+    // Check if the key has stored rotation information in label[6]
+    const storedRotationInfo = key.labels?.[6]
+
+    if (!storedRotationInfo || typeof storedRotationInfo !== 'string') {
+      // No stored rotation information, keep key as-is
+      restoredKeys.push(key)
+      continue
+    }
+
+    // Only process keys that have the DEROTATE marker
+    // This prevents modifying keys that had label[6] already populated for other purposes
+    if (!storedRotationInfo.startsWith('DEROTATE:')) {
+      // Not a de-rotation marker, keep key as-is
+      restoredKeys.push(key)
+      continue
+    }
+
+    // Extract the angle from the marker format "DEROTATE:<angle>"
+    const angleStr = storedRotationInfo.substring('DEROTATE:'.length)
+    const angle = parseFloat(angleStr)
+
+    // If we have valid rotation information, restore the key
+    if (!isNaN(angle)) {
+      // Simply restore the rotation angle
+      key.rotation_angle = angle
+
+      // Clear the stored rotation information
+      if (key.labels && key.labels.length > 6) {
+        key.labels[6] = ''
+      }
+    }
+
+    restoredKeys.push(key)
+  }
+
+  return restoredKeys
+}
