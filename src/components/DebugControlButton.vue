@@ -39,8 +39,6 @@ interface DebugOverlayRef {
     intersectingKeys: Key[]
   }) => void
   clearDebugLine: () => void
-  toggleMatrixOverlay?: () => boolean
-  isMatrixOverlayActive?: () => boolean
 }
 
 interface Props {

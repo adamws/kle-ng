@@ -57,7 +57,7 @@
     />
 
     <!-- Debug Control Button (development mode only) -->
-    <DebugControlButton v-if="isDevMode" :debugOverlayRef="debugOverlayProxyRef" />
+    <DebugControlButton v-if="isDevMode" :debugOverlayRef="debugOverlayRef" />
   </div>
 
   <!-- Rotation control modal -->
@@ -97,7 +97,6 @@ import MoveExactlyModal from '@/components/MoveExactlyModal.vue'
 import MatrixAnnotationOverlay from '@/components/MatrixAnnotationOverlay.vue'
 import DebugOverlay from '@/components/DebugOverlay.vue'
 import DebugControlButton from '@/components/DebugControlButton.vue'
-import { extractMatrixAssignments } from '@/utils/matrix-utils'
 
 // Visual border around rendered keycaps (in pixels)
 const CANVAS_BORDER = 9
@@ -210,88 +209,6 @@ const renderOptions = computed<RenderOptions>(() => ({
   background: keyboardStore.metadata?.backcolor || '#ffffff',
   fontFamily: fontStore.canvasFontFamily,
 }))
-
-// Matrix overlay methods
-const toggleMatrixOverlay = (): boolean => {
-  // Check if layout is VIA-annotated
-  if (!keyboardStore.isViaAnnotated) {
-    toast.showWarning(
-      'Layout must be VIA-annotated (all keys have "row,col" labels)',
-      'Matrix Overlay',
-    )
-    return false
-  }
-
-  // Toggle visibility
-  matrixAnnotationVisible.value = !matrixAnnotationVisible.value
-
-  if (matrixAnnotationVisible.value) {
-    // Extract matrix data from VIA labels
-    const { rows, cols } = extractMatrixAssignments(keyboardStore.keys)
-
-    // Update overlay with matrix data
-    if (matrixOverlayRef.value) {
-      matrixOverlayRef.value.setMatrixData(rows, cols)
-    }
-  }
-
-  return matrixAnnotationVisible.value
-}
-
-const isMatrixOverlayActive = (): boolean => {
-  return matrixAnnotationVisible.value
-}
-
-// Matrix drawing methods
-const enableMatrixDrawing = (type: 'row' | 'column') => {
-  // Enable overlay visibility
-  matrixAnnotationVisible.value = true
-
-  // Enable drawing mode on the overlay
-  if (matrixOverlayRef.value) {
-    matrixOverlayRef.value.enableDrawing(type)
-  }
-}
-
-const disableMatrixDrawing = () => {
-  // Disable drawing mode on the overlay
-  if (matrixOverlayRef.value) {
-    matrixOverlayRef.value.disableDrawing()
-  }
-}
-
-const isMatrixDrawingActive = (): boolean => {
-  // Check if drawing is active by checking pointer events
-  return matrixOverlayRef.value?.getCompletedDrawings !== undefined
-}
-
-const clearMatrixDrawings = () => {
-  if (matrixOverlayRef.value) {
-    matrixOverlayRef.value.clearDrawings()
-  }
-}
-
-const hasMatrixDrawings = (): boolean => {
-  if (!matrixOverlayRef.value) return false
-  const drawings = matrixOverlayRef.value.getCompletedDrawings()
-  return drawings.rows.length > 0 || drawings.columns.length > 0
-}
-
-// Create a proxy ref that combines debugOverlayRef with matrix overlay methods
-const debugOverlayProxyRef = computed(() => {
-  if (!debugOverlayRef.value) return undefined
-
-  return {
-    ...debugOverlayRef.value,
-    toggleMatrixOverlay,
-    isMatrixOverlayActive,
-    enableMatrixDrawing,
-    disableMatrixDrawing,
-    isMatrixDrawingActive,
-    clearMatrixDrawings,
-    hasMatrixDrawings,
-  }
-})
 
 // Watch for layout changes and clear matrix overlay
 watch(

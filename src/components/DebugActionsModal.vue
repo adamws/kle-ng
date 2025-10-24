@@ -77,13 +77,6 @@
         <button @click="drawLine">Draw Line</button>
       </div>
 
-      <!-- Matrix Overlay Section -->
-      <div class="section">
-        <button @click="toggleMatrixOverlay" :class="{ active: matrixOverlayActive }">
-          {{ matrixOverlayActive ? 'Hide' : 'Show' }} Matrix
-        </button>
-      </div>
-
       <!-- Clear All Section -->
       <div class="section">
         <button @click="clearAll" class="clear-btn">Clear All</button>
@@ -93,7 +86,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import { useKeyboardStore, type Key } from '@/stores/keyboard'
 import { findKeysAlongLine } from '@/utils/line-intersection'
 import CustomNumberInput from '@/components/CustomNumberInput.vue'
@@ -114,7 +107,6 @@ interface DebugOverlayRef {
     intersectingKeys: Key[]
   }) => void
   clearDebugLine: () => void
-  toggleMatrixOverlay?: () => boolean
   isMatrixOverlayActive?: () => boolean
 }
 
@@ -186,25 +178,6 @@ const clearAll = () => {
   clearMarkers()
   clearLine()
 }
-
-const matrixOverlayActive = ref(false)
-
-const toggleMatrixOverlay = () => {
-  if (props.debugOverlayRef?.toggleMatrixOverlay) {
-    const newState = props.debugOverlayRef.toggleMatrixOverlay()
-    matrixOverlayActive.value = newState
-  }
-}
-
-// Update matrix overlay state when modal becomes visible
-watch(
-  () => props.visible,
-  (isVisible) => {
-    if (isVisible && props.debugOverlayRef?.isMatrixOverlayActive) {
-      matrixOverlayActive.value = props.debugOverlayRef.isMatrixOverlayActive()
-    }
-  },
-)
 </script>
 
 <style scoped>
