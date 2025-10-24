@@ -1,23 +1,34 @@
 <template>
-  <canvas
-    v-show="visible"
-    ref="canvasRef"
-    class="matrix-annotation-overlay"
-    :width="canvasWidth"
-    :height="canvasHeight"
-    @click="handleClick"
-    @mousemove="handleMouseMove"
-  />
+  <div class="matrix-overlay-container">
+    <canvas
+      v-show="visible"
+      ref="canvasRef"
+      class="matrix-annotation-overlay"
+      :width="canvasWidth"
+      :height="canvasHeight"
+      @click="handleClick"
+      @contextmenu.prevent="handleRightClick"
+      @mousemove="handleMouseMove"
+    />
+
+    <MatrixContextMenu
+      :visible="contextMenuVisible"
+      :position="contextMenuPosition"
+      :hover-state="frozenHoverState"
+      @close="closeContextMenu"
+    />
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { type Key } from '@/stores/keyboard'
 import type { CanvasRenderer } from '@/utils/canvas-renderer'
 import { getKeyCenter as calculateKeyCenter } from '@/utils/keyboard-geometry'
 import { findKeysAlongLine } from '@/utils/line-intersection'
 import { useKeyboardStore } from '@/stores/keyboard'
 import { useMatrixDrawingStore } from '@/stores/matrix-drawing'
+import MatrixContextMenu from './MatrixContextMenu.vue'
 
 // Props
 interface Props {
@@ -59,6 +70,30 @@ const hoveredAnchor = ref<{
     distance: number
   }>
 } | null>(null)
+
+// Context menu state
+const contextMenuVisible = ref(false)
+const contextMenuPosition = ref({ x: 0, y: 0 })
+// Frozen hover state - saved when context menu opens, used for menu display
+const frozenHoverState = ref<{
+  hoveredRow: number | null
+  hoveredColumn: number | null
+  hoveredAnchor: {
+    type: 'row' | 'column' | 'overlap'
+    index: number
+    key: Key
+    overlappingNodes?: Array<{
+      type: 'row' | 'column'
+      index: number
+      key: Key
+      distance: number
+    }>
+  } | null
+}>({
+  hoveredRow: null,
+  hoveredColumn: null,
+  hoveredAnchor: null,
+})
 
 // Computed
 const ctx = computed(() => canvasRef.value?.getContext('2d'))
@@ -326,8 +361,11 @@ const detectHover = (canvasX: number, canvasY: number) => {
 const handleMouseMove = (event: MouseEvent) => {
   const canvasPos = getCanvasPosition(event)
 
-  // Always detect hover (for existing matrix annotations)
-  detectHover(canvasPos.x, canvasPos.y)
+  // Don't update hover state when context menu is visible (keep it frozen)
+  if (!contextMenuVisible.value) {
+    // Always detect hover (for existing matrix annotations)
+    detectHover(canvasPos.x, canvasPos.y)
+  }
 
   if (
     !matrixDrawingStore.isDrawing ||
@@ -339,8 +377,10 @@ const handleMouseMove = (event: MouseEvent) => {
     if (previewSequence.value.length > 0) {
       previewSequence.value = []
     }
-    // Always render to show hover effects
-    renderCanvas()
+    // Always render to show hover effects (unless context menu is open)
+    if (!contextMenuVisible.value) {
+      renderCanvas()
+    }
     return
   }
   const closestKey = findClosestKey(canvasPos.x, canvasPos.y, keyboardStore.keys)
@@ -454,6 +494,32 @@ const handleClick = (event: MouseEvent) => {
     matrixDrawingStore.addKeyToSequence(closestKey)
   }
 
+  renderCanvas()
+}
+
+// Right-click handler - open context menu
+const handleRightClick = (event: MouseEvent) => {
+  // Only show context menu if hovering over a matrix element
+  if (!hoveredRow.value && !hoveredColumn.value && !hoveredAnchor.value) {
+    return
+  }
+
+  // Freeze the current hover state for the context menu
+  frozenHoverState.value = {
+    hoveredRow: hoveredRow.value,
+    hoveredColumn: hoveredColumn.value,
+    hoveredAnchor: hoveredAnchor.value,
+  }
+
+  // Set context menu position to mouse position
+  contextMenuPosition.value = { x: event.clientX, y: event.clientY }
+  contextMenuVisible.value = true
+}
+
+// Close context menu
+const closeContextMenu = () => {
+  contextMenuVisible.value = false
+  // Re-render to update hover effects after menu closes
   renderCanvas()
 }
 
@@ -898,13 +964,38 @@ defineExpose({
   clearDrawings,
 })
 
-// Initial render
+// Global click handler to close context menu when clicking outside
+const handleGlobalClick = () => {
+  // Close context menu if clicking outside of it
+  if (contextMenuVisible.value) {
+    closeContextMenu()
+  }
+}
+
+// Initial render and event listeners
 onMounted(() => {
   renderCanvas()
+  // Add global click listener to close context menu
+  document.addEventListener('click', handleGlobalClick)
+})
+
+onUnmounted(() => {
+  // Remove global click listener
+  document.removeEventListener('click', handleGlobalClick)
 })
 </script>
 
 <style scoped>
+.matrix-overlay-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none; /* Let clicks pass through container */
+  z-index: 10;
+}
+
 .matrix-annotation-overlay {
   position: absolute;
   top: 0;
