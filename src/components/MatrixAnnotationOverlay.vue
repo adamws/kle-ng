@@ -45,6 +45,21 @@ const matrixCols = ref<Map<number, Key[]>>(new Map())
 // Preview sequence (local to overlay - not part of store state)
 const previewSequence = ref<Key[]>([]) // Preview of what will be added on next click
 
+// Hover state tracking for interactive elements
+const hoveredRow = ref<number | null>(null)
+const hoveredColumn = ref<number | null>(null)
+const hoveredAnchor = ref<{
+  type: 'row' | 'column' | 'overlap'
+  index: number
+  key: Key
+  overlappingNodes?: Array<{
+    type: 'row' | 'column'
+    index: number
+    key: Key
+    distance: number
+  }>
+} | null>(null)
+
 // Computed
 const ctx = computed(() => canvasRef.value?.getContext('2d'))
 
@@ -97,22 +112,237 @@ const getCanvasPosition = (event: MouseEvent): { x: number; y: number } => {
   }
 }
 
-// Mouse move handler - show preview of next segment
+// Calculate distance from a point to a line segment
+const distanceToLineSegment = (
+  px: number,
+  py: number,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+): number => {
+  const dx = x2 - x1
+  const dy = y2 - y1
+  const lengthSquared = dx * dx + dy * dy
+
+  if (lengthSquared === 0) {
+    // Degenerate case: segment is a point
+    return Math.sqrt((px - x1) * (px - x1) + (py - y1) * (py - y1))
+  }
+
+  // Calculate projection parameter t
+  let t = ((px - x1) * dx + (py - y1) * dy) / lengthSquared
+  t = Math.max(0, Math.min(1, t)) // Clamp to [0, 1]
+
+  // Find the closest point on the segment
+  const closestX = x1 + t * dx
+  const closestY = y1 + t * dy
+
+  // Return distance from point to closest point on segment
+  return Math.sqrt((px - closestX) * (px - closestX) + (py - closestY) * (py - closestY))
+}
+
+// Check if a point is near a line segment
+const isPointNearLine = (
+  px: number,
+  py: number,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  threshold: number = 6,
+): boolean => {
+  return distanceToLineSegment(px, py, x1, y1, x2, y2) < threshold
+}
+
+// Detect what the mouse is hovering over
+const detectHover = (canvasX: number, canvasY: number) => {
+  const NODE_HOVER_THRESHOLD = 8
+  const LINE_HOVER_THRESHOLD = 6
+
+  // Reset hover state
+  hoveredRow.value = null
+  hoveredColumn.value = null
+  hoveredAnchor.value = null
+
+  // Check for node hover (priority over line hover)
+  const allNodes: Array<{
+    type: 'row' | 'column'
+    index: number
+    key: Key
+    distance: number
+  }> = []
+
+  // Collect all row nodes from VIA annotations
+  matrixRows.value.forEach((keySequence, rowIndex) => {
+    keySequence.forEach((key) => {
+      const center = getKeyCenter(key)
+      const distance = Math.sqrt(Math.pow(center.x - canvasX, 2) + Math.pow(center.y - canvasY, 2))
+      if (distance < NODE_HOVER_THRESHOLD) {
+        allNodes.push({ type: 'row', index: rowIndex, key, distance })
+      }
+    })
+  })
+
+  // Collect all row nodes from manually drawn rows
+  matrixDrawingStore.completedRows.forEach((keySequence, rowIndex) => {
+    keySequence.forEach((key) => {
+      const center = getKeyCenter(key)
+      const distance = Math.sqrt(Math.pow(center.x - canvasX, 2) + Math.pow(center.y - canvasY, 2))
+      if (distance < NODE_HOVER_THRESHOLD) {
+        allNodes.push({ type: 'row', index: rowIndex, key, distance })
+      }
+    })
+  })
+
+  // Collect all column nodes from VIA annotations
+  matrixCols.value.forEach((keySequence, colIndex) => {
+    keySequence.forEach((key) => {
+      const center = getKeyCenter(key)
+      const distance = Math.sqrt(Math.pow(center.x - canvasX, 2) + Math.pow(center.y - canvasY, 2))
+      if (distance < NODE_HOVER_THRESHOLD) {
+        allNodes.push({ type: 'column', index: colIndex, key, distance })
+      }
+    })
+  })
+
+  // Collect all column nodes from manually drawn columns
+  matrixDrawingStore.completedColumns.forEach((keySequence, colIndex) => {
+    keySequence.forEach((key) => {
+      const center = getKeyCenter(key)
+      const distance = Math.sqrt(Math.pow(center.x - canvasX, 2) + Math.pow(center.y - canvasY, 2))
+      if (distance < NODE_HOVER_THRESHOLD) {
+        allNodes.push({ type: 'column', index: colIndex, key, distance })
+      }
+    })
+  })
+
+  // If hovering over node(s)
+  if (allNodes.length > 0) {
+    // Sort by distance
+    allNodes.sort((a, b) => a.distance - b.distance)
+    const closest = allNodes[0]
+
+    // Check for overlapping nodes at this position
+    const overlapping = allNodes.filter(
+      (node) =>
+        Math.abs(getKeyCenter(node.key).x - getKeyCenter(closest.key).x) < 0.1 &&
+        Math.abs(getKeyCenter(node.key).y - getKeyCenter(closest.key).y) < 0.1,
+    )
+
+    if (overlapping.length > 1) {
+      // Multiple nodes at same position
+      hoveredAnchor.value = {
+        type: 'overlap',
+        index: closest.index,
+        key: closest.key,
+        overlappingNodes: overlapping,
+      }
+    } else {
+      // Single node
+      hoveredAnchor.value = {
+        type: closest.type,
+        index: closest.index,
+        key: closest.key,
+      }
+    }
+    return
+  }
+
+  // Check for line hover (rows from VIA annotations)
+  matrixRows.value.forEach((keySequence, rowIndex) => {
+    if (keySequence.length < 2) return
+
+    for (let i = 0; i < keySequence.length - 1; i++) {
+      const start = getKeyCenter(keySequence[i])
+      const end = getKeyCenter(keySequence[i + 1])
+
+      if (isPointNearLine(canvasX, canvasY, start.x, start.y, end.x, end.y, LINE_HOVER_THRESHOLD)) {
+        hoveredRow.value = rowIndex
+        return
+      }
+    }
+  })
+
+  // Check for line hover (rows from manually drawn)
+  if (hoveredRow.value === null) {
+    matrixDrawingStore.completedRows.forEach((keySequence, rowIndex) => {
+      if (keySequence.length < 2) return
+
+      for (let i = 0; i < keySequence.length - 1; i++) {
+        const start = getKeyCenter(keySequence[i])
+        const end = getKeyCenter(keySequence[i + 1])
+
+        if (
+          isPointNearLine(canvasX, canvasY, start.x, start.y, end.x, end.y, LINE_HOVER_THRESHOLD)
+        ) {
+          hoveredRow.value = rowIndex
+          return
+        }
+      }
+    })
+  }
+
+  // Check for line hover (columns from VIA annotations)
+  if (hoveredRow.value === null) {
+    matrixCols.value.forEach((keySequence, colIndex) => {
+      if (keySequence.length < 2) return
+
+      for (let i = 0; i < keySequence.length - 1; i++) {
+        const start = getKeyCenter(keySequence[i])
+        const end = getKeyCenter(keySequence[i + 1])
+
+        if (
+          isPointNearLine(canvasX, canvasY, start.x, start.y, end.x, end.y, LINE_HOVER_THRESHOLD)
+        ) {
+          hoveredColumn.value = colIndex
+          return
+        }
+      }
+    })
+  }
+
+  // Check for line hover (columns from manually drawn)
+  if (hoveredRow.value === null && hoveredColumn.value === null) {
+    matrixDrawingStore.completedColumns.forEach((keySequence, colIndex) => {
+      if (keySequence.length < 2) return
+
+      for (let i = 0; i < keySequence.length - 1; i++) {
+        const start = getKeyCenter(keySequence[i])
+        const end = getKeyCenter(keySequence[i + 1])
+
+        if (
+          isPointNearLine(canvasX, canvasY, start.x, start.y, end.x, end.y, LINE_HOVER_THRESHOLD)
+        ) {
+          hoveredColumn.value = colIndex
+          return
+        }
+      }
+    })
+  }
+}
+
+// Mouse move handler - show preview of next segment and detect hover
 const handleMouseMove = (event: MouseEvent) => {
+  const canvasPos = getCanvasPosition(event)
+
+  // Always detect hover (for existing matrix annotations)
+  detectHover(canvasPos.x, canvasPos.y)
+
   if (
     !matrixDrawingStore.isDrawing ||
     !props.renderer ||
     matrixDrawingStore.currentSequence.length === 0
   ) {
-    // Clear preview if no active sequence
+    // Not actively drawing - just show hover effects
+    // Clear preview if there was one
     if (previewSequence.value.length > 0) {
       previewSequence.value = []
-      renderCanvas()
     }
+    // Always render to show hover effects
+    renderCanvas()
     return
   }
-
-  const canvasPos = getCanvasPosition(event)
   const closestKey = findClosestKey(canvasPos.x, canvasPos.y, keyboardStore.keys)
 
   if (!closestKey || matrixDrawingStore.currentSequence.includes(closestKey)) {
@@ -277,6 +507,9 @@ const renderCanvas = () => {
   if (previewSequence.value.length > 0) {
     renderPreviewSequence(previewSequence.value)
   }
+
+  // Render hover effects on top of everything
+  renderHoverEffects()
 
   ctx.value.restore()
 }
@@ -445,6 +678,139 @@ const renderPreviewSequence = (keys: Key[]) => {
   })
 }
 
+// Render hover effects
+const renderHoverEffects = () => {
+  if (!ctx.value) return
+
+  // Render hovered row/column (thicker, highlighted line)
+  if (hoveredRow.value !== null) {
+    // Check both VIA annotations and manually drawn rows
+    let keys = matrixRows.value.get(hoveredRow.value)
+    if (!keys) {
+      keys = matrixDrawingStore.completedRows[hoveredRow.value]
+    }
+    if (keys) renderHoveredRow(keys)
+  }
+
+  if (hoveredColumn.value !== null) {
+    // Check both VIA annotations and manually drawn columns
+    let keys = matrixCols.value.get(hoveredColumn.value)
+    if (!keys) {
+      keys = matrixDrawingStore.completedColumns[hoveredColumn.value]
+    }
+    if (keys) renderHoveredColumn(keys)
+  }
+
+  // Render hovered node (highlight circle)
+  if (hoveredAnchor.value) {
+    renderHoveredNode(hoveredAnchor.value)
+  }
+}
+
+// Render a hovered node (yellow circle highlight)
+const renderHoveredNode = (anchor: {
+  type: 'row' | 'column' | 'overlap'
+  index: number
+  key: Key
+  overlappingNodes?: Array<{
+    type: 'row' | 'column'
+    index: number
+    key: Key
+    distance: number
+  }>
+}) => {
+  if (!ctx.value) return
+
+  const center = getKeyCenter(anchor.key)
+
+  // Draw yellow highlight circle
+  ctx.value.fillStyle = 'rgba(255, 193, 7, 0.3)' // Semi-transparent yellow
+  ctx.value.strokeStyle = '#ffc107' // Yellow border
+  ctx.value.lineWidth = 2
+  ctx.value.beginPath()
+  ctx.value.arc(center.x, center.y, 10, 0, Math.PI * 2)
+  ctx.value.fill()
+  ctx.value.stroke()
+}
+
+// Render a hovered row (thicker blue line)
+const renderHoveredRow = (keys: Key[]) => {
+  if (!ctx.value || keys.length === 0) return
+
+  const path = keys.map((key) => getKeyCenter(key))
+
+  const lineColor = '#007bff' // Blue
+  const lineWidth = 4 // Thicker to indicate hover
+  const circleRadius = 7 // Larger circles
+
+  // Draw thicker line segments
+  ctx.value.strokeStyle = lineColor
+  ctx.value.lineWidth = lineWidth
+  ctx.value.globalAlpha = 0.7
+  ctx.value.beginPath()
+
+  path.forEach((point, i) => {
+    if (i === 0) {
+      ctx.value!.moveTo(point.x, point.y)
+    } else {
+      ctx.value!.lineTo(point.x, point.y)
+    }
+  })
+
+  ctx.value.stroke()
+  ctx.value.globalAlpha = 1.0
+
+  // Draw larger key markers
+  path.forEach((point) => {
+    ctx.value!.fillStyle = lineColor
+    ctx.value!.strokeStyle = '#ffffff'
+    ctx.value!.lineWidth = 2
+    ctx.value!.beginPath()
+    ctx.value!.arc(point.x, point.y, circleRadius, 0, Math.PI * 2)
+    ctx.value!.fill()
+    ctx.value!.stroke()
+  })
+}
+
+// Render a hovered column (thicker green line)
+const renderHoveredColumn = (keys: Key[]) => {
+  if (!ctx.value || keys.length === 0) return
+
+  const path = keys.map((key) => getKeyCenter(key))
+
+  const lineColor = '#28a745' // Green
+  const lineWidth = 4 // Thicker to indicate hover
+  const circleRadius = 7 // Larger circles
+
+  // Draw thicker line segments
+  ctx.value.strokeStyle = lineColor
+  ctx.value.lineWidth = lineWidth
+  ctx.value.globalAlpha = 0.7
+  ctx.value.beginPath()
+
+  path.forEach((point, i) => {
+    if (i === 0) {
+      ctx.value!.moveTo(point.x, point.y)
+    } else {
+      ctx.value!.lineTo(point.x, point.y)
+    }
+  })
+
+  ctx.value.stroke()
+  ctx.value.globalAlpha = 1.0
+
+  // Draw larger key markers
+  path.forEach((point) => {
+    ctx.value!.fillStyle = lineColor
+    ctx.value!.strokeStyle = '#ffffff'
+    ctx.value!.lineWidth = 2
+    ctx.value!.beginPath()
+    ctx.value!.arc(point.x, point.y, circleRadius, 0, Math.PI * 2)
+    ctx.value!.fill()
+    ctx.value!.stroke()
+  })
+}
+
 // Watch for canvas property changes
 watch(
   () => [props.canvasWidth, props.canvasHeight, props.zoom, props.panX, props.panY],
@@ -501,23 +867,12 @@ watch(
 const enableDrawing = (type: 'row' | 'column') => {
   matrixDrawingStore.enableDrawing(type)
   previewSequence.value = []
-
-  // Enable pointer events when drawing
-  if (canvasRef.value) {
-    canvasRef.value.style.pointerEvents = 'auto'
-  }
 }
 
 // Public method to disable drawing mode
 const disableDrawing = () => {
   matrixDrawingStore.disableDrawing()
   previewSequence.value = []
-
-  // Disable pointer events when not drawing
-  if (canvasRef.value) {
-    canvasRef.value.style.pointerEvents = 'none'
-  }
-
   renderCanvas()
 }
 
@@ -554,7 +909,7 @@ onMounted(() => {
   position: absolute;
   top: 0;
   left: 0;
-  pointer-events: none; /* No interaction - visualization only */
+  pointer-events: auto; /* Enable interaction for hover effects and drawing */
   z-index: 10;
 }
 </style>
