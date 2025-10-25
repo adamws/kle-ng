@@ -11,7 +11,7 @@ import {
 
 export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
   // Drawing state
-  const drawingType = ref<'row' | 'column' | null>(null)
+  const drawingType = ref<'row' | 'column' | 'remove' | null>(null)
   const currentSequence = ref<Key[]>([])
   const completedRows = ref<Map<number, Key[]>>(new Map())
   const completedColumns = ref<Map<number, Key[]>>(new Map())
@@ -60,7 +60,7 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
   }
 
   // Actions
-  const enableDrawing = (type: 'row' | 'column') => {
+  const enableDrawing = (type: 'row' | 'column' | 'remove') => {
     drawingType.value = type
     currentSequence.value = []
   }

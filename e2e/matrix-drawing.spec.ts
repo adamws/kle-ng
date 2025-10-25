@@ -100,25 +100,10 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     // Wait for modal content to load (should skip directly to drawing step since no labels)
     await page.waitForTimeout(500)
 
-    // Select "Row" mode (should be default, but click to be sure)
-    const rowRadio = page.locator('.matrix-modal input[type="radio"][value="row"]')
-    await rowRadio.click()
-
-    // Click the draw button to enable drawing mode
-    //Note: We locate the button generically and click it, then verify it says "Stop"
-    const drawButton = page
-      .locator('.matrix-modal button')
-      .filter({ hasText: /Draw|Stop/ })
-      .first()
-
-    // If button says "Draw", click it to enable. If it already says "Stop", we're good
-    const buttonText = await drawButton.textContent()
-    if (buttonText?.includes('Draw') && !buttonText?.includes('Stop')) {
-      await drawButton.click()
-    }
-
-    // Wait for the button text to confirm drawing mode is enabled
-    await expect(drawButton).toHaveText(/Stop/)
+    // Drawing is now automatically enabled in row mode by default
+    // Verify the "Draw Rows" button is active (has primary styling)
+    const rowButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Rows' })
+    await expect(rowButton).toHaveClass(/btn-draw-rows/)
 
     // Now the overlay should be visible
     const overlay = page.locator('canvas.matrix-annotation-overlay')
@@ -164,14 +149,13 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     await overlay.click({ position: { x: offset + unit * 2, y: offset + unit * 2 } })
     await page.waitForTimeout(200)
 
-    // Switch to column mode by clicking the column radio button
-    const columnRadio = page.locator('.matrix-modal input[type="radio"][value="column"]')
-    await columnRadio.click()
+    // Switch to column mode by clicking the "Draw Columns" button
+    const columnButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Columns' })
+    await columnButton.click()
     await page.waitForTimeout(100)
 
-    // The drawing should still be active, but now in column mode
-    // Button text should contain "Cols" now
-    await expect(drawButton).toHaveText(/Stop.*Cols/)
+    // Verify column button is now active
+    await expect(columnButton).toHaveClass(/btn-draw-columns/)
 
     // First column: click top key (0,0) and bottom key (0,2)
     // The middle key (0,1) should be automatically added
@@ -324,23 +308,10 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     // Wait for modal content to load (should skip directly to drawing step since no labels)
     await page.waitForTimeout(500)
 
-    // Select "Row" mode
-    const rowRadio = page.locator('.matrix-modal input[type="radio"][value="row"]')
-    await rowRadio.click()
-
-    // Click the draw button to enable drawing mode
-    const drawButton = page
-      .locator('.matrix-modal button')
-      .filter({ hasText: /Draw|Stop/ })
-      .first()
-
-    const buttonText = await drawButton.textContent()
-    if (buttonText?.includes('Draw') && !buttonText?.includes('Stop')) {
-      await drawButton.click()
-    }
-
-    // Wait for the button text to confirm drawing mode is enabled
-    await expect(drawButton).toHaveText(/Stop/)
+    // Drawing is automatically enabled in row mode by default
+    // Verify the "Draw Rows" button is active
+    const rowButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Rows' })
+    await expect(rowButton).toHaveClass(/btn-draw-rows/)
 
     // Now the overlay should be visible
     const overlay = page.locator('canvas.matrix-annotation-overlay')
@@ -402,14 +373,10 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     await expect(matrixModal).toBeVisible()
     await page.waitForTimeout(500)
 
-    // Select "Row" mode and enable drawing
-    await page.locator('.matrix-modal input[type="radio"][value="row"]').click()
-    const drawButton = page
-      .locator('.matrix-modal button')
-      .filter({ hasText: /Draw|Stop/ })
-      .first()
-    await drawButton.click()
-    await expect(drawButton).toHaveText(/Stop/)
+    // Drawing is automatically enabled in row mode by default
+    // Verify the "Draw Rows" button is active
+    const rowButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Rows' })
+    await expect(rowButton).toHaveClass(/btn-draw-rows/)
 
     const overlay = page.locator('canvas.matrix-annotation-overlay')
     await expect(overlay).toBeVisible()
@@ -476,14 +443,13 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     await expect(matrixModal).toBeVisible()
     await page.waitForTimeout(500)
 
-    // Select "Column" mode and enable drawing
-    await page.locator('.matrix-modal input[type="radio"][value="column"]').click()
-    const drawButton = page
-      .locator('.matrix-modal button')
-      .filter({ hasText: /Draw|Stop/ })
-      .first()
-    await drawButton.click()
-    await expect(drawButton).toHaveText(/Stop/)
+    // Switch to column mode by clicking the "Draw Columns" button
+    const columnButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Columns' })
+    await columnButton.click()
+    await page.waitForTimeout(100)
+
+    // Verify column button is now active
+    await expect(columnButton).toHaveClass(/btn-draw-columns/)
 
     const overlay = page.locator('canvas.matrix-annotation-overlay')
     await expect(overlay).toBeVisible()
@@ -558,14 +524,11 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const border = 9
     const offset = unit / 2 + border
 
-    // Assign both keys to row 0
-    await page.locator('.matrix-modal input[type="radio"][value="row"]').click()
-    const drawButton = page
-      .locator('.matrix-modal button')
-      .filter({ hasText: /Draw|Stop/ })
-      .first()
-    await drawButton.click()
+    // Verify row mode is active by default
+    const rowButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Rows' })
+    await expect(rowButton).toHaveClass(/btn-draw-rows/)
 
+    // Assign both keys to row 0
     const key1X = offset
     const key1Y = offset
     const key2X = offset + unit
@@ -576,13 +539,11 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     await overlay.click({ position: { x: key2X, y: key2Y }, force: true })
     await page.waitForTimeout(200)
 
-    // Stop drawing rows
-    await drawButton.click()
-    await page.waitForTimeout(100)
-
     // Now assign both keys to column 0
-    await page.locator('.matrix-modal input[type="radio"][value="column"]').click()
-    await drawButton.click()
+    // Switch to column mode
+    const columnButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Columns' })
+    await columnButton.click()
+    await page.waitForTimeout(100)
 
     await overlay.click({ position: { x: key1X, y: key1Y } })
     await page.waitForTimeout(100)
@@ -628,14 +589,9 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     await expect(matrixModal).toBeVisible()
     await page.waitForTimeout(500)
 
-    // Select "Row" mode and enable drawing
-    await page.locator('.matrix-modal input[type="radio"][value="row"]').click()
-    const drawButton = page
-      .locator('.matrix-modal button')
-      .filter({ hasText: /Draw|Stop/ })
-      .first()
-    await drawButton.click()
-    await expect(drawButton).toHaveText(/Stop/)
+    // Drawing is automatically enabled in row mode by default
+    const rowButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Rows' })
+    await expect(rowButton).toHaveClass(/btn-draw-rows/)
 
     const overlay = page.locator('canvas.matrix-annotation-overlay')
     await expect(overlay).toBeVisible()
@@ -703,14 +659,13 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     await expect(matrixModal).toBeVisible()
     await page.waitForTimeout(500)
 
-    // Select "Column" mode and enable drawing
-    await page.locator('.matrix-modal input[type="radio"][value="column"]').click()
-    const drawButton = page
-      .locator('.matrix-modal button')
-      .filter({ hasText: /Draw|Stop/ })
-      .first()
-    await drawButton.click()
-    await expect(drawButton).toHaveText(/Stop/)
+    // Switch to column mode
+    const columnButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Columns' })
+    await columnButton.click()
+    await page.waitForTimeout(100)
+
+    // Verify column button is active
+    await expect(columnButton).toHaveClass(/btn-draw-columns/)
 
     const overlay = page.locator('canvas.matrix-annotation-overlay')
     await expect(overlay).toBeVisible()
@@ -757,7 +712,7 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     expect(columnAssignments).toBeGreaterThanOrEqual(3)
   })
 
-  test('should remove node from matrix via context menu', async ({ page }) => {
+  test('should remove node from matrix via remove mode', async ({ page }) => {
     // Create a 3x3 grid with pre-assigned matrix coordinates
     // Format: Each key has label "row,col" in first position
     const fixtureData = [
@@ -799,6 +754,14 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const overlay = page.locator('canvas.matrix-annotation-overlay')
     await expect(overlay).toBeVisible()
 
+    // Switch to remove mode by clicking the "Remove" button
+    const removeButton = page.locator('.matrix-modal button').filter({ hasText: 'Remove' })
+    await removeButton.click()
+    await page.waitForTimeout(100)
+
+    // Verify remove button is active (has danger styling)
+    await expect(removeButton).toHaveClass(/btn-danger/)
+
     // Get canvas bounding box for calculations
     const canvasBox = await overlay.boundingBox()
     if (!canvasBox) throw new Error('Canvas not found')
@@ -813,25 +776,9 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const key1X = canvasBox.x + offset + unit / 2
     const key1Y = canvasBox.y + offset + unit / 2
 
-    // Right-click on the first key to open context menu
-    await page.mouse.click(key1X, key1Y, { button: 'right' })
-    await page.waitForTimeout(200)
-
-    // Context menu should be visible
-    const contextMenu = page.locator('.matrix-context-menu')
-    await expect(contextMenu).toBeVisible()
-
-    // Should show "Remove Node" option (since we're hovering over a node)
-    const removeNodeButton = contextMenu.locator('button', { hasText: 'Remove Node' })
-    await expect(removeNodeButton).toBeVisible()
-
-    // Click the "Remove Node" button
-    // Use force: true to click through any overlapping canvases
-    await removeNodeButton.click({ force: true })
+    // Left-click on the first key to remove the node
+    await page.mouse.click(key1X, key1Y, { button: 'left' })
     await page.waitForTimeout(300)
-
-    // Context menu should close
-    await expect(contextMenu).not.toBeVisible()
 
     // The first key should no longer have a label
     // Export to verify
@@ -851,7 +798,7 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     await expect(matrixModal).toContainText('Columns:')
   })
 
-  test('should remove entire row via context menu', async ({ page }) => {
+  test('should remove entire row via remove mode', async ({ page }) => {
     // Create a 3x3 grid with pre-assigned matrix coordinates
     const fixtureData = [
       ['0,0', '0,1', '0,2'],
@@ -876,6 +823,14 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
 
     await page.waitForTimeout(500)
 
+    // Switch to remove mode
+    const removeButton = page.locator('.matrix-modal button').filter({ hasText: 'Remove' })
+    await removeButton.click()
+    await page.waitForTimeout(100)
+
+    // Verify remove button is active
+    await expect(removeButton).toHaveClass(/btn-danger/)
+
     // Get the canvas overlay
     const overlay = page.locator('canvas.matrix-annotation-overlay')
     await expect(overlay).toBeVisible()
@@ -897,24 +852,9 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     await page.mouse.move(lineX, lineY)
     await page.waitForTimeout(200)
 
-    // Right-click on the row line
-    await page.mouse.click(lineX, lineY, { button: 'right' })
-    await page.waitForTimeout(200)
-
-    // Context menu should show "Remove Row" option
-    const contextMenu = page.locator('.matrix-context-menu')
-    await expect(contextMenu).toBeVisible()
-
-    const removeRowButton = contextMenu.locator('button', { hasText: 'Remove Row' })
-    await expect(removeRowButton).toBeVisible()
-
-    // Click "Remove Row"
-    // Use force: true to click through any overlapping canvases
-    await removeRowButton.click({ force: true })
+    // Left-click on the row line to remove the row
+    await page.mouse.click(lineX, lineY, { button: 'left' })
     await page.waitForTimeout(300)
-
-    // Context menu should close
-    await expect(contextMenu).not.toBeVisible()
 
     // Export to verify row was removed
     const exportedLayout = await exportLayoutJSON(page)
@@ -981,17 +921,18 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const lineX = (key1CenterX + key2CenterX) / 2 // Midpoint between keys
     const lineY = canvasBox.y + row1Y // Row 1's Y position
 
+    // Switch to remove mode
+    const removeButton = page.locator('button', { hasText: 'Remove' })
+    await removeButton.click()
+    await page.waitForTimeout(100)
+
+    // Verify remove button is active
+    await expect(removeButton).toHaveClass(/btn-danger/)
+
+    // Move mouse to row line and left-click to remove
     await page.mouse.move(lineX, lineY)
     await page.waitForTimeout(200)
-    await page.mouse.click(lineX, lineY, { button: 'right' })
-    await page.waitForTimeout(200)
-
-    const contextMenu = page.locator('.matrix-context-menu')
-    await expect(contextMenu).toBeVisible()
-
-    const removeRowButton = contextMenu.locator('button', { hasText: 'Remove Row' })
-    await expect(removeRowButton).toBeVisible()
-    await removeRowButton.click({ force: true })
+    await page.mouse.click(lineX, lineY, { button: 'left' })
     await page.waitForTimeout(300)
 
     // Verify row count decreased from 3 to 2
@@ -1061,7 +1002,7 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const canvasBox = await overlay.boundingBox()
     if (!canvasBox) throw new Error('Canvas not found')
 
-    // Remove column 1 via context menu (hover over the line between keys in column 1)
+    // Remove column 1 via remove mode (hover over the line between keys in column 1)
     // Position between first and second key on column 1
     const unit = 54
     const border = 9
@@ -1074,33 +1015,31 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const lineX = canvasBox.x + col1X // Column 1's X position
     const lineY = (key1CenterY + key2CenterY) / 2 // Midpoint between keys
 
+    // Switch to remove mode
+    const removeButton = page.locator('button', { hasText: 'Remove' })
+    await removeButton.click()
+    await page.waitForTimeout(100)
+
+    // Verify remove button is active
+    await expect(removeButton).toHaveClass(/btn-danger/)
+
+    // Move mouse to column line and left-click to remove
     await page.mouse.move(lineX, lineY)
     await page.waitForTimeout(200)
-    await page.mouse.click(lineX, lineY, { button: 'right' })
-    await page.waitForTimeout(200)
-
-    const contextMenu = page.locator('.matrix-context-menu')
-    await expect(contextMenu).toBeVisible()
-
-    const removeColButton = contextMenu.locator('button', { hasText: 'Remove Column' })
-    await expect(removeColButton).toBeVisible()
-    await removeColButton.click({ force: true })
+    await page.mouse.click(lineX, lineY, { button: 'left' })
     await page.waitForTimeout(300)
 
     // Verify column count decreased from 4 to 3 and row count remain at 3
     await expect(rowsProgress).toContainText('3 defined')
     await expect(colsProgress).toContainText('3 defined')
 
-    // Enable column drawing
-    await page.locator('label', { hasText: 'Column' }).click()
-    const drawButton = page
-      .locator('.matrix-modal button')
-      .filter({ hasText: /Draw|Stop/ })
-      .first()
-    await drawButton.click()
-    await page.waitForTimeout(300)
+    // Switch to column drawing mode
+    const columnButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Columns' })
+    await columnButton.click()
+    await page.waitForTimeout(100)
 
-    // Verify drawing is enabled
+    // Verify column button is active
+    await expect(columnButton).toHaveClass(/btn-draw-columns/)
     await expect(overlay).toBeVisible()
 
     // Draw the new column

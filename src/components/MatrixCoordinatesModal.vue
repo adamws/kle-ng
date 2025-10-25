@@ -225,7 +225,7 @@
             <div class="mb-3">
               <button
                 type="button"
-                class="btn btn-outline-info btn-sm w-100"
+                class="btn btn-outline-primary btn-sm w-100"
                 @click="handleAutomaticAnnotation"
                 @mousedown.stop
                 title="Automatically assign matrix coordinates based on key positions"
@@ -238,44 +238,76 @@
               </p>
             </div>
 
-            <!-- Manual Drawing Controls -->
-            <div class="manual-drawing-section mb-0">
-              <div class="section-divider mb-2">
-                <span class="divider-text">Manual Drawing</span>
+            <!-- Drawing Type Toggle -->
+            <div class="mb-3">
+              <div class="btn-group w-100" role="group" aria-label="Drawing type selector">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-primary-outline"
+                  :class="drawingType === 'row' ? 'btn-draw-rows' : 'btn-outline-secondary'"
+                  @click="setDrawingType('row')"
+                  @mousedown.stop
+                  title="Draw rows"
+                >
+                  <i class="bi bi-diagram-3 me-1"></i>
+                  Draw Rows
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-primary-outline"
+                  :class="drawingType === 'column' ? 'btn-draw-columns' : 'btn-outline-secondary'"
+                  @click="setDrawingType('column')"
+                  @mousedown.stop
+                  title="Draw columns"
+                >
+                  <i class="bi bi-diagram-2 me-1"></i>
+                  Draw Columns
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm"
+                  :class="drawingType === 'remove' ? 'btn-danger' : 'btn-outline-secondary'"
+                  @click="setDrawingType('remove')"
+                  @mousedown.stop
+                  title="Remove elements"
+                >
+                  <i class="bi bi-trash me-1"></i>
+                  Remove
+                </button>
               </div>
-              <div class="drawing-controls">
-                <div class="radio-group mb-2">
-                  <label>
-                    <input v-model="drawingType" type="radio" value="row" />
-                    Row
-                  </label>
-                  <label>
-                    <input v-model="drawingType" type="radio" value="column" />
-                    Column
-                  </label>
-                </div>
-                <div class="button-group">
-                  <button
-                    type="button"
-                    class="btn btn-sm"
-                    :class="drawingActive ? 'btn-success' : 'btn-outline-primary'"
-                    @click="toggleDrawing"
-                    @mousedown.stop
-                  >
-                    {{ drawingActive ? 'Stop' : 'Draw' }}
-                    {{ drawingType === 'row' ? 'Rows' : 'Cols' }}
-                  </button>
-                  <button
-                    type="button"
-                    class="btn btn-outline-danger btn-sm"
-                    @click="clearDrawings"
-                    @mousedown.stop
-                    :disabled="!hasDrawings"
-                  >
-                    Clear Drawings
-                  </button>
-                </div>
-              </div>
+            </div>
+
+            <!-- Clear Drawings Button -->
+            <div class="mb-3">
+              <button
+                type="button"
+                class="btn btn-outline-danger btn-sm w-100"
+                @click="clearDrawings"
+                @mousedown.stop
+                :disabled="!hasDrawings"
+              >
+                <i class="bi bi-trash me-1"></i>
+                Clear All Drawings
+              </button>
+            </div>
+
+            <!-- Drawing Instructions -->
+            <div class="info-section-light mb-0">
+              <h6 class="small fw-bold mb-2">
+                <i class="bi bi-info-circle me-1"></i>
+                Instructions
+              </h6>
+              <ul class="small mb-0 ps-3">
+                <li>
+                  <strong>Draw Rows/Columns Mode</strong>
+                  <ul class="small mb-0 ps-3">
+                    <li><strong>Left-click</strong> to start and complete segments</li>
+                    <li><strong>Right-click</strong> to cancel while drawing</li>
+                    <li><strong>Click existing wire</strong> to append/continue</li>
+                  </ul>
+                </li>
+                <li><strong>Remove mode:</strong> Click on rows, columns, or nodes to delete</li>
+              </ul>
             </div>
           </div>
         </div>
@@ -497,6 +529,8 @@ const acceptWarning = () => {
   })
 
   step.value = 'draw'
+  // Auto-enable drawing in row mode
+  matrixDrawingStore.enableDrawing('row')
 }
 
 const proceedWithoutClearing = () => {
@@ -529,6 +563,8 @@ const proceedWithoutClearing = () => {
   matrixDrawingStore.loadExistingAssignments(existingRows, existingCols)
 
   step.value = 'draw'
+  // Auto-enable drawing in row mode
+  matrixDrawingStore.enableDrawing('row')
 }
 
 // Apply current coordinates to all keys
@@ -894,20 +930,16 @@ const resetState = () => {
 }
 
 // Drawing state and methods
-const drawingType = ref<'row' | 'column'>('row')
+const drawingType = ref<'row' | 'column' | 'remove'>('row')
 
-// Use computed to directly reference store state
-const drawingActive = computed(() => matrixDrawingStore.isDrawing)
+// Computed
 const hasDrawings = computed(() => matrixDrawingStore.hasDrawings)
 
-const toggleDrawing = () => {
-  if (matrixDrawingStore.isDrawing) {
-    // Disable drawing
-    matrixDrawingStore.disableDrawing()
-  } else {
-    // Enable drawing
-    matrixDrawingStore.enableDrawing(drawingType.value)
-  }
+const setDrawingType = (type: 'row' | 'column' | 'remove') => {
+  // Set the drawing type
+  drawingType.value = type
+  // Always keep drawing enabled, just switch the type
+  matrixDrawingStore.enableDrawing(type)
 }
 
 const clearDrawings = () => {
@@ -918,13 +950,6 @@ const clearDrawings = () => {
   // Also clear the modal's rows/cols that came from drawings
   syncDrawingsToModal()
 }
-
-// Watch drawing type changes - update if already drawing
-watch(drawingType, (newType) => {
-  if (matrixDrawingStore.isDrawing) {
-    matrixDrawingStore.enableDrawing(newType)
-  }
-})
 
 // Sync completed drawings from store to modal's rows/cols
 const syncDrawingsToModal = () => {
@@ -999,10 +1024,14 @@ watch(
       if (keyboardStore.isViaAnnotated) {
         showExistingMatrixOverlay()
         step.value = 'draw'
+        // Auto-enable drawing in row mode
+        matrixDrawingStore.enableDrawing('row')
       }
       // 2. Not annotated (empty labels) → go directly to drawing
       else if (!hasLabels.value) {
         step.value = 'draw'
+        // Auto-enable drawing in row mode
+        matrixDrawingStore.enableDrawing('row')
       }
       // 3. Partially annotated layout → show choice (both OK and Proceed without clearing)
       else if (isPartiallyAnnotated.value) {
@@ -1038,11 +1067,11 @@ watch(
 // Close on Escape key
 const handleKeyDown = (event: KeyboardEvent) => {
   if (event.key === 'Escape') {
-    // If drawing is active, cancel the current drawing sequence instead of closing the modal
-    if (matrixDrawingStore.isDrawing) {
+    // If actively drawing a sequence, cancel it instead of closing the modal
+    if (matrixDrawingStore.currentSequence.length > 0) {
       matrixDrawingStore.clearCurrentSequence()
     } else {
-      // Only close modal if no drawing is active
+      // Only close modal if no active drawing sequence
       handleCancel()
     }
   }
@@ -1209,6 +1238,25 @@ defineExpose({
   border-left: 4px solid var(--bs-primary);
 }
 
+.info-section-light {
+  background: var(--bs-tertiary-bg);
+  padding: 12px;
+  border-radius: 6px;
+  border-left: 3px solid var(--bs-secondary);
+}
+
+.info-section-light ul {
+  margin-bottom: 0;
+}
+
+.info-section-light li {
+  margin-bottom: 4px;
+}
+
+.info-section-light li:last-child {
+  margin-bottom: 0;
+}
+
 /* Progress info styles */
 .progress-info {
   display: flex;
@@ -1270,77 +1318,26 @@ defineExpose({
   border: 1px dashed var(--bs-border-color);
 }
 
+.btn-draw-rows {
+  background: var(--bs-primary) !important;
+}
+
+.btn-draw-columns {
+  background: var(--bs-primary) !important;
+}
+
 /* Animation for button press feedback */
 .btn:active {
   transform: translateY(1px);
 }
 
-/* Manual drawing section */
-.manual-drawing-section {
-  background: var(--bs-tertiary-bg);
-  padding: 12px;
-  border-radius: 6px;
-  border-left: 4px solid var(--bs-success);
-}
-
-.section-divider {
-  position: relative;
-  text-align: center;
-  margin-bottom: 8px;
-}
-
-.section-divider::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  height: 1px;
-  background: var(--bs-border-color);
-}
-
-.divider-text {
-  position: relative;
-  background: var(--bs-tertiary-bg);
-  padding: 0 8px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--bs-secondary-color);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.drawing-controls {
-  display: flex;
-  flex-direction: column;
-}
-
-.radio-group {
-  display: flex;
-  gap: 12px;
-}
-
-.radio-group label {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.875rem;
-  cursor: pointer;
-  user-select: none;
-}
-
-.radio-group input[type='radio'] {
-  cursor: pointer;
-  margin: 0;
-}
-
-.button-group {
-  display: flex;
-  gap: 6px;
-}
-
-.button-group button {
+/* Drawing type toggle button group */
+.btn-group > .btn {
   flex: 1;
+}
+
+.btn-group > .btn:focus {
+  z-index: 1;
 }
 
 /* Responsive adjustments */

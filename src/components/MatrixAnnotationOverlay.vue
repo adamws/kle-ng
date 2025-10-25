@@ -4,35 +4,23 @@
       v-show="visible"
       ref="canvasRef"
       class="matrix-annotation-overlay"
-      :class="{ 'context-menu-open': contextMenuVisible }"
       :width="canvasWidth"
       :height="canvasHeight"
       @click="handleClick"
       @contextmenu.prevent="handleRightClick"
       @mousemove="handleMouseMove"
     />
-
-    <MatrixContextMenu
-      :visible="contextMenuVisible"
-      :position="contextMenuPosition"
-      :hover-state="frozenHoverState"
-      @close="closeContextMenu"
-      @remove-node="handleRemoveNode"
-      @remove-row="handleRemoveRow"
-      @remove-column="handleRemoveColumn"
-    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { type Key } from '@/stores/keyboard'
 import type { CanvasRenderer } from '@/utils/canvas-renderer'
 import { getKeyCenter as calculateKeyCenter } from '@/utils/keyboard-geometry'
 import { findKeysAlongLine } from '@/utils/line-intersection'
 import { useKeyboardStore } from '@/stores/keyboard'
 import { useMatrixDrawingStore } from '@/stores/matrix-drawing'
-import MatrixContextMenu from './MatrixContextMenu.vue'
 
 // Props
 interface Props {
@@ -71,30 +59,6 @@ const hoveredAnchor = ref<{
     distance: number
   }>
 } | null>(null)
-
-// Context menu state
-const contextMenuVisible = ref(false)
-const contextMenuPosition = ref({ x: 0, y: 0 })
-// Frozen hover state - saved when context menu opens, used for menu display
-const frozenHoverState = ref<{
-  hoveredRow: number | null
-  hoveredColumn: number | null
-  hoveredAnchor: {
-    type: 'row' | 'column' | 'overlap'
-    index: number
-    key: Key
-    overlappingNodes?: Array<{
-      type: 'row' | 'column'
-      index: number
-      key: Key
-      distance: number
-    }>
-  } | null
-}>({
-  hoveredRow: null,
-  hoveredColumn: null,
-  hoveredAnchor: null,
-})
 
 // Computed
 const ctx = computed(() => canvasRef.value?.getContext('2d'))
@@ -195,12 +159,18 @@ const isPointNearLine = (
 const updateCursor = () => {
   if (!canvasRef.value) return
 
-  // Set cursor to context-menu if hovering over any matrix element
-  if (hoveredRow.value !== null || hoveredColumn.value !== null || hoveredAnchor.value !== null) {
-    canvasRef.value.style.cursor = 'context-menu'
-  } else {
-    canvasRef.value.style.cursor = 'default'
+  // In remove mode, show crosshair cursor when hovering over elements
+  if (matrixDrawingStore.drawingType === 'remove') {
+    if (hoveredRow.value !== null || hoveredColumn.value !== null || hoveredAnchor.value !== null) {
+      canvasRef.value.style.cursor = 'crosshair'
+    } else {
+      canvasRef.value.style.cursor = 'default'
+    }
+    return
   }
+
+  // In draw mode (row/column), always use default cursor
+  canvasRef.value.style.cursor = 'default'
 }
 
 // Detect what the mouse is hovering over
@@ -314,14 +284,22 @@ const detectHover = (canvasX: number, canvasY: number) => {
 const handleMouseMove = (event: MouseEvent) => {
   const canvasPos = getCanvasPosition(event)
 
-  // Don't update hover state when context menu is visible or when actively drawing a segment
+  // In remove mode, always detect hover for targeting elements
+  if (matrixDrawingStore.drawingType === 'remove') {
+    detectHover(canvasPos.x, canvasPos.y)
+    updateCursor()
+    renderCanvas()
+    return
+  }
+
+  // Don't update hover state when actively drawing a segment
   const isActivelyDrawing =
     matrixDrawingStore.isDrawing && matrixDrawingStore.currentSequence.length > 0
-  if (!contextMenuVisible.value && !isActivelyDrawing) {
+  if (!isActivelyDrawing) {
     // Detect hover for existing matrix annotations
     detectHover(canvasPos.x, canvasPos.y)
     updateCursor()
-  } else if (isActivelyDrawing) {
+  } else {
     // Reset cursor to default while actively drawing
     if (canvasRef.value) {
       canvasRef.value.style.cursor = 'default'
@@ -339,10 +317,8 @@ const handleMouseMove = (event: MouseEvent) => {
       previewSequence.value = []
       errorPreviewSequence.value = []
     }
-    // Always render to show hover effects (unless context menu is open)
-    if (!contextMenuVisible.value) {
-      renderCanvas()
-    }
+    // Always render to show hover effects
+    renderCanvas()
     return
   }
   const closestKey = findClosestKey(canvasPos.x, canvasPos.y, keyboardStore.keys)
@@ -405,6 +381,26 @@ const handleMouseMove = (event: MouseEvent) => {
 // Click handler - add keys to sequence or finish sequence
 const handleClick = (event: MouseEvent) => {
   if (!matrixDrawingStore.isDrawing || !props.renderer) return
+
+  // Handle remove mode - directly remove hovered elements
+  if (matrixDrawingStore.drawingType === 'remove') {
+    // Check what's hovered and remove it
+    if (hoveredRow.value !== null && hoveredAnchor.value === null) {
+      // Hovering over a row line - remove entire row
+      handleRemoveRow(hoveredRow.value)
+    } else if (hoveredColumn.value !== null && hoveredAnchor.value === null) {
+      // Hovering over a column line - remove entire column
+      handleRemoveColumn(hoveredColumn.value)
+    } else if (hoveredAnchor.value !== null) {
+      // Hovering over a node/anchor - remove that node
+      handleRemoveNode({
+        type: hoveredAnchor.value.type,
+        index: hoveredAnchor.value.index,
+        key: hoveredAnchor.value.key,
+      })
+    }
+    return
+  }
 
   const canvasPos = getCanvasPosition(event)
   const closestKey = findClosestKey(canvasPos.x, canvasPos.y, keyboardStore.keys)
@@ -493,8 +489,8 @@ const handleClick = (event: MouseEvent) => {
   renderCanvas()
 }
 
-// Right-click handler - cancel drawing or open context menu
-const handleRightClick = (event: MouseEvent) => {
+// Right-click handler - cancel drawing while actively drawing
+const handleRightClick = () => {
   // If actively drawing, cancel the current sequence
   const isActivelyDrawing =
     matrixDrawingStore.isDrawing && matrixDrawingStore.currentSequence.length > 0
@@ -508,34 +504,7 @@ const handleRightClick = (event: MouseEvent) => {
       canvasRef.value.style.cursor = 'default'
     }
     renderCanvas()
-    return
   }
-
-  // Only show context menu if hovering over a matrix element
-  // Use strict null checks to allow row/column 0 (which is falsy but valid)
-  if (hoveredRow.value === null && hoveredColumn.value === null && hoveredAnchor.value === null) {
-    return
-  }
-
-  // Freeze the current hover state for the context menu
-  frozenHoverState.value = {
-    hoveredRow: hoveredRow.value,
-    hoveredColumn: hoveredColumn.value,
-    hoveredAnchor: hoveredAnchor.value,
-  }
-
-  // Set context menu position to mouse position
-  contextMenuPosition.value = { x: event.clientX, y: event.clientY }
-  contextMenuVisible.value = true
-}
-
-// Close context menu
-const closeContextMenu = () => {
-  contextMenuVisible.value = false
-  // Update cursor based on current hover state
-  updateCursor()
-  // Re-render to update hover effects after menu closes
-  renderCanvas()
 }
 
 // Update key label after removing from row or column
@@ -1144,24 +1113,9 @@ defineExpose({
   clearDrawings,
 })
 
-// Global click handler to close context menu when clicking outside
-const handleGlobalClick = () => {
-  // Close context menu if clicking outside of it
-  if (contextMenuVisible.value) {
-    closeContextMenu()
-  }
-}
-
-// Initial render and event listeners
+// Initial render
 onMounted(() => {
   renderCanvas()
-  // Add global click listener to close context menu
-  document.addEventListener('click', handleGlobalClick)
-})
-
-onUnmounted(() => {
-  // Remove global click listener
-  document.removeEventListener('click', handleGlobalClick)
 })
 </script>
 
@@ -1182,9 +1136,5 @@ onUnmounted(() => {
   left: 0;
   pointer-events: auto; /* Enable interaction for hover effects and drawing */
   z-index: 10;
-}
-
-.matrix-annotation-overlay.context-menu-open {
-  pointer-events: none; /* Disable pointer events when context menu is open */
 }
 </style>
