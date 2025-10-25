@@ -281,7 +281,7 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     await expect(keysLeftCols).toContainText('Complete')
   })
 
-  test('should only catch clicked keys with default sensitivity (0.5) on diagonal line', async ({
+  test('should only catch clicked keys with default sensitivity (0.3) on diagonal line', async ({
     page,
   }) => {
     // Layout with diagonal opportunity: first row has 2x 1U keys, second row has 1.5U + 1U keys
@@ -290,7 +290,7 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     // Row 0: key at (0,0) w=1U center (0.5, 0.5), key at (1,0) w=1U center (1.5, 0.5)
     // Row 1: key at (0,1) w=1.5U center (0.75, 1.5), key at (1.5,1) w=1U center (2.0, 1.5)
     // Drawing from first key (0,0) to last key (1.5,1) diagonally
-    // With default sensitivity (0.5), should catch ONLY the 2 clicked keys, not the 2 intermediate ones
+    // With default sensitivity (0.3), should catch ONLY the 2 clicked keys, not the 2 intermediate ones
     const fixtureData = [
       [{ a: 0 }, '', ''],
       [{ w: 1.5 }, '', ''],
@@ -305,7 +305,7 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     // Small delay to ensure canvas renders
     await page.waitForTimeout(500)
 
-    // Default sensitivity is 0.5 - we assume this is the default value
+    // Default sensitivity is 0.3 - we assume this is the default value
     // The test logic will verify behavior through UI interactions and JSON export
 
     // Open Matrix Coordinates Modal
@@ -369,7 +369,7 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     await page.waitForTimeout(100)
 
     // Second click: bottom-right key - this should complete the sequence
-    // With default sensitivity (0.5), should catch ONLY the 2 clicked keys, not intermediate ones
+    // With default sensitivity (0.3), should catch ONLY the 2 clicked keys, not intermediate ones
     // Use force:true because the overlay may be re-rendering after first click, causing instability
     await overlay.click({ position: { x: lastKeyX, y: lastKeyY }, force: true })
     await page.waitForTimeout(200)

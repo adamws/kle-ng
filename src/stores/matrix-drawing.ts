@@ -21,8 +21,8 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
   const continuingColumnIndex = ref<number | null>(null)
 
   // Sensitivity for line intersection (0.0 = most permissive, 1.0 = strictest)
-  // Default 0.5 provides good balance between catching intended keys and avoiding "barely touched" keys
-  const sensitivity = ref<number>(0.5)
+  // Default 0.3 provides good balance between catching intended keys and avoiding "barely touched" keys
+  const sensitivity = ref<number>(0.3)
 
   // Flag to skip coordinate re-application after context menu removal
   const skipNextSync = ref<boolean>(false)
