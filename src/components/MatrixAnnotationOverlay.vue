@@ -493,8 +493,24 @@ const handleClick = (event: MouseEvent) => {
   renderCanvas()
 }
 
-// Right-click handler - open context menu
+// Right-click handler - cancel drawing or open context menu
 const handleRightClick = (event: MouseEvent) => {
+  // If actively drawing, cancel the current sequence
+  const isActivelyDrawing =
+    matrixDrawingStore.isDrawing && matrixDrawingStore.currentSequence.length > 0
+  if (isActivelyDrawing) {
+    // Cancel the current drawing
+    matrixDrawingStore.clearCurrentSequence()
+    previewSequence.value = []
+    errorPreviewSequence.value = []
+    // Reset cursor
+    if (canvasRef.value) {
+      canvasRef.value.style.cursor = 'default'
+    }
+    renderCanvas()
+    return
+  }
+
   // Only show context menu if hovering over a matrix element
   // Use strict null checks to allow row/column 0 (which is falsy but valid)
   if (hoveredRow.value === null && hoveredColumn.value === null && hoveredAnchor.value === null) {
