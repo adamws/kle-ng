@@ -55,6 +55,7 @@ const matrixDrawingStore = useMatrixDrawingStore()
 
 // Preview sequence (local to overlay - not part of store state)
 const previewSequence = ref<Key[]>([]) // Preview of what will be added on next click
+const errorPreviewSequence = ref<Key[]>([]) // Preview of illegal segments that cannot be added
 
 // Hover state tracking for interactive elements
 const hoveredRow = ref<number | null>(null)
@@ -314,8 +315,9 @@ const handleMouseMove = (event: MouseEvent) => {
   ) {
     // Not actively drawing - just show hover effects
     // Clear preview if there was one
-    if (previewSequence.value.length > 0) {
+    if (previewSequence.value.length > 0 || errorPreviewSequence.value.length > 0) {
       previewSequence.value = []
+      errorPreviewSequence.value = []
     }
     // Always render to show hover effects (unless context menu is open)
     if (!contextMenuVisible.value) {
@@ -327,8 +329,9 @@ const handleMouseMove = (event: MouseEvent) => {
 
   if (!closestKey || matrixDrawingStore.currentSequence.includes(closestKey)) {
     // Clear preview if hovering over already-included key
-    if (previewSequence.value.length > 0) {
+    if (previewSequence.value.length > 0 || errorPreviewSequence.value.length > 0) {
       previewSequence.value = []
+      errorPreviewSequence.value = []
       renderCanvas()
     }
     return
@@ -347,19 +350,34 @@ const handleMouseMove = (event: MouseEvent) => {
     matrixDrawingStore.sensitivity,
   )
 
-  // Filter out keys already in current sequence AND keys that would violate matrix rules
-  const newKeys = keysAlongLine.filter(
-    (key) =>
-      !matrixDrawingStore.currentSequence.includes(key) &&
-      matrixDrawingStore.canAddKeyToSequence(key, keyboardStore.keys),
-  )
+  // Separate keys into legal and illegal
+  const newKeys: Key[] = []
+  const illegalKeys: Key[] = []
+
+  keysAlongLine.forEach((key) => {
+    // Skip keys already in current sequence
+    if (matrixDrawingStore.currentSequence.includes(key)) return
+
+    // Check if key would violate matrix rules
+    if (matrixDrawingStore.canAddKeyToSequence(key, keyboardStore.keys)) {
+      newKeys.push(key)
+    } else {
+      illegalKeys.push(key)
+    }
+  })
 
   // Update preview if it changed
-  if (
+  const previewChanged =
     previewSequence.value.length !== newKeys.length ||
     !previewSequence.value.every((key, i) => key === newKeys[i])
-  ) {
+
+  const errorPreviewChanged =
+    errorPreviewSequence.value.length !== illegalKeys.length ||
+    !errorPreviewSequence.value.every((key, i) => key === illegalKeys[i])
+
+  if (previewChanged || errorPreviewChanged) {
     previewSequence.value = newKeys
+    errorPreviewSequence.value = illegalKeys
     renderCanvas()
   }
 }
@@ -387,6 +405,7 @@ const handleClick = (event: MouseEvent) => {
 
       // Clear preview
       previewSequence.value = []
+      errorPreviewSequence.value = []
       renderCanvas()
     }
     return
@@ -429,6 +448,7 @@ const handleClick = (event: MouseEvent) => {
 
     // Clear preview, ready for next sequence
     previewSequence.value = []
+    errorPreviewSequence.value = []
   } else {
     // First key - just add it and wait for second click
     matrixDrawingStore.addKeyToSequence(closestKey)
@@ -611,6 +631,11 @@ const renderCanvas = () => {
     renderPreviewSequence(previewSequence.value)
   }
 
+  // Render error sequence (illegal segments in red)
+  if (errorPreviewSequence.value.length > 0) {
+    renderErrorSequence(errorPreviewSequence.value)
+  }
+
   // Render hover effects on top of everything
   renderHoverEffects()
 
@@ -781,6 +806,71 @@ const renderPreviewSequence = (keys: Key[]) => {
   })
 }
 
+// Render error sequence (illegal segments in red)
+const renderErrorSequence = (keys: Key[]) => {
+  if (!ctx.value || keys.length === 0) return
+
+  const path = keys.map((key) => getKeyCenter(key))
+
+  const lineColor = 'rgba(220, 53, 69, 0.8)' // Semi-transparent red
+  const lineWidth = 2
+  const circleRadius = 5
+
+  // Draw dashed line segments
+  ctx.value.strokeStyle = lineColor
+  ctx.value.lineWidth = lineWidth
+  ctx.value.setLineDash([5, 5]) // Dashed line
+  ctx.value.beginPath()
+
+  // Start from the last key in the current sequence
+  if (matrixDrawingStore.currentSequence.length > 0) {
+    const lastKey =
+      matrixDrawingStore.currentSequence[matrixDrawingStore.currentSequence.length - 1]
+    const lastKeyCenter = getKeyCenter(lastKey)
+    ctx.value.moveTo(lastKeyCenter.x, lastKeyCenter.y)
+
+    // Draw line to all error keys
+    path.forEach((point) => {
+      ctx.value!.lineTo(point.x, point.y)
+    })
+  } else {
+    // If no current sequence, just draw between error keys
+    path.forEach((point, i) => {
+      if (i === 0) {
+        ctx.value!.moveTo(point.x, point.y)
+      } else {
+        ctx.value!.lineTo(point.x, point.y)
+      }
+    })
+  }
+
+  ctx.value.stroke()
+  ctx.value.setLineDash([]) // Reset to solid line
+
+  // Draw key markers with red fill and X mark
+  path.forEach((point) => {
+    // Draw red circle
+    ctx.value!.fillStyle = 'rgba(220, 53, 69, 0.6)'
+    ctx.value!.strokeStyle = 'rgba(220, 53, 69, 1)'
+    ctx.value!.lineWidth = 2
+    ctx.value!.beginPath()
+    ctx.value!.arc(point.x, point.y, circleRadius, 0, Math.PI * 2)
+    ctx.value!.fill()
+    ctx.value!.stroke()
+
+    // Draw X mark inside circle
+    ctx.value!.strokeStyle = '#ffffff'
+    ctx.value!.lineWidth = 2
+    const xSize = circleRadius * 0.6
+    ctx.value!.beginPath()
+    ctx.value!.moveTo(point.x - xSize, point.y - xSize)
+    ctx.value!.lineTo(point.x + xSize, point.y + xSize)
+    ctx.value!.moveTo(point.x + xSize, point.y - xSize)
+    ctx.value!.lineTo(point.x - xSize, point.y + xSize)
+    ctx.value!.stroke()
+  })
+}
+
 // Render hover effects
 const renderHoverEffects = () => {
   if (!ctx.value) return
@@ -939,6 +1029,7 @@ watch(
     }
     if (!isDrawing) {
       previewSequence.value = []
+      errorPreviewSequence.value = []
       renderCanvas()
     }
   },
@@ -956,12 +1047,14 @@ watch(
 const enableDrawing = (type: 'row' | 'column') => {
   matrixDrawingStore.enableDrawing(type)
   previewSequence.value = []
+  errorPreviewSequence.value = []
 }
 
 // Public method to disable drawing mode
 const disableDrawing = () => {
   matrixDrawingStore.disableDrawing()
   previewSequence.value = []
+  errorPreviewSequence.value = []
   renderCanvas()
 }
 
@@ -973,6 +1066,7 @@ const getCompletedDrawings = () => {
 // Public method to clear all drawings
 const clearDrawings = () => {
   previewSequence.value = []
+  errorPreviewSequence.value = []
   matrixDrawingStore.clearDrawings()
   renderCanvas()
 }
