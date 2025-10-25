@@ -25,6 +25,51 @@ function parseViaLabel(label: string | undefined): { row: number; col: number } 
 }
 
 /**
+ * Parse VIA matrix label with support for partial annotations
+ * @param label - The label string from key.labels[0]
+ * @returns Object with row and col numbers (can be null for partial assignments)
+ */
+function parseViaLabelWithPartial(
+  label: string | undefined,
+): { row: number | null; col: number | null } | null {
+  if (!label || typeof label !== 'string') return null
+
+  const trimmed = label.trim()
+
+  // Handle complete "row,col" format
+  const completePattern = /^(\d+),(\d+)$/
+  const completeMatch = trimmed.match(completePattern)
+  if (completeMatch) {
+    return {
+      row: parseInt(completeMatch[1], 10),
+      col: parseInt(completeMatch[2], 10),
+    }
+  }
+
+  // Handle row-only format "row,"
+  const rowOnlyPattern = /^(\d+),$/
+  const rowOnlyMatch = trimmed.match(rowOnlyPattern)
+  if (rowOnlyMatch) {
+    return {
+      row: parseInt(rowOnlyMatch[1], 10),
+      col: null,
+    }
+  }
+
+  // Handle column-only format ",col"
+  const colOnlyPattern = /^,(\d+)$/
+  const colOnlyMatch = trimmed.match(colOnlyPattern)
+  if (colOnlyMatch) {
+    return {
+      row: null,
+      col: parseInt(colOnlyMatch[1], 10),
+    }
+  }
+
+  return null
+}
+
+/**
  * Extract row and column assignments from VIA-annotated keys
  * @param keys - Array of keys with VIA labels (format: "row,col" in labels[0])
  * @returns Object with rows and cols Maps, where the key is the row/col number
@@ -59,6 +104,61 @@ export function extractMatrixAssignments(keys: Key[]): {
       cols.set(col, [])
     }
     cols.get(col)!.push(key)
+  })
+
+  // Sort keys within each row/column by their position
+  // For rows: sort by X position (left to right)
+  // For columns: sort by Y position (top to bottom)
+  rows.forEach((keyList) => {
+    keyList.sort((a, b) => a.x - b.x)
+  })
+
+  cols.forEach((keyList) => {
+    keyList.sort((a, b) => a.y - b.y)
+  })
+
+  return { rows, cols }
+}
+
+/**
+ * Extract row and column assignments from VIA-annotated keys with support for partial annotations
+ * @param keys - Array of keys with VIA labels (can be "row,col", "row,", or ",col")
+ * @returns Object with rows and cols Maps, where the key is the row/col number
+ */
+export function extractMatrixAssignmentsWithPartial(keys: Key[]): {
+  rows: Map<number, Key[]>
+  cols: Map<number, Key[]>
+} {
+  const rows = new Map<number, Key[]>()
+  const cols = new Map<number, Key[]>()
+
+  // Filter out decal and ghost keys
+  const regularKeys = keys.filter((key) => !key.decal && !key.ghost)
+
+  regularKeys.forEach((key) => {
+    // VIA annotations are in labels[0] (top-left position)
+    const label = key.labels?.[0]
+    const parsed = parseViaLabelWithPartial(label)
+
+    if (!parsed) return // Skip keys without valid VIA labels
+
+    const { row, col } = parsed
+
+    // Add key to row map if row is assigned
+    if (row !== null) {
+      if (!rows.has(row)) {
+        rows.set(row, [])
+      }
+      rows.get(row)!.push(key)
+    }
+
+    // Add key to column map if column is assigned
+    if (col !== null) {
+      if (!cols.has(col)) {
+        cols.set(col, [])
+      }
+      cols.get(col)!.push(key)
+    }
   })
 
   // Sort keys within each row/column by their position
@@ -285,3 +385,6 @@ export function restoreOriginalRotation(keys: Key[]): Key[] {
 
   return restoredKeys
 }
+
+// Export the parsing functions
+export { parseViaLabel, parseViaLabelWithPartial }

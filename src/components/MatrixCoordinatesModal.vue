@@ -44,26 +44,8 @@
             </div>
           </div>
 
-          <!-- Warning Message -->
-          <div class="alert alert-warning mb-3">
-            <div class="d-flex align-items-start gap-3">
-              <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 1.5rem"></i>
-              <div class="flex-grow-1">
-                <h6 class="mb-2 text-warning fw-bold">Important Notice</h6>
-                <p class="mb-2 small">
-                  This tool will <strong>remove all existing legends</strong> from your keys and
-                  replace them with matrix coordinates in "row,column" format.
-                </p>
-                <p class="mb-0 small">
-                  The matrix coordinates will be placed in the top-left legend position (position 0)
-                  on each key, following the VIA format standard.
-                </p>
-              </div>
-            </div>
-          </div>
-
           <!-- Information Section -->
-          <div class="info-section mb-0">
+          <div class="info-section mb-3">
             <div class="d-flex align-items-start gap-3">
               <i class="bi bi-info-circle text-primary" style="font-size: 1.5rem"></i>
               <div class="flex-grow-1">
@@ -86,6 +68,34 @@
                     VIA Documentation
                     <i class="bi bi-box-arrow-up-right ms-1"></i>
                   </a>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Warning Message -->
+          <div class="alert alert-warning mb-0">
+            <div class="d-flex align-items-start gap-3">
+              <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 1.5rem"></i>
+              <div class="flex-grow-1">
+                <h6 class="mb-2 text-warning fw-bold">
+                  {{ isPartiallyAnnotated ? 'Continue Matrix Annotation' : 'Important Notice' }}
+                </h6>
+                <p class="mb-2 small">
+                  <strong>{{
+                    isPartiallyAnnotated
+                      ? 'Partial annotation detected, choose your approach:'
+                      : 'Proceeding will clear all existing labels'
+                  }}</strong>
+                </p>
+                <ul class="mb-2 small" v-if="isPartiallyAnnotated">
+                  <li><strong>Continue</strong>: Continue with existing matrix annotations</li>
+                  <li><strong>Start over</strong>: Clear all labels and start fresh</li>
+                  <li><strong>Cancel</strong>: Close this tool</li>
+                </ul>
+                <p class="mb-0 small">
+                  The matrix coordinates will be placed in the top-left legend position (position 0)
+                  on each key, following the VIA format standard.
                 </p>
               </div>
             </div>
@@ -287,7 +297,7 @@
 
         <!-- OK button (warning step) -->
         <button
-          v-if="step === 'warning'"
+          v-if="step === 'warning' && !isPartiallyAnnotated"
           type="button"
           class="btn btn-primary btn-sm"
           @click="acceptWarning"
@@ -295,7 +305,32 @@
           aria-label="Ok"
         >
           <i class="bi bi-check-circle me-1"></i>
-          OK
+          OK (clear all labels)
+        </button>
+
+        <!-- Proceed without clearing button (warning step) - only show for partially annotated layouts -->
+        <button
+          v-if="step === 'warning' && isPartiallyAnnotated"
+          type="button"
+          class="btn btn-primary btn-sm"
+          @click="proceedWithoutClearing"
+          @mousedown.stop
+          aria-label="Continue"
+        >
+          <i class="bi bi-arrow-right-circle me-1"></i>
+          Continue
+        </button>
+
+        <button
+          v-if="step === 'warning' && isPartiallyAnnotated"
+          type="button"
+          class="btn btn-warning btn-sm"
+          @click="acceptWarning"
+          @mousedown.stop
+          aria-label="Start over"
+        >
+          <i class="bi bi-arrow-right-circle me-1"></i>
+          Start over
         </button>
 
         <!-- cancel button (warning step) -->
@@ -323,9 +358,11 @@ import { useMatrixDrawingStore } from '@/stores/matrix-drawing'
 import { getKeyCenter } from '@/utils/keyboard-geometry'
 import {
   extractMatrixAssignments,
+  extractMatrixAssignmentsWithPartial,
   splitLayoutByRotation,
   deRotateLayoutGroups,
   restoreOriginalRotation,
+  parseViaLabelWithPartial,
 } from '@/utils/matrix-utils'
 
 // Props
@@ -391,6 +428,26 @@ const hasLabels = computed(() => {
   })
 })
 
+// Check if layout is partially annotated (all keys have either empty labels or valid VIA annotations)
+const isPartiallyAnnotated = computed(() => {
+  const regularKeys = keyboardStore.keys.filter((key) => !key.decal && !key.ghost)
+
+  // If no regular keys, consider it not annotated
+  if (regularKeys.length === 0) return false
+
+  // Check if all regular keys have either empty labels or valid VIA annotations
+  return regularKeys.every((key) => {
+    const label = key.labels?.[0]
+
+    // Empty label is acceptable for partial annotation
+    if (!label || label.trim() === '') return true
+
+    // Check if it's a valid VIA annotation (complete or partial)
+    const parsed = parseViaLabelWithPartial(label)
+    return parsed !== null
+  })
+})
+
 // Get all regular keys (non-ghost, non-decal)
 const regularKeys = computed(() => {
   return keyboardStore.keys.filter((key) => !key.ghost && !key.decal)
@@ -438,6 +495,38 @@ const acceptWarning = () => {
   keyboardStore.keys.forEach((key) => {
     key.labels = []
   })
+
+  step.value = 'draw'
+}
+
+const proceedWithoutClearing = () => {
+  // Go to drawing step without clearing existing labels
+  // Parse existing labels and populate row/column state for continuation
+
+  // Extract existing matrix assignments from current labels (including partial annotations)
+  const { rows: existingRows, cols: existingCols } = extractMatrixAssignmentsWithPartial(
+    keyboardStore.keys,
+  )
+
+  // Convert the extracted Map<number, Key[]> to MatrixItem[] format
+  rows.value = Array.from(existingRows.entries())
+    .sort(([a], [b]) => a - b) // Sort by row index
+    .map(([index, keySequence]) => ({
+      id: `row-${index}-${Date.now()}`,
+      index,
+      keySequence,
+    }))
+
+  cols.value = Array.from(existingCols.entries())
+    .sort(([a], [b]) => a - b) // Sort by column index
+    .map(([index, keySequence]) => ({
+      id: `col-${index}-${Date.now()}`,
+      index,
+      keySequence,
+    }))
+
+  // Load existing assignments into the drawing store
+  matrixDrawingStore.loadExistingAssignments(existingRows, existingCols)
 
   step.value = 'draw'
 }
@@ -905,13 +994,23 @@ watch(
       initializePosition({ x: window.innerWidth - modalWidth - margin, y: 100 })
       resetState()
 
-      // If the layout is already annotated, show the matrix overlay and skip to draw step
+      // Handle the four scenarios:
+      // 1. Completely annotated layout → go directly to drawing
       if (keyboardStore.isViaAnnotated) {
         showExistingMatrixOverlay()
         step.value = 'draw'
-      } else if (!hasLabels.value) {
-        // If there are no labels, skip warning and go directly to drawing step
+      }
+      // 2. Not annotated (empty labels) → go directly to drawing
+      else if (!hasLabels.value) {
         step.value = 'draw'
+      }
+      // 3. Partially annotated layout → show choice (both OK and Proceed without clearing)
+      else if (isPartiallyAnnotated.value) {
+        step.value = 'warning'
+      }
+      // 4. Regular layout with non-matrix labels → show warning with only OK option
+      else {
+        step.value = 'warning'
       }
     } else {
       // Hide matrix overlay when modal closes
@@ -1077,6 +1176,18 @@ defineExpose({
   justify-content: flex-end;
   gap: 6px;
   background: var(--bs-tertiary-bg);
+}
+
+/* Responsive button layout for mobile */
+@media (max-width: 576px) {
+  .panel-footer {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .panel-footer button {
+    width: 100%;
+  }
 }
 
 /* Section styles */

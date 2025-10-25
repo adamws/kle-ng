@@ -387,7 +387,7 @@ test.describe('Matrix Coordinates Tool', () => {
     // Should be in warning step (because there are labels)
     const warningAlert = page.locator('.alert-warning')
     await expect(warningAlert).toBeVisible()
-    await expect(warningAlert).toContainText('remove all existing legends')
+    await expect(warningAlert).toContainText('clear all existing labels')
 
     // Verify labels are STILL present (not cleared yet) via JSON export
     const currentLayout = await exportLayoutJSON(page)
@@ -633,5 +633,41 @@ test.describe('Matrix Coordinates Tool', () => {
 
     // Take screenshot and compare with baseline
     await expect(canvas).toHaveScreenshot('default-60-via-matrix-preview.png')
+  })
+
+  test('should present choice when opening partially annotated layout', async ({ page }) => {
+    const fixtureData = [
+      ['0,0', '0,1', '0,2', '0,3'],
+      [',0', ',1', ',2', ',3'],
+      ['2,0', '2,1', '2,2', '2,3'],
+    ]
+
+    // Load layout with labels via JSON import
+    await importLayoutJSON(page, fixtureData)
+    await page.waitForTimeout(500)
+
+    // Open modal
+    await page.locator('.extra-tools-group button').click()
+    await page
+      .locator('.extra-tools-dropdown .dropdown-item')
+      .filter({ hasText: 'Add Switch Matrix Coordinates' })
+      .click()
+
+    await expect(page.locator('.matrix-modal')).toBeVisible()
+    await page.waitForTimeout(500)
+
+    // Should show warning
+    const warningAlert = page.locator('.alert-warning')
+    await expect(warningAlert).toBeVisible()
+    await expect(warningAlert).toContainText('Partial annotation detected')
+
+    const continueButton = page
+      .locator('.matrix-modal .panel-footer button')
+      .filter({ hasText: 'Continue' })
+    const startOverButton = page
+      .locator('.matrix-modal .panel-footer button')
+      .filter({ hasText: 'Start over' })
+    await expect(continueButton).toBeVisible()
+    await expect(startOverButton).toBeVisible()
   })
 })

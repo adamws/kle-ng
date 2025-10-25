@@ -360,6 +360,27 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
     }
   }
 
+  /**
+   * Load existing matrix assignments from parsed data
+   * This is used when continuing from partially annotated layouts
+   * @param rows - Map of row assignments
+   * @param columns - Map of column assignments
+   */
+  const loadExistingAssignments = (rows: Map<number, Key[]>, columns: Map<number, Key[]>) => {
+    // Clear any existing drawings
+    completedRows.value.clear()
+    completedColumns.value.clear()
+
+    // Load the provided assignments
+    rows.forEach((keys, rowIndex) => {
+      completedRows.value.set(rowIndex, [...keys])
+    })
+
+    columns.forEach((keys, colIndex) => {
+      completedColumns.value.set(colIndex, [...keys])
+    })
+  }
+
   return {
     // State
     drawingType,
@@ -388,5 +409,6 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
     removeKeyFromColumn,
     removeRow,
     removeColumn,
+    loadExistingAssignments,
   }
 })
