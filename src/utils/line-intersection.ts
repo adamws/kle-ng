@@ -50,17 +50,48 @@ export function lineIntersectsKey(
     return distance <= keyDiagonal / 2
   }
 
-  // Calculate parameter t for the closest point on the line to the key center
-  const t = Math.max(
-    0,
-    Math.min(
-      1,
-      ((keyCenter.x - lineStart.x) * (lineEnd.x - lineStart.x) +
-        (keyCenter.y - lineStart.y) * (lineEnd.y - lineStart.y)) /
-        (lineLength * lineLength),
-    ),
-  )
+  // Calculate parameter t for the closest point on the line to the key center (unclamped)
+  const t_unclamped =
+    ((keyCenter.x - lineStart.x) * (lineEnd.x - lineStart.x) +
+      (keyCenter.y - lineStart.y) * (lineEnd.y - lineStart.y)) /
+    (lineLength * lineLength)
 
+  // Clamp t to [0, 1] to keep closest point on the line segment
+  const t = Math.max(0, Math.min(1, t_unclamped))
+
+  // If the key center is beyond the line segment (t clamped), check if the
+  // endpoint is within the key's bounding box instead of using distance threshold.
+  // This prevents wide keys beyond the line from being incorrectly detected.
+  if (t_unclamped < 0 || t_unclamped > 1) {
+    const endpoint = t_unclamped < 0 ? lineStart : lineEnd
+
+    if (!key.rotation_angle || key.rotation_angle === 0) {
+      // Non-rotated key - check if endpoint is within key's bounding box
+      const keyLeft = key.x
+      const keyRight = key.x + (key.width || 1)
+      const keyTop = key.y
+      const keyBottom = key.y + (key.height || 1)
+
+      const result =
+        endpoint.x >= keyLeft &&
+        endpoint.x <= keyRight &&
+        endpoint.y >= keyTop &&
+        endpoint.y <= keyBottom
+
+      return result
+    } else {
+      // Rotated key - use more conservative check with diagonal radius
+      const keyWidth = key.width || 1
+      const keyHeight = key.height || 1
+      const keyDiagonal = Math.sqrt(Math.pow(keyWidth, 2) + Math.pow(keyHeight, 2))
+      const distance = Math.sqrt(
+        Math.pow(keyCenter.x - endpoint.x, 2) + Math.pow(keyCenter.y - endpoint.y, 2),
+      )
+      return distance <= keyDiagonal / 2
+    }
+  }
+
+  // Key is along the line segment - use perpendicular distance threshold
   // Calculate the closest point on the line segment
   const closestX = lineStart.x + t * (lineEnd.x - lineStart.x)
   const closestY = lineStart.y + t * (lineEnd.y - lineStart.y)
@@ -138,7 +169,8 @@ export function findKeysAlongLine(
     // Filter out ghost and decal keys
     if (key.decal || key.ghost) continue
 
-    if (lineIntersectsKey(lineStart, lineEnd, key, sensitivity)) {
+    const intersects = lineIntersectsKey(lineStart, lineEnd, key, sensitivity)
+    if (intersects) {
       const keyCenter = getKeyCenter(key)
       // Calculate distance from start point (in layout units)
       const distance = Math.sqrt(

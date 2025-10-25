@@ -1061,4 +1061,76 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const col1Count = (layoutString.match(/,1"/g) || []).length
     expect(col1Count).toBe(3)
   })
+
+  test('should not overeagerly grab next key', async ({ page }) => {
+    // this is specific bug reproduction scenario where long key (space) was incorrectly
+    // added to drawing even if mouse was not clicking there
+    const fixtureData = [
+      [{ x: 2.5, a: 0 }, ''],
+      [{ x: 2.5 }, ''],
+      [{ x: 2.5 }, ''],
+      [{ w: 6 }, ''],
+    ]
+
+    // Import layout via JSON
+    await importLayoutJSON(page, fixtureData)
+
+    // Verify layout has 4 keys via UI
+    await expect(page.locator('.keys-counter')).toContainText('Keys: 4')
+
+    // Small delay to ensure canvas renders
+    await page.waitForTimeout(500)
+
+    // Open Matrix Coordinates Modal
+    await page.locator('.extra-tools-group button').click()
+    await page
+      .locator('.extra-tools-dropdown .dropdown-item')
+      .filter({
+        hasText: 'Add Switch Matrix Coordinates',
+      })
+      .click()
+
+    // Wait for modal to be visible
+    const matrixModal = page.locator('.matrix-modal')
+    await expect(matrixModal).toBeVisible()
+
+    // Wait for modal content to load (should skip directly to drawing step since no labels)
+    await page.waitForTimeout(500)
+
+    // Now the overlay should be visible
+    const overlay = page.locator('canvas.matrix-annotation-overlay')
+    await expect(overlay).toBeVisible()
+
+    // Get canvas bounding box for click calculations
+    const overlayBox = await overlay.boundingBox()
+    if (!overlayBox) throw new Error('Matrix overlay not found')
+
+    // Calculate key centers in screen coordinates
+    // keys at (2.5,0), (2.5,1), (2.5,2), (0,3)
+    // With unit=54px and canvas border, keys are at:
+    // Row 0: x=171px y=27px)
+    // Row 1: x=171px y=81px
+    // Row 2: x=171px y=135px
+
+    // First row: click first key (2.5,0) and last key (2.5,2)
+    // The middle key (2.5,1) should be automatically added via line intersection
+    // AND the last key should not be added (that was the bug - it was added anyway)
+    // Second click automatically finishes the sequence
+    await overlay.click({ position: { x: 171, y: 27 } })
+    await page.waitForTimeout(100)
+
+    await overlay.click({ position: { x: 171, y: 135 } })
+    await page.waitForTimeout(200)
+
+    const exportedLayout = await exportLayoutJSON(page)
+    const layoutString = JSON.stringify(exportedLayout)
+
+    // Should have row 1 labels (gap was filled)
+    expect(layoutString).toContain('"0,"')
+    // Count occurrences - should have exactly 3 keys with row 0
+    const row0Count = (layoutString.match(/"0,"/g) || []).length
+    expect(row0Count).toBe(3)
+    // Last row should not have a label:
+    expect(layoutString).toContain('"w":6},""]')
+  })
 })
