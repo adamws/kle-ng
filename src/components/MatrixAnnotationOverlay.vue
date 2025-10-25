@@ -302,9 +302,11 @@ const detectHover = (canvasX: number, canvasY: number) => {
 const handleMouseMove = (event: MouseEvent) => {
   const canvasPos = getCanvasPosition(event)
 
-  // Don't update hover state when context menu is visible (keep it frozen)
-  if (!contextMenuVisible.value) {
-    // Always detect hover (for existing matrix annotations)
+  // Don't update hover state when context menu is visible or when actively drawing a segment
+  const isActivelyDrawing =
+    matrixDrawingStore.isDrawing && matrixDrawingStore.currentSequence.length > 0
+  if (!contextMenuVisible.value && !isActivelyDrawing) {
+    // Detect hover for existing matrix annotations
     detectHover(canvasPos.x, canvasPos.y)
   }
 
@@ -452,6 +454,10 @@ const handleClick = (event: MouseEvent) => {
   } else {
     // First key - just add it and wait for second click
     matrixDrawingStore.addKeyToSequence(closestKey)
+    // Clear hover states now that we're actively drawing
+    hoveredRow.value = null
+    hoveredColumn.value = null
+    hoveredAnchor.value = null
   }
 
   renderCanvas()
@@ -1048,6 +1054,10 @@ const enableDrawing = (type: 'row' | 'column') => {
   matrixDrawingStore.enableDrawing(type)
   previewSequence.value = []
   errorPreviewSequence.value = []
+  // Clear hover states when starting to draw
+  hoveredRow.value = null
+  hoveredColumn.value = null
+  hoveredAnchor.value = null
 }
 
 // Public method to disable drawing mode
