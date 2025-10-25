@@ -4,6 +4,7 @@
       v-show="visible"
       ref="canvasRef"
       class="matrix-annotation-overlay"
+      :class="{ 'context-menu-open': contextMenuVisible }"
       :width="canvasWidth"
       :height="canvasHeight"
       @click="handleClick"
@@ -16,6 +17,9 @@
       :position="contextMenuPosition"
       :hover-state="frozenHoverState"
       @close="closeContextMenu"
+      @remove-node="handleRemoveNode"
+      @remove-row="handleRemoveRow"
+      @remove-column="handleRemoveColumn"
     />
   </div>
 </template>
@@ -48,10 +52,6 @@ const props = defineProps<Props>()
 const canvasRef = ref<HTMLCanvasElement>()
 const keyboardStore = useKeyboardStore()
 const matrixDrawingStore = useMatrixDrawingStore()
-
-// Matrix data to visualize (from VIA labels)
-const matrixRows = ref<Map<number, Key[]>>(new Map())
-const matrixCols = ref<Map<number, Key[]>>(new Map())
 
 // Preview sequence (local to overlay - not part of store state)
 const previewSequence = ref<Key[]>([]) // Preview of what will be added on next click
@@ -208,18 +208,7 @@ const detectHover = (canvasX: number, canvasY: number) => {
     distance: number
   }> = []
 
-  // Collect all row nodes from VIA annotations
-  matrixRows.value.forEach((keySequence, rowIndex) => {
-    keySequence.forEach((key) => {
-      const center = getKeyCenter(key)
-      const distance = Math.sqrt(Math.pow(center.x - canvasX, 2) + Math.pow(center.y - canvasY, 2))
-      if (distance < NODE_HOVER_THRESHOLD) {
-        allNodes.push({ type: 'row', index: rowIndex, key, distance })
-      }
-    })
-  })
-
-  // Collect all row nodes from manually drawn rows
+  // Collect all row nodes from completed rows
   matrixDrawingStore.completedRows.forEach((keySequence, rowIndex) => {
     keySequence.forEach((key) => {
       const center = getKeyCenter(key)
@@ -230,18 +219,7 @@ const detectHover = (canvasX: number, canvasY: number) => {
     })
   })
 
-  // Collect all column nodes from VIA annotations
-  matrixCols.value.forEach((keySequence, colIndex) => {
-    keySequence.forEach((key) => {
-      const center = getKeyCenter(key)
-      const distance = Math.sqrt(Math.pow(center.x - canvasX, 2) + Math.pow(center.y - canvasY, 2))
-      if (distance < NODE_HOVER_THRESHOLD) {
-        allNodes.push({ type: 'column', index: colIndex, key, distance })
-      }
-    })
-  })
-
-  // Collect all column nodes from manually drawn columns
+  // Collect all column nodes from completed columns
   matrixDrawingStore.completedColumns.forEach((keySequence, colIndex) => {
     keySequence.forEach((key) => {
       const center = getKeyCenter(key)
@@ -284,8 +262,8 @@ const detectHover = (canvasX: number, canvasY: number) => {
     return
   }
 
-  // Check for line hover (rows from VIA annotations)
-  matrixRows.value.forEach((keySequence, rowIndex) => {
+  // Check for line hover (rows)
+  matrixDrawingStore.completedRows.forEach((keySequence, rowIndex) => {
     if (keySequence.length < 2) return
 
     for (let i = 0; i < keySequence.length - 1; i++) {
@@ -299,45 +277,7 @@ const detectHover = (canvasX: number, canvasY: number) => {
     }
   })
 
-  // Check for line hover (rows from manually drawn)
-  if (hoveredRow.value === null) {
-    matrixDrawingStore.completedRows.forEach((keySequence, rowIndex) => {
-      if (keySequence.length < 2) return
-
-      for (let i = 0; i < keySequence.length - 1; i++) {
-        const start = getKeyCenter(keySequence[i])
-        const end = getKeyCenter(keySequence[i + 1])
-
-        if (
-          isPointNearLine(canvasX, canvasY, start.x, start.y, end.x, end.y, LINE_HOVER_THRESHOLD)
-        ) {
-          hoveredRow.value = rowIndex
-          return
-        }
-      }
-    })
-  }
-
-  // Check for line hover (columns from VIA annotations)
-  if (hoveredRow.value === null) {
-    matrixCols.value.forEach((keySequence, colIndex) => {
-      if (keySequence.length < 2) return
-
-      for (let i = 0; i < keySequence.length - 1; i++) {
-        const start = getKeyCenter(keySequence[i])
-        const end = getKeyCenter(keySequence[i + 1])
-
-        if (
-          isPointNearLine(canvasX, canvasY, start.x, start.y, end.x, end.y, LINE_HOVER_THRESHOLD)
-        ) {
-          hoveredColumn.value = colIndex
-          return
-        }
-      }
-    })
-  }
-
-  // Check for line hover (columns from manually drawn)
+  // Check for line hover (columns)
   if (hoveredRow.value === null && hoveredColumn.value === null) {
     matrixDrawingStore.completedColumns.forEach((keySequence, colIndex) => {
       if (keySequence.length < 2) return
@@ -500,7 +440,8 @@ const handleClick = (event: MouseEvent) => {
 // Right-click handler - open context menu
 const handleRightClick = (event: MouseEvent) => {
   // Only show context menu if hovering over a matrix element
-  if (!hoveredRow.value && !hoveredColumn.value && !hoveredAnchor.value) {
+  // Use strict null checks to allow row/column 0 (which is falsy but valid)
+  if (hoveredRow.value === null && hoveredColumn.value === null && hoveredAnchor.value === null) {
     return
   }
 
@@ -520,6 +461,112 @@ const handleRightClick = (event: MouseEvent) => {
 const closeContextMenu = () => {
   contextMenuVisible.value = false
   // Re-render to update hover effects after menu closes
+  renderCanvas()
+}
+
+// Update key label after removing from row or column
+const updateKeyLabelAfterRemoval = (key: Key) => {
+  // Find if key still exists in any row or column
+  let hasRow = false
+  let hasColumn = false
+  let rowIndex: number | null = null
+  let colIndex: number | null = null
+
+  // Check completed rows
+  matrixDrawingStore.completedRows.forEach((keys, idx) => {
+    if (keys.includes(key)) {
+      hasRow = true
+      rowIndex = idx
+    }
+  })
+
+  // Check completed columns
+  matrixDrawingStore.completedColumns.forEach((keys, idx) => {
+    if (keys.includes(key)) {
+      hasColumn = true
+      colIndex = idx
+    }
+  })
+
+  // Update label based on what's still assigned
+  if (!hasRow && !hasColumn) {
+    key.labels = []
+  } else if (!hasRow && hasColumn) {
+    // Only column remains
+    key.labels = colIndex !== null ? [`,${colIndex}`] : []
+  } else if (hasRow && !hasColumn) {
+    // Only row remains
+    key.labels = rowIndex !== null ? [`${rowIndex},`] : []
+  } else if (hasRow && hasColumn) {
+    // Both remain
+    key.labels = rowIndex !== null && colIndex !== null ? [`${rowIndex},${colIndex}`] : []
+  }
+}
+
+// Handle remove node action from context menu
+const handleRemoveNode = (data: {
+  type: 'row' | 'column' | 'overlap'
+  index: number
+  key: Key
+}) => {
+  // Remove the key from both rows and columns if it's an overlap
+  if (data.type === 'overlap') {
+    // Find all rows and columns containing this key
+    matrixDrawingStore.completedRows.forEach((keys, rowIndex) => {
+      matrixDrawingStore.removeKeyFromRow(rowIndex, data.key, true) // Skip sync
+    })
+
+    matrixDrawingStore.completedColumns.forEach((keys, colIndex) => {
+      matrixDrawingStore.removeKeyFromColumn(colIndex, data.key, true) // Skip sync
+    })
+  } else if (data.type === 'row') {
+    matrixDrawingStore.removeKeyFromRow(data.index, data.key, true) // Skip sync
+  } else if (data.type === 'column') {
+    matrixDrawingStore.removeKeyFromColumn(data.index, data.key, true) // Skip sync
+  }
+
+  // Update the label based on remaining assignments
+  updateKeyLabelAfterRemoval(data.key)
+
+  // Re-render to show the updated overlay
+  renderCanvas()
+}
+
+// Handle remove row action from context menu
+const handleRemoveRow = (rowIndex: number) => {
+  // Collect keys before removing
+  const keysToUpdate: Set<Key> = new Set()
+
+  // Get keys from the row
+  const row = matrixDrawingStore.completedRows.get(rowIndex)
+  if (row) {
+    row.forEach((key) => keysToUpdate.add(key))
+    matrixDrawingStore.removeRow(rowIndex, true) // Skip sync to prevent re-application
+  }
+
+  // Update labels for all affected keys
+  keysToUpdate.forEach((key) => updateKeyLabelAfterRemoval(key))
+
+  // Re-render to show the updated overlay
+  renderCanvas()
+}
+
+// Handle remove column action from context menu
+const handleRemoveColumn = (colIndex: number) => {
+  // Collect keys before removing
+  const keysToUpdate: Set<Key> = new Set()
+
+  // Get keys from the column
+  const col = matrixDrawingStore.completedColumns.get(colIndex)
+  if (col) {
+    col.forEach((key) => keysToUpdate.add(key))
+    matrixDrawingStore.removeColumn(colIndex, true) // Skip sync to prevent re-application
+  }
+
+  // Update labels for all affected keys
+  keysToUpdate.forEach((key) => updateKeyLabelAfterRemoval(key))
+
+  // Re-render to show the updated overlay
   renderCanvas()
 }
 
@@ -543,16 +590,6 @@ const renderCanvas = () => {
     props.panX + props.coordinateOffset.x * props.zoom,
     props.panY + props.coordinateOffset.y * props.zoom,
   )
-
-  // Render VIA-annotated rows (blue)
-  matrixRows.value.forEach((keys) => {
-    renderRow(keys)
-  })
-
-  // Render VIA-annotated columns (green)
-  matrixCols.value.forEach((keys) => {
-    renderColumn(keys)
-  })
 
   // Render completed drawn rows (blue)
   matrixDrawingStore.completedRows.forEach((keys) => {
@@ -750,20 +787,12 @@ const renderHoverEffects = () => {
 
   // Render hovered row/column (thicker, highlighted line)
   if (hoveredRow.value !== null) {
-    // Check both VIA annotations and manually drawn rows
-    let keys = matrixRows.value.get(hoveredRow.value)
-    if (!keys) {
-      keys = matrixDrawingStore.completedRows[hoveredRow.value]
-    }
+    const keys = matrixDrawingStore.completedRows.get(hoveredRow.value)
     if (keys) renderHoveredRow(keys)
   }
 
   if (hoveredColumn.value !== null) {
-    // Check both VIA annotations and manually drawn columns
-    let keys = matrixCols.value.get(hoveredColumn.value)
-    if (!keys) {
-      keys = matrixDrawingStore.completedColumns[hoveredColumn.value]
-    }
+    const keys = matrixDrawingStore.completedColumns.get(hoveredColumn.value)
     if (keys) renderHoveredColumn(keys)
   }
 
@@ -899,20 +928,14 @@ watch(
 )
 
 // Public method to set matrix data
-const setMatrixData = (rows: Map<number, Key[]>, cols: Map<number, Key[]>) => {
-  matrixRows.value = rows
-  matrixCols.value = cols
-  nextTick(() => {
-    renderCanvas()
-  })
-}
-
 // Watch store drawing state and sync pointer events
 watch(
   () => matrixDrawingStore.isDrawing,
   (isDrawing) => {
+    // Pointer events should be enabled whenever overlay is visible
+    // (for both drawing and context menu interactions)
     if (canvasRef.value) {
-      canvasRef.value.style.pointerEvents = isDrawing ? 'auto' : 'none'
+      canvasRef.value.style.pointerEvents = 'auto'
     }
     if (!isDrawing) {
       previewSequence.value = []
@@ -923,7 +946,7 @@ watch(
 
 // Watch for changes in completed drawings to re-render
 watch(
-  () => [matrixDrawingStore.completedRows.length, matrixDrawingStore.completedColumns.length],
+  () => [matrixDrawingStore.completedRows.size, matrixDrawingStore.completedColumns.size],
   () => {
     renderCanvas()
   },
@@ -956,7 +979,6 @@ const clearDrawings = () => {
 
 // Expose public methods
 defineExpose({
-  setMatrixData,
   renderCanvas,
   enableDrawing,
   disableDrawing,
@@ -1002,5 +1024,9 @@ onUnmounted(() => {
   left: 0;
   pointer-events: auto; /* Enable interaction for hover effects and drawing */
   z-index: 10;
+}
+
+.matrix-annotation-overlay.context-menu-open {
+  pointer-events: none; /* Disable pointer events when context menu is open */
 }
 </style>

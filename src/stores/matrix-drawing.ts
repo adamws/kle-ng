@@ -13,8 +13,12 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
   // Drawing state
   const drawingType = ref<'row' | 'column' | null>(null)
   const currentSequence = ref<Key[]>([])
-  const completedRows = ref<Key[][]>([])
-  const completedColumns = ref<Key[][]>([])
+  const completedRows = ref<Map<number, Key[]>>(new Map())
+  const completedColumns = ref<Map<number, Key[]>>(new Map())
+
+  // Track next available row/column numbers
+  const nextRowNumber = ref<number>(0)
+  const nextColumnNumber = ref<number>(0)
 
   // Track if we're continuing an existing row/column (index of the row/column being continued)
   const continuingRowIndex = ref<number | null>(null)
@@ -24,10 +28,13 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
   // Default 0.5 provides good balance between catching intended keys and avoiding "barely touched" keys
   const sensitivity = ref<number>(0.5)
 
+  // Flag to skip coordinate re-application after context menu removal
+  const skipNextSync = ref<boolean>(false)
+
   // Computed
   const isDrawing = computed(() => drawingType.value !== null)
   const hasDrawings = computed(
-    () => completedRows.value.length > 0 || completedColumns.value.length > 0,
+    () => completedRows.value.size > 0 || completedColumns.value.size > 0,
   )
 
   // Actions
@@ -53,24 +60,30 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
     if (drawingType.value === 'row') {
       if (continuingRowIndex.value !== null) {
         // Merge with existing row - add only new keys that aren't already in the row
-        const existingRow = completedRows.value[continuingRowIndex.value]
-        const newKeys = currentSequence.value.filter((key) => !existingRow.includes(key))
-        completedRows.value[continuingRowIndex.value] = [...existingRow, ...newKeys]
+        const existingRow = completedRows.value.get(continuingRowIndex.value)
+        if (existingRow) {
+          const newKeys = currentSequence.value.filter((key) => !existingRow.includes(key))
+          completedRows.value.set(continuingRowIndex.value, [...existingRow, ...newKeys])
+        }
         continuingRowIndex.value = null // Reset continuation state
       } else {
-        // Create new row
-        completedRows.value.push([...currentSequence.value])
+        // Create new row with next available number
+        completedRows.value.set(nextRowNumber.value, [...currentSequence.value])
+        nextRowNumber.value++
       }
     } else if (drawingType.value === 'column') {
       if (continuingColumnIndex.value !== null) {
         // Merge with existing column - add only new keys that aren't already in the column
-        const existingCol = completedColumns.value[continuingColumnIndex.value]
-        const newKeys = currentSequence.value.filter((key) => !existingCol.includes(key))
-        completedColumns.value[continuingColumnIndex.value] = [...existingCol, ...newKeys]
+        const existingCol = completedColumns.value.get(continuingColumnIndex.value)
+        if (existingCol) {
+          const newKeys = currentSequence.value.filter((key) => !existingCol.includes(key))
+          completedColumns.value.set(continuingColumnIndex.value, [...existingCol, ...newKeys])
+        }
         continuingColumnIndex.value = null // Reset continuation state
       } else {
-        // Create new column
-        completedColumns.value.push([...currentSequence.value])
+        // Create new column with next available number
+        completedColumns.value.set(nextColumnNumber.value, [...currentSequence.value])
+        nextColumnNumber.value++
       }
     }
 
@@ -84,11 +97,13 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
   }
 
   const clearDrawings = () => {
-    completedRows.value = []
-    completedColumns.value = []
+    completedRows.value.clear()
+    completedColumns.value.clear()
     currentSequence.value = []
     continuingRowIndex.value = null
     continuingColumnIndex.value = null
+    nextRowNumber.value = 0
+    nextColumnNumber.value = 0
   }
 
   const getCompletedDrawings = () => {
@@ -124,10 +139,15 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
         // If this is the first key in the sequence, we're starting to continue an existing row
         if (currentSequence.value.length === 0) {
           // Find which completed row this key belongs to
-          const rowIndex = completedRows.value.findIndex((row) => row.includes(key))
-          if (rowIndex !== -1) {
+          let foundRowIndex: number | null = null
+          completedRows.value.forEach((row, rowIndex) => {
+            if (row.includes(key)) {
+              foundRowIndex = rowIndex
+            }
+          })
+          if (foundRowIndex !== null) {
             // Mark that we're continuing this row
-            continuingRowIndex.value = rowIndex
+            continuingRowIndex.value = foundRowIndex
             return true
           }
           // Key has a row but not in our completed rows (shouldn't happen, but reject to be safe)
@@ -136,7 +156,7 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
 
         // If we're already continuing a row, check if this key belongs to the same row
         if (continuingRowIndex.value !== null) {
-          const continueRow = completedRows.value[continuingRowIndex.value]
+          const continueRow = completedRows.value.get(continuingRowIndex.value)
           if (continueRow && continueRow.includes(key)) {
             return true // Allow adding keys from the same row we're continuing
           }
@@ -152,7 +172,7 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
       // The new row index depends on whether we're continuing an existing row
       if (coords.col !== null) {
         const newRowIndex =
-          continuingRowIndex.value !== null ? continuingRowIndex.value : completedRows.value.length
+          continuingRowIndex.value !== null ? continuingRowIndex.value : nextRowNumber.value
 
         // Check against already completed assignments
         for (const otherKey of allKeys) {
@@ -178,10 +198,15 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
         // If this is the first key in the sequence, we're starting to continue an existing column
         if (currentSequence.value.length === 0) {
           // Find which completed column this key belongs to
-          const colIndex = completedColumns.value.findIndex((col) => col.includes(key))
-          if (colIndex !== -1) {
+          let foundColIndex: number | null = null
+          completedColumns.value.forEach((col, colIndex) => {
+            if (col.includes(key)) {
+              foundColIndex = colIndex
+            }
+          })
+          if (foundColIndex !== null) {
             // Mark that we're continuing this column
-            continuingColumnIndex.value = colIndex
+            continuingColumnIndex.value = foundColIndex
             return true
           }
           // Key has a column but not in our completed columns (shouldn't happen, but reject to be safe)
@@ -190,7 +215,7 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
 
         // If we're already continuing a column, check if this key belongs to the same column
         if (continuingColumnIndex.value !== null) {
-          const continueCol = completedColumns.value[continuingColumnIndex.value]
+          const continueCol = completedColumns.value.get(continuingColumnIndex.value)
           if (continueCol && continueCol.includes(key)) {
             return true // Allow adding keys from the same column we're continuing
           }
@@ -208,7 +233,7 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
         const newColIndex =
           continuingColumnIndex.value !== null
             ? continuingColumnIndex.value
-            : completedColumns.value.length
+            : nextColumnNumber.value
 
         // Check against already completed assignments
         for (const otherKey of allKeys) {
@@ -247,6 +272,76 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
     return new Set()
   }
 
+  /**
+   * Remove a specific key from a row
+   * @param rowIndex - The row number to remove from
+   * @param key - The key to remove
+   * @param skipSync - If true, skip the next coordinate sync (for context menu removals)
+   */
+  const removeKeyFromRow = (rowIndex: number, key: Key, skipSync = false) => {
+    const row = completedRows.value.get(rowIndex)
+    if (!row) return
+
+    const keyIndex = row.indexOf(key)
+    if (keyIndex !== -1) {
+      row.splice(keyIndex, 1)
+      // If row is now empty, remove the row entirely
+      if (row.length === 0) {
+        completedRows.value.delete(rowIndex)
+      }
+      if (skipSync) {
+        skipNextSync.value = true
+      }
+    }
+  }
+
+  /**
+   * Remove a specific key from a column
+   * @param colIndex - The column number to remove from
+   * @param key - The key to remove
+   * @param skipSync - If true, skip the next coordinate sync (for context menu removals)
+   */
+  const removeKeyFromColumn = (colIndex: number, key: Key, skipSync = false) => {
+    const col = completedColumns.value.get(colIndex)
+    if (!col) return
+
+    const keyIndex = col.indexOf(key)
+    if (keyIndex !== -1) {
+      col.splice(keyIndex, 1)
+      // If column is now empty, remove the column entirely
+      if (col.length === 0) {
+        completedColumns.value.delete(colIndex)
+      }
+      if (skipSync) {
+        skipNextSync.value = true
+      }
+    }
+  }
+
+  /**
+   * Remove an entire row by row number
+   * @param rowIndex - The row number to remove
+   * @param skipSync - If true, skip the next coordinate sync (for context menu removals)
+   */
+  const removeRow = (rowIndex: number, skipSync = false) => {
+    completedRows.value.delete(rowIndex)
+    if (skipSync) {
+      skipNextSync.value = true
+    }
+  }
+
+  /**
+   * Remove an entire column by column number
+   * @param colIndex - The column number to remove
+   * @param skipSync - If true, skip the next coordinate sync (for context menu removals)
+   */
+  const removeColumn = (colIndex: number, skipSync = false) => {
+    completedColumns.value.delete(colIndex)
+    if (skipSync) {
+      skipNextSync.value = true
+    }
+  }
+
   return {
     // State
     drawingType,
@@ -254,6 +349,7 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
     completedRows,
     completedColumns,
     sensitivity,
+    skipNextSync,
 
     // Computed
     isDrawing,
@@ -270,5 +366,9 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
     setSensitivity,
     canAddKeyToSequence,
     getUnavailableKeys,
+    removeKeyFromRow,
+    removeKeyFromColumn,
+    removeRow,
+    removeColumn,
   }
 })

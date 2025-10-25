@@ -841,30 +841,37 @@ watch(drawingType, (newType) => {
 const syncDrawingsToModal = () => {
   const drawings = matrixDrawingStore.getCompletedDrawings()
 
-  // Convert completed rows to MatrixItems
-  rows.value = drawings.rows.map((keySequence, idx) => ({
-    id: `row-${idx}-${Date.now()}`,
-    index: idx,
-    keySequence,
-  }))
+  // Convert completed rows Map to MatrixItems array
+  rows.value = Array.from(drawings.rows.entries())
+    .sort(([a], [b]) => a - b) // Sort by row number
+    .map(([rowNumber, keySequence]) => ({
+      id: `row-${rowNumber}-${Date.now()}`,
+      index: rowNumber,
+      keySequence,
+    }))
 
-  // Convert completed columns to MatrixItems
-  cols.value = drawings.columns.map((keySequence, idx) => ({
-    id: `col-${idx}-${Date.now()}`,
-    index: idx,
-    keySequence,
-  }))
+  // Convert completed columns Map to MatrixItems array
+  cols.value = Array.from(drawings.columns.entries())
+    .sort(([a], [b]) => a - b) // Sort by column number
+    .map(([colNumber, keySequence]) => ({
+      id: `col-${colNumber}-${Date.now()}`,
+      index: colNumber,
+      keySequence,
+    }))
 }
 
 // Watch for changes in store's completed drawings and sync to modal
-// Watch both length changes AND content changes (for row/column continuation)
+// Watch both size changes AND content changes (for row/column continuation)
 watch(
   () => [
-    matrixDrawingStore.completedRows.length,
-    matrixDrawingStore.completedColumns.length,
+    matrixDrawingStore.completedRows.size,
+    matrixDrawingStore.completedColumns.size,
     // Also watch the total number of keys across all rows/columns to detect additions
-    matrixDrawingStore.completedRows.reduce((sum, row) => sum + row.length, 0),
-    matrixDrawingStore.completedColumns.reduce((sum, col) => sum + col.length, 0),
+    Array.from(matrixDrawingStore.completedRows.values()).reduce((sum, row) => sum + row.length, 0),
+    Array.from(matrixDrawingStore.completedColumns.values()).reduce(
+      (sum, col) => sum + col.length,
+      0,
+    ),
   ],
   () => {
     // Only sync and apply if modal is visible AND in draw step
@@ -872,6 +879,14 @@ watch(
     if (!props.visible || step.value !== 'draw') return
 
     syncDrawingsToModal()
+
+    // Skip coordinate application if removal just happened (context menu)
+    // The removal handler already updated the labels appropriately
+    if (matrixDrawingStore.skipNextSync) {
+      matrixDrawingStore.skipNextSync = false
+      return
+    }
+
     // Apply coordinates immediately after syncing to show labels while drawing
     // This is safe because applyCoordinatesToKeys only modifies key.labels,
     // which doesn't affect the store's completedRows/completedColumns arrays

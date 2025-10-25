@@ -1,31 +1,52 @@
 <template>
-  <div
-    v-if="visible"
-    ref="menuRef"
-    class="matrix-context-menu"
-    :style="{ top: position.y + 'px', left: position.x + 'px' }"
-    @mousedown.stop
-  >
-    <div class="menu-content">
-      <!-- Remove Node action (for single node hover) -->
-      <button v-if="showRemoveNode" type="button" class="menu-item" disabled @mousedown.stop>
-        <i class="bi bi-circle me-2"></i>
-        Remove Node
-      </button>
+  <Teleport to="body">
+    <div
+      v-if="visible"
+      ref="menuRef"
+      class="matrix-context-menu"
+      :style="{ top: position.y + 'px', left: position.x + 'px' }"
+      @mousedown.stop
+      @click.stop
+    >
+      <div class="menu-content">
+        <!-- Remove Node action (for single node hover) -->
+        <button
+          v-if="showRemoveNode"
+          type="button"
+          class="menu-item"
+          @click="handleRemoveNode"
+          @mousedown.stop
+        >
+          <i class="bi bi-circle me-2"></i>
+          Remove Node
+        </button>
 
-      <!-- Remove Row action (for row line hover) -->
-      <button v-if="showRemoveRow" type="button" class="menu-item" disabled @mousedown.stop>
-        <i class="bi bi-diagram-3 me-2"></i>
-        Remove Row
-      </button>
+        <!-- Remove Row action (for row line hover) -->
+        <button
+          v-if="showRemoveRow"
+          type="button"
+          class="menu-item"
+          @click="handleRemoveRow"
+          @mousedown.stop
+        >
+          <i class="bi bi-diagram-3 me-2"></i>
+          Remove Row
+        </button>
 
-      <!-- Remove Column action (for column line hover) -->
-      <button v-if="showRemoveColumn" type="button" class="menu-item" disabled @mousedown.stop>
-        <i class="bi bi-diagram-2 me-2"></i>
-        Remove Column
-      </button>
+        <!-- Remove Column action (for column line hover) -->
+        <button
+          v-if="showRemoveColumn"
+          type="button"
+          class="menu-item"
+          @click="handleRemoveColumn"
+          @mousedown.stop
+        >
+          <i class="bi bi-diagram-2 me-2"></i>
+          Remove Column
+        </button>
+      </div>
     </div>
-  </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -63,6 +84,16 @@ const props = withDefaults(defineProps<Props>(), {
   }),
 })
 
+// Emits
+interface Emits {
+  (e: 'removeNode', data: { type: 'row' | 'column' | 'overlap'; index: number; key: Key }): void
+  (e: 'removeRow', rowIndex: number): void
+  (e: 'removeColumn', colIndex: number): void
+  (e: 'close'): void
+}
+
+const emit = defineEmits<Emits>()
+
 const menuRef = ref<HTMLDivElement>()
 
 // Computed properties to determine which menu items to show
@@ -84,6 +115,32 @@ const showRemoveColumn = computed(() => {
   // Show "Remove Column" when hovering over a column line (not a node)
   return props.hoverState?.hoveredColumn !== null && props.hoverState?.hoveredAnchor === null
 })
+
+// Action handlers
+const handleRemoveNode = () => {
+  if (props.hoverState?.hoveredAnchor) {
+    emit('removeNode', {
+      type: props.hoverState.hoveredAnchor.type,
+      index: props.hoverState.hoveredAnchor.index,
+      key: props.hoverState.hoveredAnchor.key,
+    })
+    emit('close')
+  }
+}
+
+const handleRemoveRow = () => {
+  if (props.hoverState?.hoveredRow !== null) {
+    emit('removeRow', props.hoverState.hoveredRow)
+    emit('close')
+  }
+}
+
+const handleRemoveColumn = () => {
+  if (props.hoverState?.hoveredColumn !== null) {
+    emit('removeColumn', props.hoverState.hoveredColumn)
+    emit('close')
+  }
+}
 </script>
 
 <style scoped>

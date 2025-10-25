@@ -756,4 +756,178 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const columnAssignments = (layoutString.match(/,0/g) || []).length
     expect(columnAssignments).toBeGreaterThanOrEqual(3)
   })
+
+  test('should remove node from matrix via context menu', async ({ page }) => {
+    // Create a 3x3 grid with pre-assigned matrix coordinates
+    // Format: Each key has label "row,col" in first position
+    const fixtureData = [
+      ['0,0', '0,1', '0,2'],
+      ['1,0', '1,1', '1,2'],
+      ['2,0', '2,1', '2,2'],
+    ]
+
+    // Import layout via JSON
+    await importLayoutJSON(page, fixtureData)
+
+    // Verify layout has 9 keys
+    await expect(page.locator('.keys-counter')).toContainText('Keys: 9')
+
+    await page.waitForTimeout(500)
+
+    // Open Matrix Coordinates Modal
+    await page.locator('.extra-tools-group button').click()
+    await page
+      .locator('.extra-tools-dropdown .dropdown-item')
+      .filter({ hasText: 'Add Switch Matrix Coordinates' })
+      .click()
+
+    // Wait for modal to be visible
+    const matrixModal = page.locator('.matrix-modal')
+    await expect(matrixModal).toBeVisible()
+
+    // Should show "Layout Already Annotated" message since all keys have labels
+    await expect(matrixModal).toContainText('Layout Already Annotated')
+
+    // Modal should show 3 rows and 3 columns
+    await expect(matrixModal).toContainText('Rows:')
+    await expect(matrixModal).toContainText('3 defined')
+    await expect(matrixModal).toContainText('Columns:')
+
+    await page.waitForTimeout(500)
+
+    // Get the canvas overlay (where the matrix is rendered)
+    const overlay = page.locator('canvas.matrix-annotation-overlay')
+    await expect(overlay).toBeVisible()
+
+    // Get canvas bounding box for calculations
+    const canvasBox = await overlay.boundingBox()
+    if (!canvasBox) throw new Error('Canvas not found')
+
+    // Calculate position of the first key (top-left, should be at 0,0 in layout)
+    // Canvas uses unit size to position keys, with some offset
+    // Assume unit size is approximately 54 pixels (default)
+    const unit = 54
+    const offset = 10 // Small offset from canvas edge
+
+    // Position of first key center (0,0)
+    const key1X = canvasBox.x + offset + unit / 2
+    const key1Y = canvasBox.y + offset + unit / 2
+
+    // Right-click on the first key to open context menu
+    await page.mouse.click(key1X, key1Y, { button: 'right' })
+    await page.waitForTimeout(200)
+
+    // Context menu should be visible
+    const contextMenu = page.locator('.matrix-context-menu')
+    await expect(contextMenu).toBeVisible()
+
+    // Should show "Remove Node" option (since we're hovering over a node)
+    const removeNodeButton = contextMenu.locator('button', { hasText: 'Remove Node' })
+    await expect(removeNodeButton).toBeVisible()
+
+    // Click the "Remove Node" button
+    // Use force: true to click through any overlapping canvases
+    await removeNodeButton.click({ force: true })
+    await page.waitForTimeout(300)
+
+    // Context menu should close
+    await expect(contextMenu).not.toBeVisible()
+
+    // The first key should no longer have a label
+    // Export to verify
+    const exportedLayout = await exportLayoutJSON(page)
+
+    // First key (index 0 in flat array) should have empty or no label
+    const keys = exportedLayout.flat ? exportedLayout.flat() : exportedLayout
+
+    // Find the first key - it should not have "0,0" label anymore
+    const firstKeyLabel = keys[0]
+    expect(firstKeyLabel).not.toBe('0,0')
+
+    // Modal should still show the layout but with updated counts
+    // We removed one node from row 0 and column 0, but rows/columns should still exist
+    // (since other keys are still in those rows/columns)
+    await expect(matrixModal).toContainText('Rows:')
+    await expect(matrixModal).toContainText('Columns:')
+  })
+
+  test('should remove entire row via context menu', async ({ page }) => {
+    // Create a 3x3 grid with pre-assigned matrix coordinates
+    const fixtureData = [
+      ['0,0', '0,1', '0,2'],
+      ['1,0', '1,1', '1,2'],
+      ['2,0', '2,1', '2,2'],
+    ]
+
+    // Import layout via JSON
+    await importLayoutJSON(page, fixtureData)
+
+    await page.waitForTimeout(500)
+
+    // Open Matrix Coordinates Modal
+    await page.locator('.extra-tools-group button').click()
+    await page
+      .locator('.extra-tools-dropdown .dropdown-item')
+      .filter({ hasText: 'Add Switch Matrix Coordinates' })
+      .click()
+
+    const matrixModal = page.locator('.matrix-modal')
+    await expect(matrixModal).toBeVisible()
+
+    await page.waitForTimeout(500)
+
+    // Get the canvas overlay
+    const overlay = page.locator('canvas.matrix-annotation-overlay')
+    await expect(overlay).toBeVisible()
+
+    const canvasBox = await overlay.boundingBox()
+    if (!canvasBox) throw new Error('Canvas not found')
+
+    const unit = 54
+    const offset = 10
+
+    // Position between first and second key on the first row (on the line connecting them)
+    // Use the exact center Y position and midpoint X between the two keys
+    const key1CenterX = canvasBox.x + offset + unit / 2
+    const key2CenterX = canvasBox.x + offset + unit + unit / 2
+    const lineX = (key1CenterX + key2CenterX) / 2 // Midpoint between keys
+    const lineY = canvasBox.y + offset + unit / 2 // Same Y as key centers
+
+    // First move mouse to trigger hover detection
+    await page.mouse.move(lineX, lineY)
+    await page.waitForTimeout(200)
+
+    // Right-click on the row line
+    await page.mouse.click(lineX, lineY, { button: 'right' })
+    await page.waitForTimeout(200)
+
+    // Context menu should show "Remove Row" option
+    const contextMenu = page.locator('.matrix-context-menu')
+    await expect(contextMenu).toBeVisible()
+
+    const removeRowButton = contextMenu.locator('button', { hasText: 'Remove Row' })
+    await expect(removeRowButton).toBeVisible()
+
+    // Click "Remove Row"
+    // Use force: true to click through any overlapping canvases
+    await removeRowButton.click({ force: true })
+    await page.waitForTimeout(300)
+
+    // Context menu should close
+    await expect(contextMenu).not.toBeVisible()
+
+    // Export to verify row was removed
+    const exportedLayout = await exportLayoutJSON(page)
+    const layoutString = JSON.stringify(exportedLayout)
+
+    // First row (row 0) should be removed, so no keys should have "0," label
+    expect(layoutString).not.toContain('"0,0"')
+    expect(layoutString).not.toContain('"0,1"')
+    expect(layoutString).not.toContain('"0,2"')
+
+    // Modal should show 2 rows now (row 0 removed, so rows 1 and 2 remain)
+    await expect(matrixModal).toContainText('Rows:')
+    await expect(matrixModal).toContainText('2 defined')
+    await expect(matrixModal).toContainText('Columns:')
+  })
 })
