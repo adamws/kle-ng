@@ -939,7 +939,13 @@ watch(
 // Close on Escape key
 const handleKeyDown = (event: KeyboardEvent) => {
   if (event.key === 'Escape') {
-    handleCancel()
+    // If drawing is active, cancel the current drawing sequence instead of closing the modal
+    if (matrixDrawingStore.isDrawing) {
+      matrixDrawingStore.clearCurrentSequence()
+    } else {
+      // Only close modal if no drawing is active
+      handleCancel()
+    }
   }
 }
 
