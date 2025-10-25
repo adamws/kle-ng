@@ -191,6 +191,18 @@ const isPointNearLine = (
   return distanceToLineSegment(px, py, x1, y1, x2, y2) < threshold
 }
 
+// Update cursor based on hover state
+const updateCursor = () => {
+  if (!canvasRef.value) return
+
+  // Set cursor to context-menu if hovering over any matrix element
+  if (hoveredRow.value !== null || hoveredColumn.value !== null || hoveredAnchor.value !== null) {
+    canvasRef.value.style.cursor = 'context-menu'
+  } else {
+    canvasRef.value.style.cursor = 'default'
+  }
+}
+
 // Detect what the mouse is hovering over
 const detectHover = (canvasX: number, canvasY: number) => {
   const NODE_HOVER_THRESHOLD = 8
@@ -308,6 +320,12 @@ const handleMouseMove = (event: MouseEvent) => {
   if (!contextMenuVisible.value && !isActivelyDrawing) {
     // Detect hover for existing matrix annotations
     detectHover(canvasPos.x, canvasPos.y)
+    updateCursor()
+  } else if (isActivelyDrawing) {
+    // Reset cursor to default while actively drawing
+    if (canvasRef.value) {
+      canvasRef.value.style.cursor = 'default'
+    }
   }
 
   if (
@@ -408,6 +426,10 @@ const handleClick = (event: MouseEvent) => {
       // Clear preview
       previewSequence.value = []
       errorPreviewSequence.value = []
+      // Reset cursor - will be updated on next mouse move
+      if (canvasRef.value) {
+        canvasRef.value.style.cursor = 'default'
+      }
       renderCanvas()
     }
     return
@@ -451,6 +473,10 @@ const handleClick = (event: MouseEvent) => {
     // Clear preview, ready for next sequence
     previewSequence.value = []
     errorPreviewSequence.value = []
+    // Reset cursor - will be updated on next mouse move
+    if (canvasRef.value) {
+      canvasRef.value.style.cursor = 'default'
+    }
   } else {
     // First key - just add it and wait for second click
     matrixDrawingStore.addKeyToSequence(closestKey)
@@ -458,6 +484,10 @@ const handleClick = (event: MouseEvent) => {
     hoveredRow.value = null
     hoveredColumn.value = null
     hoveredAnchor.value = null
+    // Reset cursor to default while actively drawing
+    if (canvasRef.value) {
+      canvasRef.value.style.cursor = 'default'
+    }
   }
 
   renderCanvas()
@@ -486,6 +516,8 @@ const handleRightClick = (event: MouseEvent) => {
 // Close context menu
 const closeContextMenu = () => {
   contextMenuVisible.value = false
+  // Update cursor based on current hover state
+  updateCursor()
   // Re-render to update hover effects after menu closes
   renderCanvas()
 }
@@ -1058,6 +1090,10 @@ const enableDrawing = (type: 'row' | 'column') => {
   hoveredRow.value = null
   hoveredColumn.value = null
   hoveredAnchor.value = null
+  // Reset cursor
+  if (canvasRef.value) {
+    canvasRef.value.style.cursor = 'default'
+  }
 }
 
 // Public method to disable drawing mode
@@ -1065,6 +1101,8 @@ const disableDrawing = () => {
   matrixDrawingStore.disableDrawing()
   previewSequence.value = []
   errorPreviewSequence.value = []
+  // Update cursor based on current hover state
+  updateCursor()
   renderCanvas()
 }
 
