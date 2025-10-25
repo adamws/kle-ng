@@ -16,10 +16,6 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
   const completedRows = ref<Map<number, Key[]>>(new Map())
   const completedColumns = ref<Map<number, Key[]>>(new Map())
 
-  // Track next available row/column numbers
-  const nextRowNumber = ref<number>(0)
-  const nextColumnNumber = ref<number>(0)
-
   // Track if we're continuing an existing row/column (index of the row/column being continued)
   const continuingRowIndex = ref<number | null>(null)
   const continuingColumnIndex = ref<number | null>(null)
@@ -36,6 +32,32 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
   const hasDrawings = computed(
     () => completedRows.value.size > 0 || completedColumns.value.size > 0,
   )
+
+  /**
+   * Find the next free (unused) row number
+   * Searches from 0 upward to find the first number not in use
+   * This ensures gaps are filled when rows are removed
+   */
+  const findNextFreeRowNumber = (): number => {
+    let num = 0
+    while (completedRows.value.has(num)) {
+      num++
+    }
+    return num
+  }
+
+  /**
+   * Find the next free (unused) column number
+   * Searches from 0 upward to find the first number not in use
+   * This ensures gaps are filled when columns are removed
+   */
+  const findNextFreeColumnNumber = (): number => {
+    let num = 0
+    while (completedColumns.value.has(num)) {
+      num++
+    }
+    return num
+  }
 
   // Actions
   const enableDrawing = (type: 'row' | 'column') => {
@@ -67,9 +89,8 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
         }
         continuingRowIndex.value = null // Reset continuation state
       } else {
-        // Create new row with next available number
-        completedRows.value.set(nextRowNumber.value, [...currentSequence.value])
-        nextRowNumber.value++
+        // Create new row with next free number (fills gaps from removed rows)
+        completedRows.value.set(findNextFreeRowNumber(), [...currentSequence.value])
       }
     } else if (drawingType.value === 'column') {
       if (continuingColumnIndex.value !== null) {
@@ -81,9 +102,8 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
         }
         continuingColumnIndex.value = null // Reset continuation state
       } else {
-        // Create new column with next available number
-        completedColumns.value.set(nextColumnNumber.value, [...currentSequence.value])
-        nextColumnNumber.value++
+        // Create new column with next free number (fills gaps from removed columns)
+        completedColumns.value.set(findNextFreeColumnNumber(), [...currentSequence.value])
       }
     }
 
@@ -102,8 +122,6 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
     currentSequence.value = []
     continuingRowIndex.value = null
     continuingColumnIndex.value = null
-    nextRowNumber.value = 0
-    nextColumnNumber.value = 0
   }
 
   const getCompletedDrawings = () => {
@@ -172,7 +190,7 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
       // The new row index depends on whether we're continuing an existing row
       if (coords.col !== null) {
         const newRowIndex =
-          continuingRowIndex.value !== null ? continuingRowIndex.value : nextRowNumber.value
+          continuingRowIndex.value !== null ? continuingRowIndex.value : findNextFreeRowNumber()
 
         // Check against already completed assignments
         for (const otherKey of allKeys) {
@@ -233,7 +251,7 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
         const newColIndex =
           continuingColumnIndex.value !== null
             ? continuingColumnIndex.value
-            : nextColumnNumber.value
+            : findNextFreeColumnNumber()
 
         // Check against already completed assignments
         for (const otherKey of allKeys) {
