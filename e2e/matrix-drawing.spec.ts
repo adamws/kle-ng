@@ -930,4 +930,196 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     await expect(matrixModal).toContainText('2 defined')
     await expect(matrixModal).toContainText('Columns:')
   })
+
+  test('should reuse freed row numbers when drawing after removal', async ({ page }) => {
+    // Create a 4x3 grid with pre-assigned matrix coordinates
+    // Format: Each key has label "row,col" in first position
+    const fixtureData = [
+      ['0,0', '0,1', '0,2', '0,3'],
+      ['1,0', '1,1', '1,2', '1,3'],
+      ['2,0', '2,1', '2,2', '2,3'],
+    ]
+
+    await importLayoutJSON(page, fixtureData)
+    await page.waitForTimeout(500)
+
+    // Open Matrix Coordinates Modal
+    await page.locator('.extra-tools-group button').click()
+    await page
+      .locator('.extra-tools-dropdown .dropdown-item')
+      .filter({ hasText: 'Add Switch Matrix Coordinates' })
+      .click()
+
+    const matrixModal = page.locator('.matrix-modal')
+    await expect(matrixModal).toBeVisible()
+    await page.waitForTimeout(500)
+
+    // Now overlay should be visible
+    const overlay = page.locator('canvas.matrix-annotation-overlay')
+    await expect(overlay).toBeVisible()
+
+    // Verify 3 rows and 4 column created
+    const rowsProgress = page.locator('.progress-label').filter({ hasText: 'Rows:' })
+    await expect(rowsProgress).toContainText('3 defined')
+    const colsProgress = page.locator('.progress-label').filter({ hasText: 'Columns:' })
+    await expect(colsProgress).toContainText('4 defined')
+
+    // Get canvas position for context menu
+    const canvasBox = await overlay.boundingBox()
+    if (!canvasBox) throw new Error('Canvas not found')
+
+    // Now remove row 1 via context menu (hover over the line between keys in row 1)
+    // Position between first and second key on row 1
+    const unit = 54
+    const border = 9
+    const offset = unit / 2 + border // Center of first key
+
+    const row1Y = offset + unit
+
+    const key1CenterX = canvasBox.x + offset
+    const key2CenterX = canvasBox.x + offset + unit
+    const lineX = (key1CenterX + key2CenterX) / 2 // Midpoint between keys
+    const lineY = canvasBox.y + row1Y // Row 1's Y position
+
+    await page.mouse.move(lineX, lineY)
+    await page.waitForTimeout(200)
+    await page.mouse.click(lineX, lineY, { button: 'right' })
+    await page.waitForTimeout(200)
+
+    const contextMenu = page.locator('.matrix-context-menu')
+    await expect(contextMenu).toBeVisible()
+
+    const removeRowButton = contextMenu.locator('button', { hasText: 'Remove Row' })
+    await expect(removeRowButton).toBeVisible()
+    await removeRowButton.click({ force: true })
+    await page.waitForTimeout(300)
+
+    // Verify row count decreased from 3 to 2
+    await expect(rowsProgress).toContainText('2 defined')
+    await expect(colsProgress).toContainText('4 defined')
+
+    // Enable row drawing
+    await page.locator('button', { hasText: 'Draw Rows' }).click()
+
+    // Verify drawing is enabled
+    await expect(overlay).toBeVisible()
+
+    // Draw the new row
+    await overlay.click({ position: { x: offset, y: row1Y }, force: true })
+    await page.waitForTimeout(150)
+    await overlay.click({ position: { x: offset + 3 * unit, y: row1Y }, force: true })
+    await page.waitForTimeout(300)
+
+    // Verify we're back to 3 rows
+    await expect(rowsProgress).toContainText('3 defined')
+    await expect(colsProgress).toContainText('4 defined')
+
+    const exportedLayout = await exportLayoutJSON(page)
+    const layoutString = JSON.stringify(exportedLayout)
+
+    // Should have row 1 labels (gap was filled)
+    expect(layoutString).toContain('"1,')
+    // Count occurrences - should have exactly 4 keys with row 1 (the second row we just drew)
+    const row1Count = (layoutString.match(/"1,/g) || []).length
+    expect(row1Count).toBe(4)
+  })
+
+  test('should reuse freed column numbers when drawing after removal', async ({ page }) => {
+    // Create a 4x3 grid with pre-assigned matrix coordinates
+    // Format: Each key has label "row,col" in first position
+    const fixtureData = [
+      ['0,0', '0,1', '0,2', '0,3'],
+      ['1,0', '1,1', '1,2', '1,3'],
+      ['2,0', '2,1', '2,2', '2,3'],
+    ]
+
+    await importLayoutJSON(page, fixtureData)
+    await page.waitForTimeout(500)
+
+    // Open Matrix Coordinates Modal
+    await page.locator('.extra-tools-group button').click()
+    await page
+      .locator('.extra-tools-dropdown .dropdown-item')
+      .filter({ hasText: 'Add Switch Matrix Coordinates' })
+      .click()
+
+    const matrixModal = page.locator('.matrix-modal')
+    await expect(matrixModal).toBeVisible()
+    await page.waitForTimeout(500)
+
+    // Now overlay should be visible
+    const overlay = page.locator('canvas.matrix-annotation-overlay')
+    await expect(overlay).toBeVisible()
+
+    // Verify 3 rows and 4 column created
+    const rowsProgress = page.locator('.progress-label').filter({ hasText: 'Rows:' })
+    await expect(rowsProgress).toContainText('3 defined')
+    const colsProgress = page.locator('.progress-label').filter({ hasText: 'Columns:' })
+    await expect(colsProgress).toContainText('4 defined')
+
+    // Get canvas position for context menu
+    const canvasBox = await overlay.boundingBox()
+    if (!canvasBox) throw new Error('Canvas not found')
+
+    // Remove column 1 via context menu (hover over the line between keys in column 1)
+    // Position between first and second key on column 1
+    const unit = 54
+    const border = 9
+    const offset = unit / 2 + border // Center of first key
+
+    const col1X = offset + unit
+
+    const key1CenterY = canvasBox.y + offset
+    const key2CenterY = canvasBox.y + offset + unit
+    const lineX = canvasBox.x + col1X // Column 1's X position
+    const lineY = (key1CenterY + key2CenterY) / 2 // Midpoint between keys
+
+    await page.mouse.move(lineX, lineY)
+    await page.waitForTimeout(200)
+    await page.mouse.click(lineX, lineY, { button: 'right' })
+    await page.waitForTimeout(200)
+
+    const contextMenu = page.locator('.matrix-context-menu')
+    await expect(contextMenu).toBeVisible()
+
+    const removeColButton = contextMenu.locator('button', { hasText: 'Remove Column' })
+    await expect(removeColButton).toBeVisible()
+    await removeColButton.click({ force: true })
+    await page.waitForTimeout(300)
+
+    // Verify column count decreased from 4 to 3 and row count remain at 3
+    await expect(rowsProgress).toContainText('3 defined')
+    await expect(colsProgress).toContainText('3 defined')
+
+    // Enable column drawing
+    await page.locator('label', { hasText: 'Column' }).click()
+    const drawButton = page
+      .locator('.matrix-modal button')
+      .filter({ hasText: /Draw|Stop/ })
+      .first()
+    await drawButton.click()
+    await page.waitForTimeout(300)
+
+    // Verify drawing is enabled
+    await expect(overlay).toBeVisible()
+
+    // Draw the new column
+    await overlay.click({ position: { x: col1X, y: offset }, force: true })
+    await page.waitForTimeout(100)
+    await overlay.click({ position: { x: col1X, y: offset + 2 * unit }, force: true })
+    await page.waitForTimeout(200)
+
+    // Verify we're back to 4 columns
+    await expect(rowsProgress).toContainText('3 defined')
+    await expect(colsProgress).toContainText('4 defined')
+
+    const exportedLayout = await exportLayoutJSON(page)
+    const layoutString = JSON.stringify(exportedLayout)
+
+    // Should have column 1 labels (gap was filled)
+    expect(layoutString).toContain(',1"')
+    // Count occurrences - should have exactly 3 keys with column 1 (the second column we just drew)
+    const col1Count = (layoutString.match(/,1"/g) || []).length
+    expect(col1Count).toBe(3)
+  })
 })
