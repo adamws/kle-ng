@@ -720,6 +720,44 @@ export class CanvasRenderer {
     }
   }
 
+  private drawCircularKey(
+    params: KeyRenderParams,
+    borderColor: string,
+    fillColor: string,
+    innerColor: string,
+    strokeWidth: number,
+    bevelMargin: number,
+  ) {
+    // Calculate circle dimensions based on width only (ignore height)
+    const centerX = params.outercapx + params.outercapwidth / 2
+    const centerY = params.outercapy + params.outercapwidth / 2
+    const outerRadius = params.outercapwidth / 2
+    const innerRadius = (params.outercapwidth - bevelMargin * 2) / 2
+
+    // Draw outer circle (border and fill)
+    this.ctx.beginPath()
+    this.ctx.arc(centerX, centerY, outerRadius, 0, 2 * Math.PI)
+
+    if (fillColor) {
+      this.ctx.fillStyle = fillColor
+      this.ctx.fill()
+    }
+
+    if (borderColor) {
+      this.ctx.strokeStyle = borderColor
+      this.ctx.lineWidth = strokeWidth
+      this.ctx.stroke()
+    }
+
+    // Draw inner circle (key surface)
+    if (innerColor && innerRadius > 0) {
+      this.ctx.beginPath()
+      this.ctx.arc(centerX, centerY, innerRadius + 1, 0, 2 * Math.PI)
+      this.ctx.fillStyle = innerColor
+      this.ctx.fill()
+    }
+  }
+
   private drawRotationOriginIndicator(key: Key) {
     // Get the rotation origin in canvas coordinates (same calculation as in getRenderParams)
     const originX = D.mul(key.rotation_x || 0, this.options.unit)
@@ -1046,33 +1084,64 @@ export class CanvasRenderer {
       }
     }
 
+    // Check if this is a rotary encoder key
+    // (check if 'switch mount' property equal 'rot_ec11')
+    const isRotaryEncoder = key.sm === 'rot_ec11'
+
     // Render using unified vector union approach for all keys
     if (!key.decal) {
-      this.drawKeyRectangleLayers(
-        rectangles,
-        sizes.roundOuter,
-        isSelected ? '#dc3545' : '#000000', // border color
-        params.darkColor, // fill color
-        params.lightColor, // inner color
-        sizes.strokeWidth,
-      )
+      if (isRotaryEncoder) {
+        // Render as circle for rotary encoders (uses 'w' only, ignores 'h')
+        this.drawCircularKey(
+          params,
+          isSelected ? '#dc3545' : '#000000', // border color
+          params.darkColor, // fill color
+          params.lightColor, // inner color
+          sizes.strokeWidth,
+          sizes.bevelMargin,
+        )
+      } else {
+        // Render as rectangle for normal keys
+        this.drawKeyRectangleLayers(
+          rectangles,
+          sizes.roundOuter,
+          isSelected ? '#dc3545' : '#000000', // border color
+          params.darkColor, // fill color
+          params.lightColor, // inner color
+          sizes.strokeWidth,
+        )
+      }
     }
 
     // For decal keys, only draw selection outline if selected
     if (key.decal && isSelected) {
-      const outerRectangles = rectangles.filter((rect) => rect.type === 'outer')
-      outerRectangles.forEach((rect) => {
-        this.drawRoundedRect(
-          rect.x,
-          rect.y,
-          rect.width,
-          rect.height,
-          sizes.roundOuter,
-          undefined,
-          '#dc3545',
-          sizes.strokeWidth,
-        )
-      })
+      if (isRotaryEncoder) {
+        // Draw circular outline for rotary encoder decals
+        const centerX = params.outercapx + params.outercapwidth / 2
+        const centerY = params.outercapy + params.outercapheight / 2
+        const radius = params.outercapwidth / 2
+
+        this.ctx.beginPath()
+        this.ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI)
+        this.ctx.strokeStyle = '#dc3545'
+        this.ctx.lineWidth = sizes.strokeWidth
+        this.ctx.stroke()
+      } else {
+        // Draw rectangular outline for normal decals
+        const outerRectangles = rectangles.filter((rect) => rect.type === 'outer')
+        outerRectangles.forEach((rect) => {
+          this.drawRoundedRect(
+            rect.x,
+            rect.y,
+            rect.width,
+            rect.height,
+            sizes.roundOuter,
+            undefined,
+            '#dc3545',
+            sizes.strokeWidth,
+          )
+        })
+      }
     }
 
     // Draw homing nub

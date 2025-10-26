@@ -876,6 +876,20 @@
                       <label class="form-check-label small" for="decalCheck">Decal</label>
                     </div>
                   </div>
+                  <div class="col-6">
+                    <div class="form-check form-check-sm">
+                      <input
+                        v-model="currentRotaryEncoder"
+                        @change="updateRotaryEncoder"
+                        type="checkbox"
+                        class="form-check-input"
+                        id="rotaryEncoderCheck"
+                      />
+                      <label class="form-check-label small" for="rotaryEncoderCheck"
+                        >Rotary Encoder</label
+                      >
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1011,6 +1025,7 @@ const currentGhost = ref(false)
 const currentStepped = ref(false)
 const currentNub = ref(false)
 const currentDecal = ref(false)
+const currentRotaryEncoder = ref(false)
 const currentRotationAngle = ref(0)
 const currentRotationX = ref(0)
 const currentRotationY = ref(0)
@@ -1088,6 +1103,7 @@ const updateCurrentValues = () => {
     currentStepped.value = false
     currentNub.value = false
     currentDecal.value = false
+    currentRotaryEncoder.value = false
     currentRotationAngle.value = 0
     currentRotationX.value = 0
     currentRotationY.value = 0
@@ -1129,6 +1145,7 @@ const updateCurrentValues = () => {
     currentStepped.value = !!firstKey.stepped
     currentNub.value = !!firstKey.nub
     currentDecal.value = !!firstKey.decal
+    currentRotaryEncoder.value = firstKey.sm === 'rot_ec11' ? true : false
     currentRotationAngle.value = normalizeRotationAngle(firstKey.rotation_angle || 0)
     currentRotationX.value = formatNumber(firstKey.rotation_x || 0)
     currentRotationY.value = formatNumber(firstKey.rotation_y || 0)
@@ -1158,6 +1175,7 @@ const updateCurrentValues = () => {
     currentStepped.value = !!firstKey.stepped
     currentNub.value = !!firstKey.nub
     currentDecal.value = !!firstKey.decal
+    currentRotaryEncoder.value = firstKey.sm === 'rot_ec11' ? true : false
     currentRotationAngle.value = normalizeRotationAngle(firstKey.rotation_angle || 0)
     currentRotationX.value = formatNumber(firstKey.rotation_x || 0)
     currentRotationY.value = formatNumber(firstKey.rotation_y || 0)
@@ -1386,6 +1404,16 @@ const updateDecal = () => {
 
   selectedKeys.value.forEach((key) => {
     key.decal = currentDecal.value
+  })
+
+  keyboardStore.saveState()
+}
+
+const updateRotaryEncoder = () => {
+  if (selectedKeys.value.length === 0) return
+
+  selectedKeys.value.forEach((key) => {
+    key.sm = currentRotaryEncoder.value ? 'rot_ec11' : ''
   })
 
   keyboardStore.saveState()
@@ -1745,13 +1773,6 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
 .form-check-sm .form-check-label {
   font-size: 0.7rem;
   line-height: 1.2;
-}
-
-/* Responsive adjustments */
-@media (max-width: 1199.98px) {
-  .property-group {
-    margin-bottom: 1rem;
-  }
 }
 
 @media (max-width: 767.98px) {
