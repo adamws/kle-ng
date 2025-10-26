@@ -825,9 +825,9 @@
               <!-- Options -->
               <div class="mb-2">
                 <label class="form-label small mb-1">Options</label>
-                <div class="row g-1">
-                  <div class="col-6">
-                    <div class="form-check form-check-sm">
+                <div class="row row-cols-3 g-2">
+                  <div class="col">
+                    <div class="form-check">
                       <input
                         v-model="currentGhost"
                         @change="updateGhost"
@@ -837,7 +837,9 @@
                       />
                       <label class="form-check-label small" for="ghostCheck">Ghost</label>
                     </div>
-                    <div class="form-check form-check-sm">
+                  </div>
+                  <div class="col">
+                    <div class="form-check">
                       <input
                         v-model="currentStepped"
                         @change="updateStepped"
@@ -854,8 +856,8 @@
                       >
                     </div>
                   </div>
-                  <div class="col-6">
-                    <div class="form-check form-check-sm">
+                  <div class="col">
+                    <div class="form-check">
                       <input
                         v-model="currentNub"
                         @change="updateNub"
@@ -865,7 +867,9 @@
                       />
                       <label class="form-check-label small" for="nubCheck">Home</label>
                     </div>
-                    <div class="form-check form-check-sm">
+                  </div>
+                  <div class="col">
+                    <div class="form-check">
                       <input
                         v-model="currentDecal"
                         @change="updateDecal"
@@ -877,7 +881,7 @@
                     </div>
                   </div>
                   <div class="col-6">
-                    <div class="form-check form-check-sm">
+                    <div class="form-check">
                       <input
                         v-model="currentRotaryEncoder"
                         @change="updateRotaryEncoder"
@@ -1763,16 +1767,6 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
 .label-color-picker-small::-webkit-color-swatch {
   border: none;
   border-radius: 2px;
-}
-
-.form-check-sm .form-check-input {
-  margin-top: 0.125em;
-  transform: scale(0.9);
-}
-
-.form-check-sm .form-check-label {
-  font-size: 0.7rem;
-  line-height: 1.2;
 }
 
 @media (max-width: 767.98px) {
