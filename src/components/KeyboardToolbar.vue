@@ -147,6 +147,7 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick, watch } from 'vue'
 import { useKeyboardStore } from '@/stores/keyboard'
+import { useMatrixDrawingStore } from '@/stores/matrix-drawing'
 import presetsMetadata from '@/data/presets.json'
 import { parseJsonString } from '@/utils/serialization'
 import { toast } from '@/composables/useToast'
@@ -158,6 +159,7 @@ import LZString from 'lz-string'
 
 // Store
 const keyboardStore = useKeyboardStore()
+const matrixDrawingStore = useMatrixDrawingStore()
 
 // Component state
 const selectedPreset = ref('')
@@ -343,6 +345,17 @@ const downloadPng = async () => {
   // Generate canvas with rounded background
   const radiiValue = keyboardStore.metadata.radii?.trim() || '6px'
   const tempCanvas = createCanvasWithRoundedBackground(canvas, radiiValue)
+
+  // If matrix overlay is visible, composite it on top
+  if (matrixDrawingStore.isModalOpen) {
+    const overlayCanvas = document.querySelector('.matrix-annotation-overlay') as HTMLCanvasElement
+    if (overlayCanvas) {
+      const tempCtx = tempCanvas.getContext('2d')
+      if (tempCtx) {
+        tempCtx.drawImage(overlayCanvas, 0, 0)
+      }
+    }
+  }
 
   try {
     // Get base PNG blob
