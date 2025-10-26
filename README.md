@@ -102,6 +102,78 @@ The mirror axis position snaps to multiples of the step size.
 
 <img src="resources/gifs/mirror-tool.gif">
 
+### Extra Tools
+
+Extra tools are grouped under single button in the left side toolbar. Currently there are three:
+1. **Legent Tools** - bulk legend editing
+2. **Add Switch Matrix Coordinates** - assign [VIA style](https://www.caniusevia.com/docs/layouts/) row/column labels
+3. **Move Rotatoin Origins** - recalculate positions according to new rotation references
+
+#### Add Switch Matrix Coordinates Tool
+
+This tool helps to map physical layout to the electrical switch matrix, enabling proper key mapping in
+[VIA](https://www.caniusevia.com/) and [Vial](https://get.vial.today/) configurators which use special
+flavour of KLE json layout with extra rules. To learn more see [VIA Documentation](https://www.caniusevia.com/docs/layouts/).
+
+<img align="right" src="resources/add-switch-matrix-coordinates-modal.png" width=50% hspace=10>
+
+To start, click 'Extra Tools' button and select **Add Switch Matrix Coordinates** option.
+If current layout has any key labels defined, you will be warned that proceeding will clear them up.
+If accepted, you should get main tool window.
+
+Window is divided in three sections:
+- **progress indicator** - shows how many rows/columns current matrix has and how many keys are unassigned
+- **actions** - user actions and mode toggle
+- **instructions**
+
+The kle-ng provides an algorithm which can handle annotations automatically.
+It is recommended to start with **Annotate Automatically** option. If the results are not satisfactory
+there is an option to edit the result. You can also clear everything with **Clear All Drawings**
+and draw all row and columns manually.
+
+An example of automatically annotated layout may look something like this:
+
+<a href="http://localhost:5173/#share=NrBEAYBp1SMgjLeAmZUDM7IBZsFZsA2bAdmwA5sBObBGOKBJAXUmAG9QB3UALgQA6FPgC+cBNGSSkEyGjlY5eOYTkk55OVTm1IXXgMGkxc+qDace-ISfGgUUuI9kP5yR0rcq3atxrctNx0DG2FTNz03Zgt2UKMRewwnUGTXZIV4onCkyDV4oUS4ZL0CnOLEGBYWIA">
+  <img src="resources/keyboard-layout-matrix-annotations.png">
+</a>
+
+Blue wires represent rows and green wires represent columns. Top left key labels describe key position in the matrix.
+To edit connections use appropriate editing mode:
+
+<table>
+  <tr>
+    <th align="center" style="width:33%"><b>Draw Rows</b></th>
+    <th align="center" style="width:33%"><b>Draw Columns</b></th>
+    <th align="center" style="width:33%"><b>Remove</b></th>
+  </tr>
+  <tr>
+    <td><img src="resources/gifs/manual-annotation-draw-row.gif"></td>
+    <td><img src="resources/gifs/manual-annotation-draw-columns.gif"></td>
+    <td><img src="resources/gifs/manual-annotation-remove-elements.gif"></td>
+  </tr>
+  <tr>
+    <td colspan="2">
+      <ul>
+        <li>Left-click to start and complete segments</li>
+        <li>Right-click or Escape to cancel</li>
+        <li>Click existing wire to append/continue</li>
+      </ul>
+      New row/columns are assigned with first free numerical value.<br>
+      It is possible to re-assign numbers later.
+    </td>
+    <td>Hover and click on a element to remove.</td>
+  </tr>
+</table>
+
+<img align="right" src="resources/matrix-renumbering-status.png" hspace=10>
+
+To change a number of any row/column, hover over it in any editing mode and start typing number.
+You should get renumbering prompt at the bottom of canvas area.
+
+> [!NOTE]
+> To export keyboard PNG image **with** row/columns wires overlay, open **Add Switch Matrix Coordinates** tool
+> first and then use **Export**->**Download PNG**.
+
 ### Image and SVG Label Support
 
 Key labels support embedding images and SVG graphics, allowing for rich visual representation of icons, symbols, and custom graphics.
