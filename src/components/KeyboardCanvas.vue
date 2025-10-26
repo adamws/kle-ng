@@ -58,6 +58,12 @@
 
     <!-- Debug Control Button (development mode only) -->
     <DebugControlButton v-if="isDevMode" :debugOverlayRef="debugOverlayRef" />
+
+    <!-- Matrix Renumbering Status Bar -->
+    <div v-if="matrixRenumberingStatus" class="matrix-renumbering-status">
+      <span class="status-label">{{ matrixRenumberingStatus.message }}</span>
+      <span class="status-hint">Press <kbd>Enter</kbd> to confirm, <kbd>Esc</kbd> to cancel</span>
+    </div>
   </div>
 
   <!-- Rotation control modal -->
@@ -200,6 +206,11 @@ const canvasCursor = computed(() => {
     return 'grabbing'
   }
   return 'default'
+})
+
+// Matrix renumbering status from overlay
+const matrixRenumberingStatus = computed(() => {
+  return matrixOverlayRef.value?.renumberingStatus || null
 })
 
 const renderOptions = computed<RenderOptions>(() => ({
@@ -1813,5 +1824,57 @@ defineExpose({})
   z-index: 1000;
   box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
   white-space: nowrap;
+}
+
+/* Matrix Renumbering Status Bar */
+.matrix-renumbering-status {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  background: rgba(255, 193, 7, 0.95);
+  color: #000;
+  padding: 8px 16px;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 1000;
+  pointer-events: none;
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.matrix-renumbering-status .status-label {
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+}
+
+.matrix-renumbering-status .status-hint {
+  color: rgba(0, 0, 0, 0.7);
+  font-size: 12px;
+}
+
+.matrix-renumbering-status kbd {
+  background: rgba(0, 0, 0, 0.15);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid rgba(0, 0, 0, 0.2);
 }
 </style>

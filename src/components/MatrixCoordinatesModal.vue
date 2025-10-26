@@ -233,13 +233,11 @@
                 <i class="bi bi-magic me-1"></i>
                 Annotate Automatically
               </button>
-              <p class="mb-0 mt-1 small text-muted text-center">
-                Auto-assigns based on key center positions
-              </p>
             </div>
 
             <!-- Drawing Type Toggle -->
             <div class="mb-3">
+              <p class="mb-0 mt-1 small">Select editing mode:</p>
               <div class="btn-group w-100" role="group" aria-label="Drawing type selector">
                 <button
                   type="button"
@@ -302,11 +300,18 @@
                   <strong>Draw Rows/Columns Mode</strong>
                   <ul class="small mb-0 ps-3">
                     <li><strong>Left-click</strong> to start and complete segments</li>
-                    <li><strong>Right-click</strong> to cancel while drawing</li>
+                    <li><strong>Right-click or Escape</strong> to cancel while drawing</li>
                     <li><strong>Click existing wire</strong> to append/continue</li>
                   </ul>
                 </li>
-                <li><strong>Remove mode:</strong> Click on rows, columns, or nodes to delete</li>
+                <li><strong>Remove Mode:</strong> Click on rows, columns, or nodes to delete</li>
+                <li>
+                  <strong>Change Row/Column number</strong>
+                  <ul class="small mb-0 ps-3">
+                    <li>Type new value while hovering over element</li>
+                    <li><strong>Enter</strong> to confirm or <strong>Escape</strong> to cancel</li>
+                  </ul>
+                </li>
               </ul>
             </div>
           </div>
@@ -1195,7 +1200,6 @@ defineExpose({
 
 .panel-body {
   padding: 16px;
-  max-height: 600px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;

@@ -14,7 +14,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { type Key } from '@/stores/keyboard'
 import type { CanvasRenderer } from '@/utils/canvas-renderer'
 import { getKeyCenter as calculateKeyCenter } from '@/utils/keyboard-geometry'
@@ -59,6 +59,15 @@ const hoveredAnchor = ref<{
     distance: number
   }>
 } | null>(null)
+
+// Renumbering state
+const typedNumberBuffer = ref<string>('')
+const renumberingTarget = ref<{
+  type: 'row' | 'column'
+  index: number
+  originalIndex: number
+} | null>(null)
+const skipNextHoverClear = ref<boolean>(false) // Flag to prevent clearing after renumber
 
 // Computed
 const ctx = computed(() => canvasRef.value?.getContext('2d'))
@@ -178,6 +187,10 @@ const detectHover = (canvasX: number, canvasY: number) => {
   const NODE_HOVER_THRESHOLD = 8
   const LINE_HOVER_THRESHOLD = 6
 
+  // Save previous hover state to detect changes
+  const previousHoveredRow = hoveredRow.value
+  const previousHoveredColumn = hoveredColumn.value
+
   // Reset hover state
   hoveredRow.value = null
   hoveredColumn.value = null
@@ -277,6 +290,20 @@ const detectHover = (canvasX: number, canvasY: number) => {
         }
       }
     })
+  }
+
+  // Clear renumbering buffer if hover target changed
+  if (
+    (previousHoveredRow !== hoveredRow.value || previousHoveredColumn !== hoveredColumn.value) &&
+    renumberingTarget.value !== null
+  ) {
+    // Skip clearing if we just renumbered (hover change is expected)
+    if (skipNextHoverClear.value) {
+      skipNextHoverClear.value = false // Reset flag
+    } else {
+      typedNumberBuffer.value = ''
+      renumberingTarget.value = null
+    }
   }
 }
 
@@ -504,6 +531,115 @@ const handleRightClick = () => {
       canvasRef.value.style.cursor = 'default'
     }
     renderCanvas()
+  }
+}
+
+// Keyboard handler for renumbering rows/columns
+const handleKeyDown = (event: KeyboardEvent) => {
+  // Don't intercept if overlay is not visible
+  if (!props.visible) {
+    return
+  }
+
+  // Only intercept keys when hovering over a row/column (hoveredRow/hoveredColumn !== null)
+  if (hoveredRow.value === null && hoveredColumn.value === null) {
+    return
+  }
+
+  // Set renumbering target if not already set
+  if (renumberingTarget.value === null) {
+    if (hoveredRow.value !== null) {
+      // Hovering over a row
+      renumberingTarget.value = {
+        type: 'row',
+        index: hoveredRow.value,
+        originalIndex: hoveredRow.value, // Store original for Backspace restoration
+      }
+    } else if (hoveredColumn.value !== null) {
+      // Hovering over a column
+      renumberingTarget.value = {
+        type: 'column',
+        index: hoveredColumn.value,
+        originalIndex: hoveredColumn.value, // Store original for Backspace restoration
+      }
+    } else {
+      return
+    }
+  }
+
+  // Only proceed if we have a valid renumbering target
+  if (!renumberingTarget.value) {
+    return
+  }
+
+  // Handle Escape key - cancel renumbering
+  if (event.key === 'Escape') {
+    // Only handle Escape if we have an active renumbering (typed buffer exists)
+    if (typedNumberBuffer.value.length > 0) {
+      typedNumberBuffer.value = ''
+      renumberingTarget.value = null
+      skipNextHoverClear.value = false
+      renderCanvas()
+      event.preventDefault()
+      event.stopPropagation() // Prevent modal from closing
+      return
+    }
+    // If no active renumbering, let the event propagate (modal will handle it)
+    return
+  }
+
+  // Handle Backspace key - remove last digit from buffer
+  if (event.key === 'Backspace') {
+    if (typedNumberBuffer.value.length > 0) {
+      // Remove last character from buffer
+      typedNumberBuffer.value = typedNumberBuffer.value.slice(0, -1)
+      renderCanvas()
+      event.preventDefault()
+      event.stopPropagation()
+      return
+    }
+    // No active typing, let event propagate
+    return
+  }
+
+  // Handle Enter key - confirm renumbering
+  if (event.key === 'Enter') {
+    if (typedNumberBuffer.value.length > 0) {
+      const newNumber = parseInt(typedNumberBuffer.value, 10)
+
+      if (renumberingTarget.value.type === 'row') {
+        const oldIndex = renumberingTarget.value.index
+        matrixDrawingStore.renumberRow(oldIndex, newNumber)
+        renumberingTarget.value.index = newNumber
+        hoveredRow.value = newNumber
+        skipNextHoverClear.value = true
+      } else if (renumberingTarget.value.type === 'column') {
+        const oldIndex = renumberingTarget.value.index
+        matrixDrawingStore.renumberColumn(oldIndex, newNumber)
+        renumberingTarget.value.index = newNumber
+        hoveredColumn.value = newNumber
+        skipNextHoverClear.value = true
+      }
+
+      // Clear buffer after applying
+      typedNumberBuffer.value = ''
+      renderCanvas()
+      event.preventDefault()
+      event.stopPropagation()
+      return
+    }
+    // No active typing, let event propagate
+    return
+  }
+
+  // Handle digit keys (0-9) - just add to buffer, don't renumber yet
+  // Ignore other keys
+  if (event.key >= '0' && event.key <= '9') {
+    typedNumberBuffer.value += event.key
+    renderCanvas()
+    event.preventDefault()
+    event.stopPropagation()
+    return
   }
 }
 
@@ -1104,18 +1240,60 @@ const clearDrawings = () => {
   renderCanvas()
 }
 
-// Expose public methods
+// Computed property for renumbering status message
+const renumberingStatus = computed(() => {
+  if (!renumberingTarget.value || !typedNumberBuffer.value) {
+    return null
+  }
+
+  const type = renumberingTarget.value.type === 'row' ? 'Row' : 'Column'
+  const original = renumberingTarget.value.originalIndex
+  const newValue = typedNumberBuffer.value
+
+  return {
+    type,
+    original,
+    newValue,
+    message: `${type} ${original} → ${newValue}`,
+  }
+})
+
+// Expose public methods and renumbering state
 defineExpose({
   renderCanvas,
   enableDrawing,
   disableDrawing,
   getCompletedDrawings,
   clearDrawings,
+  renumberingStatus,
 })
+
+// Watch for visibility changes to clean up renumbering state
+watch(
+  () => props.visible,
+  (visible) => {
+    if (!visible) {
+      // Clear renumbering state when overlay is hidden
+      typedNumberBuffer.value = ''
+      renumberingTarget.value = null
+      skipNextHoverClear.value = false
+    }
+  },
+)
 
 // Initial render
 onMounted(() => {
   renderCanvas()
+
+  // Add keyboard event listener for renumbering
+  // Use capture phase to ensure we get events before modal's handler
+  document.addEventListener('keydown', handleKeyDown, true)
+})
+
+// Cleanup
+onUnmounted(() => {
+  // Remove keyboard event listeners
+  document.removeEventListener('keydown', handleKeyDown, true)
 })
 </script>
 

@@ -1133,4 +1133,292 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     // Last row should not have a label:
     expect(layoutString).toContain('"w":6},""]')
   })
+
+  test('should renumber rows by typing digits while hovering', async ({ page }) => {
+    // Create a 3x3 grid with pre-assigned matrix coordinates
+    const fixtureData = [
+      ['0,0', '0,1', '0,2'],
+      ['1,0', '1,1', '1,2'],
+      ['2,0', '2,1', '2,2'],
+    ]
+
+    await importLayoutJSON(page, fixtureData)
+    await page.waitForTimeout(500)
+
+    // Open Matrix Coordinates Modal
+    await page.locator('.extra-tools-group button').click()
+    await page
+      .locator('.extra-tools-dropdown .dropdown-item')
+      .filter({ hasText: 'Add Switch Matrix Coordinates' })
+      .click()
+
+    const matrixModal = page.locator('.matrix-modal')
+    await expect(matrixModal).toBeVisible()
+    await page.waitForTimeout(500)
+
+    // Switch to Draw Rows mode
+    const rowButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Rows' })
+    await rowButton.click()
+    await page.waitForTimeout(100)
+
+    const overlay = page.locator('canvas.matrix-annotation-overlay')
+    await expect(overlay).toBeVisible()
+
+    const canvasBox = await overlay.boundingBox()
+    if (!canvasBox) throw new Error('Canvas not found')
+
+    const unit = 54
+    const border = 9
+    const offset = unit / 2 + border
+
+    // Position between first and second key on row 0 (on the line connecting them)
+    const key1CenterX = canvasBox.x + offset
+    const key2CenterX = canvasBox.x + offset + unit
+    const lineX = (key1CenterX + key2CenterX) / 2
+    const lineY = canvasBox.y + offset
+
+    // Move mouse to hover over row 0
+    await page.mouse.move(lineX, lineY)
+    await page.waitForTimeout(200)
+
+    // Type '5' to renumber row 0 to row 5
+    await page.keyboard.press('5')
+    // Add a letter to check if it is ignored
+    await page.keyboard.press('a')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(300)
+
+    // Export and verify row 0 became row 5
+    let exportedLayout = await exportLayoutJSON(page)
+    let layoutString = JSON.stringify(exportedLayout)
+
+    // Should have row 5 labels
+    expect(layoutString).toContain('"5,0"')
+    expect(layoutString).toContain('"5,1"')
+    expect(layoutString).toContain('"5,2"')
+
+    // Should not have row 0 labels anymore
+    expect(layoutString).not.toContain('"0,0"')
+    expect(layoutString).not.toContain('"0,1"')
+    expect(layoutString).not.toContain('"0,2"')
+
+    // Now test swapping: hover over row 1 and type '5'
+    const row1LineY = canvasBox.y + offset + unit
+    await page.mouse.move(lineX, row1LineY)
+    await page.waitForTimeout(200)
+
+    await page.keyboard.press('5')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(300)
+
+    // Export and verify swap occurred
+    exportedLayout = await exportLayoutJSON(page)
+    layoutString = JSON.stringify(exportedLayout)
+
+    // Row that was originally row 1 should now be row 5
+    expect(layoutString).toContain('"5,0"')
+    expect(layoutString).toContain('"5,1"')
+    expect(layoutString).toContain('"5,2"')
+
+    // Row that was renumbered to 5 should now be row 1
+    expect(layoutString).toContain('"1,0"')
+    expect(layoutString).toContain('"1,1"')
+    expect(layoutString).toContain('"1,2"')
+  })
+
+  test('should renumber columns by typing digits while hovering', async ({ page }) => {
+    // Create a 3x3 grid with pre-assigned matrix coordinates
+    const fixtureData = [
+      ['0,0', '0,1', '0,2'],
+      ['1,0', '1,1', '1,2'],
+      ['2,0', '2,1', '2,2'],
+    ]
+
+    await importLayoutJSON(page, fixtureData)
+    await page.waitForTimeout(500)
+
+    // Open Matrix Coordinates Modal
+    await page.locator('.extra-tools-group button').click()
+    await page
+      .locator('.extra-tools-dropdown .dropdown-item')
+      .filter({ hasText: 'Add Switch Matrix Coordinates' })
+      .click()
+
+    const matrixModal = page.locator('.matrix-modal')
+    await expect(matrixModal).toBeVisible()
+    await page.waitForTimeout(500)
+
+    // Switch to Draw Columns mode
+    const columnButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Columns' })
+    await columnButton.click()
+    await page.waitForTimeout(100)
+
+    const overlay = page.locator('canvas.matrix-annotation-overlay')
+    await expect(overlay).toBeVisible()
+
+    const canvasBox = await overlay.boundingBox()
+    if (!canvasBox) throw new Error('Canvas not found')
+
+    const unit = 54
+    const border = 9
+    const offset = unit / 2 + border
+
+    // Position between first and second key on column 0 (on the line connecting them)
+    const key1CenterY = canvasBox.y + offset
+    const key2CenterY = canvasBox.y + offset + unit
+    const lineX = canvasBox.x + offset
+    const lineY = (key1CenterY + key2CenterY) / 2
+
+    // Move mouse to hover over column 0
+    await page.mouse.move(lineX, lineY)
+    await page.waitForTimeout(200)
+
+    // Type '7' to renumber column 0 to column 7
+    await page.keyboard.press('7')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(300)
+
+    // Export and verify column 0 became column 7
+    const exportedLayout = await exportLayoutJSON(page)
+    const layoutString = JSON.stringify(exportedLayout)
+
+    // Should have column 7 labels
+    expect(layoutString).toContain('"0,7"')
+    expect(layoutString).toContain('"1,7"')
+    expect(layoutString).toContain('"2,7"')
+
+    // Should not have column 0 labels anymore (for the first column)
+    // Note: Other columns still exist (column 1, 2)
+    expect(layoutString).not.toContain('"0,0"')
+    expect(layoutString).not.toContain('"1,0"')
+    expect(layoutString).not.toContain('"2,0"')
+  })
+
+  test('should handle multi-digit row numbers', async ({ page }) => {
+    // Create a 2x2 grid
+    const fixtureData = [
+      ['0,0', '0,1'],
+      ['1,0', '1,1'],
+    ]
+
+    await importLayoutJSON(page, fixtureData)
+    await page.waitForTimeout(500)
+
+    // Open Matrix Coordinates Modal
+    await page.locator('.extra-tools-group button').click()
+    await page
+      .locator('.extra-tools-dropdown .dropdown-item')
+      .filter({ hasText: 'Add Switch Matrix Coordinates' })
+      .click()
+
+    const matrixModal = page.locator('.matrix-modal')
+    await expect(matrixModal).toBeVisible()
+    await page.waitForTimeout(500)
+
+    // Switch to Draw Rows mode
+    const rowButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Rows' })
+    await rowButton.click()
+    await page.waitForTimeout(100)
+
+    const overlay = page.locator('canvas.matrix-annotation-overlay')
+    await expect(overlay).toBeVisible()
+
+    const canvasBox = await overlay.boundingBox()
+    if (!canvasBox) throw new Error('Canvas not found')
+
+    const unit = 54
+    const border = 9
+    const offset = unit / 2 + border
+
+    // Hover over row 0
+    const key1CenterX = canvasBox.x + offset
+    const key2CenterX = canvasBox.x + offset + unit
+    const lineX = (key1CenterX + key2CenterX) / 2
+    const lineY = canvasBox.y + offset
+
+    await page.mouse.move(lineX, lineY)
+    await page.waitForTimeout(200)
+
+    // Type '1' then '0' to renumber to row 10
+    await page.keyboard.press('1')
+    await page.keyboard.press('0')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(300)
+
+    // Export and verify row became row 10
+    const exportedLayout = await exportLayoutJSON(page)
+    const layoutString = JSON.stringify(exportedLayout)
+
+    // Should have row 10 labels and row 1 should be unchanged
+    expect(layoutString).toContain('[["10,0","10,1"],["1,0","1,1"]]')
+  })
+
+  test('should cancel renumbering with Escape key', async ({ page }) => {
+    // Create a 3x3 grid
+    const fixtureData = [
+      ['0,0', '0,1', '0,2'],
+      ['1,0', '1,1', '1,2'],
+      ['2,0', '2,1', '2,2'],
+    ]
+
+    await importLayoutJSON(page, fixtureData)
+    await page.waitForTimeout(500)
+
+    // Open Matrix Coordinates Modal
+    await page.locator('.extra-tools-group button').click()
+    await page
+      .locator('.extra-tools-dropdown .dropdown-item')
+      .filter({ hasText: 'Add Switch Matrix Coordinates' })
+      .click()
+
+    const matrixModal = page.locator('.matrix-modal')
+    await expect(matrixModal).toBeVisible()
+    await page.waitForTimeout(500)
+
+    // Switch to Draw Rows mode
+    const rowButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Rows' })
+    await rowButton.click()
+    await page.waitForTimeout(100)
+
+    const overlay = page.locator('canvas.matrix-annotation-overlay')
+    await expect(overlay).toBeVisible()
+
+    const canvasBox = await overlay.boundingBox()
+    if (!canvasBox) throw new Error('Canvas not found')
+
+    const unit = 54
+    const border = 9
+    const offset = unit / 2 + border
+
+    // Hover over row 0
+    const key1CenterX = canvasBox.x + offset
+    const key2CenterX = canvasBox.x + offset + unit
+    const lineX = (key1CenterX + key2CenterX) / 2
+    const lineY = canvasBox.y + offset
+
+    await page.mouse.move(lineX, lineY)
+    await page.waitForTimeout(200)
+
+    // Type '5' to start renumbering
+    await page.keyboard.press('5')
+    await page.waitForTimeout(100)
+
+    // Press Escape to cancel
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(300)
+
+    // Export and verify row 0 is still row 0 (not renumbered to 5)
+    const exportedLayout = await exportLayoutJSON(page)
+    const layoutString = JSON.stringify(exportedLayout)
+
+    // Should still have row 0 labels
+    expect(layoutString).toContain('"0,0"')
+    expect(layoutString).toContain('"0,1"')
+    expect(layoutString).toContain('"0,2"')
+
+    // Should not have row 5 labels
+    expect(layoutString).not.toContain('"5,0"')
+    expect(layoutString).not.toContain('"5,1"')
+    expect(layoutString).not.toContain('"5,2"')
+  })
 })

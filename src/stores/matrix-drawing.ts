@@ -392,6 +392,108 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
     isModalOpen.value = open
   }
 
+  /**
+   * Renumber a row from oldIndex to newIndex
+   * If newIndex already exists, swap the two rows
+   * @param oldIndex - The current row number
+   * @param newIndex - The desired row number
+   */
+  const renumberRow = (oldIndex: number, newIndex: number) => {
+    // Do nothing if indices are the same
+    if (oldIndex === newIndex) return
+
+    const oldRow = completedRows.value.get(oldIndex)
+    if (!oldRow) return
+
+    const newRow = completedRows.value.get(newIndex)
+
+    if (newRow) {
+      // Swap: newIndex row becomes oldIndex, oldIndex row becomes newIndex
+      completedRows.value.set(oldIndex, newRow)
+      completedRows.value.set(newIndex, oldRow)
+
+      // Update labels for both rows
+      newRow.forEach((key) => {
+        updateKeyLabel(key, oldIndex, null)
+      })
+      oldRow.forEach((key) => {
+        updateKeyLabel(key, newIndex, null)
+      })
+    } else {
+      // Just move oldIndex to newIndex
+      completedRows.value.delete(oldIndex)
+      completedRows.value.set(newIndex, oldRow)
+
+      // Update labels for moved row
+      oldRow.forEach((key) => {
+        updateKeyLabel(key, newIndex, null)
+      })
+    }
+  }
+
+  /**
+   * Renumber a column from oldIndex to newIndex
+   * If newIndex already exists, swap the two columns
+   * @param oldIndex - The current column number
+   * @param newIndex - The desired column number
+   */
+  const renumberColumn = (oldIndex: number, newIndex: number) => {
+    // Do nothing if indices are the same
+    if (oldIndex === newIndex) return
+
+    const oldCol = completedColumns.value.get(oldIndex)
+    if (!oldCol) return
+
+    const newCol = completedColumns.value.get(newIndex)
+
+    if (newCol) {
+      // Swap: newIndex column becomes oldIndex, oldIndex column becomes newIndex
+      completedColumns.value.set(oldIndex, newCol)
+      completedColumns.value.set(newIndex, oldCol)
+
+      // Update labels for both columns
+      newCol.forEach((key) => {
+        updateKeyLabel(key, null, oldIndex)
+      })
+      oldCol.forEach((key) => {
+        updateKeyLabel(key, null, newIndex)
+      })
+    } else {
+      // Just move oldIndex to newIndex
+      completedColumns.value.delete(oldIndex)
+      completedColumns.value.set(newIndex, oldCol)
+
+      // Update labels for moved column
+      oldCol.forEach((key) => {
+        updateKeyLabel(key, null, newIndex)
+      })
+    }
+  }
+
+  /**
+   * Update a key's label with new row/column indices
+   * Pass null to keep existing row or column value
+   * @param key - The key to update
+   * @param newRowIndex - New row index (or null to keep existing)
+   * @param newColIndex - New column index (or null to keep existing)
+   */
+  const updateKeyLabel = (key: Key, newRowIndex: number | null, newColIndex: number | null) => {
+    const coords = parseMatrixCoordinates(key)
+    const row = newRowIndex !== null ? newRowIndex : coords.row
+    const col = newColIndex !== null ? newColIndex : coords.col
+
+    // Update label based on what's assigned
+    if (row !== null && col !== null) {
+      key.labels = [`${row},${col}`]
+    } else if (row !== null && col === null) {
+      key.labels = [`${row},`]
+    } else if (row === null && col !== null) {
+      key.labels = [`,${col}`]
+    } else {
+      key.labels = []
+    }
+  }
+
   return {
     // State
     isModalOpen,
@@ -423,5 +525,7 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
     removeRow,
     removeColumn,
     loadExistingAssignments,
+    renumberRow,
+    renumberColumn,
   }
 })
