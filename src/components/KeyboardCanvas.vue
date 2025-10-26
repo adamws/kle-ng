@@ -140,13 +140,11 @@ const resizeObserver = ref<ResizeObserver>()
 // Matrix annotation state
 const matrixAnnotationVisible = ref(false)
 
-// Auto-show overlay when drawing is enabled or when there are completed drawings
+// Show overlay when matrix modal is open, hide when modal closes
 watch(
-  () => [matrixDrawingStore.isDrawing, matrixDrawingStore.hasDrawings],
-  ([isDrawing, hasDrawings]) => {
-    if (isDrawing || hasDrawings) {
-      matrixAnnotationVisible.value = true
-    }
+  () => matrixDrawingStore.isModalOpen,
+  (isOpen) => {
+    matrixAnnotationVisible.value = isOpen
   },
 )
 

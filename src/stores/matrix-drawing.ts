@@ -10,6 +10,9 @@ import {
 } from '@/utils/matrix-validation'
 
 export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
+  // Modal state - tracks if the matrix coordinates modal is open
+  const isModalOpen = ref<boolean>(false)
+
   // Drawing state
   const drawingType = ref<'row' | 'column' | 'remove' | null>(null)
   const currentSequence = ref<Key[]>([])
@@ -381,8 +384,17 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
     })
   }
 
+  /**
+   * Set the modal open state
+   * This controls overlay visibility - overlay is visible when modal is open
+   */
+  const setModalOpen = (open: boolean) => {
+    isModalOpen.value = open
+  }
+
   return {
     // State
+    isModalOpen,
     drawingType,
     currentSequence,
     completedRows,
@@ -395,6 +407,7 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
     hasDrawings,
 
     // Actions
+    setModalOpen,
     enableDrawing,
     disableDrawing,
     addKeyToSequence,

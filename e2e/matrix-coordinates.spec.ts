@@ -561,6 +561,24 @@ test.describe('Matrix Coordinates Tool', () => {
     await expect(completionAlert).toBeVisible({ timeout: 10000 })
     await expect(completionAlert).toContainText('Annotation Complete!')
     await expect(completionAlert).toContainText('All 3 keys have been assigned')
+
+    // Close the modal using Escape key
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.matrix-modal')).not.toBeVisible()
+    await page.waitForTimeout(300)
+
+    // Regression test: Verify that keys can be selected after closing modal
+    // (Previously, the overlay was blocking clicks after automatic annotation)
+    const canvas = page.locator('canvas.keyboard-canvas')
+    await expect(canvas).toBeVisible()
+
+    // Click on a key (approximate center of first key at position 0,0)
+    // With unit=54px and border=9px, first key center is at approximately (36, 36)
+    await canvas.click({ position: { x: 36, y: 36 } })
+    await page.waitForTimeout(200)
+
+    // Verify that the key was selected by checking the Selected counter
+    await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
   })
 
   test('should show matrix preview for already annotated Default 60% (VIA) preset', async ({

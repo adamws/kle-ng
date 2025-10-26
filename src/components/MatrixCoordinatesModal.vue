@@ -1081,6 +1081,9 @@ const handleKeyDown = (event: KeyboardEvent) => {
 watch(
   () => props.visible,
   (visible) => {
+    // Update store state so overlay knows when modal is open
+    matrixDrawingStore.setModalOpen(visible)
+
     if (visible) {
       document.addEventListener('keydown', handleKeyDown)
       document.body.classList.add('modal-open')
