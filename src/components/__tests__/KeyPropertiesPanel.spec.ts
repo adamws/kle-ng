@@ -400,4 +400,189 @@ describe('KeyPropertiesPanel', () => {
       expect(clearFrontButton.attributes('disabled')).toBeDefined()
     })
   })
+
+  describe('Rotary Encoder Functionality', () => {
+    it('should disable height inputs when rotary encoder is selected', async () => {
+      // Create a rotary encoder key
+      const encoderKey = new Key()
+      encoderKey.sm = 'rot_ec11'
+      encoderKey.width = 2
+      encoderKey.height = 2
+
+      store.keys = [encoderKey]
+      store.selectedKeys = [encoderKey]
+
+      const wrapper = mount(KeyPropertiesPanel, {
+        global: {
+          plugins: [pinia],
+        },
+      })
+
+      await wrapper.vm.$nextTick()
+
+      // Find height inputs and verify they are disabled
+      const heightInputs = wrapper.findAll('input[title="Height"]')
+      expect(heightInputs.length).toBeGreaterThan(0)
+
+      heightInputs.forEach((input) => {
+        expect(input.attributes('disabled')).toBeDefined()
+      })
+
+      // Also check secondary height if in advanced mode
+      const secondaryHeightInput = wrapper.find('input[title="Secondary Height"]')
+      if (secondaryHeightInput.exists()) {
+        expect(secondaryHeightInput.attributes('disabled')).toBeDefined()
+      }
+    })
+
+    it('should synchronize height with width when width changes on rotary encoder', async () => {
+      // Create a rotary encoder key
+      const encoderKey = new Key()
+      encoderKey.sm = 'rot_ec11'
+      encoderKey.width = 1.5
+      encoderKey.height = 1.5
+
+      store.keys = [encoderKey]
+      store.selectedKeys = [encoderKey]
+
+      const wrapper = mount(KeyPropertiesPanel, {
+        global: {
+          plugins: [pinia],
+        },
+      })
+
+      await wrapper.vm.$nextTick()
+
+      // Mock saveState to track when it's called
+      const saveStateSpy = vi.spyOn(store, 'saveState')
+
+      // Find width input and change its value
+      const widthInput = wrapper.find('input[title="Width"]')
+      expect(widthInput.exists()).toBe(true)
+
+      // Simulate width change
+      await widthInput.setValue('2.5')
+      await widthInput.trigger('blur')
+      await wrapper.vm.$nextTick()
+
+      // Verify that height was synchronized with width
+      expect(encoderKey.width).toBe(2.5)
+      expect(encoderKey.height).toBe(2.5)
+      expect(encoderKey.height2).toBe(2.5)
+      expect(saveStateSpy).toHaveBeenCalled()
+    })
+
+    it('should set height equal to width when converting key to rotary encoder', async () => {
+      // Create a normal rectangular key with different width and height
+      const normalKey = new Key()
+      normalKey.width = 2
+      normalKey.height = 1.5
+      normalKey.sm = ''
+
+      store.keys = [normalKey]
+      store.selectedKeys = [normalKey]
+
+      const wrapper = mount(KeyPropertiesPanel, {
+        global: {
+          plugins: [pinia],
+        },
+      })
+
+      await wrapper.vm.$nextTick()
+
+      // Mock saveState
+      const saveStateSpy = vi.spyOn(store, 'saveState')
+
+      // Find the rotary encoder checkbox (switch mount option)
+      const rotaryEncoderCheckbox = wrapper.find('#rotaryEncoderCheck')
+      expect(rotaryEncoderCheckbox.exists()).toBe(true)
+
+      // Enable rotary encoder
+      await rotaryEncoderCheckbox.setValue(true)
+      await wrapper.vm.$nextTick()
+
+      // Verify that height was set to match width
+      expect(normalKey.sm).toBe('rot_ec11')
+      expect(normalKey.width).toBe(2)
+      expect(normalKey.height).toBe(2) // Should be synchronized to width
+      expect(normalKey.height2).toBe(2)
+      expect(saveStateSpy).toHaveBeenCalled()
+    })
+
+    it('should handle non-rectangular keys when converting to rotary encoder', async () => {
+      // Create a non-rectangular key (like ISO Enter)
+      const isoKey = new Key()
+      isoKey.width = 1.25
+      isoKey.height = 2
+      isoKey.width2 = 1.5
+      isoKey.height2 = 1
+      isoKey.x2 = -0.25
+      isoKey.y2 = 0
+      isoKey.sm = ''
+
+      store.keys = [isoKey]
+      store.selectedKeys = [isoKey]
+
+      const wrapper = mount(KeyPropertiesPanel, {
+        global: {
+          plugins: [pinia],
+        },
+      })
+
+      await wrapper.vm.$nextTick()
+
+      // Find the rotary encoder checkbox
+      const rotaryEncoderCheckbox = wrapper.find('#rotaryEncoderCheck')
+      expect(rotaryEncoderCheckbox.exists()).toBe(true)
+
+      // Enable rotary encoder
+      await rotaryEncoderCheckbox.setValue(true)
+      await wrapper.vm.$nextTick()
+
+      // Verify that the key was converted properly
+      expect(isoKey.sm).toBe('rot_ec11')
+      expect(isoKey.x2).toBe(0) // Reset secondary position
+      expect(isoKey.y2).toBe(0)
+      expect(isoKey.width2).toBe(isoKey.width) // Secondary width matches primary
+      expect(isoKey.height).toBe(isoKey.width) // Height matches width
+      expect(isoKey.height2).toBe(isoKey.width) // Secondary height matches width
+    })
+
+    it('should not allow height inputs to be enabled for rotary encoders', async () => {
+      // Create a rotary encoder key
+      const encoderKey = new Key()
+      encoderKey.sm = 'rot_ec11'
+      encoderKey.width = 1.5
+      encoderKey.height = 1.5
+
+      store.keys = [encoderKey]
+      store.selectedKeys = [encoderKey]
+
+      const wrapper = mount(KeyPropertiesPanel, {
+        global: {
+          plugins: [pinia],
+        },
+      })
+
+      await wrapper.vm.$nextTick()
+
+      // Verify height inputs remain disabled
+      const heightInputs = wrapper.findAll('input[title="Height"]')
+      heightInputs.forEach((input) => {
+        expect(input.attributes('disabled')).toBeDefined()
+        expect((input.element as HTMLInputElement).disabled).toBe(true)
+      })
+
+      // Now disable rotary encoder
+      const rotaryEncoderCheckbox = wrapper.find('#rotaryEncoderCheck')
+      await rotaryEncoderCheckbox.setValue(false)
+      await wrapper.vm.$nextTick()
+
+      // Verify height inputs are now enabled
+      const heightInputsAfter = wrapper.findAll('input[title="Height"]')
+      heightInputsAfter.forEach((input) => {
+        expect(input.attributes('disabled')).toBeUndefined()
+      })
+    })
+  })
 })

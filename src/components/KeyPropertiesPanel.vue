@@ -79,6 +79,7 @@
                         :min="0.25"
                         :max="24"
                         title="Height"
+                        :disabled="isRotaryEncoder"
                       />
                     </div>
                   </div>
@@ -252,6 +253,7 @@
                         :min="0.25"
                         :max="24"
                         title="Height"
+                        :disabled="isRotaryEncoder"
                       />
                     </div>
                     <div class="col-3">
@@ -274,6 +276,7 @@
                         :min="0.25"
                         :max="24"
                         title="Secondary Height"
+                        :disabled="isRotaryEncoder"
                       />
                     </div>
                   </div>
@@ -953,6 +956,12 @@ const isNonRectangular = computed(() => {
   return hasNonRectangularProperties
 })
 
+const isRotaryEncoder = computed(() => {
+  if (selectedKeys.value.length === 0) return false
+  const key = selectedKeys.value[0]
+  return key.sm === 'rot_ec11'
+})
+
 // Step property should be disabled for pure 1x1 keys (no secondary dimensions)
 const isSteppedDisabled = computed(() => {
   if (selectedKeys.value.length === 0) return false
@@ -1259,6 +1268,11 @@ const updateWidth = () => {
     if (key.width2 !== undefined && !key.stepped && !key.x2 && !key.y2) {
       key.width2 = currentWidth.value
     }
+    // If key is rotary encoder, update height as well
+    if (key.sm === 'rot_ec11') {
+      key.height = currentWidth.value
+      key.height2 = currentWidth.value
+    }
   })
 
   keyboardStore.saveState()
@@ -1418,6 +1432,13 @@ const updateRotaryEncoder = () => {
 
   selectedKeys.value.forEach((key) => {
     key.sm = currentRotaryEncoder.value ? 'rot_ec11' : ''
+
+    // In case we are converting non-rectangular key like ISO enter:
+    key.x2 = 0
+    key.y2 = 0
+    key.width2 = key.width
+    key.height = key.width
+    key.height2 = key.width
   })
 
   keyboardStore.saveState()
