@@ -161,6 +161,15 @@ test.describe('Single Key Rendering Tests', () => {
 
       await expect(helper.getCanvas()).toHaveScreenshot('options/decal-key.png')
     })
+
+    test('rotary encoder', async () => {
+      await helper.addKey()
+      await helper.setKeyLabel('center', 'Volume')
+      await helper.setKeyOptions({ rotaryEncoder: true })
+      await helper.waitForRender()
+
+      await expect(helper.getCanvas()).toHaveScreenshot('options/rotary-encoder.png')
+    })
   })
 
   test.describe('Key Rotations', () => {

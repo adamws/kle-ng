@@ -250,6 +250,7 @@ export class CanvasTestHelper {
     stepped?: boolean
     nub?: boolean
     decal?: boolean
+    rotaryEncoder?: boolean
   }) {
     if (options.ghost !== undefined) {
       const ghostCheckbox = this.page.locator('#ghostCheck')
@@ -284,6 +285,15 @@ export class CanvasTestHelper {
         await decalCheckbox.check()
       } else {
         await decalCheckbox.uncheck()
+      }
+    }
+
+    if (options.rotaryEncoder !== undefined) {
+      const rotaryEncoderCheckbox = this.page.locator('#rotaryEncoderCheck')
+      if (options.rotaryEncoder) {
+        await rotaryEncoderCheckbox.check()
+      } else {
+        await rotaryEncoderCheckbox.uncheck()
       }
     }
 
