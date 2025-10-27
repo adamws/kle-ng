@@ -420,6 +420,27 @@ test.describe('Single Key Rendering Tests', () => {
       await expect(helper.getCanvas()).toHaveScreenshot('labels/all-9-labels.png')
     })
 
+    test('rotary encoder with all 9 labels', async () => {
+      await helper.addKey()
+
+      // Set all label positions
+      await helper.setKeyLabel('topLeft', 'A')
+      await helper.setKeyLabel('topCenter', 'B')
+      await helper.setKeyLabel('topRight', 'C')
+      await helper.setKeyLabel('centerLeft', 'D')
+      await helper.setKeyLabel('center', 'E')
+      await helper.setKeyLabel('centerRight', 'F')
+      await helper.setKeyLabel('bottomLeft', 'G')
+      await helper.setKeyLabel('bottomCenter', 'H')
+      await helper.setKeyLabel('bottomRight', 'I')
+
+      await helper.setKeyOptions({ rotaryEncoder: true })
+
+      await helper.waitForRender()
+
+      await expect(helper.getCanvas()).toHaveScreenshot('labels/rotary-encoder-all-9-labels.png')
+    })
+
     test('function key with dual labels', async () => {
       await helper.addKey()
       await helper.setKeyLabel('topCenter', 'F1')
