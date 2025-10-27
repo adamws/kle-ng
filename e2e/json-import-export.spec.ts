@@ -446,6 +446,42 @@ test.describe('JSON Import/Export Functionality', () => {
       // Should contain rotation-related properties in the exported content
       expect(exportedContent.includes('"r":')).toBe(true)
     })
+
+    test('should correctly handle rotary encoder property through round-trip', async ({ page }) => {
+      // This targets bug fixed in adamws/kle-serial v0.17.1,
+      // some properties where not deserialized propertly (including 'Switch Mount' which we use to
+      // mark rotary encoder)
+
+      // Import rotary encoder layout
+      const filePath = path.resolve('e2e/fixtures', 'simple-rotary-encoder.json')
+
+      const fileChooserPromise = page.waitForEvent('filechooser')
+      await page.locator('button', { hasText: 'Import' }).click()
+      // Wait for dropdown to be visible
+      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
+      await page.locator('a', { hasText: 'From File' }).click()
+      const fileChooser = await fileChooserPromise
+      await fileChooser.setFiles(filePath)
+
+      await expect(page.locator('.keys-counter')).toContainText('Keys: 3')
+
+      // Export the layout
+      const downloadPromise = page.waitForEvent('download')
+      await page.locator('button', { hasText: 'Export' }).click()
+      await page.locator('a', { hasText: 'Download JSON' }).click()
+
+      const download = await downloadPromise
+      const exportPath = path.resolve('e2e/test-output', 'simple-rotary-encoder-export.json')
+      await download.saveAs(exportPath)
+
+      // Verify that are equal
+      const exportedContent = await fs.readFile(exportPath, 'utf-8')
+      const exportedData = JSON.parse(exportedContent)
+      const importedContent = await fs.readFile(filePath, 'utf-8')
+      const importedData = JSON.parse(importedContent)
+
+      expect(exportedData).toEqual(importedData)
+    })
   })
 
   test.describe('Integration Tests', () => {
