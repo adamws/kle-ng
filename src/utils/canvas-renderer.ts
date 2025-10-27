@@ -83,6 +83,29 @@ const defaultSizes: DefaultSizes = {
   roundInner: 3,
 }
 
+// Label positioning grid matching original KLE (12 positions)
+const labelPositions = [
+  // Top row
+  { align: 'left', baseline: 'hanging' }, // 0: top-left
+  { align: 'center', baseline: 'hanging' }, // 1: top-center
+  { align: 'right', baseline: 'hanging' }, // 2: top-right
+
+  // Center row
+  { align: 'left', baseline: 'middle' }, // 3: center-left
+  { align: 'center', baseline: 'middle' }, // 4: center
+  { align: 'right', baseline: 'middle' }, // 5: center-right
+
+  // Bottom row
+  { align: 'left', baseline: 'alphabetic' }, // 6: bottom-left
+  { align: 'center', baseline: 'alphabetic' }, // 7: bottom-center
+  { align: 'right', baseline: 'alphabetic' }, // 8: bottom-right
+
+  // Front legends (side print)
+  { align: 'left', baseline: 'hanging' }, // 9: front-left
+  { align: 'center', baseline: 'hanging' }, // 10: front-center
+  { align: 'right', baseline: 'hanging' }, // 11: front-right
+]
+
 export class CanvasRenderer {
   private ctx: CanvasRenderingContext2D
   private options: RenderOptions
@@ -1150,7 +1173,11 @@ export class CanvasRenderer {
     }
 
     // Draw text labels
-    this.drawKeyLabels(key, params)
+    if (isRotaryEncoder) {
+      this.drawRotaryEncoderLabels(key, params)
+    } else {
+      this.drawKeyLabels(key, params)
+    }
 
     this.ctx.restore()
   }
@@ -1169,36 +1196,101 @@ export class CanvasRenderer {
     this.ctx.fillRect(centerX - lineWidth / 2, centerY - lineHeight / 2, lineWidth, lineHeight)
   }
 
-  private drawKeyLabels(key: Key, params: KeyRenderParams) {
-    // Label positioning grid matching original KLE (12 positions)
-    const labelPositions = [
-      // Top row
-      { align: 'left', baseline: 'hanging' }, // 0: top-left
-      { align: 'center', baseline: 'hanging' }, // 1: top-center
-      { align: 'right', baseline: 'hanging' }, // 2: top-right
+  private calculateFontSize(key: Key, index: number) {
+    const textSize = key.textSize[index] || key.default.textSize
+    // Font size calculation using linear formula: 6 + (2 * textSize)
+    let fontSize = 6 + 2 * textSize
+    // Front labels (indices 9-11) use smaller font size like in original KLE
+    if (index >= 9) {
+      fontSize = Math.min(10, fontSize * 0.8) // Front labels are smaller
+    }
+    return fontSize
+  }
 
-      // Center row
-      { align: 'left', baseline: 'middle' }, // 3: center-left
-      { align: 'center', baseline: 'middle' }, // 4: center
-      { align: 'right', baseline: 'middle' }, // 5: center-right
-
-      // Bottom row
-      { align: 'left', baseline: 'alphabetic' }, // 6: bottom-left
-      { align: 'center', baseline: 'alphabetic' }, // 7: bottom-center
-      { align: 'right', baseline: 'alphabetic' }, // 8: bottom-right
-
-      // Front legends (side print)
-      { align: 'left', baseline: 'hanging' }, // 9: front-left
-      { align: 'center', baseline: 'hanging' }, // 10: front-center
-      { align: 'right', baseline: 'hanging' }, // 11: front-right
-    ]
-
+  private drawRotaryEncoderLabels(key: Key, params: KeyRenderParams) {
     key.labels.forEach((label, index) => {
       if (!label || index >= labelPositions.length) return
 
       const pos = labelPositions[index]
       const textColor = key.textColor[index] || key.default.textColor
-      const textSize = key.textSize[index] || key.default.textSize
+
+      // Calculate actual position with smart edge distances to prevent overlap
+      let x: number
+      let y: number
+
+      // Fixed margins for labels - should be consistent regardless of key size
+      const fixedHorizontalMargin = 4 // Fixed distance from left/right edges
+      const fixedVerticalMargin = 12 // Fixed distance from top/bottom edges
+
+      if (pos.align === 'left') {
+        // Left-aligned labels use fixed distance from left edge
+        x = params.textcapx + fixedHorizontalMargin
+      } else if (pos.align === 'right') {
+        // Right-aligned labels use fixed distance from right edge
+        x = params.textcapx + params.textcapwidth - fixedHorizontalMargin
+      } else {
+        // Center-aligned labels move proportionally with key width
+        x = params.textcapx + params.textcapwidth * 0.5
+      }
+
+      const fontSize = this.calculateFontSize(key, index)
+
+      // Use font from options or fall back to default
+      const fontFamily = this.options.fontFamily || '"Helvetica Neue", Helvetica, Arial, sans-serif'
+      this.ctx.font = `${fontSize}px ${fontFamily}`
+
+      // Render only top labels (0-8) - rotary encoder has no front face, front labels not supported
+      if (index >= 9) {
+        return // Skip front labels for rotary encoders
+      }
+
+      // Calculate three fixed lines on the key surface
+      const topLine = params.outercapy + fixedVerticalMargin
+      // +1 is a workaround (looks better)
+      const middleLine = params.outercapy + params.outercapwidth * 0.5 + 1
+      const bottomLine = params.outercapy + params.outercapwidth - fixedVerticalMargin
+
+      // Top labels (0-8): Use the appropriate fixed line
+      if (index >= 0 && index <= 2) {
+        y = topLine
+      } else if (index >= 3 && index <= 5) {
+        y = middleLine
+      } else if (index >= 6 && index <= 8) {
+        y = bottomLine
+      } else {
+        // Fallback: middle line
+        y = middleLine
+      }
+
+      this.ctx.fillStyle = textColor
+      this.ctx.textAlign = pos.align as CanvasTextAlign
+      this.ctx.textBaseline = pos.baseline as CanvasTextBaseline
+
+      // Calculate available space for this label
+      const availableWidth = params.innercapwidth
+      const availableHeight = availableWidth
+
+      // Check if label is image-only or SVG-only
+      const isImageOnly = /^<img\s+[^>]+>\s*$/.test(label)
+      const isSvgOnly = /^<svg[^>]*>[\s\S]*?<\/svg>\s*$/.test(label)
+
+      if (isImageOnly || isSvgOnly) {
+        // Image-only label: position based on alignment
+        this.drawImageLabel(label, params, pos, index)
+      } else {
+        // Text or mixed content: use normal text rendering
+        const processedLabel = this.processLabelText(label)
+        this.drawWrappedText(processedLabel, x, y, availableWidth, availableHeight, pos)
+      }
+    })
+  }
+
+  private drawKeyLabels(key: Key, params: KeyRenderParams) {
+    key.labels.forEach((label, index) => {
+      if (!label || index >= labelPositions.length) return
+
+      const pos = labelPositions[index]
+      const textColor = key.textColor[index] || key.default.textColor
 
       // Calculate actual position with smart edge distances to prevent overlap
       let x: number
@@ -1219,13 +1311,7 @@ export class CanvasRenderer {
         x = params.textcapx + params.textcapwidth * 0.5
       }
 
-      // Font size calculation using linear formula: 6 + (2 * textSize)
-      let fontSize = 6 + 2 * textSize
-
-      // Front labels (indices 9-11) use smaller font size like in original KLE
-      if (index >= 9) {
-        fontSize = Math.min(10, fontSize * 0.8) // Front labels are smaller
-      }
+      const fontSize = this.calculateFontSize(key, index)
 
       // Use font from options or fall back to default
       const fontFamily = this.options.fontFamily || '"Helvetica Neue", Helvetica, Arial, sans-serif'
@@ -1260,8 +1346,8 @@ export class CanvasRenderer {
       this.ctx.textBaseline = pos.baseline as CanvasTextBaseline
 
       // Calculate available space for this label
-      const availableWidth = this.calculateAvailableWidth(params)
-      const availableHeight = this.calculateAvailableHeight(params)
+      const availableWidth = params.textcapwidth
+      const availableHeight = params.textcapheight - 2
 
       // Check if label is image-only or SVG-only
       const isImageOnly = /^<img\s+[^>]+>\s*$/.test(label)
@@ -1814,19 +1900,6 @@ export class CanvasRenderer {
       // Don't pass labelBounds for multi-line text - it would position each line incorrectly
       this.drawHtmlText(line, x, lineY)
     })
-  }
-
-  private calculateAvailableWidth(params: KeyRenderParams): number {
-    // Calculate available width - minimal margins to match original KLE behavior
-    // Original KLE allows text very close to key edges for maximum fit
-    const margin = 0
-    return Math.max(0, params.textcapwidth - margin * 2)
-  }
-
-  private calculateAvailableHeight(params: KeyRenderParams): number {
-    // Calculate available height - reduced margins to match original KLE behavior
-    const margin = 1
-    return Math.max(0, params.textcapheight - margin * 2)
   }
 
   private drawWrappedText(
