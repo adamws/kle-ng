@@ -462,7 +462,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
       historyIndex.value = -1
       saveState()
       dirty.value = false
-      resetViewTrigger.value++ // Trigger view reset
+      resetViewTrigger.value++ // Trigger view reset (will preserve zoom, reset pan only)
     } catch (error) {
       console.error('Error loading layout:', error)
       throw error

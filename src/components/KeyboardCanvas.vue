@@ -1500,12 +1500,10 @@ const handleSystemCopy = (event: Event) => {
 }
 
 const resetView = () => {
-  zoom.value = 1
+  // Only reset pan position, preserve zoom level
+  // This allows users to maintain their preferred zoom when loading new layouts
   panX.value = 0
   panY.value = 0
-
-  // Notify external zoom indicator
-  window.dispatchEvent(new CustomEvent('canvas-zoom-update', { detail: zoom.value }))
 
   nextTick(() => {
     updateCanvasSize()
