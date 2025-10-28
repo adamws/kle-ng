@@ -28,8 +28,6 @@ interface Props {
   canvasWidth: number
   canvasHeight: number
   zoom: number
-  panX: number
-  panY: number
   coordinateOffset: { x: number; y: number }
   renderer: CanvasRenderer | null
 }
@@ -116,8 +114,8 @@ const getCanvasPosition = (event: MouseEvent): { x: number; y: number } => {
 
   // Account for zoom, pan, and coordinate offset
   return {
-    x: (screenX - props.panX - props.coordinateOffset.x * props.zoom) / props.zoom,
-    y: (screenY - props.panY - props.coordinateOffset.y * props.zoom) / props.zoom,
+    x: (screenX - props.coordinateOffset.x * props.zoom) / props.zoom,
+    y: (screenY - props.coordinateOffset.y * props.zoom) / props.zoom,
   }
 }
 
@@ -766,8 +764,8 @@ const renderCanvas = () => {
     0,
     0,
     props.zoom,
-    props.panX + props.coordinateOffset.x * props.zoom,
-    props.panY + props.coordinateOffset.y * props.zoom,
+    props.coordinateOffset.x * props.zoom,
+    props.coordinateOffset.y * props.zoom,
   )
 
   // Render completed drawn rows (blue)
@@ -1157,7 +1155,7 @@ const renderHoveredColumn = (keys: Key[]) => {
 
 // Watch for canvas property changes
 watch(
-  () => [props.canvasWidth, props.canvasHeight, props.zoom, props.panX, props.panY],
+  () => [props.canvasWidth, props.canvasHeight, props.zoom],
   () => {
     nextTick(() => {
       renderCanvas()

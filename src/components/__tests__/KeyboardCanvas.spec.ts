@@ -141,7 +141,7 @@ describe('KeyboardCanvas', () => {
 
       await wrapper.vm.$nextTick()
 
-      // Simulate zoom and pan (these are internal state, so we test the behavior indirectly)
+      // Simulate zoom (these are internal state, so we test the behavior indirectly)
       const canvas = wrapper.find('canvas').element
 
       // First trigger mouse enter to enable position tracking

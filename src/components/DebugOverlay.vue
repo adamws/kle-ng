@@ -18,8 +18,6 @@ interface Props {
   canvasWidth: number
   canvasHeight: number
   zoom: number
-  panX: number
-  panY: number
   coordinateOffset: { x: number; y: number }
 }
 
@@ -89,8 +87,8 @@ const renderDebugMarkers = () => {
     0,
     0,
     props.zoom,
-    props.panX + coordinateOffsetX * props.zoom,
-    props.panY + coordinateOffsetY * props.zoom,
+    coordinateOffsetX * props.zoom,
+    coordinateOffsetY * props.zoom,
   )
 
   // Draw debug line if present
@@ -286,14 +284,7 @@ const clearDebugMarkers = () => {
 
 // Watch for changes that require re-rendering
 watch(
-  [
-    () => props.zoom,
-    () => props.panX,
-    () => props.panY,
-    () => props.canvasWidth,
-    () => props.canvasHeight,
-    () => keyboardStore.keys,
-  ],
+  [() => props.zoom, () => props.canvasWidth, () => props.canvasHeight, () => keyboardStore.keys],
   () => {
     if (debugOptions.value || debugLine.value) {
       nextTick(() => {

@@ -37,8 +37,6 @@
       :canvasWidth="canvasWidth"
       :canvasHeight="canvasHeight"
       :zoom="zoom"
-      :panX="panX"
-      :panY="panY"
       :coordinateOffset="getCoordinateSystemOffset()"
       :renderer="renderer || null"
     />
@@ -51,8 +49,6 @@
       :canvasWidth="canvasWidth"
       :canvasHeight="canvasHeight"
       :zoom="zoom"
-      :panX="panX"
-      :panY="panY"
       :coordinateOffset="getCoordinateSystemOffset()"
     />
 
@@ -159,8 +155,6 @@ const dragCoordinateOffset = ref<{ x: number; y: number } | null>(null)
 // Rotation points interaction state
 const hoveredRotationPointId = ref<string | null>(null)
 
-const panX = ref(0)
-const panY = ref(0)
 const zoom = ref(1)
 
 const rectSelectionOccurred = ref(false)
@@ -729,8 +723,8 @@ const renderKeyboard = () => {
         0,
         0,
         zoom.value,
-        panX.value + coordinateOffset.x * zoom.value,
-        panY.value + coordinateOffset.y * zoom.value,
+        coordinateOffset.x * zoom.value,
+        coordinateOffset.y * zoom.value,
       )
 
       // During rectangle selection, show tempSelectedKeys for dynamic highlighting
@@ -790,8 +784,8 @@ const getCanvasPosition = (event: MouseEvent) => {
   const coordinateOffset = dragCoordinateOffset.value || getCoordinateSystemOffset()
 
   return {
-    x: D.div(D.sub(screenX, D.add(panX.value, D.mul(coordinateOffset.x, zoom.value))), zoom.value),
-    y: D.div(D.sub(screenY, D.add(panY.value, D.mul(coordinateOffset.y, zoom.value))), zoom.value),
+    x: D.div(D.sub(screenX, D.mul(coordinateOffset.x, zoom.value)), zoom.value),
+    y: D.div(D.sub(screenY, D.mul(coordinateOffset.y, zoom.value)), zoom.value),
   }
 }
 
@@ -1463,8 +1457,6 @@ const handleExternalZoom = (event: Event) => {
 
 const handleExternalResetView = () => {
   zoom.value = 1
-  panX.value = 0
-  panY.value = 0
   nextTick(() => {
     updateCanvasSize()
     nextTick(() => {
@@ -1500,11 +1492,6 @@ const handleSystemCopy = (event: Event) => {
 }
 
 const resetView = () => {
-  // Only reset pan position, preserve zoom level
-  // This allows users to maintain their preferred zoom when loading new layouts
-  panX.value = 0
-  panY.value = 0
-
   nextTick(() => {
     updateCanvasSize()
     nextTick(() => {
