@@ -1,6 +1,6 @@
 import * as LZString from 'lz-string'
-import { Serial, Keyboard } from '@ijprest/kle-serial'
-import type { KeyboardMetadata, Key } from '@ijprest/kle-serial'
+import { Serial, Keyboard } from '@adamws/kle-serial'
+import type { KeyboardMetadata, Key } from '@adamws/kle-serial'
 
 export interface LayoutData {
   keys: Key[]

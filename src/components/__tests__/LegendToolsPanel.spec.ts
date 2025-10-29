@@ -3,7 +3,7 @@ import { mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import LegendToolsPanel from '../LegendToolsPanel.vue'
 import { useKeyboardStore } from '@/stores/keyboard'
-import { Key } from '@ijprest/kle-serial'
+import { Key } from '@adamws/kle-serial'
 
 describe('LegendToolsPanel', () => {
   let wrapper: VueWrapper

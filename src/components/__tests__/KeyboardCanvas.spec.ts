@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import { Key } from '@ijprest/kle-serial'
+import { Key } from '@adamws/kle-serial'
 import KeyboardCanvas from '../KeyboardCanvas.vue'
 import { useKeyboardStore } from '@/stores/keyboard'
 

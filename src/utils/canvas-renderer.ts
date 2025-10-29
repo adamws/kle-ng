@@ -1,4 +1,4 @@
-import type { Key, KeyboardMetadata } from '@ijprest/kle-serial'
+import type { Key, KeyboardMetadata } from '@adamws/kle-serial'
 import { D } from './decimal-math'
 import polygonClippingLib from 'polygon-clipping'
 import { parseBorderRadius, createRoundedRectanglePath } from './border-radius'

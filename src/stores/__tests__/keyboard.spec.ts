@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useKeyboardStore } from '../keyboard'
-import { Key, Keyboard, KeyboardMetadata } from '@ijprest/kle-serial'
+import { Key, Keyboard, KeyboardMetadata } from '@adamws/kle-serial'
 
 describe('Keyboard Store', () => {
   let store: ReturnType<typeof useKeyboardStore>

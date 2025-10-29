@@ -3,7 +3,7 @@ import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import KeyPropertiesPanel from '../KeyPropertiesPanel.vue'
 import { useKeyboardStore } from '@/stores/keyboard'
-import { Key } from '@ijprest/kle-serial'
+import { Key } from '@adamws/kle-serial'
 
 // Mock localStorage
 const localStorageMock = {

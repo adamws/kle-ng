@@ -10,7 +10,7 @@ import {
   fetchGistLayout,
   clearGistFromUrl,
 } from '../url-sharing'
-import { Key, KeyboardMetadata } from '@ijprest/kle-serial'
+import { Key, KeyboardMetadata } from '@adamws/kle-serial'
 import type { LayoutData } from '../url-sharing'
 
 // Mock window.location

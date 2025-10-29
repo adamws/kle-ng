@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import type { Ref } from 'vue'
 import { ref, computed } from 'vue'
-import { Key, KeyboardMetadata, Keyboard, Serial } from '@ijprest/kle-serial'
+import { Key, KeyboardMetadata, Keyboard, Serial } from '@adamws/kle-serial'
 import { D } from '../utils/decimal-math'
 import { toast } from '../composables/useToast'
 import {
@@ -17,7 +17,7 @@ import {
 import type { LayoutData } from '../utils/url-sharing'
 import { useFontStore } from './font'
 
-export { Key, KeyboardMetadata } from '@ijprest/kle-serial'
+export { Key, KeyboardMetadata } from '@adamws/kle-serial'
 
 // localStorage key for persisting lock rotations setting
 const LOCK_ROTATIONS_KEY = 'kle-ng-lock-rotations'

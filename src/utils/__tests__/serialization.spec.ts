@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { parseJsonString } from '../serialization'
-import { Serial, Key, Keyboard } from '@ijprest/kle-serial'
+import { Serial, Key, Keyboard } from '@adamws/kle-serial'
 
 describe('Serialization Utils', () => {
   describe('parseJsonString', () => {

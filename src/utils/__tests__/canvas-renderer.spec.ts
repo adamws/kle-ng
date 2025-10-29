@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { CanvasRenderer } from '../canvas-renderer'
-import { Key, KeyboardMetadata } from '@ijprest/kle-serial'
+import { Key, KeyboardMetadata } from '@adamws/kle-serial'
 
 // Mock Path2D constructor and methods for Node.js environment
 global.Path2D = vi.fn().mockImplementation(() => ({

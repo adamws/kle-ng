@@ -494,7 +494,7 @@ describe('png-metadata', () => {
       expect((props1.fa as unknown[]).length).toBe(1) // Only '2' remains
 
       // Most importantly: verify it can be deserialized by KLE
-      const { Serial } = await import('@ijprest/kle-serial')
+      const { Serial } = await import('@adamws/kle-serial')
       expect(() => {
         Serial.deserialize(extractedLayout as Array<unknown>)
       }).not.toThrow()
