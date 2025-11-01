@@ -530,7 +530,7 @@ const acceptWarning = () => {
 
   // Remove all legends from all keys
   keyboardStore.keys.forEach((key) => {
-    key.labels = []
+    key.labels[0] = ''
   })
 
   step.value = 'draw'
@@ -602,16 +602,16 @@ const applyCoordinatesToKeys = () => {
     // Build label based on what's assigned
     if (rowIndex !== undefined && colIndex !== undefined) {
       // Both row and column assigned: "row,col"
-      key.labels = [`${rowIndex},${colIndex}`]
+      key.labels[0] = `${rowIndex},${colIndex}`
     } else if (rowIndex !== undefined) {
       // Only row assigned: "row,"
-      key.labels = [`${rowIndex},`]
+      key.labels[0] = `${rowIndex},`
     } else if (colIndex !== undefined) {
       // Only column assigned: ",col"
-      key.labels = [`,${colIndex}`]
+      key.labels[0] = `,${colIndex}`
     } else {
       // No assignment: clear label
-      key.labels = []
+      key.labels[0] = ''
     }
   })
 }

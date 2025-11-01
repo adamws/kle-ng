@@ -44,7 +44,7 @@ describe('Keyboard Store', () => {
         y: 2,
         width: 1.5,
         color: '#ff0000',
-        labels: ['', '', '', '', 'Test'],
+        labels: ['', '', '', '', 'Test', '', '', '', '', '', '', ''],
       })
 
       const key = store.keys[0]
@@ -238,12 +238,12 @@ describe('Keyboard Store', () => {
       store.addKey({
         x: 0,
         y: 0,
-        labels: ['', '', '', '', 'A'],
+        labels: ['', '', '', '', 'A', '', '', '', '', '', '', ''],
       })
       store.addKey({
         x: 1,
         y: 0,
-        labels: ['', '', '', '', 'B'],
+        labels: ['', '', '', '', 'B', '', '', '', '', '', '', ''],
       })
     })
 
@@ -391,10 +391,10 @@ describe('Keyboard Store', () => {
     it('should load internal format layout', () => {
       const layout = {
         keys: [new Key()],
-        metadata: { ...new KeyboardMetadata(), name: 'Internal Layout' },
+        meta: { ...new KeyboardMetadata(), name: 'Internal Layout' },
       }
 
-      store.loadLayout(layout)
+      store.loadKeyboard(layout)
 
       expect(store.keys).toHaveLength(1)
       expect(store.metadata.name).toBe('Internal Layout')
@@ -413,8 +413,20 @@ describe('Keyboard Store', () => {
 
   describe('mirror operations', () => {
     beforeEach(() => {
-      store.addKey({ x: 0, y: 0, width: 1, height: 1, labels: ['', '', '', '', 'A'] })
-      store.addKey({ x: 2, y: 1, width: 1, height: 1, labels: ['', '', '', '', 'B'] })
+      store.addKey({
+        x: 0,
+        y: 0,
+        width: 1,
+        height: 1,
+        labels: ['', '', '', '', 'A', '', '', '', '', '', '', ''],
+      })
+      store.addKey({
+        x: 2,
+        y: 1,
+        width: 1,
+        height: 1,
+        labels: ['', '', '', '', 'B', '', '', '', '', '', '', ''],
+      })
       store.selectAll()
     })
 
@@ -493,7 +505,7 @@ describe('Keyboard Store', () => {
       rotatedKey.rotation_angle = 45
       rotatedKey.rotation_x = 1.5
       rotatedKey.rotation_y = 1.5
-      rotatedKey.labels = ['', '', '', '', 'Rotated']
+      rotatedKey.labels = ['', '', '', '', 'Rotated', '', '', '', '', '', '', '']
 
       store.keys.push(rotatedKey)
       store.selectKey(rotatedKey)
@@ -523,7 +535,7 @@ describe('Keyboard Store', () => {
       rotatedKey.rotation_angle = 30
       rotatedKey.rotation_x = 1.5
       rotatedKey.rotation_y = 1.5
-      rotatedKey.labels = ['', '', '', '', 'Rotated']
+      rotatedKey.labels = ['', '', '', '', 'Rotated', '', '', '', '', '', '', '']
 
       store.keys.push(rotatedKey)
       store.selectKey(rotatedKey)
@@ -554,7 +566,7 @@ describe('Keyboard Store', () => {
       // Set rotation_x and rotation_y to undefined (Key constructor sets them to 0)
       delete (rotatedKey as unknown as Record<string, unknown>).rotation_x
       delete (rotatedKey as unknown as Record<string, unknown>).rotation_y
-      rotatedKey.labels = ['', '', '', '', 'Rotated']
+      rotatedKey.labels = ['', '', '', '', 'Rotated', '', '', '', '', '', '', '']
 
       store.keys.push(rotatedKey)
       store.selectKey(rotatedKey)
@@ -581,7 +593,7 @@ describe('Keyboard Store', () => {
       key.rotation_angle = 0
       key.rotation_x = 1.5
       key.rotation_y = 1.5
-      key.labels = ['', '', '', '', 'ZeroRotation']
+      key.labels = ['', '', '', '', 'ZeroRotation', '', '', '', '', '', '', '']
 
       store.keys.push(key)
       store.selectKey(key)
@@ -645,7 +657,13 @@ describe('Keyboard Store', () => {
 
     it('should allow negative coordinates in mirrored keys', () => {
       // Add a key very close to axis
-      store.addKey({ x: 0.1, y: 0.1, width: 1, height: 1, labels: ['', '', '', '', 'Edge'] })
+      store.addKey({
+        x: 0.1,
+        y: 0.1,
+        width: 1,
+        height: 1,
+        labels: ['', '', '', '', 'Edge', '', '', '', '', '', '', ''],
+      })
       store.selectAll()
 
       // Set mirror axis that would create negative coordinates (convert to canvas coordinates)
@@ -672,7 +690,7 @@ describe('Keyboard Store', () => {
       key.y = 0
       key.width = 1
       key.height = 1
-      key.labels = ['TEST']
+      key.labels = ['TEST', '', '', '', '', '', '', '', '', '', '', '']
       store.keys.push(key)
       expect(store.keys.length).toBe(1)
 
@@ -749,7 +767,7 @@ describe('Keyboard Store', () => {
         y: 1,
         width: 1,
         height: 1,
-        labels: ['', '', '', '', 'R'],
+        labels: ['', '', '', '', 'R', '', '', '', '', '', '', ''],
         rotation_angle: 45,
         rotation_x: 0.5,
         rotation_y: 0.5,
@@ -791,7 +809,7 @@ describe('Keyboard Store', () => {
         y: 0,
         width: 1,
         height: 1,
-        labels: ['', '', '', '', 'T'],
+        labels: ['', '', '', '', 'T', '', '', '', '', '', '', ''],
         rotation_angle: 90, // 90 degree rotation
         rotation_x: 0.5,
         rotation_y: 0.5,
@@ -835,7 +853,13 @@ describe('Keyboard Store', () => {
       store.keys = []
 
       // Add a key at a non-grid position
-      store.addKey({ x: 0.375, y: 0.125, width: 1, height: 1, labels: ['', '', '', '', 'A'] })
+      store.addKey({
+        x: 0.375,
+        y: 0.125,
+        width: 1,
+        height: 1,
+        labels: ['', '', '', '', 'A', '', '', '', '', '', '', ''],
+      })
       const key = store.keys[0]
 
       // Set move step to 0.25
@@ -869,7 +893,13 @@ describe('Keyboard Store', () => {
       store.keys = []
 
       // Add a key at position close to zero
-      store.addKey({ x: 0.125, y: 0.125, width: 1, height: 1, labels: ['', '', '', '', 'B'] })
+      store.addKey({
+        x: 0.125,
+        y: 0.125,
+        width: 1,
+        height: 1,
+        labels: ['', '', '', '', 'B', '', '', '', '', '', '', ''],
+      })
       const key = store.keys[0]
 
       // Set move step to 0.25
@@ -897,7 +927,7 @@ describe('Keyboard Store', () => {
   describe('serialization', () => {
     beforeEach(() => {
       store.addKey({
-        labels: ['', '', '', '', 'A'],
+        labels: ['', '', '', '', 'A', '', '', '', '', '', '', ''],
       })
     })
 

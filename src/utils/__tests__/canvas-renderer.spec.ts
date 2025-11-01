@@ -108,8 +108,8 @@ describe('CanvasRenderer', () => {
         ...new Key(),
         x: 1,
         y: 1,
-        labels: ['', '', '', '', 'A'],
-      }
+        labels: ['', '', '', '', 'A', '', '', '', '', '', '', ''],
+      } as Key
       const keys = [key]
       const selectedKeys: Key[] = []
       const metadata = new KeyboardMetadata()
@@ -172,8 +172,8 @@ describe('CanvasRenderer', () => {
       const key = {
         ...new Key(),
         decal: true,
-        labels: ['', '', '', '', 'LED'],
-      }
+        labels: ['', '', '', '', 'LED', '', '', '', '', '', '', ''],
+      } as Key
       const keys = [key]
       const selectedKeys: Key[] = []
       const metadata = new KeyboardMetadata()
@@ -193,8 +193,8 @@ describe('CanvasRenderer', () => {
       const key = {
         ...new Key(),
         decal: true,
-        labels: ['', '', '', '', 'LED'],
-      }
+        labels: ['', '', '', '', 'LED', '', '', '', '', '', '', ''],
+      } as Key
       const keys = [key]
       const selectedKeys = [key] // Key is selected
       const metadata = new KeyboardMetadata()
@@ -216,9 +216,9 @@ describe('CanvasRenderer', () => {
         x: 0,
         y: 0,
         width: 1, // 1u key
-        labels: ['Q', '', 'W', 'A', '', 'D'], // left, center, right labels
+        labels: ['Q', '', 'W', 'A', '', 'D', '', '', '', '', '', ''], // left, center, right labels
         textSize: [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3], // size 3 text
-      }
+      } as Key
       const keys = [smallKey]
       const metadata = new KeyboardMetadata()
 
@@ -243,9 +243,9 @@ describe('CanvasRenderer', () => {
         x: 0,
         y: 0,
         width: 2.5, // 2.5u key
-        labels: ['Q', '', 'W', 'A', '', 'D'], // left, center, right labels
+        labels: ['Q', '', 'W', 'A', '', 'D', '', '', '', '', '', ''], // left, center, right labels
         textSize: [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
-      }
+      } as Key
       const keys = [largeKey]
       const metadata = new KeyboardMetadata()
 
@@ -262,7 +262,7 @@ describe('CanvasRenderer', () => {
         y: 0,
         labels: ['', '', '', '', '', '', '', '', '', 'F1', 'F2', 'F3'], // front labels at indices 9-11
         textSize: [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3], // size 3 text
-      }
+      } as Key
       const keys = [key]
       const metadata = new KeyboardMetadata()
 
@@ -389,8 +389,8 @@ describe('CanvasRenderer', () => {
         height2: 1,
         x2: -0.75,
         y2: 1,
-        labels: ['', '', '', '', 'Enter'],
-      }
+        labels: ['', '', '', '', 'Enter', '', '', '', '', '', '', ''],
+      } as Key
       const keys = [bigAssEnterKey]
       const selectedKeys: Key[] = []
       const metadata = new KeyboardMetadata()
@@ -418,8 +418,8 @@ describe('CanvasRenderer', () => {
         height2: 1,
         x2: -0.25,
         y2: 0,
-        labels: ['', '', '', '', 'ISO Enter'],
-      }
+        labels: ['', '', '', '', 'ISO Enter', '', '', '', '', '', '', ''],
+      } as Key
       const keys = [isoEnterKey]
       const selectedKeys: Key[] = []
       const metadata = new KeyboardMetadata()
@@ -450,7 +450,7 @@ describe('CanvasRenderer', () => {
         height: 1,
         labels: ['Delete', '', '', '', '', '', '', '', '', '', '', ''],
         textSize: [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
-      }
+      } as Key
       const keys = [deleteKey]
       const selectedKeys: Key[] = []
       const metadata = new KeyboardMetadata()
@@ -671,16 +671,16 @@ describe('CanvasRenderer', () => {
         x: 0,
         y: 0,
         color: '#cc0000',
-        labels: ['', '', '', '', 'A'],
-      }
+        labels: ['', '', '', '', 'A', '', '', '', '', '', '', ''],
+      } as Key
 
       const key2 = {
         ...new Key(),
         x: 0.5,
         y: 0,
         color: '#0000cc',
-        labels: ['', '', '', '', 'B'],
-      }
+        labels: ['', '', '', '', 'B', '', '', '', '', '', '', ''],
+      } as Key
 
       const keys = [key1, key2]
       const selectedKeys = [key2] // Only key2 is selected
@@ -702,8 +702,8 @@ describe('CanvasRenderer', () => {
         x: 0,
         y: 0,
         color: '#cc0000',
-        labels: ['', '', '', '', 'A'],
-      }
+        labels: ['', '', '', '', 'A', '', '', '', '', '', '', ''],
+      } as Key
 
       const keys = [key1]
       const selectedKeys: Key[] = [] // No selection
@@ -730,8 +730,8 @@ describe('CanvasRenderer', () => {
         x: 0,
         y: 0,
         width: 1, // Small key (54px wide in real units)
-        labels: ['', '', '', '', 'Very Long Label Text'],
-      }
+        labels: ['', '', '', '', 'Very Long Label Text', '', '', '', '', '', '', ''],
+      } as Key
 
       const keys = [keyWithLongLabel]
       const selectedKeys: Key[] = []
@@ -773,8 +773,8 @@ describe('CanvasRenderer', () => {
         x: 0,
         y: 0,
         width: 0.75, // Very small key
-        labels: ['', '', '', '', 'Supercalifragilisticexpialidocious'], // Single very long word
-      }
+        labels: ['', '', '', '', 'Supercalifragilisticexpialidocious', '', '', '', '', '', '', ''], // Single very long word
+      } as Key
 
       const keys = [keyWithVeryLongWord]
       const selectedKeys: Key[] = []

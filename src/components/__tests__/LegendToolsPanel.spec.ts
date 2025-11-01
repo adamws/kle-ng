@@ -215,34 +215,8 @@ describe('LegendToolsPanel', () => {
     it('moves legend from one position to another', async () => {
       const key = new Key()
       key.labels = ['A', '', '', '', '', '', '', '', '', '', '', '']
-      key.textColor = [
-        '#ff0000',
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-      ]
-      key.textSize = [
-        5,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-      ]
+      key.textColor = ['#ff0000', '', '', '', '', '', '', '', '', '', '', '']
+      key.textSize = [5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
       key.decal = false
 
       store.keys = [key]
@@ -268,9 +242,9 @@ describe('LegendToolsPanel', () => {
       // Legend and formatting should move
       expect(key.labels[0]).toBe('')
       expect(key.labels[1]).toBe('A')
-      expect(key.textColor[0]).toBeUndefined()
+      expect(key.textColor[0]).toBe('')
       expect(key.textColor[1]).toBe('#ff0000')
-      expect(key.textSize[0]).toBeUndefined()
+      expect(key.textSize[0]).toBe(0)
       expect(key.textSize[1]).toBe(5)
     })
   })

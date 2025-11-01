@@ -1419,7 +1419,7 @@ const handleDrop = async (event: DragEvent) => {
       if (isInternalKleFormat(data)) {
         // Internal KLE format with meta and keys
         console.log(`Loading internal KLE format from dropped file: ${file.name}`)
-        keyboardStore.loadLayout(data.keys, data.meta)
+        keyboardStore.loadKeyboard(data)
         toast.showSuccess(`Internal KLE layout loaded from ${file.name}`, 'Import Successful')
       } else {
         // Raw KLE format (array-based)

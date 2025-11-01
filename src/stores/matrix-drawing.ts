@@ -484,13 +484,13 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
 
     // Update label based on what's assigned
     if (row !== null && col !== null) {
-      key.labels = [`${row},${col}`]
+      key.labels[0] = `${row},${col}`
     } else if (row !== null && col === null) {
-      key.labels = [`${row},`]
+      key.labels[0] = `${row},`
     } else if (row === null && col !== null) {
-      key.labels = [`,${col}`]
+      key.labels[0] = `,${col}`
     } else {
-      key.labels = []
+      key.labels[0] = ''
     }
   }
 

@@ -1197,7 +1197,8 @@ export class CanvasRenderer {
   }
 
   private calculateFontSize(key: Key, index: number) {
-    const textSize = key.textSize[index] || key.default.textSize
+    const ts = key.textSize[index]
+    const textSize = typeof ts === 'number' && ts > 0 ? ts : key.default.textSize
     // Font size calculation using linear formula: 6 + (2 * textSize)
     let fontSize = 6 + 2 * textSize
     // Front labels (indices 9-11) use smaller font size like in original KLE

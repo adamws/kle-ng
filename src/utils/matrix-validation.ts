@@ -6,7 +6,8 @@ import type { Key } from '@/stores/keyboard'
  * Returns { row: number, col: number } or null if not assigned
  */
 export function parseMatrixCoordinates(key: Key): { row: number | null; col: number | null } {
-  if (!key.labels || key.labels.length === 0 || !key.labels[0]) {
+  // labels is always a 12-element array, just check if first label is empty
+  if (!key.labels[0]) {
     return { row: null, col: null }
   }
 

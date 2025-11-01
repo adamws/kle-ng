@@ -13,7 +13,7 @@
   "keys": [
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "MACRO"],
+      "labels": ["", "", "", "", "MACRO"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -42,7 +42,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "TERMINAL"],
+      "labels": ["", "", "", "", "TERMINAL"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -71,7 +71,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "QUOTE"],
+      "labels": ["", "", "", "", "QUOTE"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -100,7 +100,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "OVER<BR>STRIKE"],
+      "labels": ["", "", "", "", "OVER<BR>STRIKE"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -129,7 +129,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "CLEAR<br>INPUT"],
+      "labels": ["", "", "", "", "CLEAR<br>INPUT"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -158,7 +158,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "CLEAR<br>SCREEN"],
+      "labels": ["", "", "", "", "CLEAR<br>SCREEN"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -187,7 +187,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "HOLD<br>OUTPUT"],
+      "labels": ["", "", "", "", "HOLD<br>OUTPUT"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -216,7 +216,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "STOP<br>OUTPUT"],
+      "labels": ["", "", "", "", "STOP<br>OUTPUT"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -245,7 +245,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "ABORT"],
+      "labels": ["", "", "", "", "ABORT"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -274,7 +274,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "BREAK"],
+      "labels": ["", "", "", "", "BREAK"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -303,7 +303,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "RESUME"],
+      "labels": ["", "", "", "", "RESUME"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -332,7 +332,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "CALL"],
+      "labels": ["", "", "", "", "CALL"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -361,7 +361,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, null, null, null, "Ⅰ"],
+      "labels": ["", "", "", "", "Ⅰ"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -390,7 +390,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, null, null, null, "Ⅱ"],
+      "labels": ["", "", "", "", "Ⅱ"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -419,7 +419,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "SYSTEM"],
+      "labels": ["", "", "", "", "SYSTEM"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -448,7 +448,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "±", null, null, null, null, null, ":"],
+      "labels": ["", "±", "", "", "", "", "", ":"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -477,7 +477,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "!", null, null, null, null, null, "1"],
+      "labels": ["", "!", "", "", "", "", "", "1"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -506,7 +506,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "@", null, null, null, null, null, "2"],
+      "labels": ["", "@", "", "", "", "", "", "2"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -535,7 +535,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "#", null, null, null, null, null, "3"],
+      "labels": ["", "#", "", "", "", "", "", "3"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -564,7 +564,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "$", null, null, null, null, null, "4"],
+      "labels": ["", "$", "", "", "", "", "", "4"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -593,7 +593,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "%", null, null, null, null, null, "5"],
+      "labels": ["", "%", "", "", "", "", "", "5"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -622,7 +622,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "^", null, null, null, null, null, "6"],
+      "labels": ["", "^", "", "", "", "", "", "6"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -651,7 +651,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "&", null, null, null, null, null, "7"],
+      "labels": ["", "&", "", "", "", "", "", "7"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -680,7 +680,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "*", null, null, null, null, null, "8"],
+      "labels": ["", "*", "", "", "", "", "", "8"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -709,7 +709,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "(", null, null, null, null, null, "9"],
+      "labels": ["", "(", "", "", "", "", "", "9"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -738,7 +738,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, ")", null, null, null, null, null, "0"],
+      "labels": ["", ")", "", "", "", "", "", "0"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -767,7 +767,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "—", null, null, null, null, null, "–"],
+      "labels": ["", "—", "", "", "", "", "", "–"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -796,7 +796,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "+", null, null, null, null, null, "="],
+      "labels": ["", "+", "", "", "", "", "", "="],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -825,7 +825,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "<", null, null, null, null, null, "{"],
+      "labels": ["", "<", "", "", "", "", "", "{"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -854,7 +854,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, ">", null, null, null, null, null, "}"],
+      "labels": ["", ">", "", "", "", "", "", "}"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -883,7 +883,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "STATUS"],
+      "labels": ["", "", "", "", "STATUS"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -912,7 +912,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, null, null, null, "☝"],
+      "labels": ["", "", "", "", "☝"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -941,7 +941,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, null, null, null, "☟"],
+      "labels": ["", "", "", "", "☟"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -970,7 +970,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, null, null, null, "Ⅲ"],
+      "labels": ["", "", "", "", "Ⅲ"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -999,7 +999,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, null, null, null, "Ⅳ"],
+      "labels": ["", "", "", "", "Ⅳ"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1028,7 +1028,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "NETWORK"],
+      "labels": ["", "", "", "", "NETWORK"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1057,7 +1057,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "TAB"],
+      "labels": ["", "", "", "", "TAB"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1086,7 +1086,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "∧", null, null, null, null, null, "Q"],
+      "labels": ["", "∧", "", "", "", "", "", "Q"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1115,7 +1115,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "∨", null, null, null, null, null, "W"],
+      "labels": ["", "∨", "", "", "", "", "", "W"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1144,7 +1144,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "∩", null, null, null, null, null, "E"],
+      "labels": ["", "∩", "", "", "", "", "", "E"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1173,7 +1173,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "∪", null, null, null, null, null, "R"],
+      "labels": ["", "∪", "", "", "", "", "", "R"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1202,7 +1202,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "⊂", null, null, null, null, null, "T"],
+      "labels": ["", "⊂", "", "", "", "", "", "T"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1231,7 +1231,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "⊃", null, null, null, null, null, "Y"],
+      "labels": ["", "⊃", "", "", "", "", "", "Y"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1260,7 +1260,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "∀", null, null, null, null, null, "U"],
+      "labels": ["", "∀", "", "", "", "", "", "U"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1289,7 +1289,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "∞", null, null, null, null, null, "I"],
+      "labels": ["", "∞", "", "", "", "", "", "I"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1318,7 +1318,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "∃", null, null, null, null, null, "O"],
+      "labels": ["", "∃", "", "", "", "", "", "O"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1347,7 +1347,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "∂", null, null, null, null, null, "P"],
+      "labels": ["", "∂", "", "", "", "", "", "P"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1376,7 +1376,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "[", null, null, null, null, null, "("],
+      "labels": ["", "[", "", "", "", "", "", "("],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1405,7 +1405,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "]", null, null, null, null, null, ")"],
+      "labels": ["", "]", "", "", "", "", "", ")"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1434,7 +1434,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "~", null, null, null, null, null, "`"],
+      "labels": ["", "~", "", "", "", "", "", "`"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1463,7 +1463,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "|", null, null, null, null, null, "\\"],
+      "labels": ["", "|", "", "", "", "", "", "\\"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1492,7 +1492,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "DELETE"],
+      "labels": ["", "", "", "", "DELETE"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1521,7 +1521,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, null, null, null, "☜"],
+      "labels": ["", "", "", "", "☜"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1550,7 +1550,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, null, null, null, "☞"],
+      "labels": ["", "", "", "", "☞"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1579,7 +1579,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "MODE<br>LOCK"],
+      "labels": ["", "", "", "", "MODE<br>LOCK"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1608,7 +1608,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "ALT MODE"],
+      "labels": ["", "", "", "", "ALT MODE"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1637,7 +1637,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "RUB OUT"],
+      "labels": ["", "", "", "", "RUB OUT"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1666,7 +1666,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "⊤", null, null, null, null, null, "A"],
+      "labels": ["", "⊤", "", "", "", "", "", "A"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1695,7 +1695,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "⊣", null, null, null, null, null, "S"],
+      "labels": ["", "⊣", "", "", "", "", "", "S"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1724,7 +1724,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "⊢", null, null, null, null, null, "D"],
+      "labels": ["", "⊢", "", "", "", "", "", "D"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1753,7 +1753,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "⊥", null, null, null, null, null, "F"],
+      "labels": ["", "⊥", "", "", "", "", "", "F"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1782,7 +1782,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "↑", null, null, null, null, null, "G"],
+      "labels": ["", "↑", "", "", "", "", "", "G"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1811,7 +1811,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "↓", null, null, null, null, null, "H"],
+      "labels": ["", "↓", "", "", "", "", "", "H"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1840,7 +1840,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "←", null, null, null, null, null, "J"],
+      "labels": ["", "←", "", "", "", "", "", "J"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1869,7 +1869,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "→", null, null, null, null, null, "K"],
+      "labels": ["", "→", "", "", "", "", "", "K"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1898,7 +1898,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "↔", null, null, null, null, null, "L"],
+      "labels": ["", "↔", "", "", "", "", "", "L"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1927,7 +1927,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, ":", null, null, null, null, null, ";"],
+      "labels": ["", ":", "", "", "", "", "", ";"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1956,7 +1956,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "\"", null, null, null, null, null, "'"],
+      "labels": ["", "\"", "", "", "", "", "", "'"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1985,7 +1985,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "RETURN"],
+      "labels": ["", "", "", "", "RETURN"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2014,7 +2014,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "LINE"],
+      "labels": ["", "", "", "", "LINE"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2043,7 +2043,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "END"],
+      "labels": ["", "", "", "", "END"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2072,7 +2072,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "HELP"],
+      "labels": ["", "", "", "", "HELP"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2101,7 +2101,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "CAPS LOCK"],
+      "labels": ["", "", "", "", "CAPS LOCK"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2130,7 +2130,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "TOP"],
+      "labels": ["", "", "", "", "TOP"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2159,7 +2159,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "GREEK"],
+      "labels": ["", "", "", "", "GREEK"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2188,7 +2188,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "SHIFT"],
+      "labels": ["", "", "", "", "SHIFT"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2217,7 +2217,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "⌊", null, null, null, null, null, "Z"],
+      "labels": ["", "⌊", "", "", "", "", "", "Z"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2246,7 +2246,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "⌈", null, null, null, null, null, "X"],
+      "labels": ["", "⌈", "", "", "", "", "", "X"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2275,7 +2275,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "≠", null, null, null, null, null, "C"],
+      "labels": ["", "≠", "", "", "", "", "", "C"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2304,7 +2304,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "≃", null, null, null, null, null, "V"],
+      "labels": ["", "≃", "", "", "", "", "", "V"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2333,7 +2333,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "≡", null, null, null, null, null, "B"],
+      "labels": ["", "≡", "", "", "", "", "", "B"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2362,7 +2362,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "≤", null, null, null, null, null, "N"],
+      "labels": ["", "≤", "", "", "", "", "", "N"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2391,7 +2391,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "≥", null, null, null, null, null, "M"],
+      "labels": ["", "≥", "", "", "", "", "", "M"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2420,7 +2420,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "<", null, null, null, null, null, ","],
+      "labels": ["", "<", "", "", "", "", "", ","],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2449,7 +2449,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, ">", null, null, null, null, null, "."],
+      "labels": ["", ">", "", "", "", "", "", "."],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2478,7 +2478,7 @@
     },
     {
       "color": "#6e6d6b",
-      "labels": [null, "?", null, null, null, null, null, "/"],
+      "labels": ["", "?", "", "", "", "", "", "/"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2507,7 +2507,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "SHIFT"],
+      "labels": ["", "", "", "", "SHIFT"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2536,7 +2536,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "GREEK"],
+      "labels": ["", "", "", "", "GREEK"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2565,7 +2565,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "TOP"],
+      "labels": ["", "", "", "", "TOP"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2594,7 +2594,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "REPEAT"],
+      "labels": ["", "", "", "", "REPEAT"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2623,7 +2623,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "MODE LOCK"],
+      "labels": ["", "", "", "", "MODE LOCK"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2652,7 +2652,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "HYPER"],
+      "labels": ["", "", "", "", "HYPER"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2681,7 +2681,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "SUPER"],
+      "labels": ["", "", "", "", "SUPER"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2710,7 +2710,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "META"],
+      "labels": ["", "", "", "", "META"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2768,7 +2768,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "CONTROL"],
+      "labels": ["", "", "", "", "CONTROL"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2797,7 +2797,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "META"],
+      "labels": ["", "", "", "", "META"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2826,7 +2826,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "SUPER"],
+      "labels": ["", "", "", "", "SUPER"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2855,7 +2855,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "HYPER"],
+      "labels": ["", "", "", "", "HYPER"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2884,7 +2884,7 @@
     },
     {
       "color": "#0073a2",
-      "labels": [null, null, null, null, "CONTROL"],
+      "labels": ["", "", "", "", "CONTROL"],
       "textColor": [],
       "textSize": [],
       "default": {

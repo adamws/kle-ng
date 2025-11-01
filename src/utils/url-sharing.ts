@@ -1,22 +1,12 @@
 import * as LZString from 'lz-string'
 import { Serial, Keyboard } from '@adamws/kle-serial'
-import type { KeyboardMetadata, Key } from '@adamws/kle-serial'
-
-export interface LayoutData {
-  keys: Key[]
-  metadata: KeyboardMetadata
-}
 
 /**
  * Encode layout data into a compressed URL-safe string using KLE format
  */
-export function encodeLayoutToUrl(layoutData: LayoutData): string {
+export function encodeLayoutToUrl(keyboard: Keyboard): string {
   try {
     // Use KLE's standard serialization format which is much more compact
-    const keyboard = new Keyboard()
-    keyboard.keys = layoutData.keys
-    keyboard.meta = layoutData.metadata
-
     const kleData = Serial.serialize(keyboard)
     const json = JSON.stringify(kleData)
     const compressed = LZString.compressToEncodedURIComponent(json)
@@ -30,7 +20,7 @@ export function encodeLayoutToUrl(layoutData: LayoutData): string {
 /**
  * Decode a compressed URL string back to layout data
  */
-export function decodeLayoutFromUrl(encodedData: string): LayoutData {
+export function decodeLayoutFromUrl(encodedData: string): Keyboard {
   try {
     const decompressed = LZString.decompressFromEncodedURIComponent(encodedData)
     if (!decompressed) {
@@ -47,10 +37,7 @@ export function decodeLayoutFromUrl(encodedData: string): LayoutData {
     // Deserialize using KLE's standard format
     const keyboard = Serial.deserialize(kleData)
 
-    return {
-      keys: keyboard.keys,
-      metadata: keyboard.meta,
-    }
+    return keyboard
   } catch (error) {
     console.error('Error decoding layout from URL:', error)
     throw new Error('Failed to decode layout data from URL')
@@ -60,8 +47,8 @@ export function decodeLayoutFromUrl(encodedData: string): LayoutData {
 /**
  * Generate a shareable URL with encoded layout data
  */
-export function generateShareableUrl(layoutData: LayoutData, baseUrl?: string): string {
-  const encoded = encodeLayoutToUrl(layoutData)
+export function generateShareableUrl(keyboard: Keyboard, baseUrl?: string): string {
+  const encoded = encodeLayoutToUrl(keyboard)
   const base = baseUrl || window.location.origin + window.location.pathname
   return `${base}#share=${encoded}`
 }
@@ -69,7 +56,7 @@ export function generateShareableUrl(layoutData: LayoutData, baseUrl?: string): 
 /**
  * Extract layout data from current URL if present
  */
-export function extractLayoutFromCurrentUrl(): LayoutData | null {
+export function extractLayoutFromCurrentUrl(): Keyboard | null {
   try {
     const hash = window.location.hash
     if (!hash.startsWith('#share=')) {
@@ -181,7 +168,7 @@ function findLayoutFile(files: Record<string, { content: string }>): { content: 
 /**
  * Fetch layout data from GitHub gist
  */
-export async function fetchGistLayout(gistId: string): Promise<LayoutData> {
+export async function fetchGistLayout(gistId: string): Promise<Keyboard> {
   try {
     const response = await fetch(`https://api.github.com/gists/${gistId}`, {
       headers: {
@@ -224,10 +211,7 @@ export async function fetchGistLayout(gistId: string): Promise<LayoutData> {
     // Deserialize using KLE's standard format
     const keyboard = Serial.deserialize(kleData)
 
-    return {
-      keys: keyboard.keys,
-      metadata: keyboard.meta,
-    }
+    return keyboard
   } catch (error) {
     console.error('Error fetching gist layout:', error)
     throw error instanceof Error ? error : new Error('Failed to fetch gist layout')

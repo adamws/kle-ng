@@ -398,10 +398,10 @@ const removeLegends = (category: LegendCategory) => {
           key.labels[i] = ''
           // Clear text formatting too
           if (key.textColor && key.textColor[i]) {
-            key.textColor[i] = undefined
+            key.textColor[i] = ''
           }
           if (key.textSize && key.textSize[i]) {
-            key.textSize[i] = undefined
+            key.textSize[i] = 0
           }
         }
       }
@@ -418,12 +418,12 @@ const moveLabel = (key: Key, from: number, to: number) => {
 
     if (key.textColor && key.textColor[from]) {
       key.textColor[to] = key.textColor[from]
-      key.textColor[from] = undefined
+      key.textColor[from] = ''
     }
 
     if (key.textSize && key.textSize[from]) {
       key.textSize[to] = key.textSize[from]
-      key.textSize[from] = undefined
+      key.textSize[from] = 0
     }
   }
 }

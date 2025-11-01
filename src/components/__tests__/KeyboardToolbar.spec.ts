@@ -126,7 +126,7 @@ describe('KeyboardToolbar', () => {
 
       // Clear the default layout and add a single key
       store.clearLayout()
-      store.addKey({ labels: ['Test'] })
+      store.addKey({ labels: ['Test', '', '', '', '', '', '', '', '', '', '', ''] })
 
       // Position it at (2, 1)
       const firstKey = store.keys[0]
@@ -201,7 +201,7 @@ describe('KeyboardToolbar', () => {
 
       // Add a test key
       store.addKey({
-        labels: ['', '', '', '', 'A'],
+        labels: ['', '', '', '', 'A', '', '', '', '', '', '', ''],
         x: 1.123456789,
         y: 2.987654321,
       })
@@ -220,7 +220,7 @@ describe('KeyboardToolbar', () => {
 
       // Add a test key with high precision values
       store.addKey({
-        labels: ['', '', '', '', 'B'],
+        labels: ['', '', '', '', 'B', '', '', '', '', '', '', ''],
         x: 1.1234567890123456,
         y: 2.9876543210987654,
         width: 1.5555555555555556,

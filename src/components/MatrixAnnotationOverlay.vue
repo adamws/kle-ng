@@ -667,16 +667,16 @@ const updateKeyLabelAfterRemoval = (key: Key) => {
 
   // Update label based on what's still assigned
   if (!hasRow && !hasColumn) {
-    key.labels = []
+    key.labels[0] = ''
   } else if (!hasRow && hasColumn) {
     // Only column remains
-    key.labels = colIndex !== null ? [`,${colIndex}`] : []
+    key.labels[0] = colIndex !== null ? `,${colIndex}` : ''
   } else if (hasRow && !hasColumn) {
     // Only row remains
-    key.labels = rowIndex !== null ? [`${rowIndex},`] : []
+    key.labels[0] = rowIndex !== null ? `${rowIndex},` : ''
   } else if (hasRow && hasColumn) {
     // Both remain
-    key.labels = rowIndex !== null && colIndex !== null ? [`${rowIndex},${colIndex}`] : []
+    key.labels[0] = rowIndex !== null && colIndex !== null ? `${rowIndex},${colIndex}` : ''
   }
 }
 

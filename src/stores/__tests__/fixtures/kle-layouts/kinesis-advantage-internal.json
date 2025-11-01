@@ -13,9 +13,9 @@
   "keys": [
     {
       "color": "#cccccc",
-      "labels": [null, null, null, null, null, null, "Esc"],
+      "labels": ["", "", "", "", "", "", "Esc"],
       "textColor": [],
-      "textSize": [null, null, null, null, null, null, 2],
+      "textSize": [0, 0, 0, 0, 0, 0, 2],
       "default": {
         "textColor": "#000000",
         "textSize": 1
@@ -42,9 +42,9 @@
     },
     {
       "color": "#cccccc",
-      "labels": [null, null, null, null, null, null, "F1"],
+      "labels": ["", "", "", "", "", "", "F1"],
       "textColor": [],
-      "textSize": [null, null, null, null, null, null, 2],
+      "textSize": [0, 0, 0, 0, 0, 0, 2],
       "default": {
         "textColor": "#000000",
         "textSize": 1
@@ -71,9 +71,9 @@
     },
     {
       "color": "#cccccc",
-      "labels": [null, null, null, null, null, null, "F2"],
+      "labels": ["", "", "", "", "", "", "F2"],
       "textColor": [],
-      "textSize": [null, null, null, null, null, null, 2],
+      "textSize": [0, 0, 0, 0, 0, 0, 2],
       "default": {
         "textColor": "#000000",
         "textSize": 1
@@ -100,9 +100,9 @@
     },
     {
       "color": "#cccccc",
-      "labels": [null, null, null, null, null, null, "F3"],
+      "labels": ["", "", "", "", "", "", "F3"],
       "textColor": [],
-      "textSize": [null, null, null, null, null, null, 2],
+      "textSize": [0, 0, 0, 0, 0, 0, 2],
       "default": {
         "textColor": "#000000",
         "textSize": 1
@@ -129,9 +129,9 @@
     },
     {
       "color": "#cccccc",
-      "labels": [null, null, null, null, null, null, "F4"],
+      "labels": ["", "", "", "", "", "", "F4"],
       "textColor": [],
-      "textSize": [null, null, null, null, null, null, 2],
+      "textSize": [0, 0, 0, 0, 0, 0, 2],
       "default": {
         "textColor": "#000000",
         "textSize": 1
@@ -158,9 +158,9 @@
     },
     {
       "color": "#cccccc",
-      "labels": [null, null, null, null, null, null, "F5"],
+      "labels": ["", "", "", "", "", "", "F5"],
       "textColor": [],
-      "textSize": [null, null, null, null, null, null, 2],
+      "textSize": [0, 0, 0, 0, 0, 0, 2],
       "default": {
         "textColor": "#000000",
         "textSize": 1
@@ -187,9 +187,9 @@
     },
     {
       "color": "#cccccc",
-      "labels": [null, null, null, null, null, null, "F6"],
+      "labels": ["", "", "", "", "", "", "F6"],
       "textColor": [],
-      "textSize": [null, null, null, null, null, null, 2],
+      "textSize": [0, 0, 0, 0, 0, 0, 2],
       "default": {
         "textColor": "#000000",
         "textSize": 1
@@ -216,9 +216,9 @@
     },
     {
       "color": "#cccccc",
-      "labels": [null, null, null, null, null, null, "F7"],
+      "labels": ["", "", "", "", "", "", "F7"],
       "textColor": [],
-      "textSize": [null, null, null, null, null, null, 2],
+      "textSize": [0, 0, 0, 0, 0, 0, 2],
       "default": {
         "textColor": "#000000",
         "textSize": 1
@@ -245,9 +245,9 @@
     },
     {
       "color": "#cccccc",
-      "labels": [null, null, null, null, null, null, "F8"],
+      "labels": ["", "", "", "", "", "", "F8"],
       "textColor": [],
-      "textSize": [null, null, null, null, null, null, 2],
+      "textSize": [0, 0, 0, 0, 0, 0, 2],
       "default": {
         "textColor": "#000000",
         "textSize": 1
@@ -274,9 +274,9 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["Repeat Rate", null, null, null, null, null, "F9"],
+      "labels": ["Repeat Rate", "", "", "", "", "", "F9"],
       "textColor": [],
-      "textSize": [null, null, null, null, null, null, 2],
+      "textSize": [0, 0, 0, 0, 0, 0, 2],
       "default": {
         "textColor": "#000000",
         "textSize": 1
@@ -303,9 +303,9 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["Disable Macro", null, null, null, null, null, "F10"],
+      "labels": ["Disable Macro", "", "", "", "", "", "F10"],
       "textColor": [],
-      "textSize": [null, null, null, null, null, null, 2],
+      "textSize": [0, 0, 0, 0, 0, 0, 2],
       "default": {
         "textColor": "#000000",
         "textSize": 1
@@ -332,9 +332,9 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["Macro", null, null, null, null, null, "F11"],
+      "labels": ["Macro", "", "", "", "", "", "F11"],
       "textColor": [],
-      "textSize": [null, null, null, null, null, null, 2],
+      "textSize": [0, 0, 0, 0, 0, 0, 2],
       "default": {
         "textColor": "#000000",
         "textSize": 1
@@ -361,9 +361,9 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["Remap", null, null, null, null, null, "F12"],
+      "labels": ["Remap", "", "", "", "", "", "F12"],
       "textColor": [],
-      "textSize": [null, null, null, null, null, null, 2],
+      "textSize": [0, 0, 0, 0, 0, 0, 2],
       "default": {
         "textColor": "#000000",
         "textSize": 1
@@ -535,7 +535,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["@", null, null, null, null, null, "2"],
+      "labels": ["@", "", "", "", "", "", "2"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -564,7 +564,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["#", null, null, null, null, null, "3"],
+      "labels": ["#", "", "", "", "", "", "3"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -593,7 +593,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["$", null, null, null, null, null, "4"],
+      "labels": ["$", "", "", "", "", "", "4"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -622,7 +622,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["%", null, null, null, null, null, "5"],
+      "labels": ["%", "", "", "", "", "", "5"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -651,7 +651,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["^", null, null, null, null, null, "6"],
+      "labels": ["^", "", "", "", "", "", "6"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -680,7 +680,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["&", null, null, null, null, null, "7", null, null, null, "Nm Lk"],
+      "labels": ["&", "", "", "", "", "", "7", "", "", "", "Nm Lk"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -709,7 +709,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["*", null, null, null, null, null, "8", null, null, null, "="],
+      "labels": ["*", "", "", "", "", "", "8", "", "", "", "="],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -738,7 +738,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["(", null, null, null, null, null, "9", null, null, null, "="],
+      "labels": ["(", "", "", "", "", "", "9", "", "", "", "="],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -767,7 +767,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["+", null, null, null, null, null, "="],
+      "labels": ["+", "", "", "", "", "", "="],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -796,7 +796,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["!", null, null, null, null, null, "1"],
+      "labels": ["!", "", "", "", "", "", "1"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -825,7 +825,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": [")", null, null, null, null, null, "0", null, null, null, "*"],
+      "labels": [")", "", "", "", "", "", "0", "", "", "", "*"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -854,7 +854,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["_", null, null, null, null, null, "-"],
+      "labels": ["_", "", "", "", "", "", "-"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1028,7 +1028,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["U", null, null, null, null, null, null, null, null, null, "7"],
+      "labels": ["U", "", "", "", "", "", "", "", "", "", "7"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1057,7 +1057,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["I", null, null, null, null, null, null, null, null, null, "8"],
+      "labels": ["I", "", "", "", "", "", "", "", "", "", "8"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1086,7 +1086,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["O", null, null, null, null, null, null, null, null, null, "9"],
+      "labels": ["O", "", "", "", "", "", "", "", "", "", "9"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1115,7 +1115,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": [null, null, null, "Tab"],
+      "labels": ["", "", "", "Tab"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1173,7 +1173,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["P", null, null, null, null, null, null, null, null, null, "-"],
+      "labels": ["P", "", "", "", "", "", "", "", "", "", "-"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1202,7 +1202,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["|", null, null, null, null, null, "\\"],
+      "labels": ["|", "", "", "", "", "", "\\"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1376,7 +1376,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["J", null, null, null, null, null, null, null, null, null, "4"],
+      "labels": ["J", "", "", "", "", "", "", "", "", "", "4"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1405,7 +1405,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["K", null, null, null, null, null, null, null, null, null, "5"],
+      "labels": ["K", "", "", "", "", "", "", "", "", "", "5"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1434,7 +1434,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["L", null, null, null, null, null, null, null, null, null, "6"],
+      "labels": ["L", "", "", "", "", "", "", "", "", "", "6"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1463,7 +1463,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": [null, null, null, "Caps<br>Lock"],
+      "labels": ["", "", "", "Caps<br>Lock"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1521,7 +1521,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": [":", null, null, null, null, null, ";", null, null, null, "+"],
+      "labels": [":", "", "", "", "", "", ";", "", "", "", "+"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1550,7 +1550,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["\"", null, null, null, null, null, "'"],
+      "labels": ["\"", "", "", "", "", "", "'"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1724,7 +1724,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["M", null, null, null, null, null, null, null, null, null, "1"],
+      "labels": ["M", "", "", "", "", "", "", "", "", "", "1"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1753,7 +1753,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["<", null, null, null, null, null, ",", null, null, null, "2"],
+      "labels": ["<", "", "", "", "", "", ",", "", "", "", "2"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1782,7 +1782,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": [">", null, null, null, null, null, ".", null, null, null, "3"],
+      "labels": [">", "", "", "", "", "", ".", "", "", "", "3"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1811,7 +1811,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": [null, null, null, "Shift"],
+      "labels": ["", "", "", "Shift"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1869,7 +1869,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["?", null, null, null, null, null, "/", null, null, null, "Enter"],
+      "labels": ["?", "", "", "", "", "", "/", "", "", "", "Enter"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1898,7 +1898,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": [null, null, null, "Shift"],
+      "labels": ["", "", "", "Shift"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1927,7 +1927,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["|", null, null, null, null, null, "\\", null, null, null, "Insert"],
+      "labels": ["|", "", "", "", "", "", "\\", "", "", "", "Insert"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1956,7 +1956,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": [null, "⇦", null, null, null, null, null, null, null, null, "⇦"],
+      "labels": ["", "⇦", "", "", "", "", "", "", "", "", "⇦"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1985,7 +1985,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": [null, "⇨", null, null, null, null, null, null, null, null, "⇨"],
+      "labels": ["", "⇨", "", "", "", "", "", "", "", "", "⇨"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2014,7 +2014,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": [null, "⇧", null, null, null, null, null, null, null, null, "⇧"],
+      "labels": ["", "⇧", "", "", "", "", "", "", "", "", "⇧"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2043,7 +2043,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": [null, "⇩", null, null, null, null, null, null, null, null, "⇩"],
+      "labels": ["", "⇩", "", "", "", "", "", "", "", "", "⇩"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2072,7 +2072,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["{", null, null, null, null, null, "[", null, null, null, "."],
+      "labels": ["{", "", "", "", "", "", "[", "", "", "", "."],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2101,7 +2101,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["~", null, null, null, null, null, "`"],
+      "labels": ["~", "", "", "", "", "", "`"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2130,7 +2130,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["}", null, null, null, null, null, "]", null, null, null, "Enter"],
+      "labels": ["}", "", "", "", "", "", "]", "", "", "", "Enter"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2217,7 +2217,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": [null, null, null, null, "Back<br>Space"],
+      "labels": ["", "", "", "", "Back<br>Space"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2246,7 +2246,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": [null, null, null, null, "Delete"],
+      "labels": ["", "", "", "", "Delete"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2275,7 +2275,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": [null, null, null, null, "Home"],
+      "labels": ["", "", "", "", "Home"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2304,7 +2304,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": [null, null, null, null, "End"],
+      "labels": ["", "", "", "", "End"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2333,7 +2333,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["Cmd", null, null, "Win"],
+      "labels": ["Cmd", "", "", "Win"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2362,7 +2362,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": [null, null, null, null, "Ctrl"],
+      "labels": ["", "", "", "", "Ctrl"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2391,7 +2391,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": [null, null, null, "Page<br>Up"],
+      "labels": ["", "", "", "Page<br>Up"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2420,7 +2420,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": [null, null, null, null, "Enter"],
+      "labels": ["", "", "", "", "Enter"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2449,7 +2449,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": [null, null, null, null, "Space"],
+      "labels": ["", "", "", "", "Space"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2478,7 +2478,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": [null, null, null, "Page<br>Down"],
+      "labels": ["", "", "", "Page<br>Down"],
       "textColor": [],
       "textSize": [],
       "default": {

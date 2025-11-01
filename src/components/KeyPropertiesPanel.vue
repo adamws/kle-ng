@@ -1130,12 +1130,8 @@ const updateCurrentValues = () => {
     labels.value = [...firstKey.labels]
     // Map per-label colors, falling back to default color
     labelColors.value = firstKey.textColor.map(
-      (color: string | undefined) => color || firstKey.default.textColor,
+      (color: string) => color || firstKey.default.textColor,
     )
-    // Ensure we have 12 colors
-    while (labelColors.value.length < 12) {
-      labelColors.value.push(firstKey.default.textColor)
-    }
 
     currentWidth.value = formatNumber(firstKey.width)
     currentHeight.value = formatNumber(firstKey.height)
@@ -1148,10 +1144,8 @@ const updateCurrentValues = () => {
     currentColor.value = firstKey.color
     currentTextColor.value = firstKey.default.textColor
     currentDefaultTextSize.value = firstKey.default.textSize
-    // Map per-label text sizes - show only explicitly set values (undefined means using default)
-    labelTextSizes.value = firstKey.textSize.map((size: number | undefined) =>
-      size === undefined ? undefined : size,
-    )
+    // Map per-label text sizes - show only explicitly set values (0 means using default)
+    labelTextSizes.value = firstKey.textSize.map((size: number) => (size <= 0 ? undefined : size))
     // Initialize previous values for spinner detection
     previousTextSizeValues.value = [...labelTextSizes.value.slice(0, 9)]
     currentGhost.value = !!firstKey.ghost
@@ -1178,10 +1172,8 @@ const updateCurrentValues = () => {
     currentColor.value = firstKey.color
     currentTextColor.value = firstKey.default.textColor
     currentDefaultTextSize.value = firstKey.default.textSize
-    // Map per-label text sizes - show only explicitly set values (undefined means using default)
-    labelTextSizes.value = firstKey.textSize.map((size: number | undefined) =>
-      size === undefined ? undefined : size,
-    )
+    // Map per-label text sizes - show only explicitly set values (0 means using default)
+    labelTextSizes.value = firstKey.textSize.map((size: number) => (size <= 0 ? undefined : size))
     // Initialize previous values for spinner detection
     previousTextSizeValues.value = [...labelTextSizes.value.slice(0, 9)]
     currentGhost.value = !!firstKey.ghost
@@ -1221,7 +1213,6 @@ const updateTextColorPreview = () => {
 
   selectedKeys.value.forEach((key) => {
     key.default.textColor = currentTextColor.value
-    key.textColor = key.textColor.map(() => undefined)
   })
 }
 
@@ -1238,7 +1229,6 @@ const updateTextColor = () => {
 
   selectedKeys.value.forEach((key) => {
     key.default.textColor = normalizedColor
-    key.textColor = key.textColor.map(() => undefined)
   })
 
   // Update the input field with the normalized color
@@ -1490,18 +1480,13 @@ const updateLabelColorPreview = (index: number) => {
   if (selectedKeys.value.length === 0) return
 
   selectedKeys.value.forEach((key) => {
-    // Ensure textColor array is at least as long as needed
-    while (key.textColor.length <= index) {
-      key.textColor.push(undefined)
-    }
-
     // Set the color for this specific label
     const newColor = labelColors.value[index]
     if (newColor === key.default.textColor) {
-      // If it's the same as default, store undefined to use default
-      key.textColor[index] = undefined
+      // If it's the same as default, store empty string to use default
+      key.textColor[index] = ''
     } else {
-      key.textColor[index] = newColor
+      key.textColor[index] = newColor || ''
     }
   })
 }
@@ -1510,18 +1495,13 @@ const updateLabelColor = (index: number) => {
   if (selectedKeys.value.length === 0) return
 
   selectedKeys.value.forEach((key) => {
-    // Ensure textColor array is at least as long as needed
-    while (key.textColor.length <= index) {
-      key.textColor.push(undefined)
-    }
-
     // Set the color for this specific label
     const newColor = labelColors.value[index]
     if (newColor === key.default.textColor) {
-      // If it's the same as default, store undefined to use default
-      key.textColor[index] = undefined
+      // If it's the same as default, store empty string to use default
+      key.textColor[index] = ''
     } else {
-      key.textColor[index] = newColor
+      key.textColor[index] = newColor || ''
     }
   })
 
@@ -1598,7 +1578,7 @@ const clearTextSizes = () => {
   selectedKeys.value.forEach((key) => {
     // Clear text sizes for positions 0-8 by setting them to undefined
     for (let i = 0; i <= 8; i++) {
-      key.textSize[i] = undefined
+      key.textSize[i] = 0
     }
   })
   // Update reactive values - set to undefined to show empty fields
@@ -1619,7 +1599,7 @@ const updateLabelTextSizeValue = (index: number, value: number | undefined) => {
   selectedKeys.value.forEach((key) => {
     if (value === undefined || value === null) {
       // Clear the custom text size (will use default)
-      key.textSize[index] = undefined
+      key.textSize[index] = 0
     } else {
       // Store the validated size
       const validatedSize = validateTextSize(value)

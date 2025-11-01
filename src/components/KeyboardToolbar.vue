@@ -565,7 +565,7 @@ const importFromShareLink = async (shareUrl: string) => {
     const layoutData = decodeLayoutFromUrl(encodedData)
 
     // Load the layout
-    keyboardStore.loadLayout(layoutData.keys, layoutData.metadata)
+    keyboardStore.loadKeyboard(layoutData)
     keyboardStore.filename = 'shared-layout'
 
     toast.showSuccess('Layout imported from share link', 'Import Successful')
@@ -615,7 +615,7 @@ const importFromUrlHash = async (urlWithHash: string) => {
     } else if (/^[a-f0-9]+$/i.test(decodedUrl)) {
       // Gist ID format (preferred for gists as it's shorter)
       const layoutData = await fetchGistLayout(decodedUrl)
-      keyboardStore.loadLayout(layoutData.keys, layoutData.metadata)
+      keyboardStore.loadKeyboard(layoutData)
       keyboardStore.filename = `gist-${decodedUrl}`
       toast.showSuccess(`Layout imported from gist: ${decodedUrl}`, 'Import Successful')
     } else {
@@ -714,7 +714,7 @@ const processJsonLayout = async (
     // Internal KLE format with meta and keys
     console.log(`Loading internal KLE format from: ${displayFilename}`)
 
-    keyboardStore.loadLayout(data.keys, data.meta)
+    keyboardStore.loadKeyboard(data)
     toast.showSuccess(`Internal KLE layout loaded from ${displayFilename}`, 'Import successful')
   } else {
     // Raw KLE format (array-based)

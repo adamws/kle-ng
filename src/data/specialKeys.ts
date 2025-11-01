@@ -1,6 +1,8 @@
 // Predefined special key templates
 // These are common special keys with non-rectangular shapes
 
+import type { Array12 } from '@adamws/kle-serial'
+
 export interface SpecialKeyTemplate {
   name: string
   description: string
@@ -11,7 +13,7 @@ export interface SpecialKeyTemplate {
     height2?: number
     x2?: number
     y2?: number
-    labels?: string[]
+    labels?: Array12<string>
   }
 }
 
@@ -26,7 +28,7 @@ export const SPECIAL_KEYS: SpecialKeyTemplate[] = [
       height2: 1,
       x2: -0.25,
       y2: 0,
-      labels: ['', '', '', '', 'Enter'],
+      labels: ['', '', '', '', 'Enter', '', '', '', '', '', '', ''],
     },
   },
   {
@@ -39,7 +41,7 @@ export const SPECIAL_KEYS: SpecialKeyTemplate[] = [
       height2: 1,
       x2: -0.75,
       y2: 1,
-      labels: ['', '', '', '', 'Enter'],
+      labels: ['', '', '', '', 'Enter', '', '', '', '', '', '', ''],
     },
   },
 ]

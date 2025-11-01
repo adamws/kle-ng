@@ -14,10 +14,15 @@ import {
   clearGistFromUrl,
   clearUrlFromHash,
 } from '../utils/url-sharing'
-import type { LayoutData } from '../utils/url-sharing'
+import {
+  shrinkArray,
+  createEmptyLabels,
+  createEmptyTextColors,
+  createEmptyTextSizes,
+} from '../utils/array-helpers'
 import { useFontStore } from './font'
 
-export { Key, KeyboardMetadata } from '@adamws/kle-serial'
+export { Key, Keyboard, KeyboardMetadata, type Array12 } from '@adamws/kle-serial'
 
 // localStorage key for persisting lock rotations setting
 const LOCK_ROTATIONS_KEY = 'kle-ng-lock-rotations'
@@ -143,6 +148,13 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     dirty.value = true
   }
 
+  /**
+   * Adds a new key to the keyboard layout.
+   * If no position is specified, positions the key next to the currently selected key,
+   * or at the end of the layout if no key is selected.
+   * Automatically selects the newly added key and saves state to history.
+   * @param keyData - Optional partial key data to override defaults
+   */
   const addKey = (keyData?: Partial<Key>) => {
     const newKey = { ...createKey(), ...keyData }
 
@@ -405,58 +417,30 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     })
   }
 
-  const loadLayout = (
-    layout: { keys: Key[]; metadata?: KeyboardMetadata } | Key[],
-    layoutMetadata?: KeyboardMetadata,
-  ) => {
+  /**
+   * Loads a keyboard layout into the store.
+   * Performs a deep copy of keys and metadata to ensure data isolation.
+   * Resets history, selection, and triggers view reset.
+   * Applies font settings from CSS metadata if present.
+   * @param keyboard - The keyboard layout to load
+   * @throws {Error} If the layout cannot be loaded
+   */
+  const loadKeyboard = (keyboard: Keyboard) => {
     try {
+      keys.value = JSON.parse(JSON.stringify(keyboard.keys))
+      // Merge with defaults to ensure all standard properties exist
+      const defaults = new KeyboardMetadata()
+      metadata.value = { ...defaults, ...JSON.parse(JSON.stringify(keyboard.meta)) }
+
+      // Apply font settings from CSS metadata if present
       const fontStore = useFontStore()
-
-      if (Array.isArray(layout)) {
-        // Legacy format: array of keys
-        keys.value = JSON.parse(JSON.stringify(layout)) // Deep copy
-        if (layoutMetadata) {
-          // Replace metadata entirely to clear any custom fields (like VIA metadata)
-          // Merge with defaults to ensure all standard properties exist
-          const defaults = new KeyboardMetadata()
-          metadata.value = { ...defaults, ...JSON.parse(JSON.stringify(layoutMetadata)) }
-
-          // Apply font settings from CSS metadata if present
-          if (layoutMetadata.css) {
-            fontStore.applyFromCssMetadata(layoutMetadata.css)
-          } else {
-            // No CSS metadata, reset to default font
-            fontStore.resetToDefault()
-          }
-        } else {
-          // No metadata provided, reset to defaults
-          metadata.value = new KeyboardMetadata()
-          // Reset to default font when loading layout without metadata
-          fontStore.resetToDefault()
-        }
+      if (keyboard.meta?.css) {
+        fontStore.applyFromCssMetadata(keyboard.meta.css)
       } else {
-        // New format: object with keys and metadata
-        keys.value = JSON.parse(JSON.stringify(layout.keys)) // Deep copy
-        if (layout.metadata) {
-          // Replace metadata entirely to clear any custom fields (like VIA metadata)
-          // Merge with defaults to ensure all standard properties exist
-          const defaults = new KeyboardMetadata()
-          metadata.value = { ...defaults, ...JSON.parse(JSON.stringify(layout.metadata)) }
-
-          // Apply font settings from CSS metadata if present
-          if (layout.metadata.css) {
-            fontStore.applyFromCssMetadata(layout.metadata.css)
-          } else {
-            // No CSS metadata, reset to default font
-            fontStore.resetToDefault()
-          }
-        } else {
-          // No metadata provided, reset to defaults
-          metadata.value = new KeyboardMetadata()
-          // Reset to default font when loading layout without metadata
-          fontStore.resetToDefault()
-        }
+        // No CSS metadata, reset to default font
+        fontStore.resetToDefault()
       }
+
       selectedKeys.value = []
       history.value = []
       historyIndex.value = -1
@@ -469,6 +453,11 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     }
   }
 
+  /**
+   * Clears the current keyboard layout, resetting all state to defaults.
+   * Removes all keys, clears selection, resets metadata, and clears history.
+   * Resets font to default and triggers view reset.
+   */
   const clearLayout = () => {
     keys.value = []
     selectedKeys.value = []
@@ -486,17 +475,30 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     resetViewTrigger.value++ // Trigger view reset
   }
 
-  const getSerializedData = (format: 'kle' | 'kle-internal' | 'internal' = 'internal') => {
+  /**
+   * Serializes the current keyboard layout in the specified format.
+   * @param format - The serialization format:
+   *   - 'internal': Returns Keyboard object (default)
+   *   - 'kle': Returns KLE compact format (array-based)
+   *   - 'kle-internal': Returns object format with proper property ordering for JSON export
+   * @returns The serialized keyboard data
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const getSerializedData = (format: 'kle' | 'kle-internal' | 'internal' = 'internal'): any => {
     const keyboard = new Keyboard()
-    keyboard.keys = keys.value
-    keyboard.meta = metadata.value
+    keyboard.keys = JSON.parse(JSON.stringify(keys.value))
+    keyboard.meta = JSON.parse(JSON.stringify(metadata.value))
 
     if (format === 'kle') {
       return Serial.serialize(getRoundedKeyboard(keyboard))
     }
 
     if (format === 'kle-internal') {
-      return getKleInternalFormat(keyboard)
+      // Use getKleInternalFormatForExport to ensure correct property order
+      // This is necessary because Key instances, when JSON.stringified, have
+      // their array properties (labels, textColor, textSize) appearing last
+      // due to constructor initialization, which doesn't match the expected order
+      return getKleInternalFormatForExport(keyboard)
     }
 
     return keyboard
@@ -540,18 +542,52 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     return roundedKeyboard
   }
 
-  const getKleInternalFormat = (keyboard: Keyboard) => {
+  /**
+   * Helper to create kle-internal format with shrunk arrays for file export.
+   * This is necessary because Key instances, when JSON.stringified, have
+   * their array properties (labels, textColor, textSize) appearing last
+   * due to constructor initialization, which doesn't match the expected order.
+   * @param keyboard - The keyboard to serialize
+   * @returns Serialized keyboard with shrunk arrays and proper property order
+   */
+  const getKleInternalFormatForExport = (keyboard: Keyboard) => {
     const roundedKeyboard = getRoundedKeyboard(keyboard)
 
+    // Create plain objects with shrunk arrays
     return {
       meta: roundedKeyboard.meta,
-      keys: roundedKeyboard.keys,
+      keys: roundedKeyboard.keys.map((key) => ({
+        color: key.color,
+        labels: shrinkArray(key.labels),
+        textColor: shrinkArray(key.textColor),
+        textSize: shrinkArray(key.textSize),
+        default: key.default,
+        x: key.x,
+        y: key.y,
+        width: key.width,
+        height: key.height,
+        x2: key.x2,
+        y2: key.y2,
+        width2: key.width2,
+        height2: key.height2,
+        rotation_x: key.rotation_x,
+        rotation_y: key.rotation_y,
+        rotation_angle: key.rotation_angle,
+        decal: key.decal,
+        ghost: key.ghost,
+        stepped: key.stepped,
+        nub: key.nub,
+        profile: key.profile,
+        sm: key.sm,
+        sb: key.sb,
+        st: key.st,
+      })),
     }
   }
 
   const loadKLELayout = (kleData: unknown) => {
     const keyboard = Serial.deserialize(kleData as Array<unknown>)
-    loadLayout(keyboard.keys, keyboard.meta)
+    loadKeyboard(keyboard)
   }
 
   const updateLayoutFromJson = (kleData: unknown) => {
@@ -559,12 +595,10 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     const keyboard = Serial.deserialize(kleData as Array<unknown>)
 
     try {
-      keys.value = JSON.parse(JSON.stringify(keyboard.keys)) // Deep copy
-      // Replace metadata entirely to clear any custom fields (like VIA metadata)
-      // Merge with defaults to ensure all standard properties exist
-      const defaults = new KeyboardMetadata()
-      metadata.value = { ...defaults, ...JSON.parse(JSON.stringify(keyboard.meta)) }
       selectedKeys.value = []
+
+      keys.value = keyboard.keys
+      metadata.value = keyboard.meta
 
       // Apply font settings from CSS metadata if present
       const fontStore = useFontStore()
@@ -1102,18 +1136,17 @@ export const useKeyboardStore = defineStore('keyboard', () => {
 
   // URL Sharing functionality
   const generateShareUrl = (): string => {
-    const layoutData: LayoutData = {
-      keys: keys.value,
-      metadata: metadata.value,
-    }
-    return generateShareableUrl(layoutData)
+    const keyboard = new Keyboard()
+    keyboard.keys = keys.value
+    keyboard.meta = metadata.value
+    return generateShareableUrl(keyboard)
   }
 
   const loadFromShareUrl = (): boolean => {
     try {
       const sharedLayout = extractLayoutFromCurrentUrl()
       if (sharedLayout) {
-        loadLayout(sharedLayout.keys, sharedLayout.metadata)
+        loadKeyboard(sharedLayout)
         clearShareFromUrl() // Clean up URL after loading
         return true
       }
@@ -1159,20 +1192,20 @@ export const useKeyboardStore = defineStore('keyboard', () => {
         loadingToastTimer = window.setTimeout(showLoadingToast, 500)
 
         try {
-          let layoutData: LayoutData
+          let keyboard: Keyboard
 
           // Determine the type of URL and load accordingly
           if (urlParam.includes('gist.github.com')) {
             // Full GitHub Gist URL
             const gistMatch = urlParam.match(/gist\.github\.com\/[^/]+\/([a-f0-9]+)/)
             if (gistMatch && gistMatch[1]) {
-              layoutData = await fetchGistLayout(gistMatch[1])
+              keyboard = await fetchGistLayout(gistMatch[1])
             } else {
               throw new Error('Invalid GitHub Gist URL format')
             }
           } else if (/^[a-f0-9]+$/i.test(urlParam)) {
             // Gist ID format (preferred for gists as it's shorter)
-            layoutData = await fetchGistLayout(urlParam)
+            keyboard = await fetchGistLayout(urlParam)
           } else {
             // Direct URL to JSON file
             const response = await fetch(urlParam)
@@ -1187,14 +1220,10 @@ export const useKeyboardStore = defineStore('keyboard', () => {
             }
 
             // Deserialize using KLE's standard format
-            const keyboard = Serial.deserialize(kleData)
-            layoutData = {
-              keys: keyboard.keys,
-              metadata: keyboard.meta,
-            }
+            keyboard = Serial.deserialize(kleData)
           }
 
-          loadLayout(layoutData.keys, layoutData.metadata)
+          loadKeyboard(keyboard)
 
           // Clean up URL after loading
           if (isGistFormat) {
@@ -1317,7 +1346,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
 
         try {
           const gistLayout = await fetchGistLayout(gistId)
-          loadLayout(gistLayout.keys, gistLayout.metadata)
+          loadKeyboard(gistLayout)
           clearGistFromUrl() // Clean up URL after loading
 
           const loadTime = Date.now() - startTime
@@ -1475,43 +1504,11 @@ export const useKeyboardStore = defineStore('keyboard', () => {
       const row = Math.round(Number(centerY))
       const col = Math.round(Number(centerX))
 
-      // Create new labels array with matrix coordinate at position 0
-      // This ensures proper Vue reactivity by replacing the entire array
-      key.labels = [`${row},${col}`, '', '', '', '', '', '', '', '', '', '', '']
-
-      // Clear text formatting for all positions
-      if (key.textColor) {
-        key.textColor = [
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-        ]
-      }
-      if (key.textSize) {
-        key.textSize = [
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-        ]
-      }
+      // Initialize arrays properly (always 12 elements)
+      key.labels = createEmptyLabels()
+      key.labels[0] = `${row},${col}`
+      key.textColor = createEmptyTextColors()
+      key.textSize = createEmptyTextSizes()
     })
 
     markDirty()
@@ -1616,7 +1613,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     redo,
     updateKeyProperty,
     updateSelectedKeys,
-    loadLayout,
+    loadKeyboard,
     clearLayout,
     loadKLELayout,
     updateLayoutFromJson,

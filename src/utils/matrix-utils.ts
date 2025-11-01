@@ -318,14 +318,7 @@ export function deRotateLayoutGroups(groups: RotationGroup[]): Key[] {
       // Format: "DEROTATE:<angle>" to distinguish from other uses of label[6]
       const originalRotationAngle = `DEROTATE:${rotationAngle}`
 
-      // Ensure labels array exists and has at least 7 elements
-      if (!key.labels) {
-        key.labels = Array(12).fill('')
-      } else if (key.labels.length < 7) {
-        // Extend labels array to have at least 7 elements
-        key.labels = [...key.labels, ...Array(12 - key.labels.length).fill('')]
-      }
-
+      // labels is always a 12-element array, just set the value
       key.labels[6] = originalRotationAngle
 
       // Simply set rotation_angle to 0, keep all other properties unchanged

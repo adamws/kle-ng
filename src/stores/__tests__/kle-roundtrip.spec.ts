@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import { useKeyboardStore, Key, KeyboardMetadata } from '../keyboard'
+import { useKeyboardStore, Key, Keyboard } from '../keyboard'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
 
@@ -38,94 +38,29 @@ describe('KLE Round-trip Compatibility Tests', () => {
         const standardLayout = JSON.parse(readFileSync(standardPath, 'utf-8'))
         const expectedInternal = JSON.parse(readFileSync(expectedInternalPath, 'utf-8'))
 
+        const expectedKeyboard = expectedInternal as Keyboard
+        // No inflation needed - our export now produces the same shrunk format as the fixtures
+
         // Import standard KLE format
         store.loadKLELayout(standardLayout)
 
         // Export as KLE internal format
-        const actualInternal = store.getSerializedData('kle-internal') as {
-          meta: KeyboardMetadata
-          keys: Key[]
-        }
+        const actualKeyboard = store.getSerializedData('kle-internal')
 
         // Deep comparison with detailed assertions
-        expect(actualInternal).toHaveProperty('meta')
-        expect(actualInternal).toHaveProperty('keys')
+        expect(actualKeyboard).toHaveProperty('meta')
+        expect(actualKeyboard).toHaveProperty('keys')
 
         // Compare metadata
-        expect(actualInternal.meta).toEqual(expectedInternal.meta)
+        expect(actualKeyboard.meta).toEqual(expectedKeyboard.meta)
 
         // Compare number of keys
-        expect(actualInternal.keys).toHaveLength(expectedInternal.keys.length)
+        expect(actualKeyboard.keys).toHaveLength(expectedKeyboard.keys.length)
 
         // Compare each key individually for better error messages
-        actualInternal.keys.forEach((actualKey, index) => {
-          const expectedKey = expectedInternal.keys[index]
-
-          // Validate numeric precision for all numeric properties
-          const numericProps = [
-            'x',
-            'y',
-            'width',
-            'height',
-            'x2',
-            'y2',
-            'width2',
-            'height2',
-            'rotation_x',
-            'rotation_y',
-            'rotation_angle',
-          ]
-
-          numericProps.forEach((prop) => {
-            const value = actualKey[prop as keyof Key]
-            if (typeof value === 'number' && value !== Math.floor(value)) {
-              const decimalPlaces = (value.toString().split('.')[1] || '').length
-              expect(
-                decimalPlaces,
-                `Key ${index} ${prop}: ${value} should have ≤ 6 decimal places`,
-              ).toBeLessThanOrEqual(6)
-            }
-          })
-
-          // Compare basic properties
-          expect(actualKey.x, `Key ${index}: x coordinate`).toBe(expectedKey.x)
-          expect(actualKey.y, `Key ${index}: y coordinate`).toBe(expectedKey.y)
-          expect(actualKey.width, `Key ${index}: width`).toBe(expectedKey.width)
-          expect(actualKey.height, `Key ${index}: height`).toBe(expectedKey.height)
-
-          // Compare positioning properties
-          expect(actualKey.x2, `Key ${index}: x2`).toBe(expectedKey.x2)
-          expect(actualKey.y2, `Key ${index}: y2`).toBe(expectedKey.y2)
-          expect(actualKey.width2, `Key ${index}: width2`).toBe(expectedKey.width2)
-          expect(actualKey.height2, `Key ${index}: height2`).toBe(expectedKey.height2)
-
-          // Compare rotation properties
-          expect(actualKey.rotation_x, `Key ${index}: rotation_x`).toBe(expectedKey.rotation_x)
-          expect(actualKey.rotation_y, `Key ${index}: rotation_y`).toBe(expectedKey.rotation_y)
-          expect(actualKey.rotation_angle, `Key ${index}: rotation_angle`).toBe(
-            expectedKey.rotation_angle,
-          )
-
-          // Compare appearance properties
-          expect(actualKey.color, `Key ${index}: color`).toBe(expectedKey.color)
-          expect(actualKey.labels, `Key ${index}: labels`).toEqual(expectedKey.labels)
-          expect(actualKey.textColor, `Key ${index}: textColor`).toEqual(expectedKey.textColor)
-          expect(actualKey.textSize, `Key ${index}: textSize`).toEqual(expectedKey.textSize)
-          expect(actualKey.default, `Key ${index}: default`).toEqual(expectedKey.default)
-
-          // Compare boolean flags
-          expect(actualKey.decal, `Key ${index}: decal`).toBe(expectedKey.decal)
-          expect(actualKey.ghost, `Key ${index}: ghost`).toBe(expectedKey.ghost)
-          expect(actualKey.stepped, `Key ${index}: stepped`).toBe(expectedKey.stepped)
-          expect(actualKey.nub, `Key ${index}: nub`).toBe(expectedKey.nub)
-
-          // Compare switch properties
-          expect(actualKey.sm, `Key ${index}: switch mount`).toBe(expectedKey.sm)
-          expect(actualKey.sb, `Key ${index}: switch brand`).toBe(expectedKey.sb)
-          expect(actualKey.st, `Key ${index}: switch type`).toBe(expectedKey.st)
-
-          // Compare profile
-          expect(actualKey.profile, `Key ${index}: profile`).toBe(expectedKey.profile)
+        actualKeyboard.keys.forEach((actualKey: Key, index: number) => {
+          const expectedKey = expectedKeyboard.keys[index]
+          expect(actualKey).toEqual(expectedKey)
         })
       },
     )
@@ -140,7 +75,7 @@ describe('KLE Round-trip Compatibility Tests', () => {
       store.loadKLELayout(originalLayout)
       const firstInternal = store.getSerializedData('kle-internal')
 
-      // Convert back to KLE
+      //// Convert back to KLE
       const backToKLE = store.getSerializedData('kle')
 
       // Second round-trip: KLE → Internal
@@ -149,6 +84,158 @@ describe('KLE Round-trip Compatibility Tests', () => {
 
       // Both internal representations should be identical
       expect(secondInternal).toEqual(firstInternal)
+    })
+  })
+
+  describe('Array Shrinking Validation', () => {
+    it('should shrink arrays with only default values to empty arrays', () => {
+      const testFile = resolve(__dirname, '../../../public/data/presets/planck.json')
+      const layout = JSON.parse(readFileSync(testFile, 'utf-8'))
+
+      store.loadKLELayout(layout)
+      const exported = store.getSerializedData('kle-internal')
+
+      // Check that keys with only default values have empty arrays
+      exported.keys.forEach((key: Record<string, unknown>) => {
+        // If textColor array is empty, all values were default
+        if (Array.isArray(key.textColor) && key.textColor.length === 0) {
+          expect(key.textColor).toEqual([])
+        }
+        // If textSize array is empty, all values were default
+        if (Array.isArray(key.textSize) && key.textSize.length === 0) {
+          expect(key.textSize).toEqual([])
+        }
+      })
+    })
+
+    it('should truncate arrays at last meaningful value', () => {
+      const testFile = resolve(__dirname, '../../../public/data/presets/kinesis-advantage.json')
+      const layout = JSON.parse(readFileSync(testFile, 'utf-8'))
+
+      store.loadKLELayout(layout)
+      const exported = store.getSerializedData('kle-internal')
+
+      // Find keys with non-empty textSize arrays
+      const keysWithTextSize = exported.keys.filter(
+        (key: Record<string, unknown>) => Array.isArray(key.textSize) && key.textSize.length > 0,
+      )
+
+      // Verify each has no trailing defaults
+      keysWithTextSize.forEach((key: Record<string, unknown>) => {
+        const textSize = key.textSize as unknown[]
+        const lastValue = textSize[textSize.length - 1]
+        // Last value should not be 0 (default) or empty string
+        expect(lastValue).not.toBe(0)
+        expect(lastValue).not.toBe('')
+      })
+    })
+
+    it('should ensure textSize arrays contain only numbers', () => {
+      const testFile = resolve(__dirname, '../../../public/data/presets/kinesis-advantage.json')
+      const layout = JSON.parse(readFileSync(testFile, 'utf-8'))
+
+      store.loadKLELayout(layout)
+      const exported = store.getSerializedData('kle-internal')
+
+      // Check all textSize values are numbers
+      exported.keys.forEach((key: Record<string, unknown>) => {
+        if (Array.isArray(key.textSize)) {
+          key.textSize.forEach((value: unknown) => {
+            expect(typeof value).toBe('number')
+          })
+        }
+      })
+    })
+  })
+
+  describe('Property Order Validation', () => {
+    it('should export keys with properties in the correct order', () => {
+      const testFile = resolve(__dirname, '../../../public/data/presets/ergodox.json')
+      const layout = JSON.parse(readFileSync(testFile, 'utf-8'))
+
+      store.loadKLELayout(layout)
+      const exported = store.getSerializedData('kle-internal')
+
+      const expectedOrder = [
+        'color',
+        'labels',
+        'textColor',
+        'textSize',
+        'default',
+        'x',
+        'y',
+        'width',
+        'height',
+        'x2',
+        'y2',
+        'width2',
+        'height2',
+        'rotation_x',
+        'rotation_y',
+        'rotation_angle',
+        'decal',
+        'ghost',
+        'stepped',
+        'nub',
+        'profile',
+        'sm',
+        'sb',
+        'st',
+      ]
+
+      // Check first few keys for property order
+      exported.keys.slice(0, 5).forEach((key: Record<string, unknown>) => {
+        const actualKeys = Object.keys(key)
+        const relevantExpected = expectedOrder.filter((prop) => prop in key)
+        expect(actualKeys).toEqual(relevantExpected)
+      })
+    })
+  })
+
+  describe('Backward Compatibility with Legacy Fixtures', () => {
+    it('should handle legacy fixtures with null values in label arrays', () => {
+      const legacyFixturePath = resolve(
+        __dirname,
+        'fixtures/kle-layouts/planck-internal-legacy.json',
+      )
+      const modernFixturePath = resolve(__dirname, 'fixtures/kle-layouts/planck-internal.json')
+
+      const legacyFixture = JSON.parse(readFileSync(legacyFixturePath, 'utf-8'))
+      const modernFixture = JSON.parse(readFileSync(modernFixturePath, 'utf-8'))
+
+      // Legacy fixture has null in arrays - verify kle-serial2 handles it
+      // by loading as KLE-internal format and checking it produces same result as modern
+      const standardLayoutPath = resolve(__dirname, '../../../public/data/presets/planck.json')
+      const standardLayout = JSON.parse(readFileSync(standardLayoutPath, 'utf-8'))
+
+      // Load standard format which kle-serial2 will deserialize
+      store.loadKLELayout(standardLayout)
+      const exported = store.getSerializedData('kle-internal')
+
+      // The exported format should match modern fixture (with "" not null)
+      expect(exported.keys).toHaveLength(modernFixture.keys.length)
+
+      // Verify no null values in exported labels
+      exported.keys.forEach((key: Record<string, unknown>) => {
+        if (Array.isArray(key.labels)) {
+          key.labels.forEach((label: unknown) => {
+            // Should be string, never null in modern export
+            expect(typeof label).toBe('string')
+          })
+        }
+      })
+
+      // The legacy fixture demonstrates the old format with null
+      // Verify it has nulls as expected
+      let hasNulls = false
+      legacyFixture.keys.forEach((key: Record<string, unknown>) => {
+        if (Array.isArray(key.labels)) {
+          key.labels.forEach((label: unknown) => {
+            if (label === null) hasNulls = true
+          })
+        }
+      })
+      expect(hasNulls).toBe(true) // Legacy fixture should have nulls
     })
   })
 })

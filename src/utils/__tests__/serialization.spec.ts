@@ -95,7 +95,7 @@ describe('Serialization Utils', () => {
     it('should serialize and deserialize layouts', () => {
       const keyboard = new Keyboard()
       keyboard.keys.push(new Key())
-      keyboard.keys[0].labels = ['A']
+      keyboard.keys[0].labels[0] = 'A'
 
       const serialized = Serial.serialize(keyboard)
       const deserialized = Serial.deserialize(serialized)

@@ -10,8 +10,7 @@ import {
   fetchGistLayout,
   clearGistFromUrl,
 } from '../url-sharing'
-import { Key, KeyboardMetadata } from '@adamws/kle-serial'
-import type { LayoutData } from '../url-sharing'
+import { Key, KeyboardMetadata, Keyboard } from '@adamws/kle-serial'
 
 // Mock window.location
 const mockLocation = {
@@ -38,10 +37,10 @@ Object.defineProperty(window, 'history', {
 })
 
 describe('url-sharing', () => {
-  let sampleLayoutData: LayoutData
+  let sampleKeyboard: Keyboard
 
   beforeEach(() => {
-    // Create sample layout data
+    // Create sample keyboard
     const key1 = new Key()
     key1.x = 0
     key1.y = 0
@@ -58,10 +57,9 @@ describe('url-sharing', () => {
     metadata.name = 'Test Keyboard'
     metadata.author = 'Test Author'
 
-    sampleLayoutData = {
-      keys: [key1, key2],
-      metadata,
-    }
+    sampleKeyboard = new Keyboard()
+    sampleKeyboard.keys = [key1, key2]
+    sampleKeyboard.meta = metadata
 
     // Reset mocks
     mockLocation.hash = ''
@@ -75,7 +73,7 @@ describe('url-sharing', () => {
 
   describe('encodeLayoutToUrl', () => {
     it('should encode layout data to a URL-safe string', () => {
-      const encoded = encodeLayoutToUrl(sampleLayoutData)
+      const encoded = encodeLayoutToUrl(sampleKeyboard)
 
       expect(encoded).toBeTypeOf('string')
       expect(encoded.length).toBeGreaterThan(0)
@@ -84,25 +82,24 @@ describe('url-sharing', () => {
 
     it('should throw error for invalid data', () => {
       // Create invalid data that will cause KLE serialization to fail
-      const invalidData: LayoutData = {
-        keys: null as unknown as Key[], // This will cause Serial.serialize to fail
-        metadata: new KeyboardMetadata(),
-      }
+      const invalidKeyboard = new Keyboard()
+      invalidKeyboard.keys = null as unknown as Key[] // This will cause Serial.serialize to fail
+      invalidKeyboard.meta = new KeyboardMetadata()
 
       expect(() => {
-        encodeLayoutToUrl(invalidData)
+        encodeLayoutToUrl(invalidKeyboard)
       }).toThrow('Failed to encode layout data')
     })
   })
 
   describe('decodeLayoutFromUrl', () => {
     it('should decode previously encoded layout data', () => {
-      const encoded = encodeLayoutToUrl(sampleLayoutData)
+      const encoded = encodeLayoutToUrl(sampleKeyboard)
       const decoded = decodeLayoutFromUrl(encoded)
 
-      expect(decoded).toEqual(sampleLayoutData)
+      expect(decoded).toEqual(sampleKeyboard)
       expect(decoded.keys).toHaveLength(2)
-      expect(decoded.metadata.name).toBe('Test Keyboard')
+      expect(decoded.meta.name).toBe('Test Keyboard')
     })
 
     it('should throw error for invalid encoded string', () => {
@@ -125,7 +122,7 @@ describe('url-sharing', () => {
 
   describe('generateShareableUrl', () => {
     it('should generate a complete shareable URL', () => {
-      const shareUrl = generateShareableUrl(sampleLayoutData)
+      const shareUrl = generateShareableUrl(sampleKeyboard)
 
       expect(shareUrl).toMatch(/^http:\/\/localhost:3000\/#share=/)
       expect(shareUrl).toContain('#share=')
@@ -133,28 +130,28 @@ describe('url-sharing', () => {
 
     it('should use custom base URL when provided', () => {
       const customBase = 'https://example.com/app'
-      const shareUrl = generateShareableUrl(sampleLayoutData, customBase)
+      const shareUrl = generateShareableUrl(sampleKeyboard, customBase)
 
       expect(shareUrl).toMatch(/^https:\/\/example\.com\/app#share=/)
     })
 
     it('should generate URL that can be decoded back', () => {
-      const shareUrl = generateShareableUrl(sampleLayoutData)
+      const shareUrl = generateShareableUrl(sampleKeyboard)
       const hashPart = shareUrl.split('#share=')[1]
       const decoded = decodeLayoutFromUrl(hashPart)
 
-      expect(decoded).toEqual(sampleLayoutData)
+      expect(decoded).toEqual(sampleKeyboard)
     })
   })
 
   describe('extractLayoutFromCurrentUrl', () => {
     it('should extract layout data from URL hash', () => {
-      const encoded = encodeLayoutToUrl(sampleLayoutData)
+      const encoded = encodeLayoutToUrl(sampleKeyboard)
       mockLocation.hash = `#share=${encoded}`
 
       const extracted = extractLayoutFromCurrentUrl()
 
-      expect(extracted).toEqual(sampleLayoutData)
+      expect(extracted).toEqual(sampleKeyboard)
     })
 
     it('should return null when no share hash present', () => {
@@ -222,7 +219,7 @@ describe('url-sharing', () => {
   describe('integration tests', () => {
     it('should handle complete encode -> URL -> decode cycle', () => {
       // Generate shareable URL
-      const shareUrl = generateShareableUrl(sampleLayoutData)
+      const shareUrl = generateShareableUrl(sampleKeyboard)
 
       // Simulate navigating to that URL
       const urlParts = shareUrl.split('#')
@@ -231,20 +228,19 @@ describe('url-sharing', () => {
       // Extract layout from URL
       const extracted = extractLayoutFromCurrentUrl()
 
-      expect(extracted).toEqual(sampleLayoutData)
+      expect(extracted).toEqual(sampleKeyboard)
     })
 
     it('should handle empty layout data', () => {
-      const emptyLayout: LayoutData = {
-        keys: [],
-        metadata: new KeyboardMetadata(),
-      }
+      const emptyKeyboard = new Keyboard()
+      emptyKeyboard.keys = []
+      emptyKeyboard.meta = new KeyboardMetadata()
 
-      const encoded = encodeLayoutToUrl(emptyLayout)
+      const encoded = encodeLayoutToUrl(emptyKeyboard)
       const decoded = decodeLayoutFromUrl(encoded)
 
       expect(decoded.keys).toHaveLength(0)
-      expect(decoded.metadata).toBeInstanceOf(Object)
+      expect(decoded.meta).toBeInstanceOf(Object)
     })
 
     it('should handle complex layout with rotated keys', () => {
@@ -257,12 +253,11 @@ describe('url-sharing', () => {
       complexKey.rotation_x = 3
       complexKey.rotation_y = 2
 
-      const complexLayout: LayoutData = {
-        keys: [complexKey],
-        metadata: sampleLayoutData.metadata,
-      }
+      const complexKeyboard = new Keyboard()
+      complexKeyboard.keys = [complexKey]
+      complexKeyboard.meta = sampleKeyboard.meta
 
-      const encoded = encodeLayoutToUrl(complexLayout)
+      const encoded = encodeLayoutToUrl(complexKeyboard)
       const decoded = decodeLayoutFromUrl(encoded)
 
       expect(decoded.keys[0].x).toBe(2.5)
@@ -528,9 +523,12 @@ describe('url-sharing', () => {
 
       it('should handle switching between share and gist URLs', () => {
         // Start with share URL
-        const encoded = encodeLayoutToUrl(sampleLayoutData)
+        const encoded = encodeLayoutToUrl(sampleKeyboard)
         mockLocation.hash = `#share=${encoded}`
-        expect(extractLayoutFromCurrentUrl()).toEqual(sampleLayoutData)
+
+        const extracted1 = extractLayoutFromCurrentUrl()
+
+        expect(extracted1).toEqual(sampleKeyboard)
         expect(extractGistFromCurrentUrl()).toBeNull()
 
         // Switch to gist URL (valid hex gist ID)
@@ -540,7 +538,10 @@ describe('url-sharing', () => {
 
         // Switch back to share URL
         mockLocation.hash = `#share=${encoded}`
-        expect(extractLayoutFromCurrentUrl()).toEqual(sampleLayoutData)
+
+        const extracted2 = extractLayoutFromCurrentUrl()
+
+        expect(extracted2).toEqual(sampleKeyboard)
         expect(extractGistFromCurrentUrl()).toBeNull()
       })
     })
