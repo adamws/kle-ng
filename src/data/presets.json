@@ -3,7 +3,6 @@
     { "name": "Blank Layout", "file": "blank.json" },
     { "name": "ANSI 104", "file": "ansi-104.json" },
     { "name": "ANSI 104 (big-ass enter)", "file": "ansi-104-big-ass-enter.json" },
-    { "name": "ISO 105", "file": "iso-105.json" },
     { "name": "Default 60%", "file": "default-60.json" },
     { "name": "Default 60% (VIA)", "file": "default-60-via.json" },
     { "name": "ISO 60%", "file": "iso-60.json" },
@@ -11,7 +10,7 @@
     { "name": "ErgoDox", "file": "ergodox.json" },
     { "name": "Atreus", "file": "atreus.json" },
     { "name": "Planck", "file": "planck.json" },
-    { "name": "Kinesis Advantage", "file": "kinesis-advantage.json" },
+    { "name": "Keychron Q1", "file": "keychron-q1.json" },
     { "name": "Keycool 84", "file": "keycool-84.json" },
     { "name": "Leopold FC660m", "file": "leopold-fc660m.json" },
     { "name": "Symbolics Space Cadet", "file": "symbolics-spacecadet.json" }
