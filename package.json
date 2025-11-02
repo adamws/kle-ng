@@ -24,7 +24,7 @@
     "format": "prettier --log-level silent --write src/ e2e/"
   },
   "dependencies": {
-    "@adamws/kle-serial": "github:adamws/kle-serial2#develop",
+    "@adamws/kle-serial": "github:adamws/kle-serial2#v0.18.0",
     "bootstrap": "^5.3.7",
     "bootstrap-icons": "^1.13.1",
     "decimal.js": "^10.6.0",
