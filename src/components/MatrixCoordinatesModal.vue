@@ -393,6 +393,7 @@ import { useDraggablePanel } from '@/composables/useDraggablePanel'
 import { useKeyboardStore, type Key } from '@/stores/keyboard'
 import { useMatrixDrawingStore } from '@/stores/matrix-drawing'
 import { getKeyCenter } from '@/utils/keyboard-geometry'
+import { createEmptyLabels } from '@/utils/array-helpers'
 import {
   extractMatrixAssignments,
   extractMatrixAssignmentsWithPartial,
@@ -528,9 +529,9 @@ const acceptWarning = () => {
   // Hide the existing matrix overlay since we're about to remove all legends
   exitPreviewMode()
 
-  // Remove all legends from all keys
+  // Remove all legends from all keys (all 12 positions)
   keyboardStore.keys.forEach((key) => {
-    key.labels[0] = ''
+    key.labels = createEmptyLabels()
   })
 
   step.value = 'draw'
