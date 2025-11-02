@@ -398,6 +398,12 @@ The following features are intentionally not supported:
   - kle-ng provides [minimal `css` metadata support](#custom-fonts)
 - Legacy rendering quirks and edge cases
 
+The kle-ng uses for or [kle-serial](https://github.com/adamws/kle-serial2) fork which in version v0.18.0
+introduced new KLE property type (`'ta'`) as a solution for color handling problems from
+the original editor ([#344](https://github.com/ijprest/keyboard-layout-editor/issues/344),[#334](https://github.com/ijprest/keyboard-layout-editor/issues/334),[#315](https://github.com/ijprest/keyboard-layout-editor/issues/315) and [#214](https://github.com/ijprest/keyboard-layout-editor/issues/214)).
+This property follow sames semantics as text size equivalent property (`'fa'`).
+Layouts using `'ta'` can be opened with legacy editor but it will render font colors differently.
+
 ## Support
 
 The best way to support this project is to:
