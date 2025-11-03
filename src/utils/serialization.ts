@@ -1,4 +1,40 @@
 import JSON5 from 'json5'
+import type { Key } from '@adamws/kle-serial'
+
+/**
+ * Sort keys for optimal serialization (matches keyboard-layout-editor approach).
+ * Groups keys by rotation cluster first (rotation_angle, rotation_x, rotation_y),
+ * then sorts by y/x within each cluster. This produces more compact serialization
+ * because rotation properties can be set once per cluster.
+ *
+ * @param keys - Array of keys to sort (will be sorted in place)
+ */
+export function sortKeysForSerialization(keys: Key[]): void {
+  keys.sort((a, b) => {
+    // Normalize rotation angles to 0-360 range for comparison
+    const aAngle = ((a.rotation_angle || 0) + 360) % 360
+    const bAngle = ((b.rotation_angle || 0) + 360) % 360
+
+    // First: sort by rotation angle
+    if (aAngle !== bAngle) return aAngle - bAngle
+
+    // Second: sort by rotation origin X
+    const aRotX = a.rotation_x || 0
+    const bRotX = b.rotation_x || 0
+    if (aRotX !== bRotX) return aRotX - bRotX
+
+    // Third: sort by rotation origin Y
+    const aRotY = a.rotation_y || 0
+    const bRotY = b.rotation_y || 0
+    if (aRotY !== bRotY) return aRotY - bRotY
+
+    // Fourth: sort by y coordinate (topmost first)
+    if (a.y !== b.y) return a.y - b.y
+
+    // Fifth: sort by x coordinate (leftmost first)
+    return a.x - b.x
+  })
+}
 
 /**
  * Parse JSON string with fallback to JSON5 and smart bracket handling

@@ -651,14 +651,14 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["O"],
+      "labels": ["U"],
       "textColor": [],
       "textSize": [],
       "default": {
         "textColor": "#000000",
         "textSize": 3
       },
-      "x": 10,
+      "x": 8,
       "y": 0.25,
       "width": 1,
       "height": 1,
@@ -680,14 +680,14 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["U"],
+      "labels": ["O"],
       "textColor": [],
       "textSize": [],
       "default": {
         "textColor": "#000000",
         "textSize": 3
       },
-      "x": 8,
+      "x": 10,
       "y": 0.25,
       "width": 1,
       "height": 1,
@@ -796,14 +796,14 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["L"],
+      "labels": ["J"],
       "textColor": [],
       "textSize": [],
       "default": {
         "textColor": "#000000",
         "textSize": 3
       },
-      "x": 10,
+      "x": 8,
       "y": 1.25,
       "width": 1,
       "height": 1,
@@ -825,14 +825,14 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["J"],
+      "labels": ["L"],
       "textColor": [],
       "textSize": [],
       "default": {
         "textColor": "#000000",
         "textSize": 3
       },
-      "x": 8,
+      "x": 10,
       "y": 1.25,
       "width": 1,
       "height": 1,
@@ -941,14 +941,14 @@
     },
     {
       "color": "#cccccc",
-      "labels": [">", "", "", "", "", "", "."],
+      "labels": ["M"],
       "textColor": [],
       "textSize": [],
       "default": {
         "textColor": "#000000",
         "textSize": 3
       },
-      "x": 10,
+      "x": 8,
       "y": 2.25,
       "width": 1,
       "height": 1,
@@ -970,14 +970,14 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["M"],
+      "labels": [">", "", "", "", "", "", "."],
       "textColor": [],
       "textSize": [],
       "default": {
         "textColor": "#000000",
         "textSize": 3
       },
-      "x": 8,
+      "x": 10,
       "y": 2.25,
       "width": 1,
       "height": 1,
@@ -1115,14 +1115,14 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["\"", "", "", "", "", "", "'"],
+      "labels": ["fn"],
       "textColor": [],
       "textSize": [],
       "default": {
         "textColor": "#000000",
         "textSize": 3
       },
-      "x": 10,
+      "x": 8,
       "y": 3.25,
       "width": 1,
       "height": 1,
@@ -1144,14 +1144,14 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["fn"],
+      "labels": ["\"", "", "", "", "", "", "'"],
       "textColor": [],
       "textSize": [],
       "default": {
         "textColor": "#000000",
         "textSize": 3
       },
-      "x": 8,
+      "x": 10,
       "y": 3.25,
       "width": 1,
       "height": 1,

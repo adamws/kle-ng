@@ -1043,5 +1043,132 @@ describe('Keyboard Store', () => {
       expect(data.meta.author).toBe('Test Author')
       expect(data.meta.backcolor).toBe('#123456')
     })
+
+    it('should sort keys by y/x position (topmost/leftmost first) for optimal serialization', () => {
+      // Clear existing keys
+      store.keys = []
+
+      // Add three keys in non-optimal order: (0,0), (1,2), (2,1)
+      store.addKey({ x: 0, y: 0, labels: ['', '', '', '', '1', '', '', '', '', '', '', ''] })
+      store.addKey({ x: 1, y: 2, labels: ['', '', '', '', '2', '', '', '', '', '', '', ''] })
+      store.addKey({ x: 2, y: 1, labels: ['', '', '', '', '3', '', '', '', '', '', '', ''] })
+
+      // Verify initial order in store (should be in insertion order)
+      expect(store.keys[0].x).toBe(0)
+      expect(store.keys[0].y).toBe(0)
+      expect(store.keys[1].x).toBe(1)
+      expect(store.keys[1].y).toBe(2)
+      expect(store.keys[2].x).toBe(2)
+      expect(store.keys[2].y).toBe(1)
+
+      // Get serialized data - should be sorted by y, then x
+      const data = store.getSerializedData('kle') as unknown[]
+
+      // The serialized data should have keys in optimal order: (0,0), (2,1), (1,2)
+      // This results in simpler serialization:
+      // [[{"a":0},"1"], [{"x":2},"3"], [{"x":1},"2"]]
+      // vs unsorted: [[{"a":0},"1"], [{"x":1,"y":2},"2"], [{"x":2,"y":-1},"3"]]
+
+      // Verify the serialized format is more compact
+      const serializedString = JSON.stringify(data)
+
+      // Check that the serialization doesn't have negative y offsets
+      // which indicates better ordering
+      expect(serializedString).not.toContain('"y":-')
+
+      // Verify the keys are in the correct sorted order in internal format
+      const internalData = store.getSerializedData('internal') as Keyboard
+      expect(internalData.keys[0].x).toBe(0)
+      expect(internalData.keys[0].y).toBe(0)
+      expect(internalData.keys[0].labels[4]).toBe('1')
+
+      expect(internalData.keys[1].x).toBe(2)
+      expect(internalData.keys[1].y).toBe(1)
+      expect(internalData.keys[1].labels[4]).toBe('3')
+
+      expect(internalData.keys[2].x).toBe(1)
+      expect(internalData.keys[2].y).toBe(2)
+      expect(internalData.keys[2].labels[4]).toBe('2')
+
+      // Verify original store keys are unchanged (sorting only affects serialized data)
+      expect(store.keys[0].x).toBe(0)
+      expect(store.keys[0].y).toBe(0)
+      expect(store.keys[1].x).toBe(1)
+      expect(store.keys[1].y).toBe(2)
+      expect(store.keys[2].x).toBe(2)
+      expect(store.keys[2].y).toBe(1)
+    })
+
+    it('should sort keys by rotation cluster first for optimal serialization with rotated keys', () => {
+      // Clear existing keys
+      store.keys = []
+
+      // Add keys with different rotation properties in mixed order
+      // Non-rotated key at (0,0)
+      store.addKey({
+        x: 0,
+        y: 0,
+        labels: ['', '', '', '', 'A', '', '', '', '', '', '', ''],
+      })
+
+      // Rotated key at (5,5) with 45° rotation
+      store.addKey({
+        x: 5,
+        y: 5,
+        rotation_angle: 45,
+        rotation_x: 3,
+        rotation_y: 3,
+        labels: ['', '', '', '', 'B', '', '', '', '', '', '', ''],
+      })
+
+      // Non-rotated key at (1,1)
+      store.addKey({
+        x: 1,
+        y: 1,
+        labels: ['', '', '', '', 'C', '', '', '', '', '', '', ''],
+      })
+
+      // Another rotated key in same cluster as B
+      store.addKey({
+        x: 4,
+        y: 4,
+        rotation_angle: 45,
+        rotation_x: 3,
+        rotation_y: 3,
+        labels: ['', '', '', '', 'D', '', '', '', '', '', '', ''],
+      })
+
+      // Key with different rotation angle
+      store.addKey({
+        x: 2,
+        y: 2,
+        rotation_angle: 90,
+        rotation_x: 1,
+        rotation_y: 1,
+        labels: ['', '', '', '', 'E', '', '', '', '', '', '', ''],
+      })
+
+      // Get serialized data
+      const internalData = store.getSerializedData('internal') as Keyboard
+
+      // Verify keys are grouped by rotation cluster:
+      // 1. Non-rotated keys (rotation_angle=0) come first, sorted by y/x
+      expect(internalData.keys[0].labels[4]).toBe('A') // (0,0), no rotation
+      expect(internalData.keys[1].labels[4]).toBe('C') // (1,1), no rotation
+
+      // 2. Keys with 45° rotation at origin (3,3), sorted by y/x
+      expect(internalData.keys[2].labels[4]).toBe('D') // (4,4), 45° at (3,3)
+      expect(internalData.keys[3].labels[4]).toBe('B') // (5,5), 45° at (3,3)
+
+      // 3. Keys with 90° rotation at origin (1,1)
+      expect(internalData.keys[4].labels[4]).toBe('E') // (2,2), 90° at (1,1)
+
+      // Verify original store keys are unchanged
+      expect(store.keys[0].labels[4]).toBe('A')
+      expect(store.keys[1].labels[4]).toBe('B')
+      expect(store.keys[2].labels[4]).toBe('C')
+      expect(store.keys[3].labels[4]).toBe('D')
+      expect(store.keys[4].labels[4]).toBe('E')
+    })
   })
 })

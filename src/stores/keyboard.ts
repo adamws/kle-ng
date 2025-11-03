@@ -20,6 +20,7 @@ import {
   createEmptyTextColors,
   createEmptyTextSizes,
 } from '../utils/array-helpers'
+import { sortKeysForSerialization } from '../utils/serialization'
 import { useFontStore } from './font'
 
 export { Key, Keyboard, KeyboardMetadata, type Array12 } from '@adamws/kle-serial'
@@ -487,6 +488,10 @@ export const useKeyboardStore = defineStore('keyboard', () => {
   const getSerializedData = (format: 'kle' | 'kle-internal' | 'internal' = 'internal'): any => {
     const keyboard = new Keyboard()
     keyboard.keys = JSON.parse(JSON.stringify(keys.value))
+
+    // Sort keys for optimal serialization
+    sortKeysForSerialization(keyboard.keys)
+
     keyboard.meta = JSON.parse(JSON.stringify(metadata.value))
 
     if (format === 'kle') {
