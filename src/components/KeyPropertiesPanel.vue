@@ -1621,15 +1621,15 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
 </script>
 
 <style scoped>
-/* Panel columns minimum width styling (too have same width for normal and advanced mode) */
+/* Override Bootstrap's responsive column behavior - use flexbox for responsive wrapping */
 .key-properties-panel .col-lg-3.col-md-6 {
-  min-width: 340px;
+  flex: 1 1 340px;
+  max-width: 500px;
 }
 
-/* Remove minimum width on mobile to allow even spacing */
+/* On very small screens, allow property groups to be full width and remove padding */
 @media (max-width: 575.98px) {
   .key-properties-panel .col-lg-3.col-md-6 {
-    min-width: unset;
     padding-left: 0px;
     padding-right: 0px;
   }
@@ -1642,6 +1642,8 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
   border-radius: 6px;
   padding: 12px;
   height: 100%;
+  width: 100%;
+  max-width: 500px;
 }
 
 .property-group-title {
@@ -1771,6 +1773,14 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
 }
 
 @media (max-width: 767.98px) {
+  .key-properties-panel .col-lg-3.col-md-6 {
+    max-width: 100%;
+  }
+
+  .property-group {
+    max-width: 100%;
+  }
+
   .labels-grid {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
     gap: 2px;
