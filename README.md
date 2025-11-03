@@ -1,36 +1,17 @@
+<div align="center">
+
+<img src="resources/keychron-q1-layout.png">
+
+https://editor.keyboard-tools.xyz/
+
+</div>
+
 # kle-ng
 
 The kle-ng is a reimplementation of the popular [Keyboard Layout Editor](http://www.keyboard-layout-editor.com)
 designed to provide a better user experience while maintaining compatibility
 with existing layouts.
 
-The original [keyboard-layout-editor](https://github.com/ijprest/keyboard-layout-editor)
-has remained largely unchanged since 2018 and shows its age in daily use.
-
-## Why kle-ng?
-
-Keyboard Layout Editor has been an essential tool for the mechanical keyboard DIY community,
-enabling countless custom keyboard projects. However, as the community has grown and evolved,
-the tool could benefit from improvements to better serve modern needs.
-
-What's wrong with the original Keyboard Layout Editor?
-
-- **Clunky interface**: Selection and editing tools feel outdated and imprecise
-  - Limited mouse support
-- **No updates**: Hasn't received meaningful improvements since 2018
-  - Not responding to community feedback, not addressing bugs
-- **Limited editing features**: Missing tools that would speed up layout creation
-
-What kle-ng tries to do better:
-
-- **Smoother Editing Experience**
-  - Fast, responsive canvas-based rendering
-  - Precise key selection and positioning with visual feedback
-  - Intuitive mouse based drag-and-drop for moving keys around
-- **Better Workflow**
-  - Cleaner, more organized interface that gets out of your way
-  - Improved keyboard shortcuts for faster editing, better mouse support
-  - Extra tools for key [rotations](#rotate-selection-tool) and creating [split](#mirror-tool) layouts
 
 ## Getting Started
 
@@ -42,37 +23,95 @@ Just import your JSON files and continue where you left off.
 
 ## Features
 
+<table align="center">
+  <tr>
+    <th align="center" colspan=4><b>Canvas Tools</b></th>
+  </tr
+  <tr>
+    <td><img src="resources/selection-tool-icon.png" align="left"></td>
+    <td>Selection Tool</td>
+    <td><img src="resources/mirror-tool-icon.png" align="left"></td>
+    <td>Mirror Tool</td>
+  </tr>
+  <tr>
+    <td><img src="resources/move-exactly-tool-icon.png" align="left"></td>
+    <td>Move Exactly Tool</td>
+    <td><img src="resources/rotate-selection-tool-icon.png" align="left"></td>
+    <td>Rotate Selection Tool</td>
+  </tr>
+  <tr>
+    <td><img src="resources/extra-tools-icon.png" align="left"></td>
+    <td colspan=3>
+      Extra Tools
+      <ul>
+        <li>Legend Tools</li>
+        <li>Add Switch Matrix Coordinates</li>
+        <li>Move Rotation Origins</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
 ### Selection Tool
 
-<img align="right" src="resources/gifs/key-selection.gif">
-
-Select keys with:
-
-- Click to select a single key
-- Use `Ctrl+[` and `Ctrl+]` to select previous/next key
-- Click and drag to create a rectangle selection
-- `Ctrl+Click` to add/remove keys from selection
-
-Move selected keys using:
-
-- Mouse middle (scroll) button click and drag
-- Arrow keys for keyboard-based movement
-- Select all, copy and paste with standard shortcuts (`Ctrl+A`, `Ctrl+C`, `Ctrl+V`)
-
-<img src="resources/gifs/mouse-move.gif">
+<table>
+  <tr>
+    <th align="center" style="width:50%"><b>Select Keys</b></th>
+    <th align="center" style="width:50%"><b>Move Keys</b></th>
+  </tr>
+  <tr>
+    <td><img src="resources/gifs/key-selection.gif"></td>
+    <td><img src="resources/gifs/mouse-move.gif"></td>
+  </tr>
+  <tr>
+    <td>
+      <ul>
+        <li>Click on a key to select it</li>
+        <li>Use <code>Ctrl+[</code> and <code>Ctrl+]</code> to select previous/next key</li>
+        <li>Click and drag to create a rectangle selection</li>
+        <li>Hole <code>Ctrl</code> while clicking to add/remove keys from selection</li>
+      </ul>
+    </td>
+    <td>
+      <ul>
+        <li>Move selection by mouse middle button (scroll) click and drag</li>
+        <li>Or use arrow keys for keyboard-based movement</li>
+        <li>Select all, copy and paste with standard shortcuts (<code>Ctrl+A</code>, <code>Ctrl+C</code>, <code>Ctrl+V</code>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
 
 Movement snaps to a configurable step size (defined in U, where 1U is the width of a standard key) which can be set in the canvas footer.
 
 <img src="resources/canvas-footer-left.png">
 
-The 'Lock rotations' option determines how movement of rotated keys is handled:
+#### Lock rotations
 
-- When **disabled**: The rotation origin (anchor) point remains stationary, and keys move in rotated coordinate space
-- When **enabled**: The rotation origin moves with the keys, maintaining a fixed relative position between keys and their rotation anchor. Movement occurs in normal coordinate space
+The 'Lock rotations' option determines how rotated keys are moved.
 
-<img src="resources/gifs/lock-rotation-comparison.gif">
-
-In this example, keys are moved using arrow keys, but the same behavior applies when moving with the mouse.
+<table>
+  <tr>
+    <th align="center" colspan=2><b>Rotation Lock</b></th>
+  </tr>
+  <tr>
+    <td align="center" style="width:50%"><b>Disabled</b></td>
+    <td align="center" style="width:50%"><b>Enabled</b></td>
+  </tr>
+  <tr>
+    <td><img src="resources/gifs/lock-rotation-disabled-small.gif"></td>
+    <td><img src="resources/gifs/lock-rotation-enabled-small.gif"></td>
+  </tr>
+  <tr>
+    <td>The rotation origin (anchor) point remains stationary, and keys move in rotated coordinate space.</td>
+    <td>The rotation origin moves with the keys, maintaining a fixed relative position between keys and their rotation anchor. Movement occurs in normal coordinate space.</td>
+  </tr>
+  <tr>
+    <td colspan=2>
+      In both of these examples, keys are moved by 1U using arrow keys, but the same behavior applies when moving with the mouse.
+    </td>
+  </tr>
+</table>
 
 ### Move Exactly Tool
 
@@ -107,7 +146,7 @@ The mirror axis position snaps to multiples of the step size.
 Extra tools are grouped under single button in the left side toolbar. Currently there are three:
 1. **Legent Tools** - bulk legend editing
 2. **Add Switch Matrix Coordinates** - assign [VIA style](https://www.caniusevia.com/docs/layouts/) row/column labels
-3. **Move Rotatoin Origins** - recalculate positions according to new rotation references
+3. **Move Rotation Origins** - recalculate positions according to new rotation references
 
 #### Add Switch Matrix Coordinates Tool
 
