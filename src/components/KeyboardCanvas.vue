@@ -13,9 +13,13 @@
   >
     <canvas
       ref="canvasRef"
-      :width="canvasWidth"
-      :height="canvasHeight"
-      :style="{ cursor: canvasCursor }"
+      :width="scaledCanvasWidth"
+      :height="scaledCanvasHeight"
+      :style="{
+        cursor: canvasCursor,
+        width: canvasWidth + 'px',
+        height: canvasHeight + 'px',
+      }"
       @click="handleCanvasClick"
       @mousedown="handleMouseDown"
       @mousemove="handleMouseMove"
@@ -134,6 +138,7 @@ const debugOverlayRef = ref<InstanceType<typeof DebugOverlay>>()
 
 const canvasWidth = ref(800)
 const canvasHeight = ref(600)
+const devicePixelRatio = ref(window.devicePixelRatio || 1)
 const renderer = ref<CanvasRenderer>()
 const containerWidth = ref(0)
 const containerHeight = ref(0)
@@ -201,6 +206,10 @@ const canvasCursor = computed(() => {
   }
   return 'default'
 })
+
+// Scaled canvas dimensions for high DPI screens
+const scaledCanvasWidth = computed(() => Math.round(canvasWidth.value * devicePixelRatio.value))
+const scaledCanvasHeight = computed(() => Math.round(canvasHeight.value * devicePixelRatio.value))
 
 // Matrix renumbering status from overlay
 const matrixRenumberingStatus = computed(() => {
@@ -270,6 +279,22 @@ onMounted(() => {
     window.addEventListener('canvas-reset-view', handleExternalResetView as EventListener)
     window.addEventListener('request-canvas-focus', handleCanvasFocusRequest as EventListener)
     window.addEventListener('system-copy', handleSystemCopy as EventListener)
+
+    // Watch for DPI changes (e.g., moving window between monitors)
+    // Only set up if matchMedia is available (not available in test environments)
+    if (window.matchMedia) {
+      dpiMediaQuery = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`)
+      handleDpiChange = () => {
+        const newDpr = window.devicePixelRatio || 1
+        if (newDpr !== devicePixelRatio.value) {
+          devicePixelRatio.value = newDpr
+          nextTick(() => {
+            renderKeyboard()
+          })
+        }
+      }
+      dpiMediaQuery.addEventListener('change', handleDpiChange)
+    }
 
     // Watch for theme changes via data-bs-theme attribute
     themeObserver = new MutationObserver((mutations) => {
@@ -429,6 +454,10 @@ watch(
 
 // Watch for theme changes and re-render canvas background
 let themeObserver: MutationObserver | null = null
+
+// DPI change detection
+let dpiMediaQuery: MediaQueryList | null = null
+let handleDpiChange: (() => void) | null = null
 
 const updateContainerWidth = () => {
   if (containerRef.value) {
@@ -690,11 +719,15 @@ const renderKeyboard = () => {
   if (renderer.value) {
     try {
       const ctx = renderer.value.getContext()
+      const dpr = devicePixelRatio.value
 
       // Clear the entire canvas efficiently
       ctx.save()
       ctx.setTransform(1, 0, 0, 1, 0, 0) // Reset to identity matrix
       ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+
+      // Apply DPI scaling for background drawing
+      ctx.scale(dpr, dpr)
 
       // Fill with background color, applying border radius (default 6px like original KLE)
       const radiiValue = keyboardStore.metadata.radii?.trim() || '6px'
@@ -702,12 +735,12 @@ const renderKeyboard = () => {
       // Fill entire canvas with container background color first
       const containerColor = getComputedStyle(containerRef.value!).backgroundColor
       ctx.fillStyle = containerColor
-      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+      ctx.fillRect(0, 0, canvasWidth.value, canvasHeight.value)
 
       // Then draw rounded rectangle with keyboard background color on top
       ctx.fillStyle = renderOptions.value.background
-      const corners = parseBorderRadius(radiiValue, ctx.canvas.width, ctx.canvas.height)
-      createRoundedRectanglePath(ctx, 0, 0, ctx.canvas.width, ctx.canvas.height, corners)
+      const corners = parseBorderRadius(radiiValue, canvasWidth.value, canvasHeight.value)
+      createRoundedRectanglePath(ctx, 0, 0, canvasWidth.value, canvasHeight.value, corners)
       ctx.fill()
       ctx.restore()
 
@@ -717,14 +750,14 @@ const renderKeyboard = () => {
       // Calculate coordinate system offset to handle negative coordinates
       const coordinateOffset = getCoordinateSystemOffset()
 
-      // Apply zoom, pan, and coordinate system offset
+      // Apply DPI scaling, zoom, pan, and coordinate system offset
       ctx.setTransform(
-        zoom.value,
+        zoom.value * dpr,
         0,
         0,
-        zoom.value,
-        coordinateOffset.x * zoom.value,
-        coordinateOffset.y * zoom.value,
+        zoom.value * dpr,
+        coordinateOffset.x * zoom.value * dpr,
+        coordinateOffset.y * zoom.value * dpr,
       )
 
       // During rectangle selection, show tempSelectedKeys for dynamic highlighting
@@ -1726,6 +1759,11 @@ const cleanup = () => {
   window.removeEventListener('canvas-reset-view', handleExternalResetView as EventListener)
   window.removeEventListener('request-canvas-focus', handleCanvasFocusRequest as EventListener)
   window.removeEventListener('system-copy', handleSystemCopy as EventListener)
+
+  // Remove DPI change listener
+  if (dpiMediaQuery && handleDpiChange) {
+    dpiMediaQuery.removeEventListener('change', handleDpiChange)
+  }
 
   // Remove global mouse event listeners in case they weren't cleaned up
   document.removeEventListener('mousemove', handleGlobalMouseMove)
