@@ -26,6 +26,8 @@ useTheme()
 const sectionOrder = ref(['canvas', 'properties', 'json'])
 const draggedSection = ref<string | null>(null)
 const dragOverSection = ref<string | null>(null)
+const isDraggingSection = ref(false)
+const dragStartY = ref(0)
 
 // Tab state for Key Properties section
 const activePropertiesTab = ref<'properties' | 'metadata' | 'summary'>('properties')
@@ -93,57 +95,79 @@ const toggleSectionCollapse = (sectionId: string) => {
   saveCollapsedStates()
 }
 
-// Drag and drop handlers
-const handleDragStart = (sectionId: string) => {
+// Mouse-based section reordering handlers
+const startSectionDrag = (event: MouseEvent, sectionId: string) => {
+  event.preventDefault()
+  isDraggingSection.value = true
   draggedSection.value = sectionId
+  dragStartY.value = event.clientY
+  document.addEventListener('mousemove', handleSectionDrag)
+  document.addEventListener('mouseup', stopSectionDrag)
+  document.body.style.cursor = 'grabbing'
+  document.body.style.userSelect = 'none'
 }
 
-const handleDragOver = (event: DragEvent, sectionId: string) => {
-  event.preventDefault()
-  // Only highlight sections when dragging sections (not files)
-  if (draggedSection.value) {
-    dragOverSection.value = sectionId
-  }
+const handleSectionDrag = (event: MouseEvent) => {
+  if (!isDraggingSection.value || !draggedSection.value) return
+
+  // Find which section we're currently over based on mouse position
+  const sections = document.querySelectorAll('.draggable-container')
+  let foundSection: string | null = null
+
+  sections.forEach((sectionElement) => {
+    const rect = sectionElement.getBoundingClientRect()
+    if (
+      event.clientY >= rect.top &&
+      event.clientY <= rect.bottom &&
+      event.clientX >= rect.left &&
+      event.clientX <= rect.right
+    ) {
+      const sectionId = sectionElement.getAttribute('data-section-id')
+      if (sectionId && sectionId !== draggedSection.value) {
+        foundSection = sectionId
+      }
+    }
+  })
+
+  dragOverSection.value = foundSection
 }
 
-const handleDragLeave = () => {
-  // Only clear section highlight when dragging sections (not files)
-  if (draggedSection.value) {
-    dragOverSection.value = null
-  }
-}
-
-const handleDrop = (event: DragEvent, targetSectionId: string) => {
-  event.preventDefault()
-
-  // Only handle section reordering if we're dragging a section (not files)
-  if (!draggedSection.value || draggedSection.value === targetSectionId) {
+const stopSectionDrag = () => {
+  if (!isDraggingSection.value || !draggedSection.value) {
+    isDraggingSection.value = false
     draggedSection.value = null
     dragOverSection.value = null
+    document.removeEventListener('mousemove', handleSectionDrag)
+    document.removeEventListener('mouseup', stopSectionDrag)
+    document.body.style.cursor = ''
+    document.body.style.userSelect = ''
     return
   }
 
-  // Find current positions
-  const draggedIndex = sectionOrder.value.indexOf(draggedSection.value)
-  const targetIndex = sectionOrder.value.indexOf(targetSectionId)
+  // Perform the reordering if we have a valid target
+  if (dragOverSection.value && draggedSection.value !== dragOverSection.value) {
+    const draggedIndex = sectionOrder.value.indexOf(draggedSection.value)
+    const targetIndex = sectionOrder.value.indexOf(dragOverSection.value)
 
-  if (draggedIndex !== -1 && targetIndex !== -1) {
-    // Remove dragged item and insert it at target position
-    const newOrder = [...sectionOrder.value]
-    const [draggedItem] = newOrder.splice(draggedIndex, 1)
-    newOrder.splice(targetIndex, 0, draggedItem)
+    if (draggedIndex !== -1 && targetIndex !== -1) {
+      // Remove dragged item and insert it at target position
+      const newOrder = [...sectionOrder.value]
+      const [draggedItem] = newOrder.splice(draggedIndex, 1)
+      newOrder.splice(targetIndex, 0, draggedItem)
 
-    sectionOrder.value = newOrder
-    saveSectionOrder()
+      sectionOrder.value = newOrder
+      saveSectionOrder()
+    }
   }
 
+  // Clean up
+  isDraggingSection.value = false
   draggedSection.value = null
   dragOverSection.value = null
-}
-
-const handleDragEnd = () => {
-  draggedSection.value = null
-  dragOverSection.value = null
+  document.removeEventListener('mousemove', handleSectionDrag)
+  document.removeEventListener('mouseup', stopSectionDrag)
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
 }
 
 // Define section components and their configurations
@@ -259,9 +283,7 @@ const stopResize = () => {
           dragging: draggedSection === section.id,
           'drag-over': dragOverSection === section.id,
         }"
-        @dragover="handleDragOver($event, section.id)"
-        @dragleave="handleDragLeave"
-        @drop="handleDrop($event, section.id)"
+        :data-section-id="section.id"
       >
         <div class="card mb-3 draggable-section">
           <!-- Section Header with Drag Handle -->
@@ -322,9 +344,7 @@ const stopResize = () => {
               <span
                 class="drag-grip"
                 title="Drag to reorder"
-                draggable="true"
-                @dragstart="handleDragStart(section.id)"
-                @dragend="handleDragEnd"
+                @mousedown="startSectionDrag($event, section.id)"
                 ><i class="bi bi-grip-vertical"></i
               ></span>
             </div>
