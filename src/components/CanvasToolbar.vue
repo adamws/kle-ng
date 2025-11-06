@@ -1,178 +1,95 @@
 <template>
-  <div class="canvas-toolbar">
-    <!-- Edit Operations -->
-    <div class="toolbar-section">
-      <label class="section-label">Edit</label>
-      <div class="tool-buttons">
-        <!-- Add Key Button Group -->
-        <div class="btn-group-vertical add-key-group">
-          <button class="tool-button primary-add-btn" @click="addKey" title="Add Standard Key">
-            <i class="bi bi-plus-circle"></i>
-          </button>
-          <button
-            ref="dropdownBtnRef"
-            class="tool-button dropdown-btn"
-            @click="toggleSpecialKeysDropdown"
-            title="Add Special Key"
-          >
-            <i class="bi bi-chevron-down"></i>
-          </button>
-        </div>
+  <div ref="toolbarRef" class="canvas-toolbar" :style="{ width: toolbarColumns * 70 + 'px' }">
+    <div
+      class="toolbar-content"
+      :style="{ gridTemplateColumns: `repeat(${toolbarColumns}, 50px)` }"
+    >
+      <!-- Two independent columns in 2-column mode -->
+      <div v-if="toolbarColumns === 2" class="column-1-wrapper">
+        <!-- Edit Operations -->
+        <ToolbarEditSection
+          ref="editSection1Ref"
+          :show-special-keys-dropdown="showSpecialKeysDropdown"
+          :special-keys="specialKeys"
+          :can-delete="canDelete"
+          @add-key="addKey"
+          @toggle-special-keys="toggleSpecialKeysDropdown"
+          @add-special-key="addSpecialKey"
+          @delete-keys="deleteKeys"
+        />
 
-        <!-- Special Keys Dropdown -->
-        <div
-          v-if="showSpecialKeysDropdown"
-          ref="dropdownRef"
-          class="special-keys-dropdown"
-          style="opacity: 0"
-        >
-          <div class="dropdown-header">Special Keys</div>
-          <button
-            v-for="specialKey in specialKeys"
-            :key="specialKey.name"
-            @click="addSpecialKey(specialKey)"
-            class="dropdown-item"
-            :title="specialKey.description"
-          >
-            {{ specialKey.name }}
-          </button>
-        </div>
-
-        <button class="tool-button" @click="deleteKeys" :disabled="!canDelete" title="Delete Keys">
-          <i class="bi bi-trash"></i>
-        </button>
-      </div>
-    </div>
-
-    <!-- Tool Selection -->
-    <div class="toolbar-section">
-      <label class="section-label">Tools</label>
-      <div class="tool-buttons">
-        <button
-          :class="{ 'tool-button': true, active: canvasMode === 'select' }"
-          @click="setMode('select')"
-          title="Selection Mode - Left click to select, middle drag to move"
-        >
-          <i class="bi bi-cursor"></i>
-        </button>
-
-        <button
-          :class="{ 'tool-button': true, active: canvasMode === 'move-exactly' }"
-          :disabled="!canUseMoveExactlyTool"
-          @click="setMode('move-exactly')"
-          title="Move Exactly - Move selected keys by exact X/Y values"
-        >
-          <i class="bi bi-arrows-move"></i>
-        </button>
-
-        <button
-          :class="{ 'tool-button': true, active: canvasMode === 'rotate' }"
-          :disabled="!canUseRotateTool"
-          @click="setMode('rotate')"
-          title="Rotate Selection"
-        >
-          <i class="bi bi-arrow-repeat"></i>
-        </button>
-
-        <!-- Mirror Button Group -->
-        <div class="btn-group-vertical mirror-group">
-          <button
-            :class="{
-              'tool-button': true,
-              'primary-mirror-btn': true,
-              active: canvasMode === 'mirror-v' || canvasMode === 'mirror-h',
-            }"
-            :disabled="!canUseMirrorTools"
-            @click="setMode('mirror-v')"
-            title="Mirror Vertical"
-          >
-            <i class="bi bi-symmetry-vertical"></i>
-          </button>
-          <button
-            ref="mirrorDropdownBtnRef"
-            class="tool-button dropdown-btn"
-            :disabled="!canUseMirrorTools"
-            @click="toggleMirrorDropdown"
-            title="Mirror Options"
-          >
-            <i class="bi bi-chevron-down"></i>
-          </button>
-        </div>
-
-        <!-- Mirror Dropdown -->
-        <div
-          v-if="showMirrorDropdown"
-          ref="mirrorDropdownRef"
-          class="mirror-dropdown"
-          style="opacity: 0"
-        >
-          <div class="dropdown-header">Mirror Direction</div>
-          <button
-            @click="selectMirrorMode('mirror-v')"
-            class="dropdown-item"
-            :class="{ active: canvasMode === 'mirror-v' }"
-            title="Mirror keys across a vertical line"
-          >
-            <i class="bi bi-symmetry-vertical"></i>
-            Mirror Vertical
-          </button>
-          <button
-            @click="selectMirrorMode('mirror-h')"
-            class="dropdown-item"
-            :class="{ active: canvasMode === 'mirror-h' }"
-            title="Mirror keys across a horizontal line"
-          >
-            <i class="bi bi-symmetry-horizontal"></i>
-            Mirror Horizontal
-          </button>
-        </div>
-
-        <!-- Extra Tools Dropdown -->
-        <div class="btn-group-vertical extra-tools-group">
-          <button
-            ref="extraToolsBtnRef"
-            class="tool-button"
-            @click="toggleExtraToolsDropdown"
-            title="Extra Tools"
-          >
-            <i class="bi bi-tools"></i>
-          </button>
+        <!-- History Operations (in column 1 with Edit) -->
+        <div style="padding-top: 5px">
+          <ToolbarHistorySection
+            :can-undo="canUndo"
+            :can-redo="canRedo"
+            @undo="undo"
+            @redo="redo"
+          />
         </div>
       </div>
 
-      <!-- Extra Tools Dropdown -->
-      <div
-        v-if="showExtraToolsDropdown"
-        ref="extraToolsDropdownRef"
-        class="extra-tools-dropdown"
-        style="opacity: 0"
-      >
-        <div class="dropdown-header">Extra Tools</div>
-        <button
-          v-for="tool in extraTools"
-          :key="tool.id"
-          @click="tool.disabled ? null : executeExtraTool(tool)"
-          :class="['dropdown-item', { disabled: tool.disabled }]"
-          :title="tool.description"
-          :disabled="tool.disabled"
-        >
-          {{ tool.name }}
-        </button>
-      </div>
-    </div>
+      <!-- Tools in column 2 (2-column mode) -->
+      <ToolbarToolsSection
+        v-if="toolbarColumns === 2"
+        ref="toolsSection1Ref"
+        :canvas-mode="canvasMode"
+        :can-use-move-exactly-tool="canUseMoveExactlyTool"
+        :can-use-rotate-tool="canUseRotateTool"
+        :can-use-mirror-tools="canUseMirrorTools"
+        :show-mirror-dropdown="showMirrorDropdown"
+        :show-extra-tools-dropdown="showExtraToolsDropdown"
+        :extra-tools="extraTools"
+        @set-mode="setMode"
+        @toggle-mirror-dropdown="toggleMirrorDropdown"
+        @select-mirror-mode="selectMirrorMode"
+        @toggle-extra-tools="toggleExtraToolsDropdown"
+        @execute-extra-tool="executeExtraTool"
+      />
 
-    <!-- History Operations -->
-    <div class="toolbar-section">
-      <label class="section-label">History</label>
-      <div class="tool-buttons">
-        <button class="tool-button" @click="undo" :disabled="!canUndo" title="Undo">
-          <i class="bi bi-arrow-counterclockwise"></i>
-        </button>
+      <!-- Single column mode: all sections stacked -->
+      <!-- Edit Operations -->
+      <ToolbarEditSection
+        v-if="toolbarColumns === 1"
+        ref="editSection2Ref"
+        :style="getSectionStyle(1)"
+        :show-special-keys-dropdown="showSpecialKeysDropdown"
+        :special-keys="specialKeys"
+        :can-delete="canDelete"
+        @add-key="addKey"
+        @toggle-special-keys="toggleSpecialKeysDropdown"
+        @add-special-key="addSpecialKey"
+        @delete-keys="deleteKeys"
+      />
 
-        <button class="tool-button" @click="redo" :disabled="!canRedo" title="Redo">
-          <i class="bi bi-arrow-clockwise"></i>
-        </button>
-      </div>
+      <!-- Tools (single column mode) -->
+      <ToolbarToolsSection
+        v-if="toolbarColumns === 1"
+        ref="toolsSection2Ref"
+        :style="getSectionStyle(2)"
+        :canvas-mode="canvasMode"
+        :can-use-move-exactly-tool="canUseMoveExactlyTool"
+        :can-use-rotate-tool="canUseRotateTool"
+        :can-use-mirror-tools="canUseMirrorTools"
+        :show-mirror-dropdown="showMirrorDropdown"
+        :show-extra-tools-dropdown="showExtraToolsDropdown"
+        :extra-tools="extraTools"
+        @set-mode="setMode"
+        @toggle-mirror-dropdown="toggleMirrorDropdown"
+        @select-mirror-mode="selectMirrorMode"
+        @toggle-extra-tools="toggleExtraToolsDropdown"
+        @execute-extra-tool="executeExtraTool"
+      />
+
+      <!-- History Operations (single column mode) -->
+      <ToolbarHistorySection
+        v-if="toolbarColumns === 1"
+        :style="getSectionStyle(3)"
+        :can-undo="canUndo"
+        :can-redo="canRedo"
+        @undo="undo"
+        @redo="redo"
+      />
     </div>
   </div>
 
@@ -201,25 +118,28 @@ import { SPECIAL_KEYS, type SpecialKeyTemplate } from '@/data/specialKeys'
 import LegendToolsPanel from './LegendToolsPanel.vue'
 import RotationOriginsPanel from './RotationOriginsPanel.vue'
 import MatrixCoordinatesModal from './MatrixCoordinatesModal.vue'
+import ToolbarEditSection from './ToolbarEditSection.vue'
+import ToolbarToolsSection from './ToolbarToolsSection.vue'
+import ToolbarHistorySection from './ToolbarHistorySection.vue'
 
 // Store
 const keyboardStore = useKeyboardStore()
 
+// Component refs
+const editSection1Ref = ref<InstanceType<typeof ToolbarEditSection> | null>(null)
+const editSection2Ref = ref<InstanceType<typeof ToolbarEditSection> | null>(null)
+const toolsSection1Ref = ref<InstanceType<typeof ToolbarToolsSection> | null>(null)
+const toolsSection2Ref = ref<InstanceType<typeof ToolbarToolsSection> | null>(null)
+
 // Special keys dropdown state
 const showSpecialKeysDropdown = ref(false)
 const specialKeys = SPECIAL_KEYS
-const dropdownRef = ref<HTMLElement>()
-const dropdownBtnRef = ref<HTMLElement>()
 
 // Mirror dropdown state
 const showMirrorDropdown = ref(false)
-const mirrorDropdownRef = ref<HTMLElement>()
-const mirrorDropdownBtnRef = ref<HTMLElement>()
 
 // Extra tools dropdown
 const showExtraToolsDropdown = ref(false)
-const extraToolsDropdownRef = ref<HTMLElement>()
-const extraToolsBtnRef = ref<HTMLElement>()
 
 // Legend tools panel
 const showLegendToolsPanel = ref(false)
@@ -230,6 +150,11 @@ const showRotationOriginsPanel = ref(false)
 // Matrix coordinates modal
 const showMatrixModal = ref(false)
 const matrixModalRef = ref<InstanceType<typeof MatrixCoordinatesModal> | null>(null)
+
+// Toolbar responsive layout
+const toolbarRef = ref<HTMLElement>()
+const toolbarColumns = ref(1)
+const resizeObserverRef = ref<ResizeObserver>()
 
 // Define extra tools
 interface ExtraTool {
@@ -284,6 +209,15 @@ const canUseMoveExactlyTool = computed(() => keyboardStore.selectedKeys.length >
 
 // Methods
 
+// Get grid positioning for each section based on column count (only used in single-column mode)
+const getSectionStyle = (sectionIndex: number) => {
+  // Single column mode: all sections stacked vertically
+  return {
+    gridColumn: '1',
+    gridRow: `${sectionIndex}`,
+  }
+}
+
 // Helper function to request canvas focus
 const requestCanvasFocus = () => {
   window.dispatchEvent(new CustomEvent('request-canvas-focus'))
@@ -308,9 +242,13 @@ const toggleSpecialKeysDropdown = () => {
     return
   }
 
+  // Get the active edit section ref based on current layout
+  const editSectionRef = toolbarColumns.value === 2 ? editSection1Ref.value : editSection2Ref.value
+  const dropdownBtnRef = editSectionRef?.dropdownBtnRef
+
   // Calculate position before showing dropdown
-  if (dropdownBtnRef.value) {
-    const buttonRect = dropdownBtnRef.value.getBoundingClientRect()
+  if (dropdownBtnRef) {
+    const buttonRect = dropdownBtnRef.getBoundingClientRect()
     const viewportWidth = window.innerWidth
     const viewportHeight = window.innerHeight
 
@@ -349,11 +287,11 @@ const toggleSpecialKeysDropdown = () => {
 
     // Use nextTick to ensure DOM is updated before positioning
     nextTick(() => {
-      if (dropdownRef.value) {
-        const dropdown = dropdownRef.value
-        dropdown.style.left = `${left}px`
-        dropdown.style.top = `${top}px`
-        dropdown.style.opacity = '1'
+      const dropdownRef = editSectionRef?.dropdownRef
+      if (dropdownRef) {
+        dropdownRef.style.left = `${left}px`
+        dropdownRef.style.top = `${top}px`
+        dropdownRef.style.opacity = '1'
       }
     })
   }
@@ -375,9 +313,14 @@ const toggleMirrorDropdown = () => {
     return
   }
 
+  // Get the active tools section ref based on current layout
+  const toolsSectionRef =
+    toolbarColumns.value === 2 ? toolsSection1Ref.value : toolsSection2Ref.value
+  const mirrorDropdownBtnRef = toolsSectionRef?.mirrorDropdownBtnRef
+
   // Calculate position before showing dropdown
-  if (mirrorDropdownBtnRef.value) {
-    const buttonRect = mirrorDropdownBtnRef.value.getBoundingClientRect()
+  if (mirrorDropdownBtnRef) {
+    const buttonRect = mirrorDropdownBtnRef.getBoundingClientRect()
     const viewportWidth = window.innerWidth
     const viewportHeight = window.innerHeight
 
@@ -416,11 +359,11 @@ const toggleMirrorDropdown = () => {
 
     // Use nextTick to ensure DOM is updated before positioning
     nextTick(() => {
-      if (mirrorDropdownRef.value) {
-        const dropdown = mirrorDropdownRef.value
-        dropdown.style.left = `${left}px`
-        dropdown.style.top = `${top}px`
-        dropdown.style.opacity = '1'
+      const mirrorDropdownRef = toolsSectionRef?.mirrorDropdownRef
+      if (mirrorDropdownRef) {
+        mirrorDropdownRef.style.left = `${left}px`
+        mirrorDropdownRef.style.top = `${top}px`
+        mirrorDropdownRef.style.opacity = '1'
       }
     })
   }
@@ -467,9 +410,14 @@ const toggleExtraToolsDropdown = () => {
     return
   }
 
+  // Get the active tools section ref based on current layout
+  const toolsSectionRef =
+    toolbarColumns.value === 2 ? toolsSection1Ref.value : toolsSection2Ref.value
+  const extraToolsBtnRef = toolsSectionRef?.extraToolsBtnRef
+
   // Calculate position before showing dropdown
-  if (extraToolsBtnRef.value) {
-    const buttonRect = extraToolsBtnRef.value.getBoundingClientRect()
+  if (extraToolsBtnRef) {
+    const buttonRect = extraToolsBtnRef.getBoundingClientRect()
     const viewportWidth = window.innerWidth
     const viewportHeight = window.innerHeight
 
@@ -508,11 +456,11 @@ const toggleExtraToolsDropdown = () => {
 
     // Use nextTick to ensure DOM is updated before positioning
     nextTick(() => {
-      if (extraToolsDropdownRef.value) {
-        const dropdown = extraToolsDropdownRef.value
-        dropdown.style.left = `${left}px`
-        dropdown.style.top = `${top}px`
-        dropdown.style.opacity = '1'
+      const extraToolsDropdownRef = toolsSectionRef?.extraToolsDropdownRef
+      if (extraToolsDropdownRef) {
+        extraToolsDropdownRef.style.left = `${left}px`
+        extraToolsDropdownRef.style.top = `${top}px`
+        extraToolsDropdownRef.style.opacity = '1'
       }
     })
   }
@@ -530,8 +478,10 @@ const executeExtraTool = (tool: ExtraTool) => {
 const handleClickOutside = (event: MouseEvent) => {
   if (showSpecialKeysDropdown.value) {
     const target = event.target as Node
-    const dropdownBtn = dropdownBtnRef.value
-    const dropdown = dropdownRef.value
+    const editSectionRef =
+      toolbarColumns.value === 2 ? editSection1Ref.value : editSection2Ref.value
+    const dropdownBtn = editSectionRef?.dropdownBtnRef
+    const dropdown = editSectionRef?.dropdownRef
 
     if (dropdownBtn && !dropdownBtn.contains(target) && dropdown && !dropdown.contains(target)) {
       showSpecialKeysDropdown.value = false
@@ -540,8 +490,10 @@ const handleClickOutside = (event: MouseEvent) => {
 
   if (showMirrorDropdown.value) {
     const target = event.target as Node
-    const dropdownBtn = mirrorDropdownBtnRef.value
-    const dropdown = mirrorDropdownRef.value
+    const toolsSectionRef =
+      toolbarColumns.value === 2 ? toolsSection1Ref.value : toolsSection2Ref.value
+    const dropdownBtn = toolsSectionRef?.mirrorDropdownBtnRef
+    const dropdown = toolsSectionRef?.mirrorDropdownRef
 
     if (dropdownBtn && !dropdownBtn.contains(target) && dropdown && !dropdown.contains(target)) {
       showMirrorDropdown.value = false
@@ -550,8 +502,10 @@ const handleClickOutside = (event: MouseEvent) => {
 
   if (showExtraToolsDropdown.value) {
     const target = event.target as Node
-    const dropdownBtn = extraToolsBtnRef.value
-    const dropdown = extraToolsDropdownRef.value
+    const toolsSectionRef =
+      toolbarColumns.value === 2 ? toolsSection1Ref.value : toolsSection2Ref.value
+    const dropdownBtn = toolsSectionRef?.extraToolsBtnRef
+    const dropdown = toolsSectionRef?.extraToolsDropdownRef
 
     if (dropdownBtn && !dropdownBtn.contains(target) && dropdown && !dropdown.contains(target)) {
       showExtraToolsDropdown.value = false
@@ -561,25 +515,58 @@ const handleClickOutside = (event: MouseEvent) => {
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
+
+  // Setup ResizeObserver to switch between layouts based on available height
+  if (toolbarRef.value) {
+    const resizeObserver = new ResizeObserver((entries) => {
+      const availableHeight = entries[0].contentRect.height
+      if (availableHeight < 530) {
+        toolbarColumns.value = 2
+      } else {
+        toolbarColumns.value = 1
+      }
+    })
+    resizeObserver.observe(toolbarRef.value)
+
+    // Store observer for cleanup
+    resizeObserverRef.value = resizeObserver
+  }
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
+
+  // Cleanup ResizeObserver
+  if (resizeObserverRef.value) {
+    resizeObserverRef.value.disconnect()
+  }
 })
 </script>
 
-<style scoped>
+<style>
 .canvas-toolbar {
-  width: 80px;
-  min-width: 80px;
   background: var(--bs-tertiary-bg);
   border-right: 1px solid var(--bs-border-color);
+  box-shadow: 1px 0 3px rgba(0, 0, 0, 0.1);
+  align-self: stretch;
+  transition: width 0.2s ease;
+}
+
+.toolbar-content {
+  display: grid;
+  grid-auto-rows: min-content;
+  gap: 16px 20px;
   padding: 16px 10px;
+  align-content: start;
+  justify-items: center;
+}
+
+/* Column 1 wrapper for 2-column mode: flex container for Edit + History */
+.column-1-wrapper {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  box-shadow: 1px 0 3px rgba(0, 0, 0, 0.1);
-  container-type: inline-size;
+  align-items: center;
 }
 
 .toolbar-section {
@@ -587,6 +574,7 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 6px;
   align-items: center;
+  width: 60px;
 }
 
 .section-label {
@@ -606,59 +594,6 @@ onUnmounted(() => {
   gap: 4px;
   align-items: center;
   width: 100%;
-}
-
-/* Compact layout when toolbar height is constrained */
-@container (max-height: 500px) {
-  .canvas-toolbar {
-    width: 160px;
-    min-width: 160px;
-    padding: 12px 8px;
-    gap: 12px;
-  }
-
-  .toolbar-section {
-    gap: 4px;
-  }
-
-  .tool-buttons {
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 3px;
-  }
-
-  .tool-button {
-    width: 34px;
-    height: 34px;
-  }
-
-  .add-key-group {
-    flex-direction: row;
-    gap: 2px;
-  }
-
-  .primary-add-btn {
-    border-radius: 6px 2px 2px 6px;
-    border-right: 1px solid #adb5bd;
-  }
-
-  .mirror-group {
-    flex-direction: row;
-    gap: 2px;
-  }
-
-  .primary-mirror-btn {
-    border-radius: 6px 2px 2px 6px;
-    border-right: 1px solid #adb5bd;
-  }
-
-  .dropdown-btn {
-    height: 34px;
-    width: 16px;
-    border-radius: 2px 6px 6px 2px;
-    border-left: none;
-  }
 }
 
 .tool-button {
@@ -690,7 +625,6 @@ onUnmounted(() => {
   border-color: var(--bs-primary);
   color: var(--bs-primary-text, white);
   box-shadow: 0 2px 6px rgba(0, 123, 255, 0.3);
-  transform: translateY(-1px);
 }
 
 .tool-button:focus {

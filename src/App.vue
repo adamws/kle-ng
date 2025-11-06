@@ -206,10 +206,11 @@ const closeHelp = () => {
 }
 
 // Conservative minimum to ensure all tools fit comfortably
-const minLayoutEditorHeight = 530
+const minLayoutEditorHeight = 300
+const initialLayoutEditorHeight = 530
 
 // Layout Editor container resize functionality
-const layoutEditorHeight = ref(minLayoutEditorHeight) // Initial height
+const layoutEditorHeight = ref(initialLayoutEditorHeight)
 const isResizing = ref(false)
 const resizeStartY = ref(0)
 const resizeStartHeight = ref(0)
