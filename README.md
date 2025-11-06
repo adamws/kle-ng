@@ -31,7 +31,7 @@ Just import your JSON files and continue where you left off.
 <table>
   <tr>
     <th align="center" colspan=4><b>Canvas Tools</b></th>
-  </tr
+  </tr>
   <tr>
     <td><img src="resources/selection-tool-icon.png" align="left"></td>
     <td>Selection Tool</td>
@@ -74,7 +74,7 @@ Just import your JSON files and continue where you left off.
         <li>Click on a key to select it</li>
         <li>Use <code>Ctrl+[</code> and <code>Ctrl+]</code> to select previous/next key</li>
         <li>Click and drag to create a rectangle selection</li>
-        <li>Hole <code>Ctrl</code> while clicking to add/remove keys from selection</li>
+        <li>Hold <code>Ctrl</code> while clicking to add/remove keys from selection</li>
       </ul>
     </td>
     <td>
@@ -162,7 +162,7 @@ For precise movement use 'Move Exactly' tool.
 ### Extra Tools
 
 Extra tools are grouped under single button in the left side toolbar. Currently there are three:
-1. **Legent Tools** - bulk legend editing
+1. **Legend Tools** - bulk legend editing
 2. **Add Switch Matrix Coordinates** - assign [VIA style](https://www.caniusevia.com/docs/layouts/) row/column labels
 3. **Move Rotation Origins** - recalculate positions according to new rotation references
 
@@ -218,7 +218,7 @@ To edit connections use appropriate editing mode:
       New row/columns are assigned with first free numerical value.<br>
       It is possible to re-assign numbers later.
     </td>
-    <td>Hover and click on a element to remove.</td>
+    <td>Hover and click on an element to remove.</td>
   </tr>
 </table>
 
