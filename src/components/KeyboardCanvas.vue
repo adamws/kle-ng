@@ -92,6 +92,7 @@ import { useKeyboardStore, type Key, type KeyboardMetadata } from '@/stores/keyb
 import { useMatrixDrawingStore } from '@/stores/matrix-drawing'
 import { useFontStore } from '@/stores/font'
 import { CanvasRenderer, type RenderOptions } from '@/utils/canvas-renderer'
+import { renderScheduler } from '@/utils/utils/RenderScheduler'
 import { D } from '@/utils/decimal-math'
 import { keyIntersectsSelection } from '@/utils/geometry'
 import { parseBorderRadius, createRoundedRectanglePath } from '@/utils/border-radius'
@@ -243,9 +244,7 @@ onMounted(() => {
 
     // Set up callback for when images load
     renderer.value.setImageLoadCallback(() => {
-      nextTick(() => {
-        renderKeyboard()
-      })
+      renderScheduler.schedule(renderKeyboard)
     })
 
     // Set up callback for when images fail to load
@@ -258,7 +257,7 @@ onMounted(() => {
 
     updateCanvasSize()
 
-    renderKeyboard()
+    renderScheduler.schedule(renderKeyboard)
 
     canvasRef.value.focus()
     canvasFocused.value = true
@@ -269,9 +268,7 @@ onMounted(() => {
     resizeObserver.value = new ResizeObserver(() => {
       updateContainerWidth()
       updateCanvasSize()
-      nextTick(() => {
-        renderKeyboard()
-      })
+      renderScheduler.schedule(renderKeyboard)
     })
     resizeObserver.value.observe(containerRef.value)
 
@@ -301,7 +298,7 @@ onMounted(() => {
       mutations.forEach((mutation) => {
         if (mutation.type === 'attributes' && mutation.attributeName === 'data-bs-theme') {
           // Theme changed, re-render canvas to update background color
-          renderKeyboard()
+          renderScheduler.schedule(renderKeyboard)
         }
       })
     })
@@ -358,7 +355,7 @@ watch(
     }
 
     // Always re-render to show selection changes
-    renderKeyboard()
+    renderScheduler.schedule(renderKeyboard)
   },
   { deep: true, immediate: true },
 )
@@ -375,8 +372,7 @@ watch(
 watch(zoom, async () => {
   await nextTick()
   updateCanvasSize()
-  await nextTick()
-  renderKeyboard()
+  renderScheduler.schedule(renderKeyboard)
 })
 
 // Watch specifically for changes in the number of keys
@@ -387,8 +383,7 @@ watch(
       await nextTick()
       updateContainerWidth()
       updateCanvasSize()
-      await nextTick()
-      renderKeyboard()
+      renderScheduler.schedule(renderKeyboard)
     }
   },
 )
@@ -409,8 +404,7 @@ watch(
   async () => {
     await nextTick()
     updateCanvasSize()
-    await nextTick()
-    renderKeyboard()
+    renderScheduler.schedule(renderKeyboard)
   },
   { deep: true },
 )
@@ -421,8 +415,7 @@ watch(
   async () => {
     await nextTick()
     updateCanvasSize()
-    await nextTick()
-    renderKeyboard()
+    renderScheduler.schedule(renderKeyboard)
   },
 )
 
@@ -432,7 +425,7 @@ watch(
   (newBackcolor, oldBackcolor) => {
     if (renderer.value && newBackcolor !== oldBackcolor) {
       renderer.value.updateOptions(renderOptions.value)
-      renderKeyboard()
+      renderScheduler.schedule(renderKeyboard)
     }
   },
   { immediate: false },
@@ -444,9 +437,7 @@ watch(
   (newFont, oldFont) => {
     if (renderer.value && newFont !== oldFont) {
       renderer.value.updateOptions(renderOptions.value)
-      nextTick(() => {
-        renderKeyboard()
-      })
+      renderScheduler.schedule(renderKeyboard)
     }
   },
   { immediate: false },
@@ -799,9 +790,7 @@ const renderKeyboard = () => {
 const handleWindowResize = () => {
   updateContainerWidth()
   updateCanvasSize()
-  nextTick(() => {
-    renderKeyboard()
-  })
+  renderScheduler.schedule(renderKeyboard)
 }
 
 const getCanvasPosition = (event: MouseEvent) => {
@@ -1021,18 +1010,14 @@ const handleMouseMove = (event: MouseEvent) => {
 
     if (rotationPoint?.id !== hoveredRotationPointId.value) {
       hoveredRotationPointId.value = rotationPoint?.id || null
-      nextTick(() => {
-        renderKeyboard()
-      })
+      renderScheduler.schedule(renderKeyboard)
     }
     return
   }
 
   // Handle mirror mode preview - trigger re-render to show axis preview
   if (keyboardStore.canvasMode === 'mirror-h' || keyboardStore.canvasMode === 'mirror-v') {
-    nextTick(() => {
-      renderKeyboard()
-    })
+    renderScheduler.schedule(renderKeyboard)
     return
   }
 
@@ -1068,9 +1053,7 @@ const handleMouseMoveShared = (event: MouseEvent) => {
     // Auto-scroll when dragging near container edges
     handleAutoScroll(event)
 
-    nextTick(() => {
-      renderKeyboard()
-    })
+    renderScheduler.schedule(renderKeyboard)
     return
   }
 
@@ -1199,9 +1182,7 @@ const handleMouseLeave = () => {
   // Reset hovered rotation point
   if (hoveredRotationPointId.value) {
     hoveredRotationPointId.value = null
-    nextTick(() => {
-      renderKeyboard()
-    })
+    renderScheduler.schedule(renderKeyboard)
   }
 
   // Dispatch event to notify that mouse position is hidden
@@ -1482,9 +1463,7 @@ const handleExternalZoom = (event: Event) => {
   zoom.value = customEvent.detail
   nextTick(() => {
     updateCanvasSize()
-    nextTick(() => {
-      renderKeyboard()
-    })
+    renderScheduler.schedule(renderKeyboard)
   })
 }
 
@@ -1492,9 +1471,7 @@ const handleExternalResetView = () => {
   zoom.value = 1
   nextTick(() => {
     updateCanvasSize()
-    nextTick(() => {
-      renderKeyboard()
-    })
+    renderScheduler.schedule(renderKeyboard)
   })
 }
 
@@ -1527,9 +1504,7 @@ const handleSystemCopy = (event: Event) => {
 const resetView = () => {
   nextTick(() => {
     updateCanvasSize()
-    nextTick(() => {
-      renderKeyboard()
-    })
+    renderScheduler.schedule(renderKeyboard)
   })
 }
 
@@ -1553,9 +1528,7 @@ const moveSelectedKeys = (deltaX: number, deltaY: number) => {
   })
   keyboardStore.saveState()
   updateCanvasSize()
-  nextTick(() => {
-    renderKeyboard()
-  })
+  renderScheduler.schedule(renderKeyboard)
 }
 
 const adjustSelectedKeysSize = (dimension: 'width' | 'height', delta: number) => {
@@ -1585,9 +1558,7 @@ const adjustSelectedKeysSize = (dimension: 'width' | 'height', delta: number) =>
   })
   keyboardStore.saveState()
   updateCanvasSize()
-  nextTick(() => {
-    renderKeyboard()
-  })
+  renderScheduler.schedule(renderKeyboard)
 }
 
 const selectNextKey = () => {
@@ -1702,9 +1673,7 @@ const handleRotationApply = (angle: number) => {
   keyboardStore.applyRotation()
 
   // Re-render to show final result
-  nextTick(() => {
-    renderKeyboard()
-  })
+  renderScheduler.schedule(renderKeyboard)
 }
 
 const handleRotationCancel = () => {
@@ -1712,9 +1681,7 @@ const handleRotationCancel = () => {
   keyboardStore.cancelRotation()
 
   // Re-render to remove any preview
-  nextTick(() => {
-    renderKeyboard()
-  })
+  renderScheduler.schedule(renderKeyboard)
 }
 
 const handleRotationAngleChange = (angle: number) => {
@@ -1722,9 +1689,7 @@ const handleRotationAngleChange = (angle: number) => {
   keyboardStore.updateRotationPreview(angle)
 
   // Re-render to show changes
-  nextTick(() => {
-    renderKeyboard()
-  })
+  renderScheduler.schedule(renderKeyboard)
 }
 
 // Move Exactly handlers
@@ -1738,7 +1703,7 @@ const handleMoveExactlyApply = (deltaX: number, deltaY: number) => {
     // Exit move exactly mode
     keyboardStore.setCanvasMode('select')
     // Re-render to show final result
-    renderKeyboard()
+    renderScheduler.schedule(renderKeyboard)
   })
 }
 

@@ -22,6 +22,9 @@ import {
 } from '../utils/array-helpers'
 import { sortKeysForSerialization } from '../utils/serialization'
 import { useFontStore } from './font'
+import { svgCache } from '../utils/caches/SVGCache'
+import { parseCache } from '../utils/caches/ParseCache'
+import { imageCache } from '../utils/caches/ImageCache'
 
 export { Key, Keyboard, KeyboardMetadata, type Array12 } from '@adamws/kle-serial'
 
@@ -126,6 +129,16 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     key.x = x
     key.y = y
     return key
+  }
+
+  /**
+   * Clear all render caches (SVG, parse, and image caches)
+   * Called when layout changes to ensure fresh rendering
+   */
+  const clearRenderCaches = () => {
+    svgCache.clear()
+    parseCache.clear()
+    imageCache.clear()
   }
 
   const saveState = () => {
@@ -448,6 +461,9 @@ export const useKeyboardStore = defineStore('keyboard', () => {
       saveState()
       dirty.value = false
       resetViewTrigger.value++ // Trigger view reset (will preserve zoom, reset pan only)
+
+      // Clear render caches when loading new layout
+      clearRenderCaches()
     } catch (error) {
       console.error('Error loading layout:', error)
       throw error
@@ -617,6 +633,9 @@ export const useKeyboardStore = defineStore('keyboard', () => {
       // Don't clear history - this preserves undo functionality
       saveState() // This adds current state to history
       dirty.value = true // Mark as dirty since user made changes
+
+      // Clear render caches when updating layout from JSON
+      clearRenderCaches()
     } catch (error) {
       console.error('Error updating layout from JSON:', error)
       throw error
