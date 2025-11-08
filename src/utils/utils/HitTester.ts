@@ -1,5 +1,4 @@
 import type { Key } from '@adamws/kle-serial'
-import { D } from '../decimal-math'
 import type { KeyRenderParams } from '../canvas-renderer'
 
 /**
@@ -89,7 +88,7 @@ export class HitTester {
 
       // If key is rotated, apply inverse rotation to test coordinates
       if (key.rotation_angle) {
-        const angle = D.degreesToRadians(-key.rotation_angle) // Inverse rotation
+        const angle = (-key.rotation_angle * Math.PI) / 180 // Inverse rotation
         const originX = params.origin_x
         const originY = params.origin_y
 

@@ -1,5 +1,4 @@
 import type { Key } from '@adamws/kle-serial'
-import { D } from '../decimal-math'
 import polygonClippingLib from 'polygon-clipping'
 import type { MultiPolygon } from 'polygon-clipping'
 import type { KeyRenderParams } from '../canvas-renderer'
@@ -117,101 +116,86 @@ export class KeyRenderer {
       key.x2 !== undefined ||
       key.y2 !== undefined
 
-    params.capwidth = D.mul(sizes.unit, key.width)
-    params.capheight = D.mul(sizes.unit, key.height)
-    params.capx = D.mul(sizes.unit, key.x)
-    params.capy = D.mul(sizes.unit, key.y)
+    params.capwidth = sizes.unit * key.width
+    params.capheight = sizes.unit * key.height
+    params.capx = sizes.unit * key.x
+    params.capy = sizes.unit * key.y
 
     if (params.nonRectangular) {
-      params.capwidth2 = D.mul(sizes.unit, key.width2 || key.width)
-      params.capheight2 = D.mul(sizes.unit, key.height2 || key.height)
-      params.capx2 = D.mul(sizes.unit, D.add(key.x, key.x2 || 0))
-      params.capy2 = D.mul(sizes.unit, D.add(key.y, key.y2 || 0))
+      params.capwidth2 = sizes.unit * (key.width2 || key.width)
+      params.capheight2 = sizes.unit * (key.height2 || key.height)
+      params.capx2 = sizes.unit * (key.x + (key.x2 || 0))
+      params.capy2 = sizes.unit * (key.y + (key.y2 || 0))
     }
 
-    params.outercapwidth = D.max(2, D.sub(params.capwidth, D.mul(sizes.keySpacing, 2)))
-    params.outercapheight = D.max(2, D.sub(params.capheight, D.mul(sizes.keySpacing, 2)))
+    params.outercapwidth = Math.max(2, params.capwidth - sizes.keySpacing * 2)
+    params.outercapheight = Math.max(2, params.capheight - sizes.keySpacing * 2)
 
-    const actualKeySpacingX = D.max(0, D.div(D.sub(params.capwidth, params.outercapwidth), 2))
-    const actualKeySpacingY = D.max(0, D.div(D.sub(params.capheight, params.outercapheight), 2))
+    const actualKeySpacingX = Math.max(0, (params.capwidth - params.outercapwidth) / 2)
+    const actualKeySpacingY = Math.max(0, (params.capheight - params.outercapheight) / 2)
 
-    params.outercapx = D.add(params.capx, actualKeySpacingX)
-    params.outercapy = D.add(params.capy, actualKeySpacingY)
+    params.outercapx = params.capx + actualKeySpacingX
+    params.outercapy = params.capy + actualKeySpacingY
 
     if (params.nonRectangular) {
-      params.outercapwidth2 = D.max(2, D.sub(params.capwidth2!, D.mul(sizes.keySpacing, 2)))
-      params.outercapheight2 = D.max(2, D.sub(params.capheight2!, D.mul(sizes.keySpacing, 2)))
+      params.outercapwidth2 = Math.max(2, params.capwidth2! - sizes.keySpacing * 2)
+      params.outercapheight2 = Math.max(2, params.capheight2! - sizes.keySpacing * 2)
 
-      const actualKeySpacingX2 = D.max(0, D.div(D.sub(params.capwidth2!, params.outercapwidth2), 2))
-      const actualKeySpacingY2 = D.max(
-        0,
-        D.div(D.sub(params.capheight2!, params.outercapheight2), 2),
-      )
+      const actualKeySpacingX2 = Math.max(0, (params.capwidth2! - params.outercapwidth2) / 2)
+      const actualKeySpacingY2 = Math.max(0, (params.capheight2! - params.outercapheight2) / 2)
 
-      params.outercapx2 = D.add(params.capx2!, actualKeySpacingX2)
-      params.outercapy2 = D.add(params.capy2!, actualKeySpacingY2)
+      params.outercapx2 = params.capx2! + actualKeySpacingX2
+      params.outercapy2 = params.capy2! + actualKeySpacingY2
     }
 
-    params.innercapwidth = D.max(1, D.sub(params.outercapwidth, D.mul(sizes.bevelMargin, 2)))
-    params.innercapheight = D.max(
+    params.innercapwidth = Math.max(1, params.outercapwidth - sizes.bevelMargin * 2)
+    params.innercapheight = Math.max(
       1,
-      D.sub(
-        params.outercapheight,
-        D.add(D.mul(sizes.bevelMargin, 2), D.sub(sizes.bevelOffsetBottom, sizes.bevelOffsetTop)),
-      ),
+      params.outercapheight -
+        (sizes.bevelMargin * 2 + (sizes.bevelOffsetBottom - sizes.bevelOffsetTop)),
     )
 
-    const actualBevelMarginX = D.max(0, D.div(D.sub(params.outercapwidth, params.innercapwidth), 2))
-    const actualBevelMarginY = D.max(
+    const actualBevelMarginX = Math.max(0, (params.outercapwidth - params.innercapwidth) / 2)
+    const actualBevelMarginY = Math.max(
       0,
-      D.div(
-        D.sub(
-          params.outercapheight,
-          D.add(params.innercapheight, D.sub(sizes.bevelOffsetBottom, sizes.bevelOffsetTop)),
-        ),
+      (params.outercapheight -
+        (params.innercapheight + (sizes.bevelOffsetBottom - sizes.bevelOffsetTop))) /
         2,
-      ),
     )
 
-    params.innercapx = D.add(params.outercapx, actualBevelMarginX)
-    params.innercapy = D.sub(D.add(params.outercapy, actualBevelMarginY), sizes.bevelOffsetTop)
+    params.innercapx = params.outercapx + actualBevelMarginX
+    params.innercapy = params.outercapy + actualBevelMarginY - sizes.bevelOffsetTop
 
     if (params.nonRectangular) {
-      params.innercapwidth2 = D.max(1, D.sub(params.outercapwidth2!, D.mul(sizes.bevelMargin, 2)))
-      params.innercapheight2 = D.max(1, D.sub(params.outercapheight2!, D.mul(sizes.bevelMargin, 2)))
+      params.innercapwidth2 = Math.max(1, params.outercapwidth2! - sizes.bevelMargin * 2)
+      params.innercapheight2 = Math.max(1, params.outercapheight2! - sizes.bevelMargin * 2)
 
-      const actualBevelMarginX2 = D.max(
+      const actualBevelMarginX2 = Math.max(0, (params.outercapwidth2! - params.innercapwidth2) / 2)
+      const actualBevelMarginY2 = Math.max(
         0,
-        D.div(D.sub(params.outercapwidth2!, params.innercapwidth2), 2),
-      )
-      const actualBevelMarginY2 = D.max(
-        0,
-        D.div(D.sub(params.outercapheight2!, params.innercapheight2), 2),
+        (params.outercapheight2! - params.innercapheight2) / 2,
       )
 
-      params.innercapx2 = D.add(params.outercapx2!, actualBevelMarginX2)
-      params.innercapy2 = D.sub(
-        D.add(params.outercapy2!, actualBevelMarginY2),
-        sizes.bevelOffsetTop,
-      )
+      params.innercapx2 = params.outercapx2! + actualBevelMarginX2
+      params.innercapy2 = params.outercapy2! + actualBevelMarginY2 - sizes.bevelOffsetTop
     }
 
     // Reduce text padding to match original KLE behavior for better text fit
     const textPadding = Math.max(1, sizes.padding - 1) // Reduce by 1 pixel on each side
-    params.textcapwidth = D.max(1, D.sub(params.innercapwidth, D.mul(textPadding, 2)))
-    params.textcapheight = D.max(1, D.sub(params.innercapheight, D.mul(textPadding, 2)))
+    params.textcapwidth = Math.max(1, params.innercapwidth - textPadding * 2)
+    params.textcapheight = Math.max(1, params.innercapheight - textPadding * 2)
 
-    const actualPaddingX = D.max(0, D.div(D.sub(params.innercapwidth, params.textcapwidth), 2))
-    const actualPaddingY = D.max(0, D.div(D.sub(params.innercapheight, params.textcapheight), 2))
+    const actualPaddingX = Math.max(0, (params.innercapwidth - params.textcapwidth) / 2)
+    const actualPaddingY = Math.max(0, (params.innercapheight - params.textcapheight) / 2)
 
-    params.textcapx = D.add(params.innercapx, actualPaddingX)
-    params.textcapy = D.add(params.innercapy, actualPaddingY)
+    params.textcapx = params.innercapx + actualPaddingX
+    params.textcapy = params.innercapy + actualPaddingY
 
     params.darkColor = key.color
     params.lightColor = this.lightenColor(key.color)
 
-    params.origin_x = D.mul(sizes.unit, key.rotation_x || 0)
-    params.origin_y = D.mul(sizes.unit, key.rotation_y || 0)
+    params.origin_x = sizes.unit * (key.rotation_x || 0)
+    params.origin_y = sizes.unit * (key.rotation_y || 0)
 
     return params as KeyRenderParams
   }
@@ -512,7 +496,7 @@ export class KeyRenderer {
     // Apply rotation if needed
     if (key.rotation_angle) {
       ctx.translate(params.origin_x, params.origin_y)
-      ctx.rotate(D.degreesToRadians(key.rotation_angle))
+      ctx.rotate((key.rotation_angle * Math.PI) / 180)
       ctx.translate(-params.origin_x, -params.origin_y)
     }
 

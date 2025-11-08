@@ -1,5 +1,4 @@
 import type { Key } from '@adamws/kle-serial'
-import { D } from '../decimal-math'
 
 /**
  * Represents a rotation point for interactive rotation editing
@@ -55,8 +54,8 @@ export class RotationRenderer {
    */
   public drawRotationOriginIndicator(ctx: CanvasRenderingContext2D, key: Key, unit: number): void {
     // Get the rotation origin in canvas coordinates
-    const originX = D.mul(key.rotation_x || 0, unit)
-    const originY = D.mul(key.rotation_y || 0, unit)
+    const originX = (key.rotation_x || 0) * unit
+    const originY = (key.rotation_y || 0) * unit
 
     ctx.save()
 
@@ -184,7 +183,7 @@ export class RotationRenderer {
     selectedKeys.forEach((key, keyIndex) => {
       // Calculate rotation parameters
       const hasRotation = key.rotation_angle && key.rotation_angle !== 0
-      const angleRadians = hasRotation ? D.degreesToRadians(key.rotation_angle) : 0
+      const angleRadians = hasRotation ? (key.rotation_angle * Math.PI) / 180 : 0
       // Use the actual rotation origin from key properties (not defaulting to center)
       const originX = key.rotation_x !== undefined ? key.rotation_x : key.x + key.width / 2
       const originY = key.rotation_y !== undefined ? key.rotation_y : key.y + key.height / 2
