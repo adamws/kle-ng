@@ -85,6 +85,9 @@ export class KeyRenderer {
   private static readonly HOMING_NUB_POSITION_RATIO = 0.9 // Vertical position (90% down key)
   private static readonly HOMING_NUB_OPACITY = 0.3 // Opacity of the nub indicator
 
+  // Color cache for performance optimization (Phase 2)
+  private colorCache = new Map<string, string>()
+
   /**
    * Calculate render parameters for a key, including all geometry calculations
    * for outer cap, inner cap, and text areas.
@@ -662,12 +665,35 @@ export class KeyRenderer {
 
   /**
    * Lighten a color using Lab color space for better perceptual results.
+   * Uses caching for performance optimization.
    *
    * @param color - Hex color string
    * @param factor - Lightening factor (default: 1.2)
    * @returns Lightened hex color
    */
   private lightenColor(color: string, factor: number = 1.2): string {
+    // Check cache first
+    const cacheKey = `${color}-${factor}`
+    const cached = this.colorCache.get(cacheKey)
+    if (cached) {
+      return cached
+    }
+
+    // Compute and cache result
+    const result = this.computeLightenColor(color, factor)
+    this.colorCache.set(cacheKey, result)
+    return result
+  }
+
+  /**
+   * Compute lightened color using Lab color space for better perceptual results.
+   * This is the actual computation extracted from lightenColor for caching.
+   *
+   * @param color - Hex color string
+   * @param factor - Lightening factor
+   * @returns Lightened hex color
+   */
+  private computeLightenColor(color: string, factor: number): string {
     // Simplified Lab-based lightening to match original KLE behavior more closely
     const hex = color.replace('#', '')
     if (hex.length !== 6) return color
@@ -736,6 +762,14 @@ export class KeyRenderer {
     const bFinal = Math.min(255, Math.max(0, Math.round(fromLinear(bNew))))
 
     return `#${rFinal.toString(16).padStart(2, '0')}${gFinal.toString(16).padStart(2, '0')}${bFinal.toString(16).padStart(2, '0')}`
+  }
+
+  /**
+   * Clear the color cache. Called when render options change (e.g., zoom, DPI).
+   * This ensures cached colors are recalculated with new rendering parameters.
+   */
+  public clearColorCache(): void {
+    this.colorCache.clear()
   }
 
   /**

@@ -111,6 +111,8 @@ export class CanvasRenderer {
     this.options = options
     this.boundsCalculator.setUnit(options.unit)
     this.hitTester.setUnit(options.unit)
+    // Clear color cache when options change (Phase 2 optimization)
+    keyRenderer.clearColorCache()
   }
 
   /**
