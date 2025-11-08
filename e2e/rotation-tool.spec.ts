@@ -48,6 +48,8 @@ test.describe('Selection Rotation Tool', () => {
 
     const rotationModal = page.locator('.rotation-panel')
     await expect(rotationModal).toBeVisible()
+    // Wait for modal to be fully interactive before proceeding
+    await page.waitForTimeout(100)
     await expect(page.locator('.rotation-info')).toContainText('Select rotation anchor point')
 
     const canvas = canvasHelper.getCanvas()
@@ -55,15 +57,25 @@ test.describe('Selection Rotation Tool', () => {
     await expect(page.locator('.rotation-info')).toContainText('Origin:')
 
     const angleInput = page.locator('.rotation-panel input[type="number"]')
+    await expect(angleInput).toBeVisible()
     await expect(angleInput).toBeEnabled()
+    // Wait for the input to be focused and ready (auto-focus happens on anchor selection)
+    await page.waitForTimeout(100)
     await angleInput.fill('30')
+    // Wait for the angle change to be processed
+    await canvasHelper.waitForRender()
 
     const applyButton = page.locator('.rotation-panel .btn-primary')
+    await expect(applyButton).toBeVisible()
     await expect(applyButton).toBeEnabled()
     await applyButton.click()
     await expect(rotationModal).toBeHidden()
 
+    // Wait for the rotation to be applied and rendered
     await canvasHelper.waitForRender()
+    // Additional wait to ensure state is fully updated
+    await page.waitForTimeout(100)
+
     await canvasHelper.expectCanvasScreenshot('rotation-02-after-first-rotation')
     await expect(page.locator('.selected-counter')).toContainText('Selected: 3')
 
@@ -71,28 +83,48 @@ test.describe('Selection Rotation Tool', () => {
     await canvasHelper.deselectAllKeys()
     await expect(page.locator('.selected-counter')).toContainText('Selected: 0')
 
+    // Wait for deselection to complete and render
+    await canvasHelper.waitForRender()
+
     // Select third key at position (2.5, 1.8) in key coordinates -> (135 + 9, 97.2 + 9) canvas
     await canvas.click({ position: { x: 144, y: 106.2 }, force: true })
     await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
 
     await rotationToolButton.click()
     await expect(rotationModal).toBeVisible()
+    // Wait for modal to be fully interactive before proceeding
+    await page.waitForTimeout(100)
     await expect(page.locator('.rotation-info')).toContainText('Select rotation anchor point')
 
     // Select anchor point at (1.69, 2.0) in key coordinates -> (91.26 + 9, 108 + 9) canvas
     await canvas.click({ position: { x: 101.26, y: 117 }, force: true })
     await expect(page.locator('.rotation-info')).toContainText('Origin:')
 
+    // Wait for the input to be focused and ready
+    await expect(angleInput).toBeVisible()
+    await expect(angleInput).toBeEnabled()
+    await page.waitForTimeout(100)
     await angleInput.fill('30')
+    // Wait for the angle change to be processed
+    await canvasHelper.waitForRender()
+
+    await expect(applyButton).toBeVisible()
+    await expect(applyButton).toBeEnabled()
     await applyButton.click()
     await expect(rotationModal).toBeHidden()
 
+    // Wait for the rotation to be applied and rendered
     await canvasHelper.waitForRender()
+    // Additional wait to ensure state is fully updated
+    await page.waitForTimeout(100)
+
     await canvasHelper.expectCanvasScreenshot('rotation-03-after-second-rotation')
     await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
 
     // Verify JSON layout matches expected result
     await canvasHelper.selectAllKeys()
+    // Wait for selection to complete
+    await page.waitForTimeout(100)
 
     // Export JSON and verify layout
     const exportButton = page.locator('button', { hasText: 'Export' })

@@ -306,7 +306,18 @@ export class CanvasTestHelper {
     await expect(this.getCanvas()).toBeVisible()
     // Ensure canvas is attached and ready for interaction
     await this.getCanvas().waitFor({ state: 'attached' })
-    // Canvas should be ready after visibility and attachment checks
+    // Wait for requestAnimationFrame to complete - this ensures the renderScheduler
+    // has processed any pending render callbacks
+    await this.page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          // Wait one more frame to ensure the render has completed
+          requestAnimationFrame(() => {
+            resolve()
+          })
+        })
+      })
+    })
   }
 
   getCanvas(): Locator {
