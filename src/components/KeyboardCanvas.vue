@@ -276,6 +276,7 @@ onMounted(() => {
     window.addEventListener('canvas-reset-view', handleExternalResetView as EventListener)
     window.addEventListener('request-canvas-focus', handleCanvasFocusRequest as EventListener)
     window.addEventListener('system-copy', handleSystemCopy as EventListener)
+    window.addEventListener('keys-modified', handleKeysModified as EventListener)
 
     // Watch for DPI changes (e.g., moving window between monitors)
     // Only set up if matchMedia is available (not available in test environments)
@@ -360,6 +361,12 @@ watch(
   { deep: true, immediate: true },
 )
 
+// Handle keys-modified event from store
+const handleKeysModified = () => {
+  updateCanvasSize()
+  renderScheduler.schedule(renderKeyboard)
+}
+
 // Watch for layout changes to reset view
 watch(
   () => keyboardStore.resetViewTrigger,
@@ -386,27 +393,6 @@ watch(
       renderScheduler.schedule(renderKeyboard)
     }
   },
-)
-
-// Additional aggressive watcher to ensure canvas resizes for any bounds changes
-// This catches cases where the deep watcher might be delayed
-watch(
-  () =>
-    keyboardStore.keys.map((key) => ({
-      x: key.x,
-      y: key.y,
-      width: key.width,
-      height: key.height,
-      rotation_angle: key.rotation_angle || 0,
-      rotation_x: key.rotation_x || 0,
-      rotation_y: key.rotation_y || 0,
-    })),
-  async () => {
-    await nextTick()
-    updateCanvasSize()
-    renderScheduler.schedule(renderKeyboard)
-  },
-  { deep: true },
 )
 
 // Watch for mirror tool mode changes to update canvas size
@@ -1049,6 +1035,9 @@ const handleMouseMoveShared = (event: MouseEvent) => {
     const pos = getCanvasPosition(event)
     keyboardStore.updateKeyDrag(pos)
     keyDragOccurred.value = true // Mark that key dragging is active
+
+    // Update canvas size to accommodate keys dragged beyond current bounds
+    updateCanvasSize()
 
     // Auto-scroll when dragging near container edges
     handleAutoScroll(event)
@@ -1724,6 +1713,7 @@ const cleanup = () => {
   window.removeEventListener('canvas-reset-view', handleExternalResetView as EventListener)
   window.removeEventListener('request-canvas-focus', handleCanvasFocusRequest as EventListener)
   window.removeEventListener('system-copy', handleSystemCopy as EventListener)
+  window.removeEventListener('keys-modified', handleKeysModified as EventListener)
 
   // Remove DPI change listener
   if (dpiMediaQuery && handleDpiChange) {

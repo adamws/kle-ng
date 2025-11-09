@@ -160,6 +160,11 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     }
 
     dirty.value = true
+
+    // Notify canvas of potential bounds changes
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('keys-modified'))
+    }
   }
 
   /**
@@ -407,6 +412,11 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     metadata.value = JSON.parse(JSON.stringify(state.metadata))
     selectedKeys.value = []
     dirty.value = true
+
+    // Notify canvas of potential bounds changes (undo doesn't call saveState)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('keys-modified'))
+    }
   }
 
   const redo = () => {
@@ -418,6 +428,11 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     metadata.value = JSON.parse(JSON.stringify(state.metadata))
     selectedKeys.value = []
     dirty.value = true
+
+    // Notify canvas of potential bounds changes (redo doesn't call saveState)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('keys-modified'))
+    }
   }
 
   const updateKeyProperty = (key: Key, property: keyof Key, value: unknown) => {
