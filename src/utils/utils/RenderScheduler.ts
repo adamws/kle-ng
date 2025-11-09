@@ -7,7 +7,7 @@
  */
 export class RenderScheduler {
   private pendingRender = false
-  private callbacks: (() => void)[] = []
+  private callbacks = new Set<() => void>()
   private errorHandler?: (error: Error) => void
 
   /**
@@ -15,15 +15,15 @@ export class RenderScheduler {
    * Multiple calls within the same frame will be batched together
    */
   public schedule(callback: () => void): void {
-    this.callbacks.push(callback)
+    this.callbacks.add(callback)
 
     if (!this.pendingRender) {
       this.pendingRender = true
       requestAnimationFrame(() => {
         // Execute all callbacks in the order they were scheduled
         // Use a copy of the array to allow callbacks to schedule more callbacks
-        const callbacksToExecute = [...this.callbacks]
-        this.callbacks = []
+        const callbacksToExecute = Array.from(this.callbacks)
+        this.callbacks.clear()
         this.pendingRender = false
 
         // Execute callbacks with error handling
@@ -48,7 +48,7 @@ export class RenderScheduler {
    * Useful for testing and debugging
    */
   public getPendingCount(): number {
-    return this.callbacks.length
+    return this.callbacks.size
   }
 
   /**
@@ -63,7 +63,7 @@ export class RenderScheduler {
    * Clear all pending callbacks (primarily for testing)
    */
   public clear(): void {
-    this.callbacks = []
+    this.callbacks.clear()
     this.pendingRender = false
   }
 

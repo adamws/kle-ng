@@ -198,6 +198,89 @@ describe('RenderScheduler', () => {
       expect(scheduler.isPending()).toBe(false)
     })
   })
+
+  describe('callback deduplication', () => {
+    it('should deduplicate identical callback references', async () => {
+      const callback = vi.fn()
+
+      // Schedule the same callback multiple times
+      scheduler.schedule(callback)
+      scheduler.schedule(callback)
+      scheduler.schedule(callback)
+
+      expect(scheduler.getPendingCount()).toBe(1) // Only 1 unique callback
+
+      await vi.runAllTimersAsync()
+
+      expect(callback).toHaveBeenCalledOnce() // Only executed once
+    })
+
+    it('should execute different callbacks separately', async () => {
+      const callback1 = vi.fn()
+      const callback2 = vi.fn()
+      const callback3 = vi.fn()
+
+      scheduler.schedule(callback1)
+      scheduler.schedule(callback2)
+      scheduler.schedule(callback1) // Duplicate
+      scheduler.schedule(callback3)
+
+      expect(scheduler.getPendingCount()).toBe(3) // 3 unique callbacks
+
+      await vi.runAllTimersAsync()
+
+      expect(callback1).toHaveBeenCalledOnce()
+      expect(callback2).toHaveBeenCalledOnce()
+      expect(callback3).toHaveBeenCalledOnce()
+    })
+
+    it('should handle real-world drag scenario deduplication', async () => {
+      const renderKeyboard = vi.fn()
+
+      // Simulate multiple watchers triggering during a single mousemove
+      scheduler.schedule(renderKeyboard) // From handleMouseMoveShared
+      scheduler.schedule(renderKeyboard) // From main keys watcher
+      scheduler.schedule(renderKeyboard) // From aggressive position watcher
+
+      expect(scheduler.getPendingCount()).toBe(1)
+
+      await vi.runAllTimersAsync()
+
+      expect(renderKeyboard).toHaveBeenCalledOnce() // Only 1 render!
+    })
+
+    it('should maintain deduplication across multiple schedule calls', async () => {
+      const callback = vi.fn()
+
+      // Schedule multiple times before any execution
+      scheduler.schedule(callback)
+      scheduler.schedule(callback)
+      expect(scheduler.getPendingCount()).toBe(1)
+
+      // Schedule again
+      scheduler.schedule(callback)
+      expect(scheduler.getPendingCount()).toBe(1) // Still just 1
+
+      await vi.runAllTimersAsync()
+
+      expect(callback).toHaveBeenCalledOnce()
+      expect(scheduler.getPendingCount()).toBe(0)
+    })
+
+    it('should allow same callback to be scheduled again after execution', async () => {
+      const callback = vi.fn()
+
+      // First batch
+      scheduler.schedule(callback)
+      await vi.runAllTimersAsync()
+      expect(callback).toHaveBeenCalledOnce()
+
+      // Second batch - same callback should execute again
+      scheduler.schedule(callback)
+      await vi.runAllTimersAsync()
+      expect(callback).toHaveBeenCalledTimes(2)
+    })
+  })
 })
 
 describe('renderScheduler singleton', () => {
