@@ -12,9 +12,15 @@
   - [RotationRenderer](#rotationrenderer)
 - [Caching System](#caching-system)
 - [Utility Components](#utility-components)
+  - [BoundsCalculator](#boundscalculator)
+  - [HitTester](#hittester)
+  - [Layout Change Event System](#layout-change-event-system)
+  - [RenderScheduler](#renderscheduler)
 - [Parsers](#parsers)
 - [Performance Optimization](#performance-optimization)
 - [Implementation Details](#implementation-details)
+- [Troubleshooting](#troubleshooting)
+- [Recent Improvements](#recent-improvements)
 
 ---
 
@@ -92,11 +98,24 @@ The rendering pipeline follows a **layered architecture**:
 ### High-Level Flow
 
 ```
-User Action (e.g., layout change)
+User Action (e.g., layout change, key drag)
     │
     ▼
-RenderScheduler.schedule()
-    │ (batches multiple requests)
+Store updates (keyboard.ts)
+    │
+    ├─► saveState() → dispatches 'keys-modified' event
+    ├─► undo() → dispatches 'keys-modified' event
+    └─► redo() → dispatches 'keys-modified' event
+    │
+    ▼
+KeyboardCanvas.vue receives 'keys-modified' event
+    │
+    ├─► updateCanvasSize() (resize canvas if bounds changed)
+    └─► RenderScheduler.schedule(renderKeyboard)
+    │
+    ▼
+RenderScheduler batches callbacks
+    │ (deduplicates identical callbacks)
     ▼
 requestAnimationFrame()
     │
@@ -747,35 +766,173 @@ getKeyAtPosition(x, y, keys):
   return null
 ```
 
+### Layout Change Event System
+
+**Location**: `src/stores/keyboard.ts` (event dispatch) and `src/components/KeyboardCanvas.vue` (event handling)
+
+**Purpose**: Notify the canvas component when the keyboard layout has been modified, requiring canvas update and re-render
+
+**Architecture**: Event-driven communication between store and canvas component
+
+**What triggers the event**:
+- Key position changes (drag, arrow keys, rotation)
+- Key property changes (color, label, size, shape)
+- Layout modifications (add/delete keys, undo/redo)
+- Any operation that calls `saveState()`, `undo()`, or `redo()`
+
+**How it works**:
+
+The keyboard store dispatches a custom `keys-modified` event whenever any layout modification occurs:
+
+```typescript
+// In keyboard store (keyboard.ts)
+function saveState() {
+  // ... save state logic ...
+
+  // Notify canvas of layout changes
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('keys-modified'))
+  }
+}
+
+function undo() {
+  // ... undo logic ...
+
+  // Notify canvas of layout changes (undo doesn't call saveState)
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('keys-modified'))
+  }
+}
+
+function redo() {
+  // ... redo logic ...
+
+  // Notify canvas of layout changes (redo doesn't call saveState)
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('keys-modified'))
+  }
+}
+```
+
+The canvas component listens for this event and responds by updating canvas size (if layout bounds changed) and scheduling a render:
+
+```typescript
+// In KeyboardCanvas.vue
+onMounted(() => {
+  window.addEventListener('keys-modified', handleKeysModified as EventListener)
+})
+
+const handleKeysModified = () => {
+  updateCanvasSize()
+  renderScheduler.schedule(renderKeyboard)
+}
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keys-modified', handleKeysModified as EventListener)
+})
+```
+
+**Benefits over Vue watchers**:
+- **Decoupled architecture**: Store doesn't need to know about canvas implementation
+- **Explicit communication**: Clear event-based API for layout changes
+- **Better performance**: Avoids expensive deep watchers on key position arrays
+- **Simpler reactivity**: No need for computed refs or aggressive watchers
+- **Clearer intent**: Event name explicitly describes what changed
+- **Comprehensive coverage**: Handles all layout changes (position, color, labels, rotation, etc.), not just bound changes
+
+**Special case - Drag operations**:
+During key drag operations, the canvas also updates its size directly in the mouse handler to accommodate keys being dragged beyond current bounds:
+
+```typescript
+// In handleMouseMoveShared (KeyboardCanvas.vue)
+if (keyboardStore.mouseDragMode === 'key-move') {
+  keyboardStore.updateKeyDrag(pos)
+
+  // Update canvas size to accommodate keys dragged beyond current bounds
+  updateCanvasSize()
+
+  // Schedule render (will be deduplicated with other renders in same frame)
+  renderScheduler.schedule(renderKeyboard)
+}
+```
+
+**Replaced architecture**:
+Prior to this implementation, the system used an "aggressive watcher" that created new arrays on every reactivity check:
+
+```typescript
+// OLD APPROACH (removed):
+watch(
+  () =>
+    keyboardStore.keys.map((key) => ({
+      x: key.x,
+      y: key.y,
+      width: key.width,
+      height: key.height,
+      rotation_angle: key.rotation_angle || 0,
+      rotation_x: key.rotation_x || 0,
+      rotation_y: key.rotation_y || 0,
+    })),
+  async () => {
+    await nextTick()
+    updateCanvasSize()
+    renderScheduler.schedule(renderKeyboard)
+  },
+  { deep: true },
+)
+```
+
+This watcher was problematic because:
+- Created new arrays on every Vue reactivity check
+- Performed deep comparison on nested objects
+- Fired redundantly with other watchers
+- Contributed to performance issues during drag operations
+
 ### RenderScheduler
 
 **Location**: `src/utils/utils/RenderScheduler.ts`
 
-**Purpose**: Batch render operations using requestAnimationFrame
+**Purpose**: Batch and deduplicate render operations using requestAnimationFrame
 
-**Problem**: Multiple operations trigger re-renders (e.g., image loads, layout changes)
+**Problem**: Multiple operations trigger re-renders (e.g., image loads, layout changes, drag operations)
 
-**Solution**: Batch all callbacks in the same frame
+**Solution**: Batch all callbacks in the same frame and deduplicate identical callback references
 
 **How it works**:
 ```typescript
 schedule(callback):
-  callbacks.push(callback)
+  callbacks.add(callback)  // Set automatically deduplicates
 
   if (!pendingRender):
     pendingRender = true
     requestAnimationFrame(() => {
-      // Execute all callbacks together
-      callbacks.forEach(cb => cb())
-      callbacks = []
+      // Execute all unique callbacks together
+      Array.from(callbacks).forEach(cb => cb())
+      callbacks.clear()
       pendingRender = false
     })
 ```
 
+**Key Feature - Callback Deduplication**:
+The scheduler uses a `Set` instead of an array to store callbacks, which automatically deduplicates identical function references. This prevents redundant render operations:
+
+```typescript
+// During a drag operation:
+renderScheduler.schedule(renderKeyboard)  // From mouse handler
+renderScheduler.schedule(renderKeyboard)  // From keys watcher
+renderScheduler.schedule(renderKeyboard)  // From event listener
+// → Set contains only 1 unique callback
+// → renderKeyboard() executes only once per frame!
+```
+
+**Performance Impact**:
+Without deduplication, the same render callback could execute 10-30+ times in a single animation frame during intensive operations like drag, causing severe performance degradation (60fps → ~10fps). Deduplication ensures optimal performance by executing each unique callback exactly once per frame.
+
 **Benefits**:
 - Prevents multiple renders per frame (60 FPS performance)
+- Automatically deduplicates identical callbacks
 - Reduces layout thrashing
-- Ensures smooth animations
+- Ensures smooth animations and drag operations
+- Eliminates redundant render operations
 
 **Usage**:
 ```typescript
@@ -784,6 +941,16 @@ imageCache.loadImage(url1, () => renderScheduler.schedule(rerender))
 imageCache.loadImage(url2, () => renderScheduler.schedule(rerender))
 imageCache.loadImage(url3, () => renderScheduler.schedule(rerender))
 // → Only renders once, not three times!
+
+// Drag operation with multiple watchers
+handleMouseMove() {
+  renderScheduler.schedule(renderKeyboard)  // From mouse handler
+}
+watch(keys, () => {
+  renderScheduler.schedule(renderKeyboard)  // From watcher
+})
+// → Both schedule the same function reference
+// → renderKeyboard() executes only once per frame
 ```
 
 ---
@@ -956,24 +1123,47 @@ ImageCache: Load data URL as image
     └─► Return cached image element
 ```
 
-### 2. Render Batching
+### 2. Render Batching and Deduplication
 
-**RenderScheduler** prevents multiple renders per frame:
+**RenderScheduler** prevents multiple renders per frame and deduplicates identical callbacks:
 
 ```
-Frame 1:
-  Image 1 loads → schedule render
-  Image 2 loads → schedule render (batched)
-  Image 3 loads → schedule render (batched)
-  User changes layout → schedule render (batched)
+Frame 1 - During drag operation:
+  Mouse move event → schedule(renderKeyboard)
+  Keys watcher fires → schedule(renderKeyboard)
+  Event listener fires → schedule(renderKeyboard)
+  Image loads → schedule(loadCallback)
+
+  RenderScheduler Set state:
+    → {renderKeyboard, loadCallback}  // Only 2 unique callbacks!
 
   requestAnimationFrame:
-    → Execute all 4 callbacks
-    → Render once
+    → Execute renderKeyboard() once
+    → Execute loadCallback() once
+    → Total: 2 renders instead of 4
 
 Frame 2:
   (no more work)
 ```
+
+**Critical Performance Fix**:
+Prior to implementing Set-based deduplication, the scheduler accumulated all callbacks without checking for duplicates. During drag operations, this caused severe performance degradation:
+
+```
+WITHOUT deduplication:
+  10 mousemove events in 16ms
+  → 10x schedule(renderKeyboard)
+  → Array: [renderKeyboard, renderKeyboard, ..., renderKeyboard]
+  → Executes renderKeyboard() 10 times sequentially
+
+WITH deduplication (current):
+  10 mousemove events in 16ms
+  → 10x schedule(renderKeyboard)
+  → Set: {renderKeyboard}  // Only 1 unique callback
+  → Executes renderKeyboard() once
+```
+
+This fix resolved critical drag lag issues where redundant renders caused performance degradation during mouse operations.
 
 ### 3. Pixel Alignment
 
@@ -1399,17 +1589,18 @@ console.log(`Loaded: ${stats.loaded}, Errors: ${stats.errors}`)
 - Check available space: `params.textcapwidth`, `params.textcapheight`
 - Verify wrapping algorithm is enabled
 
-**5. Slow rendering**
+**5. Slow rendering or drag lag**
 
-**Cause**: Too many re-renders or large layouts
+**Cause**: Too many re-renders, large layouts, or render scheduler issues
 
 **Solution**:
-- Check `RenderScheduler` is batching correctly
+- Verify `RenderScheduler` is using Set-based deduplication (not array)
+- Check that identical callbacks are being deduplicated
 - Monitor render frequency (should be ≤ 60 FPS)
 - Profile with Chrome DevTools Performance tab
 
 ```typescript
-// Monitor render calls:
+// Monitor render calls and check for deduplication:
 let renderCount = 0
 const original = canvasRenderer.render
 canvasRenderer.render = function(...args) {
@@ -1417,7 +1608,99 @@ canvasRenderer.render = function(...args) {
   console.log(`Render #${renderCount}`)
   return original.apply(this, args)
 }
+
+// Check scheduler deduplication:
+const callback = () => console.log('render')
+renderScheduler.schedule(callback)
+renderScheduler.schedule(callback)
+renderScheduler.schedule(callback)
+console.log('Pending count:', renderScheduler.getPendingCount())
+// Should show: 1 (if deduplication works correctly)
 ```
+
+**Known Issue (Fixed)**:
+Prior to commit `595127f`, the RenderScheduler used an array to store callbacks, causing severe performance issues during drag operations. The same render callback would execute 10-30+ times per frame, causing drag lag. This has been fixed by switching to Set-based storage for automatic deduplication.
+
+---
+
+## Recent Improvements
+
+### Performance Optimizations (Commits 595127f, ffab9a0)
+
+**1. RenderScheduler Deduplication (Commit 595127f)**
+
+**Problem**: The original RenderScheduler implementation used an array to store callbacks, allowing duplicate callbacks to accumulate. During drag operations with multiple event sources (mouse handlers, Vue watchers, event listeners), the same `renderKeyboard()` function would be scheduled 10-30+ times per frame, causing severe lag (60fps → ~10fps).
+
+**Solution**: Changed storage from array to Set:
+```typescript
+// Before:
+private callbacks: (() => void)[] = []
+this.callbacks.push(callback)  // Allows duplicates
+
+// After:
+private callbacks = new Set<() => void>()
+this.callbacks.add(callback)  // Automatic deduplication
+```
+
+**Impact**: Eliminated 300-600% performance degradation during drag operations. The same callback now executes exactly once per animation frame regardless of how many times it's scheduled.
+
+**Testing**: Added comprehensive test suite in `RenderScheduler.spec.ts` to verify deduplication behavior in real-world drag scenarios.
+
+**2. Layout Change Event System (Commit ffab9a0)**
+
+**Problem**: The system used an "aggressive watcher" that created new arrays on every Vue reactivity check to monitor key positions for layout changes. This watcher performed deep comparisons and fired redundantly with other watchers, contributing to performance issues.
+
+**Solution**: Replaced Vue watcher with event-driven architecture:
+- Keyboard store dispatches `keys-modified` custom event whenever the layout is modified (position, color, labels, rotation, etc.)
+- Canvas component listens for event and responds by updating canvas size and scheduling render
+- Direct `updateCanvasSize()` call during drag operations for immediate feedback when keys are dragged beyond bounds
+
+**Benefits**:
+- Decoupled store and canvas component
+- Eliminated expensive deep watcher on key position arrays
+- Clearer communication intent through explicit events
+- Better performance during all layout modifications
+- Comprehensive coverage of all layout changes (position, color, labels, rotation, etc.)
+
+**Removed Code** (aggressive watcher):
+```typescript
+// This 21-line watcher was removed:
+watch(
+  () => keyboardStore.keys.map((key) => ({ /* position data */ })),
+  async () => {
+    await nextTick()
+    updateCanvasSize()
+    renderScheduler.schedule(renderKeyboard)
+  },
+  { deep: true },
+)
+```
+
+**Added Code** (event-based system):
+```typescript
+// Store dispatches event (3 locations: saveState, undo, redo):
+window.dispatchEvent(new CustomEvent('keys-modified'))
+
+// Canvas listens for event:
+const handleKeysModified = () => {
+  updateCanvasSize()
+  renderScheduler.schedule(renderKeyboard)
+}
+window.addEventListener('keys-modified', handleKeysModified)
+```
+
+### Bug Analysis Documentation (Commit 273494b)
+
+Added comprehensive code review documentation analyzing the RenderScheduler bug that caused drag lag. The analysis provided:
+- Root cause identification (lack of deduplication)
+- Performance impact measurements (300-600% degradation)
+- Evidence from code showing multiple render sources
+- Two recommended fix options (single slot vs Set)
+- Testing checklist
+
+This documentation guided the implementation of the deduplication fix in commit 595127f.
+
+**Location**: `/dev/active/renderer-drag-lag-investigation/renderer-drag-lag-investigation-code-review.md`
 
 ---
 
