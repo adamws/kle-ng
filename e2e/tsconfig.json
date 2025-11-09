@@ -1,4 +1,7 @@
 {
   "extends": "@tsconfig/node22/tsconfig.json",
-  "include": ["./**/*"]
+  "include": ["./**/*"],
+  "compilerOptions": {
+    "noUncheckedIndexedAccess": false
+  }
 }

@@ -3,13 +3,14 @@ import { CanvasRenderer } from '../canvas-renderer'
 import { Key, KeyboardMetadata } from '@adamws/kle-serial'
 
 // Mock Path2D constructor and methods for Node.js environment
-global.Path2D = vi.fn().mockImplementation(() => ({
-  moveTo: vi.fn(),
-  lineTo: vi.fn(),
-  closePath: vi.fn(),
-  quadraticCurveTo: vi.fn(),
-  addPath: vi.fn(),
-}))
+global.Path2D = vi.fn(function (this: Path2D) {
+  this.moveTo = vi.fn()
+  this.lineTo = vi.fn()
+  this.closePath = vi.fn()
+  this.quadraticCurveTo = vi.fn()
+  this.addPath = vi.fn()
+  return this
+}) as unknown as typeof Path2D
 
 // Mock canvas and context
 const mockGradient = {

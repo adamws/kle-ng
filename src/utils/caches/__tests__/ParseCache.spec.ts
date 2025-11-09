@@ -3,7 +3,7 @@ import { ParseCache, type ParsedSegment } from '../ParseCache'
 
 describe('ParseCache', () => {
   let cache: ParseCache
-  let mockParser: ReturnType<typeof vi.fn>
+  let mockParser: (text: string) => ParsedSegment[]
 
   beforeEach(() => {
     cache = new ParseCache()
