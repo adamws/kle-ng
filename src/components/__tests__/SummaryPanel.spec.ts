@@ -56,7 +56,6 @@ describe('SummaryPanel', () => {
       })
 
       expect((wrapper.find('input[value="size"]').element as HTMLInputElement).checked).toBe(true)
-      expect(wrapper.find('.table-section h6').text()).toBe('Keys by Size')
     })
 
     it('should switch between view modes', async () => {
@@ -72,7 +71,6 @@ describe('SummaryPanel', () => {
       expect((wrapper.find('input[value="size-color"]').element as HTMLInputElement).checked).toBe(
         true,
       )
-      expect(wrapper.find('.table-section h6').text()).toBe('Keys by Size & Color')
     })
 
     it('should show empty table when no keys', () => {

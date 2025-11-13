@@ -5,7 +5,7 @@
         <!-- Keys by Size Table -->
         <div v-if="viewMode === 'size'" class="table-section">
           <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="section-title mb-0">Keys by Size</h6>
+            <h6 class="section-title mb-0">Keys</h6>
             <!-- Toggle for view mode -->
             <div class="btn-group" role="group" aria-label="Summary view mode">
               <input
@@ -70,7 +70,7 @@
         <!-- Keys by Size and Color Table -->
         <div v-else-if="viewMode === 'size-color'" class="table-section">
           <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="section-title mb-0">Keys by Size & Color</h6>
+            <h6 class="section-title mb-0">Keys</h6>
             <!-- Toggle for view mode -->
             <div class="btn-group" role="group" aria-label="Summary view mode">
               <input
