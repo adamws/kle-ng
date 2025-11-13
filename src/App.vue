@@ -153,10 +153,11 @@ const stopSectionDrag = () => {
       // Remove dragged item and insert it at target position
       const newOrder = [...sectionOrder.value]
       const [draggedItem] = newOrder.splice(draggedIndex, 1)
-      newOrder.splice(targetIndex, 0, draggedItem)
-
-      sectionOrder.value = newOrder
-      saveSectionOrder()
+      if (draggedItem) {
+        newOrder.splice(targetIndex, 0, draggedItem)
+        sectionOrder.value = newOrder
+        saveSectionOrder()
+      }
     }
   }
 
