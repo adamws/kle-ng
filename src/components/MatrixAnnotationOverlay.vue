@@ -229,6 +229,7 @@ const detectHover = (canvasX: number, canvasY: number) => {
     // Sort by distance
     allNodes.sort((a, b) => a.distance - b.distance)
     const closest = allNodes[0]
+    if (!closest) return
 
     // Check for overlapping nodes at this position
     const overlapping = allNodes.filter(
@@ -261,8 +262,12 @@ const detectHover = (canvasX: number, canvasY: number) => {
     if (keySequence.length < 2) return
 
     for (let i = 0; i < keySequence.length - 1; i++) {
-      const start = getKeyCenter(keySequence[i])
-      const end = getKeyCenter(keySequence[i + 1])
+      const startKey = keySequence[i]
+      const endKey = keySequence[i + 1]
+      if (!startKey || !endKey) continue
+
+      const start = getKeyCenter(startKey)
+      const end = getKeyCenter(endKey)
 
       if (isPointNearLine(canvasX, canvasY, start.x, start.y, end.x, end.y, LINE_HOVER_THRESHOLD)) {
         hoveredRow.value = rowIndex
@@ -277,8 +282,12 @@ const detectHover = (canvasX: number, canvasY: number) => {
       if (keySequence.length < 2) return
 
       for (let i = 0; i < keySequence.length - 1; i++) {
-        const start = getKeyCenter(keySequence[i])
-        const end = getKeyCenter(keySequence[i + 1])
+        const startKey = keySequence[i]
+        const endKey = keySequence[i + 1]
+        if (!startKey || !endKey) continue
+
+        const start = getKeyCenter(startKey)
+        const end = getKeyCenter(endKey)
 
         if (
           isPointNearLine(canvasX, canvasY, start.x, start.y, end.x, end.y, LINE_HOVER_THRESHOLD)
@@ -360,6 +369,7 @@ const handleMouseMove = (event: MouseEvent) => {
 
   // Calculate preview: what keys would be added if user clicks here
   const lastKey = matrixDrawingStore.currentSequence[matrixDrawingStore.currentSequence.length - 1]
+  if (!lastKey) return
   const lastKeyCenter = calculateKeyCenter(lastKey)
   const newKeyCenter = calculateKeyCenter(closestKey)
 
@@ -460,6 +470,7 @@ const handleClick = (event: MouseEvent) => {
   if (matrixDrawingStore.currentSequence.length > 0) {
     const lastKey =
       matrixDrawingStore.currentSequence[matrixDrawingStore.currentSequence.length - 1]
+    if (!lastKey) return
     const lastKeyCenter = calculateKeyCenter(lastKey)
     const newKeyCenter = calculateKeyCenter(closestKey)
 
@@ -930,6 +941,7 @@ const renderPreviewSequence = (keys: Key[]) => {
   if (matrixDrawingStore.currentSequence.length > 0) {
     const lastKey =
       matrixDrawingStore.currentSequence[matrixDrawingStore.currentSequence.length - 1]
+    if (!lastKey) return
     const lastKeyCenter = getKeyCenter(lastKey)
     ctx.value.moveTo(lastKeyCenter.x, lastKeyCenter.y)
 
@@ -983,6 +995,7 @@ const renderErrorSequence = (keys: Key[]) => {
   if (matrixDrawingStore.currentSequence.length > 0) {
     const lastKey =
       matrixDrawingStore.currentSequence[matrixDrawingStore.currentSequence.length - 1]
+    if (!lastKey) return
     const lastKeyCenter = getKeyCenter(lastKey)
     ctx.value.moveTo(lastKeyCenter.x, lastKeyCenter.y)
 
