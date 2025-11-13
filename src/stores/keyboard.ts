@@ -183,26 +183,30 @@ export const useKeyboardStore = defineStore('keyboard', () => {
         // Position next to the last selected key, accounting for rotation
         const referenceKey = selectedKeys.value[selectedKeys.value.length - 1]
 
-        if (referenceKey.rotation_angle) {
-          // For rotated keys, inherit the same rotation and positioning context
-          newKey.rotation_angle = referenceKey.rotation_angle
-          newKey.rotation_x = referenceKey.rotation_x
-          newKey.rotation_y = referenceKey.rotation_y
+        if (referenceKey) {
+          if (referenceKey.rotation_angle) {
+            // For rotated keys, inherit the same rotation and positioning context
+            newKey.rotation_angle = referenceKey.rotation_angle
+            newKey.rotation_x = referenceKey.rotation_x
+            newKey.rotation_y = referenceKey.rotation_y
 
-          // Calculate position in the rotated coordinate system
-          // Place the new key to the right of the reference key in its local coordinate system
-          newKey.x = D.add(referenceKey.x, referenceKey.width)
-          newKey.y = referenceKey.y
-        } else {
-          // Standard positioning for non-rotated keys
-          newKey.x = D.add(referenceKey.x, referenceKey.width)
-          newKey.y = referenceKey.y
+            // Calculate position in the rotated coordinate system
+            // Place the new key to the right of the reference key in its local coordinate system
+            newKey.x = D.add(referenceKey.x, referenceKey.width)
+            newKey.y = referenceKey.y
+          } else {
+            // Standard positioning for non-rotated keys
+            newKey.x = D.add(referenceKey.x, referenceKey.width)
+            newKey.y = referenceKey.y
+          }
         }
       } else {
         // Fallback to end of layout if no selection
         const lastKey = keys.value[keys.value.length - 1]
-        newKey.x = D.add(lastKey.x, lastKey.width)
-        newKey.y = lastKey.y
+        if (lastKey) {
+          newKey.x = D.add(lastKey.x, lastKey.width)
+          newKey.y = lastKey.y
+        }
       }
     }
 
@@ -243,7 +247,12 @@ export const useKeyboardStore = defineStore('keyboard', () => {
       // Select the key that's now at the position where the first deleted key was,
       // or the previous key if we deleted the last key(s)
       const newIndex = Math.min(minIndex, keys.value.length - 1)
-      selectedKeys.value = [keys.value[newIndex]]
+      const keyAtIndex = keys.value[newIndex]
+      if (keyAtIndex) {
+        selectedKeys.value = [keyAtIndex]
+      } else {
+        selectedKeys.value = []
+      }
     } else {
       selectedKeys.value = []
     }
@@ -408,6 +417,8 @@ export const useKeyboardStore = defineStore('keyboard', () => {
 
     historyIndex.value--
     const state = history.value[historyIndex.value]
+    if (!state) return // Guard against undefined state
+
     keys.value = JSON.parse(JSON.stringify(state.keys))
     metadata.value = JSON.parse(JSON.stringify(state.metadata))
     selectedKeys.value = []
@@ -424,6 +435,8 @@ export const useKeyboardStore = defineStore('keyboard', () => {
 
     historyIndex.value++
     const state = history.value[historyIndex.value]
+    if (!state) return // Guard against undefined state
+
     keys.value = JSON.parse(JSON.stringify(state.keys))
     metadata.value = JSON.parse(JSON.stringify(state.metadata))
     selectedKeys.value = []

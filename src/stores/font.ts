@@ -55,7 +55,7 @@ export const useFontStore = defineStore('font', () => {
     // Matches: @import url(http://...) or @import url("http://...") or @import url('http://...')
     const importMatch = cssString.match(/@import\s+url\(([^)]+)\)/)
     if (importMatch) {
-      let url = importMatch[1].trim()
+      let url = (importMatch[1] ?? '').trim()
       // Remove quotes if present
       url = url.replace(/^["']|["']$/g, '')
       return url
@@ -86,7 +86,7 @@ export const useFontStore = defineStore('font', () => {
     // Example: https://fonts.googleapis.com/css2?family=Noto+Sans+JP
     const fontNameMatch = googleFontsUrl.match(/family=([^&:]+)/)
     if (fontNameMatch) {
-      const fontFamily = fontNameMatch[1].replace(/\+/g, ' ')
+      const fontFamily = (fontNameMatch[1] ?? '').replace(/\+/g, ' ')
 
       // Try to load the font from URL
       const loadSuccess = await loadFontFromUrl(googleFontsUrl, fontFamily)
