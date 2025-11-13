@@ -10,7 +10,7 @@
     "dev": "vite",
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
-    "test:unit": "vitest run",
+    "test:unit": "vitest run --reporter=github-actions",
     "test:unit:watch": "vitest watch",
     "test:e2e": "playwright test",
     "test:e2e:headless": "playwright test",
