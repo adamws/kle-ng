@@ -692,9 +692,11 @@ const handleAutomaticAnnotation = () => {
     const colIndices = new Set<number>()
 
     matrixMap.forEach((keys, matrixKey) => {
-      const [row, col] = matrixKey.split(',').map(Number)
-      rowIndices.add(row)
-      colIndices.add(col)
+      const parts = matrixKey.split(',').map(Number)
+      const row = parts[0]
+      const col = parts[1]
+      if (row !== undefined) rowIndices.add(row)
+      if (col !== undefined) colIndices.add(col)
     })
 
     // Sort indices
@@ -785,7 +787,10 @@ const handleAutomaticAnnotation = () => {
         // Remove duplicates by keeping only the first key in each position
         const cleanMatrixMap = new Map<string, Key[]>()
         originalMatrixMap.forEach((keys, position) => {
-          cleanMatrixMap.set(position, [keys[0]]) // Keep only the first key
+          const firstKey = keys[0]
+          if (firstKey) {
+            cleanMatrixMap.set(position, [firstKey]) // Keep only the first key
+          }
         })
 
         buildMatrixFromMap(cleanMatrixMap)
@@ -816,7 +821,10 @@ const handleAutomaticAnnotation = () => {
 
       const cleanMatrixMap = new Map<string, Key[]>()
       matrixMap.forEach((keys, position) => {
-        cleanMatrixMap.set(position, [keys[0]]) // Keep only the first key
+        const firstKey = keys[0]
+        if (firstKey) {
+          cleanMatrixMap.set(position, [firstKey]) // Keep only the first key
+        }
       })
 
       buildMatrixFromMap(cleanMatrixMap)

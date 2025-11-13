@@ -519,7 +519,9 @@ onMounted(() => {
   // Setup ResizeObserver to switch between layouts based on available height
   if (toolbarRef.value) {
     const resizeObserver = new ResizeObserver((entries) => {
-      const availableHeight = entries[0].contentRect.height
+      const entry = entries[0]
+      if (!entry) return
+      const availableHeight = entry.contentRect.height
       if (availableHeight < 530) {
         toolbarColumns.value = 2
       } else {

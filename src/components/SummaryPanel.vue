@@ -326,8 +326,8 @@ const keysBySizeAndColor = computed(() => {
     // Sort by count descending, then by size, then by color, decals after regular
     if (a.count !== b.count) return b.count - a.count
     if (a.isDecal !== b.isDecal) return a.isDecal ? 1 : -1
-    if (a.size !== b.size) return a.size.localeCompare(b.size)
-    return a.color.localeCompare(b.color)
+    if (a.size !== b.size) return (a.size || '').localeCompare(b.size || '')
+    return (a.color || '').localeCompare(b.color || '')
   })
 })
 </script>

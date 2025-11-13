@@ -740,6 +740,7 @@ const importFromDirectUrl = async (url: string) => {
     // Extract filename from URL
     const urlParts = url.split('/')
     const filenameWithExt = urlParts[urlParts.length - 1]
+    if (!filenameWithExt) throw new Error('Invalid URL: cannot extract filename')
     const filenameWithoutExt = filenameWithExt.replace(/\.json$/, '')
 
     await processJsonLayout(jsonText, filenameWithExt, filenameWithoutExt)

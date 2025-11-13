@@ -211,6 +211,7 @@ const renderDebugMarkers = () => {
       // Draw distances to adjacent keys
       if (options.showDistances && index < keyboardStore.keys.length - 1) {
         const nextKey = keyboardStore.keys[index + 1]
+        if (!nextKey) return
         if (!nextKey.decal && !nextKey.ghost) {
           const distanceUnits = getKeyDistance(key, nextKey)
           const nextCenterUnits = getKeyCenter(nextKey)

@@ -394,7 +394,8 @@ const removeLegends = (category: LegendCategory) => {
   targetKeys.forEach((key) => {
     if (key.decal === !!category.isDecals) {
       for (let i = 0; i < 12; i++) {
-        if (key.labels[i] && category.regex.test(key.labels[i])) {
+        const label = key.labels[i]
+        if (label && category.regex.test(label)) {
           key.labels[i] = ''
           // Clear text formatting too
           if (key.textColor && key.textColor[i]) {
