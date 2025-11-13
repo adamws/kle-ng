@@ -233,6 +233,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     if (selectedIndices.length === 0) return
 
     const minIndex = selectedIndices[0]
+    if (minIndex === undefined) return
 
     // Remove selected keys
     selectedKeys.value.forEach((selectedKey) => {

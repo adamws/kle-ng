@@ -612,6 +612,7 @@ export class LabelRenderer {
 
       for (let i = 0; i < words.length; i++) {
         const word = words[i]
+        if (!word) continue
 
         // Apply font style to measure this word
         const fontStyle = this.buildFontStyle(ctx, segment.bold!, segment.italic!, fontFamily)
@@ -902,8 +903,9 @@ export class LabelRenderer {
     }
 
     // If we only have one line and it fits, use simple rendering
-    if (finalLines.length === 1 && ctx.measureText(finalLines[0]).width <= maxWidth) {
-      ctx.fillText(finalLines[0], x, y)
+    const firstLine = finalLines[0]
+    if (finalLines.length === 1 && firstLine && ctx.measureText(firstLine).width <= maxWidth) {
+      ctx.fillText(firstLine, x, y)
       return
     }
 
