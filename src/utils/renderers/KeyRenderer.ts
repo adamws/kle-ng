@@ -851,9 +851,13 @@ export class KeyRenderer {
 
     const drawRing = (ring: Array<[number, number]>) => {
       if (ring.length === 0) return
-      path.moveTo(ring[0][0] / scale, ring[0][1] / scale)
+      const first = ring[0]
+      if (!first) return
+      path.moveTo(first[0] / scale, first[1] / scale)
       for (let i = 1; i < ring.length; i++) {
-        path.lineTo(ring[i][0] / scale, ring[i][1] / scale)
+        const point = ring[i]
+        if (!point) continue
+        path.lineTo(point[0] / scale, point[1] / scale)
       }
       path.closePath()
     }
@@ -890,6 +894,7 @@ export class KeyRenderer {
     if (rectangles.length === 1) {
       // Single rectangle - use regular path
       const rect = rectangles[0]
+      if (!rect) return new Path2D() // Return empty path if rect is undefined
       const path = new Path2D()
       path.moveTo(rect.x + radius, rect.y)
       path.lineTo(rect.x + rect.width - radius, rect.y)
@@ -923,10 +928,15 @@ export class KeyRenderer {
     )
 
     try {
+      const firstPolygon = polygons[0]
+      if (!firstPolygon) return new Path2D() // Return empty path if first polygon is undefined
+
       // Compute union of all polygons using the default import
-      let result: MultiPolygon = [[polygons[0]]] // Start with first polygon as MultiPolygon format - wrap Ring in Polygon in MultiPolygon
+      let result: MultiPolygon = [[firstPolygon]] // Start with first polygon as MultiPolygon format - wrap Ring in Polygon in MultiPolygon
       for (let i = 1; i < polygons.length; i++) {
-        result = polygonClippingLib.union(result, [[polygons[i]]]) // union returns MultiPolygon - wrap Ring in Polygon
+        const polygon = polygons[i]
+        if (!polygon) continue // Skip undefined polygons
+        result = polygonClippingLib.union(result, [[polygon]]) // union returns MultiPolygon - wrap Ring in Polygon
       }
 
       return this.polygonToPath2D(result, scale)

@@ -57,8 +57,8 @@ const pointToKey = (point: Point): string => {
 const parsePointFromKey = (key: string, type: 'corner' | 'center'): RotationPoint => {
   const [x, y] = key.split(',').map(Number)
   return {
-    x,
-    y,
+    x: x ?? 0,
+    y: y ?? 0,
     type,
     id: `${type}-${key}`,
   }

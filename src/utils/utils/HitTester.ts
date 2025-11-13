@@ -80,6 +80,8 @@ export class HitTester {
     // Use a copy to avoid mutating the original array and iterate from last to first for proper z-order
     for (let i = keys.length - 1; i >= 0; i--) {
       const key = keys[i]
+      if (!key) continue // Skip if key is undefined
+
       // Check from top to bottom
       const params = this.getRenderParamsFn(key, { unit: this.unit })
 

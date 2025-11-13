@@ -32,7 +32,7 @@ export function parseBorderRadius(
 
   // Split by "/" to separate horizontal and vertical radii
   const parts = normalized.split('/')
-  const horizontal = parts[0].trim().split(' ')
+  const horizontal = (parts[0] ?? '').trim().split(' ')
   const vertical = parts[1] ? parts[1].trim().split(' ') : horizontal
 
   // Parse individual values, supporting px, %, and unitless numbers
@@ -48,18 +48,19 @@ export function parseBorderRadius(
 
   // CSS border-radius follows: top-left, top-right, bottom-right, bottom-left
   // If fewer values, they're expanded according to CSS rules
-  const expandValues = (values: string[]): string[] => {
+  const expandValues = (values: string[]): [string, string, string, string] => {
+    const defaultValue = values[0] ?? '0'
     switch (values.length) {
       case 1:
-        return [values[0], values[0], values[0], values[0]]
+        return [defaultValue, defaultValue, defaultValue, defaultValue]
       case 2:
-        return [values[0], values[1], values[0], values[1]]
+        return [values[0] ?? '0', values[1] ?? '0', values[0] ?? '0', values[1] ?? '0']
       case 3:
-        return [values[0], values[1], values[2], values[1]]
+        return [values[0] ?? '0', values[1] ?? '0', values[2] ?? '0', values[1] ?? '0']
       case 4:
-        return values
+        return [values[0] ?? '0', values[1] ?? '0', values[2] ?? '0', values[3] ?? '0']
       default:
-        return [values[0], values[1], values[2], values[3]]
+        return [values[0] ?? '0', values[1] ?? '0', values[2] ?? '0', values[3] ?? '0']
     }
   }
 

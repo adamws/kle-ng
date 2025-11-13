@@ -105,8 +105,8 @@ export class LabelParser {
           segments.push({
             type: 'image',
             src: srcMatch[1],
-            width: widthMatch ? parseInt(widthMatch[1]) : undefined,
-            height: heightMatch ? parseInt(heightMatch[1]) : undefined,
+            width: widthMatch ? parseInt(widthMatch[1] ?? '0') : undefined,
+            height: heightMatch ? parseInt(heightMatch[1] ?? '0') : undefined,
           })
         }
       } else if (match[2]) {

@@ -78,8 +78,8 @@ export class SVGProcessor {
     const heightMatch = svgContent.match(/height\s*=\s*["']?(\d+)["']?/i)
 
     return {
-      width: widthMatch ? parseInt(widthMatch[1], 10) : undefined,
-      height: heightMatch ? parseInt(heightMatch[1], 10) : undefined,
+      width: widthMatch ? parseInt(widthMatch[1] ?? '0', 10) : undefined,
+      height: heightMatch ? parseInt(heightMatch[1] ?? '0', 10) : undefined,
     }
   }
 
@@ -242,14 +242,14 @@ export class SVGProcessor {
       return { width: undefined, height: undefined }
     }
 
-    const values = viewBoxMatch[1].trim().split(/\s+/)
+    const values = (viewBoxMatch[1] ?? '').trim().split(/\s+/)
     if (values.length !== 4) {
       return { width: undefined, height: undefined }
     }
 
     // viewBox="minX minY width height"
-    const width = parseFloat(values[2])
-    const height = parseFloat(values[3])
+    const width = parseFloat(values[2] ?? '0')
+    const height = parseFloat(values[3] ?? '0')
 
     return {
       width: isNaN(width) ? undefined : width,

@@ -100,6 +100,9 @@ const getPerpendicularAxes = (corners: Point[]): Point[] => {
     const current = corners[i]
     const next = corners[(i + 1) % corners.length]
 
+    // Skip if corners are undefined (should never happen in practice)
+    if (!current || !next) continue
+
     const edge = {
       x: D.sub(next.x, current.x),
       y: D.sub(next.y, current.y),

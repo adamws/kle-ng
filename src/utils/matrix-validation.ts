@@ -18,8 +18,8 @@ export function parseMatrixCoordinates(key: Key): { row: number | null; col: num
 
   const [rowStr, colStr] = label.split(',')
 
-  const row = rowStr.trim() !== '' ? parseInt(rowStr, 10) : null
-  const col = colStr.trim() !== '' ? parseInt(colStr, 10) : null
+  const row = rowStr && rowStr.trim() !== '' ? parseInt(rowStr, 10) : null
+  const col = colStr && colStr.trim() !== '' ? parseInt(colStr, 10) : null
 
   return {
     row: row !== null && !isNaN(row) ? row : null,

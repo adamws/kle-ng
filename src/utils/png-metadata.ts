@@ -43,7 +43,9 @@ function crc32(data: Uint8Array): number {
 
   let crc = 0xffffffff
   for (let i = 0; i < data.length; i++) {
-    crc = crcTable[(crc ^ data[i]) & 0xff] ^ (crc >>> 8)
+    const byte = data[i] ?? 0
+    const tableValue = crcTable[(crc ^ byte) & 0xff] ?? 0
+    crc = tableValue ^ (crc >>> 8)
   }
   return (crc ^ 0xffffffff) >>> 0
 }
@@ -112,10 +114,10 @@ function extractTextChunks(pngData: ArrayBuffer): PngMetadata {
 
     // Read chunk type
     const chunkType = String.fromCharCode(
-      data[offset],
-      data[offset + 1],
-      data[offset + 2],
-      data[offset + 3],
+      data[offset] ?? 0,
+      data[offset + 1] ?? 0,
+      data[offset + 2] ?? 0,
+      data[offset + 3] ?? 0,
     )
     offset += 4
 
@@ -166,10 +168,10 @@ export async function addMetadataToPng(pngBlob: Blob, metadata: PngMetadata): Pr
 
     const chunkLength = view.getUint32(offset, false)
     const chunkType = String.fromCharCode(
-      data[offset + 4],
-      data[offset + 5],
-      data[offset + 6],
-      data[offset + 7],
+      data[offset + 4] ?? 0,
+      data[offset + 5] ?? 0,
+      data[offset + 6] ?? 0,
+      data[offset + 7] ?? 0,
     )
 
     if (chunkType === 'IEND') {

@@ -108,6 +108,7 @@ export class LabelRenderer {
       if (!label || index >= labelPositions.length) return
 
       const pos = labelPositions[index]
+      if (!pos) return // Skip if position is undefined
       const textColor = key.textColor[index] || key.default.textColor
 
       // Calculate actual position with smart edge distances to prevent overlap
@@ -219,6 +220,7 @@ export class LabelRenderer {
       if (!label || index >= labelPositions.length) return
 
       const pos = labelPositions[index]
+      if (!pos) return // Skip if position is undefined
       const textColor = key.textColor[index] || key.default.textColor
 
       // Calculate actual position with smart edge distances to prevent overlap

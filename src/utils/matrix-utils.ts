@@ -19,8 +19,8 @@ function parseViaLabel(label: string | undefined): { row: number; col: number } 
   if (!match) return null
 
   return {
-    row: parseInt(match[1], 10),
-    col: parseInt(match[2], 10),
+    row: parseInt(match[1] ?? '0', 10),
+    col: parseInt(match[2] ?? '0', 10),
   }
 }
 
@@ -41,8 +41,8 @@ function parseViaLabelWithPartial(
   const completeMatch = trimmed.match(completePattern)
   if (completeMatch) {
     return {
-      row: parseInt(completeMatch[1], 10),
-      col: parseInt(completeMatch[2], 10),
+      row: parseInt(completeMatch[1] ?? '0', 10),
+      col: parseInt(completeMatch[2] ?? '0', 10),
     }
   }
 
@@ -51,7 +51,7 @@ function parseViaLabelWithPartial(
   const rowOnlyMatch = trimmed.match(rowOnlyPattern)
   if (rowOnlyMatch) {
     return {
-      row: parseInt(rowOnlyMatch[1], 10),
+      row: parseInt(rowOnlyMatch[1] ?? '0', 10),
       col: null,
     }
   }
@@ -62,7 +62,7 @@ function parseViaLabelWithPartial(
   if (colOnlyMatch) {
     return {
       row: null,
-      col: parseInt(colOnlyMatch[1], 10),
+      col: parseInt(colOnlyMatch[1] ?? '0', 10),
     }
   }
 
