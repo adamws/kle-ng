@@ -1381,6 +1381,7 @@ const handleDrop = async (event: DragEvent) => {
   if (!files || files.length === 0) return
 
   const file = files[0]
+  if (!file) return
 
   try {
     // Extract filename without extension for downloads
@@ -1588,7 +1589,10 @@ const selectNextKey = () => {
   // If no selection, start with first key (nextIndex = 0)
 
   // Select the next key
-  keyboardStore.selectKey(sortedKeys[nextIndex], false)
+  const nextKey = sortedKeys[nextIndex]
+  if (nextKey) {
+    keyboardStore.selectKey(nextKey, false)
+  }
 }
 
 const selectPreviousKey = () => {
@@ -1629,7 +1633,10 @@ const selectPreviousKey = () => {
   // If no selection, start with last key (prevIndex = sortedKeys.length - 1)
 
   // Select the previous key
-  keyboardStore.selectKey(sortedKeys[prevIndex], false)
+  const prevKey = sortedKeys[prevIndex]
+  if (prevKey) {
+    keyboardStore.selectKey(prevKey, false)
+  }
 }
 
 // Calculate which keys are selected by the rectangle selection
@@ -1650,7 +1657,9 @@ const getSelectionCommonRotation = (): number => {
   if (selectedKeys.length === 0) return 0
 
   // Check if all selected keys have the same rotation angle
-  const firstRotation = selectedKeys[0].rotation_angle || 0
+  const firstKey = selectedKeys[0]
+  if (!firstKey) return 0
+  const firstRotation = firstKey.rotation_angle || 0
   const allSame = selectedKeys.every((key) => (key.rotation_angle || 0) === firstRotation)
 
   return allSame ? firstRotation : 0

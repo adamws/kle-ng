@@ -941,6 +941,7 @@ const moveStep = computed(() => keyboardStore.moveStep)
 const isNonRectangular = computed(() => {
   if (selectedKeys.value.length === 0) return false
   const key = selectedKeys.value[0]
+  if (!key) return false
 
   // Stepped keys are rectangular with visual steps - they should allow size editing
   // Only truly non-rectangular keys (like ISO Enter) are non-rectangular
@@ -959,6 +960,7 @@ const isNonRectangular = computed(() => {
 const isRotaryEncoder = computed(() => {
   if (selectedKeys.value.length === 0) return false
   const key = selectedKeys.value[0]
+  if (!key) return false
   return key.sm === 'rot_ec11'
 })
 
@@ -966,6 +968,7 @@ const isRotaryEncoder = computed(() => {
 const isSteppedDisabled = computed(() => {
   if (selectedKeys.value.length === 0) return false
   const key = selectedKeys.value[0]
+  if (!key) return false
 
   // Allow step if the key has secondary dimensions that make it non-rectangular
   const hasSecondaryDimensions =
@@ -1068,6 +1071,7 @@ const displayRotationX = computed({
   get: () => {
     if (selectedKeys.value.length === 0) return 0
     const key = selectedKeys.value[0]
+    if (!key) return 0
     const absoluteValue = key.rotation_x || 0
     return isRelativeRotationMode.value
       ? formatNumber(absoluteToRelative(absoluteValue, key.x))
@@ -1082,6 +1086,7 @@ const displayRotationY = computed({
   get: () => {
     if (selectedKeys.value.length === 0) return 0
     const key = selectedKeys.value[0]
+    if (!key) return 0
     const absoluteValue = key.rotation_y || 0
     return isRelativeRotationMode.value
       ? formatNumber(absoluteToRelative(absoluteValue, key.y))
@@ -1124,6 +1129,7 @@ const updateCurrentValues = () => {
   }
 
   const firstKey = selectedKeys.value[0]
+  if (!firstKey) return
 
   // For single selection, use the key's values directly
   if (selectedKeys.value.length === 1) {
