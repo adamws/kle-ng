@@ -87,8 +87,10 @@ describe('SummaryPanel', () => {
       const rows = wrapper.findAll('tbody tr')
       // Should only have summary row (Total Keys: 0)
       expect(rows).toHaveLength(1)
-      expect(rows[0].text()).toContain('Total Keys')
-      expect(rows[0].text()).toContain('0')
+      const firstRow = rows[0]
+      expect(firstRow).toBeDefined()
+      expect(firstRow!.text()).toContain('Total Keys')
+      expect(firstRow!.text()).toContain('0')
     })
   })
 
@@ -352,12 +354,16 @@ describe('SummaryPanel', () => {
       const dataRows = wrapper.findAll('tbody tr:not(.table-active)')
 
       // First row should be the most frequent (2x1 with count 3)
-      expect(dataRows[0].text()).toContain('2 × 1')
-      expect(dataRows[0].text()).toContain('3')
+      const firstDataRow = dataRows[0]
+      expect(firstDataRow).toBeDefined()
+      expect(firstDataRow!.text()).toContain('2 × 1')
+      expect(firstDataRow!.text()).toContain('3')
 
       // Second row should be less frequent (1x1 with count 1)
-      expect(dataRows[1].text()).toContain('1 × 1')
-      expect(dataRows[1].text()).toContain('1')
+      const secondDataRow = dataRows[1]
+      expect(secondDataRow).toBeDefined()
+      expect(secondDataRow!.text()).toContain('1 × 1')
+      expect(secondDataRow!.text()).toContain('1')
     })
   })
 
@@ -370,8 +376,12 @@ describe('SummaryPanel', () => {
       })
 
       const headers = wrapper.findAll('th')
-      expect(headers[0].text()).toBe('Size (U)')
-      expect(headers[1].text()).toBe('Count')
+      const firstHeader = headers[0]
+      expect(firstHeader).toBeDefined()
+      expect(firstHeader!.text()).toBe('Size (U)')
+      const secondHeader = headers[1]
+      expect(secondHeader).toBeDefined()
+      expect(secondHeader!.text()).toBe('Count')
     })
 
     it('should show correct headers for size-color view', async () => {
@@ -385,9 +395,15 @@ describe('SummaryPanel', () => {
       await wrapper.find('input[value="size-color"]').setValue(true)
 
       const headers = wrapper.findAll('th')
-      expect(headers[0].text()).toBe('Size (U)')
-      expect(headers[1].text()).toBe('Color')
-      expect(headers[2].text()).toBe('Count')
+      const firstHeader = headers[0]
+      expect(firstHeader).toBeDefined()
+      expect(firstHeader!.text()).toBe('Size (U)')
+      const secondHeader = headers[1]
+      expect(secondHeader).toBeDefined()
+      expect(secondHeader!.text()).toBe('Color')
+      const thirdHeader = headers[2]
+      expect(thirdHeader).toBeDefined()
+      expect(thirdHeader!.text()).toBe('Count')
     })
   })
 })

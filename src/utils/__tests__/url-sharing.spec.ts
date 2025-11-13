@@ -138,7 +138,8 @@ describe('url-sharing', () => {
     it('should generate URL that can be decoded back', () => {
       const shareUrl = generateShareableUrl(sampleKeyboard)
       const hashPart = shareUrl.split('#share=')[1]
-      const decoded = decodeLayoutFromUrl(hashPart)
+      expect(hashPart).toBeDefined()
+      const decoded = decodeLayoutFromUrl(hashPart!)
 
       expect(decoded).toEqual(sampleKeyboard)
     })
@@ -260,10 +261,12 @@ describe('url-sharing', () => {
       const encoded = encodeLayoutToUrl(complexKeyboard)
       const decoded = decodeLayoutFromUrl(encoded)
 
-      expect(decoded.keys[0].x).toBe(2.5)
-      expect(decoded.keys[0].rotation_angle).toBe(45)
-      expect(decoded.keys[0].rotation_x).toBe(3)
-      expect(decoded.keys[0].rotation_y).toBe(2)
+      const firstKey = decoded.keys[0]
+      expect(firstKey).toBeDefined()
+      expect(firstKey!.x).toBe(2.5)
+      expect(firstKey!.rotation_angle).toBe(45)
+      expect(firstKey!.rotation_x).toBe(3)
+      expect(firstKey!.rotation_y).toBe(2)
     })
   })
 

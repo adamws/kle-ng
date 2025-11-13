@@ -48,14 +48,30 @@ describe('LegendToolsPanel', () => {
       const buttons = wrapper.findAll('.btn-outline-danger')
       expect(buttons).toHaveLength(8) // All, Alphas, Numbers, Punctuation, Function, Specials, Others, Decals
 
-      expect(buttons[0].text()).toContain('All')
-      expect(buttons[1].text()).toContain('Alphas')
-      expect(buttons[2].text()).toContain('Numbers')
-      expect(buttons[3].text()).toContain('Punctuation')
-      expect(buttons[4].text()).toContain('Function')
-      expect(buttons[5].text()).toContain('Specials')
-      expect(buttons[6].text()).toContain('Others')
-      expect(buttons[7].text()).toContain('Decals')
+      const btn0 = buttons[0]
+      expect(btn0).toBeDefined()
+      expect(btn0!.text()).toContain('All')
+      const btn1 = buttons[1]
+      expect(btn1).toBeDefined()
+      expect(btn1!.text()).toContain('Alphas')
+      const btn2 = buttons[2]
+      expect(btn2).toBeDefined()
+      expect(btn2!.text()).toContain('Numbers')
+      const btn3 = buttons[3]
+      expect(btn3).toBeDefined()
+      expect(btn3!.text()).toContain('Punctuation')
+      const btn4 = buttons[4]
+      expect(btn4).toBeDefined()
+      expect(btn4!.text()).toContain('Function')
+      const btn5 = buttons[5]
+      expect(btn5).toBeDefined()
+      expect(btn5!.text()).toContain('Specials')
+      const btn6 = buttons[6]
+      expect(btn6).toBeDefined()
+      expect(btn6!.text()).toContain('Others')
+      const btn7 = buttons[7]
+      expect(btn7).toBeDefined()
+      expect(btn7!.text()).toContain('Decals')
     })
 
     it('removes legends when category button is clicked', async () => {
@@ -69,7 +85,8 @@ describe('LegendToolsPanel', () => {
 
       // Click "All" button
       const allButton = wrapper.findAll('.btn-outline-danger')[0]
-      await allButton.trigger('click')
+      expect(allButton).toBeDefined()
+      await allButton!.trigger('click')
 
       expect(saveToHistorySpy).toHaveBeenCalled()
       expect(markDirtySpy).toHaveBeenCalled()
@@ -116,7 +133,8 @@ describe('LegendToolsPanel', () => {
 
       // Click top-left button (↖)
       const topLeftButton = wrapper.findAll('.align-btn')[0]
-      await topLeftButton.trigger('click')
+      expect(topLeftButton).toBeDefined()
+      await topLeftButton!.trigger('click')
 
       expect(saveToHistorySpy).toHaveBeenCalled()
       expect(markDirtySpy).toHaveBeenCalled()
@@ -161,8 +179,12 @@ describe('LegendToolsPanel', () => {
       const keycapSelectors = wrapper.findAll('.keycap-selector')
       expect(keycapSelectors).toHaveLength(2) // From and To
 
-      const fromLabels = keycapSelectors[0].findAll('.position-label')
-      const toLabels = keycapSelectors[1].findAll('.position-label')
+      const fromSelector = keycapSelectors[0]
+      expect(fromSelector).toBeDefined()
+      const fromLabels = fromSelector!.findAll('.position-label')
+      const toSelector = keycapSelectors[1]
+      expect(toSelector).toBeDefined()
+      const toLabels = toSelector!.findAll('.position-label')
       expect(fromLabels).toHaveLength(12)
       expect(toLabels).toHaveLength(12)
     })
@@ -186,12 +208,16 @@ describe('LegendToolsPanel', () => {
 
       // Check first set (From positions)
       for (let i = 0; i < 12; i++) {
-        expect(labels[i].text()).toBe(expectedLabels[i])
+        const label = labels[i]
+        expect(label).toBeDefined()
+        expect(label!.text()).toBe(expectedLabels[i])
       }
 
       // Check second set (To positions)
       for (let i = 12; i < 24; i++) {
-        expect(labels[i].text()).toBe(expectedLabels[i - 12])
+        const label = labels[i]
+        expect(label).toBeDefined()
+        expect(label!.text()).toBe(expectedLabels[i - 12])
       }
     })
 
@@ -202,10 +228,12 @@ describe('LegendToolsPanel', () => {
 
     it('enables move button when different positions selected', async () => {
       const fromRadio = wrapper.find('input[value="0"]') // Position 0 in From
-      const toRadio = wrapper.findAll('input[value="1"]')[1] // Position 1 in To
+      const toRadios = wrapper.findAll('input[value="1"]')
+      const toRadio = toRadios[1] // Position 1 in To
+      expect(toRadio).toBeDefined()
 
       await fromRadio.setValue(true)
-      await toRadio.setValue(true)
+      await toRadio!.setValue(true)
       await wrapper.vm.$nextTick()
 
       const moveButton = wrapper.find('.btn-outline-secondary')
@@ -227,10 +255,12 @@ describe('LegendToolsPanel', () => {
 
       // Select from position 0 and to position 1
       const fromRadio = wrapper.find('input[value="0"]')
-      const toRadio = wrapper.findAll('input[value="1"]')[1]
+      const toRadios = wrapper.findAll('input[value="1"]')
+      const toRadio = toRadios[1]
+      expect(toRadio).toBeDefined()
 
       await fromRadio.setValue(true)
-      await toRadio.setValue(true)
+      await toRadio!.setValue(true)
       await wrapper.vm.$nextTick()
 
       const moveButton = wrapper.find('.btn-outline-secondary')
@@ -288,7 +318,8 @@ describe('LegendToolsPanel', () => {
 
       // First operation - remove all legends
       const allButton = wrapper.findAll('.btn-outline-danger')[0]
-      await allButton.trigger('click')
+      expect(allButton).toBeDefined()
+      await allButton!.trigger('click')
 
       // Panel should still be visible
       expect(wrapper.find('.legend-tools-panel').exists()).toBe(true)
@@ -300,7 +331,8 @@ describe('LegendToolsPanel', () => {
       key.labels = ['', 'C', '', '', '', '', '', '', '', '', '', ''] // Add new legend for testing
 
       const alignButton = wrapper.findAll('.align-btn')[0]
-      await alignButton.trigger('click')
+      expect(alignButton).toBeDefined()
+      await alignButton!.trigger('click')
 
       // Panel should still be visible
       expect(wrapper.find('.legend-tools-panel').exists()).toBe(true)

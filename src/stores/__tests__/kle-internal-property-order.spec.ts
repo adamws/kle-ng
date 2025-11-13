@@ -14,7 +14,8 @@ describe('KLE Internal Format Property Order', () => {
     // Create a simple layout with one key
     store.addKey({ x: 0, y: 0 })
     const key = store.keys[0]
-    key.labels[4] = 'A' // Set a label
+    expect(key).toBeDefined()
+    key!.labels[4] = 'A' // Set a label
 
     // Export to KLE Internal format
     const data = store.getSerializedData('kle-internal')

@@ -99,11 +99,12 @@ describe('VIA Import Utilities', () => {
 
       // Check that the compressed data exists
       const metadataObj = firstRow[0] as Record<string, string>
+      expect(metadataObj._kleng_via_data).toBeDefined()
       expect(typeof metadataObj._kleng_via_data).toBe('string')
-      expect(metadataObj._kleng_via_data.length).toBeGreaterThan(0)
+      expect(metadataObj._kleng_via_data!.length).toBeGreaterThan(0)
 
       // Decompress and verify the VIA metadata
-      const decompressed = LZString.decompressFromBase64(metadataObj._kleng_via_data)
+      const decompressed = LZString.decompressFromBase64(metadataObj._kleng_via_data!)
       expect(decompressed).toBeTruthy()
       const viaMetadata = JSON.parse(decompressed!) as Record<string, unknown>
 

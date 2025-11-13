@@ -95,13 +95,17 @@ describe('Serialization Utils', () => {
     it('should serialize and deserialize layouts', () => {
       const keyboard = new Keyboard()
       keyboard.keys.push(new Key())
-      keyboard.keys[0].labels[0] = 'A'
+      const key = keyboard.keys[0]
+      expect(key).toBeDefined()
+      key!.labels[0] = 'A'
 
       const serialized = Serial.serialize(keyboard)
       const deserialized = Serial.deserialize(serialized)
 
       expect(deserialized.keys).toHaveLength(1)
-      expect(deserialized.keys[0].labels[0]).toBe('A')
+      const deserializedKey = deserialized.keys[0]
+      expect(deserializedKey).toBeDefined()
+      expect(deserializedKey!.labels[0]).toBe('A')
     })
 
     it('should handle complex layouts', () => {
@@ -112,8 +116,10 @@ describe('Serialization Utils', () => {
 
       const keyboard = Serial.deserialize(sampleLayout)
       expect(keyboard.keys).toHaveLength(5) // Tab + Q + W + E + Backspace
-      expect(keyboard.keys[0].width).toBe(2) // Backspace is the first key
-      expect(keyboard.keys[0].labels[0]).toBe('Backspace')
+      const firstKey = keyboard.keys[0]
+      expect(firstKey).toBeDefined()
+      expect(firstKey!.width).toBe(2) // Backspace is the first key
+      expect(firstKey!.labels[0]).toBe('Backspace')
     })
   })
 })

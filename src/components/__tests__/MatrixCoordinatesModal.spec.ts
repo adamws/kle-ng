@@ -20,34 +20,37 @@ describe('MatrixCoordinatesModal', () => {
       store.addKey({ x: 2, y: 0 })
 
       const key0 = store.keys[0]
+      expect(key0).toBeDefined()
       const key1 = store.keys[1]
+      expect(key1).toBeDefined()
       const key2 = store.keys[2]
+      expect(key2).toBeDefined()
 
       // Set labels at various positions (not just position 0)
-      key0.labels[0] = 'A'
-      key0.labels[4] = 'B'
-      key0.labels[8] = 'C'
+      key0!.labels[0] = 'A'
+      key0!.labels[4] = 'B'
+      key0!.labels[8] = 'C'
 
-      key1.labels[1] = 'X'
-      key1.labels[5] = 'Y'
-      key1.labels[9] = 'Z'
+      key1!.labels[1] = 'X'
+      key1!.labels[5] = 'Y'
+      key1!.labels[9] = 'Z'
 
-      key2.labels[0] = '1'
-      key2.labels[2] = '2'
-      key2.labels[6] = '3'
-      key2.labels[11] = '4'
+      key2!.labels[0] = '1'
+      key2!.labels[2] = '2'
+      key2!.labels[6] = '3'
+      key2!.labels[11] = '4'
 
       // Verify labels are set
-      expect(key0.labels[0]).toBe('A')
-      expect(key0.labels[4]).toBe('B')
-      expect(key0.labels[8]).toBe('C')
-      expect(key1.labels[1]).toBe('X')
-      expect(key1.labels[5]).toBe('Y')
-      expect(key1.labels[9]).toBe('Z')
-      expect(key2.labels[0]).toBe('1')
-      expect(key2.labels[2]).toBe('2')
-      expect(key2.labels[6]).toBe('3')
-      expect(key2.labels[11]).toBe('4')
+      expect(key0!.labels[0]).toBe('A')
+      expect(key0!.labels[4]).toBe('B')
+      expect(key0!.labels[8]).toBe('C')
+      expect(key1!.labels[1]).toBe('X')
+      expect(key1!.labels[5]).toBe('Y')
+      expect(key1!.labels[9]).toBe('Z')
+      expect(key2!.labels[0]).toBe('1')
+      expect(key2!.labels[2]).toBe('2')
+      expect(key2!.labels[6]).toBe('3')
+      expect(key2!.labels[11]).toBe('4')
 
       // Mount the modal
       const wrapper = mount(MatrixCoordinatesModal, {
@@ -79,15 +82,16 @@ describe('MatrixCoordinatesModal', () => {
       // Setup: Create a key with labels scattered across all 12 positions
       store.addKey({ x: 0, y: 0 })
       const key = store.keys[0]
+      expect(key).toBeDefined()
 
       // Fill all 12 positions with different values
       for (let i = 0; i < 12; i++) {
-        key.labels[i] = `Label${i}`
+        key!.labels[i] = `Label${i}`
       }
 
       // Verify all positions are filled
       for (let i = 0; i < 12; i++) {
-        expect(key.labels[i]).toBe(`Label${i}`)
+        expect(key!.labels[i]).toBe(`Label${i}`)
       }
 
       // Mount the modal
@@ -106,7 +110,7 @@ describe('MatrixCoordinatesModal', () => {
 
       // Verify ALL 12 positions are now empty
       for (let i = 0; i < 12; i++) {
-        expect(key.labels[i]).toBe('')
+        expect(key!.labels[i]).toBe('')
       }
     })
 
@@ -117,16 +121,19 @@ describe('MatrixCoordinatesModal', () => {
       store.addKey({ x: 2, y: 0, decal: true }) // decal
 
       const regularKey = store.keys[0]
+      expect(regularKey).toBeDefined()
       const ghostKey = store.keys[1]
+      expect(ghostKey).toBeDefined()
       const decalKey = store.keys[2]
+      expect(decalKey).toBeDefined()
 
       // Set labels at various positions
-      regularKey.labels[0] = 'R0'
-      regularKey.labels[4] = 'R4'
-      ghostKey.labels[0] = 'G0'
-      ghostKey.labels[5] = 'G5'
-      decalKey.labels[0] = 'D0'
-      decalKey.labels[6] = 'D6'
+      regularKey!.labels[0] = 'R0'
+      regularKey!.labels[4] = 'R4'
+      ghostKey!.labels[0] = 'G0'
+      ghostKey!.labels[5] = 'G5'
+      decalKey!.labels[0] = 'D0'
+      decalKey!.labels[6] = 'D6'
 
       // Mount the modal
       const wrapper = mount(MatrixCoordinatesModal, {
@@ -158,11 +165,13 @@ describe('MatrixCoordinatesModal', () => {
       store.addKey({ x: 1, y: 0 })
 
       const key0 = store.keys[0]
+      expect(key0).toBeDefined()
       const key1 = store.keys[1]
+      expect(key1).toBeDefined()
 
       // Set partial VIA annotations
-      key0.labels[0] = '0,'
-      key1.labels[0] = '1,'
+      key0!.labels[0] = '0,'
+      key1!.labels[0] = '1,'
 
       // Mount the modal
       const wrapper = mount(MatrixCoordinatesModal, {
@@ -182,8 +191,8 @@ describe('MatrixCoordinatesModal', () => {
         await wrapper.vm.$nextTick()
 
         // Verify labels are NOT cleared
-        expect(key0.labels[0]).toBe('0,')
-        expect(key1.labels[0]).toBe('1,')
+        expect(key0!.labels[0]).toBe('0,')
+        expect(key1!.labels[0]).toBe('1,')
       }
     })
   })

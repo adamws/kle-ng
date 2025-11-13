@@ -103,8 +103,10 @@ describe('KeyPropertiesPanel', () => {
       expect(positionContents.length).toBe(2) // One for basic, one for advanced
 
       // Both containers should exist for consistent layout
-      expect(positionContents[0].exists()).toBe(true)
-      expect(positionContents[1].exists()).toBe(true)
+      expect(positionContents[0]).toBeDefined()
+      expect(positionContents[1]).toBeDefined()
+      expect(positionContents[0]!.exists()).toBe(true)
+      expect(positionContents[1]!.exists()).toBe(true)
 
       // Advanced mode should have 4 columns for position (X, Y, X2, Y2)
       // Switch to advanced mode first

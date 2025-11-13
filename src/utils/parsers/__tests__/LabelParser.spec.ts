@@ -242,7 +242,8 @@ describe('LabelParser', () => {
       it('should handle whitespace in tags', () => {
         const result = parser.parseHtmlText('< b >Bold</ b >')
         // Whitespace in tags is not supported by the regex, treated as plain text
-        expect(result[0].type).toBe('text')
+        expect(result[0]).toBeDefined()
+        expect(result[0]!.type).toBe('text')
       })
 
       it('should handle unclosed tags gracefully', () => {
@@ -253,8 +254,9 @@ describe('LabelParser', () => {
       it('should handle special characters', () => {
         const result = parser.parseHtmlText('Special: & < >')
         // The < and > are treated as potential HTML tags, so parsing stops
-        expect(result[0].type).toBe('text')
-        expect(result[0].text).toContain('Special:')
+        expect(result[0]).toBeDefined()
+        expect(result[0]!.type).toBe('text')
+        expect(result[0]!.text).toContain('Special:')
       })
 
       it('should handle dimensions without quotes', () => {

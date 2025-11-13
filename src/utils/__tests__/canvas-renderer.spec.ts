@@ -165,7 +165,8 @@ describe('CanvasRenderer', () => {
       expect(mockContext.translate).toHaveBeenCalled()
       // Check that rotate was called with approximately PI/4 (45 degrees in radians)
       // Using decimal.js may give slightly different precision than JavaScript's Math.PI / 4
-      const rotateCall = mockContext.rotate.mock.calls[0][0]
+      const rotateCall = mockContext.rotate.mock.calls[0]?.[0]
+      expect(rotateCall).toBeDefined()
       expect(rotateCall).toBeCloseTo(Math.PI / 4, 10) // 10 decimal places precision
     })
 

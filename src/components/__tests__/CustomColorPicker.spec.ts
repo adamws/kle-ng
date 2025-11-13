@@ -101,9 +101,15 @@ describe('CustomColorPicker', () => {
 
     it('initializes RGB inputs correctly', () => {
       const rgbInputs = wrapper.findAllComponents({ name: 'CustomNumberInput' })
-      expect(rgbInputs[0].props('modelValue')).toBe(255) // R
-      expect(rgbInputs[1].props('modelValue')).toBe(0) // G
-      expect(rgbInputs[2].props('modelValue')).toBe(0) // B
+      const rInput = rgbInputs[0]
+      expect(rInput).toBeDefined()
+      expect(rInput!.props('modelValue')).toBe(255) // R
+      const gInput = rgbInputs[1]
+      expect(gInput).toBeDefined()
+      expect(gInput!.props('modelValue')).toBe(0) // G
+      const bInput = rgbInputs[2]
+      expect(bInput).toBeDefined()
+      expect(bInput!.props('modelValue')).toBe(0) // B
     })
   })
 
@@ -163,8 +169,10 @@ describe('CustomColorPicker', () => {
   describe('RGB Inputs', () => {
     it('updates color when R value changes', async () => {
       const rgbInputs = wrapper.findAllComponents({ name: 'CustomNumberInput' })
+      const rInput = rgbInputs[0]
+      expect(rInput).toBeDefined()
 
-      await rgbInputs[0].vm.$emit('update:modelValue', 128)
+      await rInput!.vm.$emit('update:modelValue', 128)
 
       expect(wrapper.emitted('update:modelValue')).toBeTruthy()
       expect(wrapper.emitted('update:modelValue')![0]).toEqual(['#800000'])
@@ -172,8 +180,10 @@ describe('CustomColorPicker', () => {
 
     it('updates color when G value changes', async () => {
       const rgbInputs = wrapper.findAllComponents({ name: 'CustomNumberInput' })
+      const gInput = rgbInputs[1]
+      expect(gInput).toBeDefined()
 
-      await rgbInputs[1].vm.$emit('update:modelValue', 128)
+      await gInput!.vm.$emit('update:modelValue', 128)
 
       expect(wrapper.emitted('update:modelValue')).toBeTruthy()
       expect(wrapper.emitted('update:modelValue')![0]).toEqual(['#ff8000'])
@@ -181,8 +191,10 @@ describe('CustomColorPicker', () => {
 
     it('updates color when B value changes', async () => {
       const rgbInputs = wrapper.findAllComponents({ name: 'CustomNumberInput' })
+      const bInput = rgbInputs[2]
+      expect(bInput).toBeDefined()
 
-      await rgbInputs[2].vm.$emit('update:modelValue', 128)
+      await bInput!.vm.$emit('update:modelValue', 128)
 
       expect(wrapper.emitted('update:modelValue')).toBeTruthy()
       expect(wrapper.emitted('update:modelValue')![0]).toEqual(['#ff0080'])
@@ -190,8 +202,10 @@ describe('CustomColorPicker', () => {
 
     it('handles undefined RGB values', async () => {
       const rgbInputs = wrapper.findAllComponents({ name: 'CustomNumberInput' })
+      const rInput = rgbInputs[0]
+      expect(rInput).toBeDefined()
 
-      await rgbInputs[0].vm.$emit('update:modelValue', undefined)
+      await rInput!.vm.$emit('update:modelValue', undefined)
 
       // Should default to 0 for undefined values
       expect(wrapper.emitted('update:modelValue')).toBeTruthy()
@@ -202,21 +216,29 @@ describe('CustomColorPicker', () => {
   describe('Preset Colors', () => {
     it('selects preset color correctly', async () => {
       const presetColors = wrapper.findAll('.preset-color')
+      const secondPreset = presetColors[1]
+      expect(secondPreset).toBeDefined()
 
       // Click on second preset color (orange)
-      await presetColors[1].trigger('click')
+      await secondPreset!.trigger('click')
 
       expect(wrapper.emitted('update:modelValue')).toBeTruthy()
       // The color goes through HSV conversion which may cause slight variations due to rounding
-      const emittedColor = wrapper.emitted('update:modelValue')![0][0] as string
+      const emittedEvents = wrapper.emitted('update:modelValue')
+      expect(emittedEvents).toBeDefined()
+      const firstEvent = emittedEvents![0]
+      expect(firstEvent).toBeDefined()
+      const emittedColor = firstEvent![0] as string
       expect(emittedColor.toLowerCase()).toBe('#f5a422')
     })
 
     it('updates all inputs when preset is selected', async () => {
       const presetColors = wrapper.findAll('.preset-color')
+      const greenPreset = presetColors[4]
+      expect(greenPreset).toBeDefined()
 
       // Click on green preset
-      await presetColors[4].trigger('click')
+      await greenPreset!.trigger('click')
       await wrapper.vm.$nextTick()
 
       const hexInput = wrapper.find('input[placeholder="000000"]')
@@ -297,9 +319,15 @@ describe('CustomColorPicker', () => {
       expect((hexInput.element as HTMLInputElement).value).toBe('8040C0')
 
       const rgbInputs = wrapper.findAllComponents({ name: 'CustomNumberInput' })
-      expect(rgbInputs[0].props('modelValue')).toBe(128) // R
-      expect(rgbInputs[1].props('modelValue')).toBe(64) // G
-      expect(rgbInputs[2].props('modelValue')).toBe(192) // B
+      const rInput = rgbInputs[0]
+      expect(rInput).toBeDefined()
+      expect(rInput!.props('modelValue')).toBe(128) // R
+      const gInput = rgbInputs[1]
+      expect(gInput).toBeDefined()
+      expect(gInput!.props('modelValue')).toBe(64) // G
+      const bInput = rgbInputs[2]
+      expect(bInput).toBeDefined()
+      expect(bInput!.props('modelValue')).toBe(192) // B
     })
   })
 
@@ -337,8 +365,12 @@ describe('CustomColorPicker', () => {
       await wrapper.vm.$nextTick()
 
       const lastUsedColors = wrapper.find('.recently-used-grid').findAll('.recently-used-color')
-      expect(lastUsedColors[0].attributes('style')).toContain('background-color: rgb(255, 0, 0)')
-      expect(lastUsedColors[1].attributes('style')).toContain('background-color: rgb(0, 255, 0)')
+      const firstUsedColor = lastUsedColors[0]
+      expect(firstUsedColor).toBeDefined()
+      expect(firstUsedColor!.attributes('style')).toContain('background-color: rgb(255, 0, 0)')
+      const secondUsedColor = lastUsedColors[1]
+      expect(secondUsedColor).toBeDefined()
+      expect(secondUsedColor!.attributes('style')).toContain('background-color: rgb(0, 255, 0)')
     })
 
     it('selects last used color when clicked', async () => {
@@ -353,7 +385,9 @@ describe('CustomColorPicker', () => {
       await wrapper.vm.$nextTick()
 
       const lastUsedColors = wrapper.find('.recently-used-grid').findAll('.recently-used-color')
-      await lastUsedColors[1].trigger('click')
+      const secondUsedColor = lastUsedColors[1]
+      expect(secondUsedColor).toBeDefined()
+      await secondUsedColor!.trigger('click')
 
       expect(wrapper.emitted('update:modelValue')).toBeTruthy()
       expect(wrapper.emitted('update:modelValue')![0]).toEqual(['#00ff00'])
@@ -370,16 +404,20 @@ describe('CustomColorPicker', () => {
 
     it('does not add color to last used when preset is selected', async () => {
       const presetColors = wrapper.findAll('.preset-color')
+      const secondPreset = presetColors[1]
+      expect(secondPreset).toBeDefined()
 
-      await presetColors[1].trigger('click')
+      await secondPreset!.trigger('click')
 
       expect(mockRecentlyUsedColorsManager.addColor).not.toHaveBeenCalled()
     })
 
     it('does not add color to last used when RGB input changes', async () => {
       const rgbInputs = wrapper.findAllComponents({ name: 'CustomNumberInput' })
+      const rInput = rgbInputs[0]
+      expect(rInput).toBeDefined()
 
-      await rgbInputs[0].vm.$emit('update:modelValue', 128)
+      await rInput!.vm.$emit('update:modelValue', 128)
 
       expect(mockRecentlyUsedColorsManager.addColor).not.toHaveBeenCalled()
     })

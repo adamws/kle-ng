@@ -216,10 +216,11 @@ describe('png-metadata', () => {
 
       // Verify the stored data is compressed (not readable JSON)
       const storedData = metadata['KLE-Layout']
-      expect(() => JSON.parse(storedData)).toThrow()
+      expect(storedData).toBeDefined()
+      expect(() => JSON.parse(storedData!)).toThrow()
 
       // But decompression should work
-      const decompressed = LZString.decompressFromBase64(storedData)
+      const decompressed = LZString.decompressFromBase64(storedData!)
       expect(decompressed).toBeTruthy()
       expect(JSON.parse(decompressed!)).toEqual(layoutData)
 
@@ -361,7 +362,9 @@ describe('png-metadata', () => {
       const uncompressedSize = JSON.stringify(largeLayout).length
       const pngWithLayout = await createPngWithKleLayout(originalPng, largeLayout)
       const metadata = await extractMetadataFromPng(pngWithLayout)
-      const compressedSize = metadata['KLE-Layout'].length
+      const kleLayout = metadata['KLE-Layout']
+      expect(kleLayout).toBeDefined()
+      const compressedSize = kleLayout!.length
 
       // Verify compression provides benefit
       expect(compressedSize).toBeLessThan(uncompressedSize)
@@ -411,8 +414,10 @@ describe('png-metadata', () => {
       expect(extractedLayout).toEqual(precisionLayout)
 
       // Test specific numeric precision
-      const originalProps = precisionLayout[0][0] as Record<string, unknown>
-      const extractedProps = (extractedLayout as unknown[][])[0][0] as Record<string, unknown>
+      const originalProps = precisionLayout[0]?.[0] as Record<string, unknown>
+      const extractedProps = (extractedLayout as unknown[][])[0]?.[0] as Record<string, unknown>
+      expect(originalProps).toBeDefined()
+      expect(extractedProps).toBeDefined()
 
       expect(extractedProps.x).toBe(originalProps.x)
       expect(extractedProps.y).toBe(originalProps.y)
@@ -450,7 +455,8 @@ describe('png-metadata', () => {
 
       // Check that the layout is usable (no nulls in fa arrays)
       const row1 = (extractedLayout as unknown[][])[0]
-      const props1 = row1[0] as Record<string, unknown>
+      expect(row1).toBeDefined()
+      const props1 = row1![0] as Record<string, unknown>
       expect(props1.fa).toBeDefined()
       expect(Array.isArray(props1.fa)).toBe(true)
       // Should only contain non-null values
@@ -458,7 +464,8 @@ describe('png-metadata', () => {
       expect((props1.fa as unknown[]).length).toBe(1) // Only the '2' should remain
 
       const row2 = (extractedLayout as unknown[][])[1]
-      const props2 = row2[0] as Record<string, unknown>
+      expect(row2).toBeDefined()
+      const props2 = row2![0] as Record<string, unknown>
       expect(props2.fa).toBeDefined()
       expect((props2.fa as unknown[]).length).toBe(1) // Only the '3' should remain
     })
@@ -489,7 +496,8 @@ describe('png-metadata', () => {
 
       // Verify null values were cleaned
       const row1 = (extractedLayout as unknown[][])[0]
-      const props1 = row1[0] as Record<string, unknown>
+      expect(row1).toBeDefined()
+      const props1 = row1![0] as Record<string, unknown>
       expect((props1.fa as unknown[]).every((v) => v !== null)).toBe(true)
       expect((props1.fa as unknown[]).length).toBe(1) // Only '2' remains
 

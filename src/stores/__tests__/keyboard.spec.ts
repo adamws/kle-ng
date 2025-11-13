@@ -48,19 +48,22 @@ describe('Keyboard Store', () => {
       })
 
       const key = store.keys[0]
-      expect(key.x).toBe(5)
-      expect(key.y).toBe(2)
-      expect(key.width).toBe(1.5)
-      expect(key.color).toBe('#ff0000')
-      expect(key.labels[4]).toBe('Test')
+      expect(key).toBeDefined()
+      expect(key!.x).toBe(5)
+      expect(key!.y).toBe(2)
+      expect(key!.width).toBe(1.5)
+      expect(key!.color).toBe('#ff0000')
+      expect(key!.labels[4]).toBe('Test')
     })
 
     it('should position new keys after existing ones', () => {
       store.addKey({ x: 0, y: 0, width: 1 })
       store.addKey()
 
-      expect(store.keys[1].x).toBe(1) // After first key (x=0, width=1)
-      expect(store.keys[1].y).toBe(0) // Same row
+      const secondKey = store.keys[1]
+      expect(secondKey).toBeDefined()
+      expect(secondKey!.x).toBe(1) // After first key (x=0, width=1)
+      expect(secondKey!.y).toBe(0) // Same row
     })
 
     it('should add multiple keys', () => {
@@ -90,20 +93,30 @@ describe('Keyboard Store', () => {
       store.addKey({ x: 2, y: 0 })
 
       // Select middle key (index 1)
-      store.selectKey(store.keys[1])
-      expect(store.selectedKeys[0].x).toBe(1)
+      const middleKey = store.keys[1]
+      expect(middleKey).toBeDefined()
+      store.selectKey(middleKey!)
+      const firstSelected = store.selectedKeys[0]
+      expect(firstSelected).toBeDefined()
+      expect(firstSelected!.x).toBe(1)
 
       // Delete it
       store.deleteKeys()
 
       // Should have 2 keys left: [0], [2]
       expect(store.keys).toHaveLength(2)
-      expect(store.keys[0].x).toBe(0)
-      expect(store.keys[1].x).toBe(2)
+      const firstRemaining = store.keys[0]
+      expect(firstRemaining).toBeDefined()
+      expect(firstRemaining!.x).toBe(0)
+      const secondRemaining = store.keys[1]
+      expect(secondRemaining).toBeDefined()
+      expect(secondRemaining!.x).toBe(2)
 
       // Should auto-select the key that moved to index 1 (previously at index 2)
       expect(store.selectedKeys).toHaveLength(1)
-      expect(store.selectedKeys[0].x).toBe(2)
+      const selectedAfter = store.selectedKeys[0]
+      expect(selectedAfter).toBeDefined()
+      expect(selectedAfter!.x).toBe(2)
     })
 
     it('should auto-select previous key after deleting last key', () => {
@@ -113,8 +126,12 @@ describe('Keyboard Store', () => {
       store.addKey({ x: 2, y: 0 })
 
       // Select last key (index 2)
-      store.selectKey(store.keys[2])
-      expect(store.selectedKeys[0].x).toBe(2)
+      const lastKey = store.keys[2]
+      expect(lastKey).toBeDefined()
+      store.selectKey(lastKey!)
+      const selected = store.selectedKeys[0]
+      expect(selected).toBeDefined()
+      expect(selected!.x).toBe(2)
 
       // Delete it
       store.deleteKeys()
@@ -124,7 +141,9 @@ describe('Keyboard Store', () => {
 
       // Should auto-select the new last key (index 1)
       expect(store.selectedKeys).toHaveLength(1)
-      expect(store.selectedKeys[0].x).toBe(1)
+      const selectedAfter = store.selectedKeys[0]
+      expect(selectedAfter).toBeDefined()
+      expect(selectedAfter!.x).toBe(1)
     })
 
     it('should auto-select next key after deleting first key', () => {
@@ -134,20 +153,30 @@ describe('Keyboard Store', () => {
       store.addKey({ x: 2, y: 0 })
 
       // Select first key (index 0)
-      store.selectKey(store.keys[0])
-      expect(store.selectedKeys[0].x).toBe(0)
+      const firstKey = store.keys[0]
+      expect(firstKey).toBeDefined()
+      store.selectKey(firstKey!)
+      const selected = store.selectedKeys[0]
+      expect(selected).toBeDefined()
+      expect(selected!.x).toBe(0)
 
       // Delete it
       store.deleteKeys()
 
       // Should have 2 keys left: [1], [2] (shifted to indices 0, 1)
       expect(store.keys).toHaveLength(2)
-      expect(store.keys[0].x).toBe(1)
-      expect(store.keys[1].x).toBe(2)
+      const key0After = store.keys[0]
+      expect(key0After).toBeDefined()
+      expect(key0After!.x).toBe(1)
+      const key1After = store.keys[1]
+      expect(key1After).toBeDefined()
+      expect(key1After!.x).toBe(2)
 
       // Should auto-select the key that moved to index 0 (previously at index 1)
       expect(store.selectedKeys).toHaveLength(1)
-      expect(store.selectedKeys[0].x).toBe(1)
+      const selectedAfter = store.selectedKeys[0]
+      expect(selectedAfter).toBeDefined()
+      expect(selectedAfter!.x).toBe(1)
     })
 
     it('should auto-select appropriately when deleting multiple keys', () => {
@@ -159,8 +188,12 @@ describe('Keyboard Store', () => {
       store.addKey({ x: 4, y: 0 })
 
       // Select keys at indices 1 and 3
-      store.selectKey(store.keys[1])
-      store.selectKey(store.keys[3], true)
+      const key1 = store.keys[1]
+      expect(key1).toBeDefined()
+      store.selectKey(key1!)
+      const key3 = store.keys[3]
+      expect(key3).toBeDefined()
+      store.selectKey(key3!, true)
       expect(store.selectedKeys).toHaveLength(2)
 
       // Delete them
@@ -168,13 +201,21 @@ describe('Keyboard Store', () => {
 
       // Should have 3 keys left: [0], [2], [4] at indices 0, 1, 2
       expect(store.keys).toHaveLength(3)
-      expect(store.keys[0].x).toBe(0)
-      expect(store.keys[1].x).toBe(2)
-      expect(store.keys[2].x).toBe(4)
+      const key0After = store.keys[0]
+      expect(key0After).toBeDefined()
+      expect(key0After!.x).toBe(0)
+      const key1After = store.keys[1]
+      expect(key1After).toBeDefined()
+      expect(key1After!.x).toBe(2)
+      const key2After = store.keys[2]
+      expect(key2After).toBeDefined()
+      expect(key2After!.x).toBe(4)
 
       // Should auto-select the key at index 1 (was at index 2 before deletion, the first available after minimum deleted index 1)
       expect(store.selectedKeys).toHaveLength(1)
-      expect(store.selectedKeys[0].x).toBe(2)
+      const selectedAfter = store.selectedKeys[0]
+      expect(selectedAfter).toBeDefined()
+      expect(selectedAfter!.x).toBe(2)
     })
 
     it('should not delete if no keys selected', () => {
@@ -196,24 +237,32 @@ describe('Keyboard Store', () => {
     })
 
     it('should select a single key', () => {
-      store.selectKey(store.keys[0])
+      const key0 = store.keys[0]
+      expect(key0).toBeDefined()
+      store.selectKey(key0!)
 
       expect(store.selectedKeys).toHaveLength(1)
-      expect(store.selectedKeys[0]).toBe(store.keys[0])
+      expect(store.selectedKeys[0]).toBe(key0)
     })
 
     it('should extend selection with ctrl/cmd', () => {
-      store.selectKey(store.keys[0])
-      store.selectKey(store.keys[1], true)
+      const key0 = store.keys[0]
+      expect(key0).toBeDefined()
+      store.selectKey(key0!)
+      const key1 = store.keys[1]
+      expect(key1).toBeDefined()
+      store.selectKey(key1!, true)
 
       expect(store.selectedKeys).toHaveLength(2)
-      expect(store.selectedKeys).toContain(store.keys[0])
-      expect(store.selectedKeys).toContain(store.keys[1])
+      expect(store.selectedKeys).toContain(key0)
+      expect(store.selectedKeys).toContain(key1)
     })
 
     it('should toggle selection with extend', () => {
-      store.selectKey(store.keys[0])
-      store.selectKey(store.keys[0], true) // Toggle off
+      const key0 = store.keys[0]
+      expect(key0).toBeDefined()
+      store.selectKey(key0!)
+      store.selectKey(key0!, true) // Toggle off
 
       expect(store.selectedKeys).toHaveLength(0)
     })
@@ -248,11 +297,15 @@ describe('Keyboard Store', () => {
     })
 
     it('should copy selected keys', () => {
-      store.selectKey(store.keys[0])
+      const key0 = store.keys[0]
+      expect(key0).toBeDefined()
+      store.selectKey(key0!)
       store.copy()
 
       expect(store.clipboard).toHaveLength(1)
-      expect(store.clipboard[0].labels[4]).toBe('A')
+      const clipboardKey = store.clipboard[0]
+      expect(clipboardKey).toBeDefined()
+      expect(clipboardKey!.labels[4]).toBe('A')
       expect(store.canPaste).toBe(true)
     })
 
@@ -264,16 +317,22 @@ describe('Keyboard Store', () => {
     })
 
     it('should cut selected keys', async () => {
-      store.selectKey(store.keys[0])
+      const key0 = store.keys[0]
+      expect(key0).toBeDefined()
+      store.selectKey(key0!)
       await store.cut()
 
       expect(store.clipboard).toHaveLength(1)
       expect(store.keys).toHaveLength(1) // One key removed
-      expect(store.keys[0].labels[4]).toBe('B') // Remaining key
+      const remainingKey = store.keys[0]
+      expect(remainingKey).toBeDefined()
+      expect(remainingKey!.labels[4]).toBe('B') // Remaining key
     })
 
     it('should not paste keys when system clipboard is unavailable', async () => {
-      store.selectKey(store.keys[0])
+      const key0 = store.keys[0]
+      expect(key0).toBeDefined()
+      store.selectKey(key0!)
       await store.copy()
       await store.paste()
 
@@ -355,10 +414,11 @@ describe('Keyboard Store', () => {
 
     it('should update single key property', () => {
       const key = store.keys[0]
+      expect(key).toBeDefined()
 
-      store.updateKeyProperty(key, 'width', 1.5)
+      store.updateKeyProperty(key!, 'width', 1.5)
 
-      expect(key.width).toBe(1.5)
+      expect(key!.width).toBe(1.5)
       expect(store.dirty).toBe(true)
     })
 
@@ -368,8 +428,12 @@ describe('Keyboard Store', () => {
 
       store.updateSelectedKeys('color', '#ff0000')
 
-      expect(store.keys[0].color).toBe('#ff0000')
-      expect(store.keys[1].color).toBe('#ff0000')
+      const key0 = store.keys[0]
+      expect(key0).toBeDefined()
+      expect(key0!.color).toBe('#ff0000')
+      const key1 = store.keys[1]
+      expect(key1).toBeDefined()
+      expect(key1!.color).toBe('#ff0000')
     })
   })
 
@@ -384,7 +448,9 @@ describe('Keyboard Store', () => {
 
       expect(store.keys).toHaveLength(3)
       expect(store.metadata.name).toBe('Test Layout')
-      expect(store.keys[0].labels[4]).toBe('Q')
+      const firstKey = store.keys[0]
+      expect(firstKey).toBeDefined()
+      expect(firstKey!.labels[4]).toBe('Q')
       expect(store.dirty).toBe(false)
     })
 
@@ -402,7 +468,9 @@ describe('Keyboard Store', () => {
 
     it('should clear selection and history on load', () => {
       store.addKey()
-      store.selectKey(store.keys[0])
+      const key0 = store.keys[0]
+      expect(key0).toBeDefined()
+      store.selectKey(key0!)
 
       store.loadKLELayout([['Q']])
 
@@ -440,9 +508,11 @@ describe('Keyboard Store', () => {
       store.setMirrorAxis(canvasPos, 'horizontal')
 
       expect(store.mirrorAxis).not.toBeNull()
-      expect(store.mirrorAxis!.x).toBe(1.25) // Snapped to nearest 0.25
-      expect(store.mirrorAxis!.y).toBe(0.75) // Snapped to nearest 0.25
-      expect(store.mirrorAxis!.direction).toBe('horizontal')
+      const axis = store.mirrorAxis
+      expect(axis).toBeDefined()
+      expect(axis!.x).toBe(1.25) // Snapped to nearest 0.25
+      expect(axis!.y).toBe(0.75) // Snapped to nearest 0.25
+      expect(axis!.direction).toBe('horizontal')
     })
 
     it('should perform horizontal mirror of non-rotated keys', () => {
@@ -456,10 +526,14 @@ describe('Keyboard Store', () => {
       expect(store.keys.length).toBe(originalKeyCount * 2)
 
       // Original keys should still be there
-      expect(store.keys[0].x).toBe(0)
-      expect(store.keys[0].y).toBe(0)
-      expect(store.keys[1].x).toBe(2)
-      expect(store.keys[1].y).toBe(1)
+      const key0 = store.keys[0]
+      expect(key0).toBeDefined()
+      expect(key0!.x).toBe(0)
+      expect(key0!.y).toBe(0)
+      const key1 = store.keys[1]
+      expect(key1).toBeDefined()
+      expect(key1!.x).toBe(2)
+      expect(key1!.y).toBe(1)
 
       // Find mirrored keys
       const mirroredA = store.keys.find((k) => k.labels[4] === 'A' && k.x === 0 && k.y !== 0)
@@ -696,12 +770,13 @@ describe('Keyboard Store', () => {
 
       // Verify key properties
       const originalKey = store.keys[0]
-      expect(originalKey.x).toBe(0)
-      expect(originalKey.y).toBe(0)
-      expect(originalKey.width).toBe(1)
+      expect(originalKey).toBeDefined()
+      expect(originalKey!.x).toBe(0)
+      expect(originalKey!.y).toBe(0)
+      expect(originalKey!.width).toBe(1)
 
       // Select the key
-      store.selectKey(originalKey, false)
+      store.selectKey(originalKey!, false)
       expect(store.selectedKeys.length).toBe(1)
 
       // Set mirror axis at x=2 (use the coordinate system that setMirrorAxis expects)
@@ -773,6 +848,7 @@ describe('Keyboard Store', () => {
         rotation_y: 0.5,
       })
       const key = store.keys[0]
+      expect(key).toBeDefined()
 
       // Set move step to 0.25
       store.moveStep = 0.25
@@ -780,7 +856,7 @@ describe('Keyboard Store', () => {
       // Start drag at canvas coordinates (100, 100)
       const startCanvasX = 100
       const startCanvasY = 100
-      store.startKeyDrag(key, { x: startCanvasX, y: startCanvasY })
+      store.startKeyDrag(key!, { x: startCanvasX, y: startCanvasY })
 
       // Move mouse to the right by 54 pixels (1 key unit)
       // This should move the key right by 1 unit, regardless of rotation
@@ -792,11 +868,11 @@ describe('Keyboard Store', () => {
       // should move diagonally in world coordinates to appear as right movement
       // For 45° rotation: screen right (1,0) transforms to world (cos(45°), -sin(45°)) ≈ (0.707, -0.707)
       // But with step size 0.25, this gets snapped to (1, 0) or (0.75, -0.75) depending on rounding
-      expect(key.x).toBeCloseTo(1.75, 2) // 1 + 0.75 (transformed and snapped)
-      expect(key.y).toBeCloseTo(0.25, 2) // 1 + (-0.75) snapped to -0.75, but then rounded differently
+      expect(key!.x).toBeCloseTo(1.75, 2) // 1 + 0.75 (transformed and snapped)
+      expect(key!.y).toBeCloseTo(0.25, 2) // 1 + (-0.75) snapped to -0.75, but then rounded differently
 
       // The key's rotation should not affect the drag direction
-      expect(key.rotation_angle).toBe(45) // Rotation unchanged
+      expect(key!.rotation_angle).toBe(45) // Rotation unchanged
     })
 
     it('should prevent cursor and key from diverging during rotated key drag', () => {
@@ -815,6 +891,7 @@ describe('Keyboard Store', () => {
         rotation_y: 0.5,
       })
       const key = store.keys[0]
+      expect(key).toBeDefined()
 
       // Set move step to 1 (no snapping) to test pure movement
       store.moveStep = 1
@@ -822,7 +899,7 @@ describe('Keyboard Store', () => {
       // Simulate multiple drag steps to test for divergence
       const startX = 100
       const startY = 100
-      store.startKeyDrag(key, { x: startX, y: startY })
+      store.startKeyDrag(key!, { x: startX, y: startY })
 
       // For 90° rotation, screen movement transforms as:
       // Screen right (1,0) → World (cos(90°), -sin(90°)) = (0, -1)
@@ -830,19 +907,19 @@ describe('Keyboard Store', () => {
 
       // Step 1: Move right by 54 pixels (1 unit) - should move key "down" in world space
       store.updateKeyDrag({ x: startX + 54, y: startY })
-      expect(key.x).toBe(0) // No change in world X for screen right movement
-      expect(key.y).toBe(-1) // Moves down in world space (screen right = world down for 90° rotation)
+      expect(key!.x).toBe(0) // No change in world X for screen right movement
+      expect(key!.y).toBe(-1) // Moves down in world space (screen right = world down for 90° rotation)
 
       // Step 2: Move right again - total 2 units right in screen space
       store.updateKeyDrag({ x: startX + 108, y: startY })
-      expect(key.x).toBe(0) // Still no world X change
-      expect(key.y).toBe(-2) // Total 2 units down in world space
+      expect(key!.x).toBe(0) // Still no world X change
+      expect(key!.y).toBe(-2) // Total 2 units down in world space
 
       // Step 3: Move diagonally up-right in screen space
       // Screen delta: right=1, up=-1 → World delta: (0,-1) + (-1,0) = (-1,-1)
       store.updateKeyDrag({ x: startX + 162, y: startY - 54 })
-      expect(key.x).toBe(-1) // Now moves left in world (screen up component)
-      expect(key.y).toBe(-3) // Further down in world (screen right component)
+      expect(key!.x).toBe(-1) // Now moves left in world (screen up component)
+      expect(key!.y).toBe(-3) // Further down in world (screen right component)
 
       // Key should follow mouse precisely - no divergence
       // Even with 90° rotation, screen movements translate directly to key position changes
@@ -861,6 +938,7 @@ describe('Keyboard Store', () => {
         labels: ['', '', '', '', 'A', '', '', '', '', '', '', ''],
       })
       const key = store.keys[0]
+      expect(key).toBeDefined()
 
       // Set move step to 0.25
       store.moveStep = 0.25
@@ -869,7 +947,7 @@ describe('Keyboard Store', () => {
       // After coordinate fix: Canvas coordinates = key_units * 54 (no CANVAS_PADDING)
       const startCanvasX = 0.375 * 54
       const startCanvasY = 0.125 * 54
-      store.startKeyDrag(key, { x: startCanvasX, y: startCanvasY })
+      store.startKeyDrag(key!, { x: startCanvasX, y: startCanvasY })
 
       // Simulate a definite movement that should result in increment-based snapping
       // Move right by exactly one step (should result in original + step)
@@ -880,12 +958,12 @@ describe('Keyboard Store', () => {
       // With increment-based movement:
       // deltaX = 1.0 key units, snapped to step (1.0 / 0.25 = 4 steps exactly)
       // Result: 0.375 + 1.0 = 1.375
-      expect(key.x).toBe(1.375) // Original position + exact step multiple
-      expect(key.y).toBe(0.125) // Should remain unchanged
+      expect(key!.x).toBe(1.375) // Original position + exact step multiple
+      expect(key!.y).toBe(0.125) // Should remain unchanged
 
       // Verify it's NOT using grid snapping (which would give 1.25, 1.5, etc.)
-      expect(key.x).not.toBe(1.25) // Would be nearest 0.25 multiple with grid snapping
-      expect(key.x).not.toBe(1.5) // Would be nearest 0.25 multiple with grid snapping
+      expect(key!.x).not.toBe(1.25) // Would be nearest 0.25 multiple with grid snapping
+      expect(key!.x).not.toBe(1.5) // Would be nearest 0.25 multiple with grid snapping
     })
 
     it('should handle negative positions correctly with increment-based movement', () => {
@@ -901,6 +979,7 @@ describe('Keyboard Store', () => {
         labels: ['', '', '', '', 'B', '', '', '', '', '', '', ''],
       })
       const key = store.keys[0]
+      expect(key).toBeDefined()
 
       // Set move step to 0.25
       store.moveStep = 0.25
@@ -908,7 +987,7 @@ describe('Keyboard Store', () => {
       // Start drag - convert key coordinates to canvas coordinates
       const startCanvasX = 0.125 * 54
       const startCanvasY = 0.125 * 54
-      store.startKeyDrag(key, { x: startCanvasX, y: startCanvasY })
+      store.startKeyDrag(key!, { x: startCanvasX, y: startCanvasY })
 
       // Move left by exactly one step
       const deltaX = -1.0 * 54 // -1 key unit in canvas pixels
@@ -916,11 +995,11 @@ describe('Keyboard Store', () => {
       store.updateKeyDrag({ x: newCanvasX, y: startCanvasY })
 
       // With increment-based: 0.125 + (-1.0) = -0.875
-      expect(key.x).toBe(-0.875)
-      expect(key.y).toBe(0.125) // Should remain unchanged
+      expect(key!.x).toBe(-0.875)
+      expect(key!.y).toBe(0.125) // Should remain unchanged
 
       // Test that it allows negative coordinates
-      expect(key.x).toBeLessThan(0)
+      expect(key!.x).toBeLessThan(0)
     })
   })
 
@@ -937,7 +1016,9 @@ describe('Keyboard Store', () => {
       expect(data).toHaveProperty('keys')
       expect(data).toHaveProperty('meta')
       expect(data.keys).toHaveLength(1)
-      expect(data.keys[0].labels[4]).toBe('A')
+      const firstKey = data.keys[0]
+      expect(firstKey).toBeDefined()
+      expect(firstKey!.labels[4]).toBe('A')
     })
 
     it('should get serialized data in KLE format', () => {
@@ -960,11 +1041,13 @@ describe('Keyboard Store', () => {
       expect(data).toHaveProperty('keys')
       expect(Array.isArray(data.keys)).toBe(true)
       expect(data.keys).toHaveLength(1)
-      expect(data.keys[0]).toHaveProperty('x')
-      expect(data.keys[0]).toHaveProperty('y')
-      expect(data.keys[0]).toHaveProperty('width')
-      expect(data.keys[0]).toHaveProperty('height')
-      expect(data.keys[0].labels[4]).toBe('A')
+      const dataKey = data.keys[0]
+      expect(dataKey).toBeDefined()
+      expect(dataKey!).toHaveProperty('x')
+      expect(dataKey!).toHaveProperty('y')
+      expect(dataKey!).toHaveProperty('width')
+      expect(dataKey!).toHaveProperty('height')
+      expect(dataKey!.labels[4]).toBe('A')
     })
 
     it('should round numeric values to 6 decimal places in KLE format', () => {
@@ -998,15 +1081,16 @@ describe('Keyboard Store', () => {
         keys: Key[]
       }
       const key = data.keys[1] // Second key (first one was added in beforeEach)
+      expect(key).toBeDefined()
 
       // Check that values are rounded to 6 decimal places
-      expect(key.x).toBe(1.123457) // 1.1234567890123456 -> 1.123457
-      expect(key.y).toBe(2.987654) // 2.9876543210987654 -> 2.987654
-      expect(key.width).toBe(1.555556) // 1.5555555555555556 -> 1.555556
-      expect(key.height).toBe(2.777778) // 2.7777777777777778 -> 2.777778
-      expect(key.rotation_angle).toBe(15.123457) // 15.123456789012345 -> 15.123457
-      expect(key.rotation_x).toBe(3.141593) // 3.1415926535897932 -> 3.141593
-      expect(key.rotation_y).toBe(2.718282) // 2.7182818284590451 -> 2.718282
+      expect(key!.x).toBe(1.123457) // 1.1234567890123456 -> 1.123457
+      expect(key!.y).toBe(2.987654) // 2.9876543210987654 -> 2.987654
+      expect(key!.width).toBe(1.555556) // 1.5555555555555556 -> 1.555556
+      expect(key!.height).toBe(2.777778) // 2.7777777777777778 -> 2.777778
+      expect(key!.rotation_angle).toBe(15.123457) // 15.123456789012345 -> 15.123457
+      expect(key!.rotation_x).toBe(3.141593) // 3.1415926535897932 -> 3.141593
+      expect(key!.rotation_y).toBe(2.718282) // 2.7182818284590451 -> 2.718282
     })
 
     it('should handle zero and integer values correctly', () => {
@@ -1022,11 +1106,12 @@ describe('Keyboard Store', () => {
         keys: Key[]
       }
       const key = data.keys[1] // Second key
+      expect(key).toBeDefined()
 
-      expect(key.x).toBe(0)
-      expect(key.y).toBe(1)
-      expect(key.width).toBe(2)
-      expect(key.height).toBe(3)
+      expect(key!.x).toBe(0)
+      expect(key!.y).toBe(1)
+      expect(key!.width).toBe(2)
+      expect(key!.height).toBe(3)
     })
 
     it('should preserve metadata in KLE internal format', () => {
@@ -1054,12 +1139,18 @@ describe('Keyboard Store', () => {
       store.addKey({ x: 2, y: 1, labels: ['', '', '', '', '3', '', '', '', '', '', '', ''] })
 
       // Verify initial order in store (should be in insertion order)
-      expect(store.keys[0].x).toBe(0)
-      expect(store.keys[0].y).toBe(0)
-      expect(store.keys[1].x).toBe(1)
-      expect(store.keys[1].y).toBe(2)
-      expect(store.keys[2].x).toBe(2)
-      expect(store.keys[2].y).toBe(1)
+      const key0 = store.keys[0]
+      expect(key0).toBeDefined()
+      expect(key0!.x).toBe(0)
+      expect(key0!.y).toBe(0)
+      const key1 = store.keys[1]
+      expect(key1).toBeDefined()
+      expect(key1!.x).toBe(1)
+      expect(key1!.y).toBe(2)
+      const key2 = store.keys[2]
+      expect(key2).toBeDefined()
+      expect(key2!.x).toBe(2)
+      expect(key2!.y).toBe(1)
 
       // Get serialized data - should be sorted by y, then x
       const data = store.getSerializedData('kle') as unknown[]
@@ -1078,25 +1169,37 @@ describe('Keyboard Store', () => {
 
       // Verify the keys are in the correct sorted order in internal format
       const internalData = store.getSerializedData('internal') as Keyboard
-      expect(internalData.keys[0].x).toBe(0)
-      expect(internalData.keys[0].y).toBe(0)
-      expect(internalData.keys[0].labels[4]).toBe('1')
+      const internalKey0 = internalData.keys[0]
+      expect(internalKey0).toBeDefined()
+      expect(internalKey0!.x).toBe(0)
+      expect(internalKey0!.y).toBe(0)
+      expect(internalKey0!.labels[4]).toBe('1')
 
-      expect(internalData.keys[1].x).toBe(2)
-      expect(internalData.keys[1].y).toBe(1)
-      expect(internalData.keys[1].labels[4]).toBe('3')
+      const internalKey1 = internalData.keys[1]
+      expect(internalKey1).toBeDefined()
+      expect(internalKey1!.x).toBe(2)
+      expect(internalKey1!.y).toBe(1)
+      expect(internalKey1!.labels[4]).toBe('3')
 
-      expect(internalData.keys[2].x).toBe(1)
-      expect(internalData.keys[2].y).toBe(2)
-      expect(internalData.keys[2].labels[4]).toBe('2')
+      const internalKey2 = internalData.keys[2]
+      expect(internalKey2).toBeDefined()
+      expect(internalKey2!.x).toBe(1)
+      expect(internalKey2!.y).toBe(2)
+      expect(internalKey2!.labels[4]).toBe('2')
 
       // Verify original store keys are unchanged (sorting only affects serialized data)
-      expect(store.keys[0].x).toBe(0)
-      expect(store.keys[0].y).toBe(0)
-      expect(store.keys[1].x).toBe(1)
-      expect(store.keys[1].y).toBe(2)
-      expect(store.keys[2].x).toBe(2)
-      expect(store.keys[2].y).toBe(1)
+      const storeKey0After = store.keys[0]
+      expect(storeKey0After).toBeDefined()
+      expect(storeKey0After!.x).toBe(0)
+      expect(storeKey0After!.y).toBe(0)
+      const storeKey1After = store.keys[1]
+      expect(storeKey1After).toBeDefined()
+      expect(storeKey1After!.x).toBe(1)
+      expect(storeKey1After!.y).toBe(2)
+      const storeKey2After = store.keys[2]
+      expect(storeKey2After).toBeDefined()
+      expect(storeKey2After!.x).toBe(2)
+      expect(storeKey2After!.y).toBe(1)
     })
 
     it('should sort keys by rotation cluster first for optimal serialization with rotated keys', () => {
@@ -1153,22 +1256,42 @@ describe('Keyboard Store', () => {
 
       // Verify keys are grouped by rotation cluster:
       // 1. Non-rotated keys (rotation_angle=0) come first, sorted by y/x
-      expect(internalData.keys[0].labels[4]).toBe('A') // (0,0), no rotation
-      expect(internalData.keys[1].labels[4]).toBe('C') // (1,1), no rotation
+      const serializedKey0 = internalData.keys[0]
+      expect(serializedKey0).toBeDefined()
+      expect(serializedKey0!.labels[4]).toBe('A') // (0,0), no rotation
+      const serializedKey1 = internalData.keys[1]
+      expect(serializedKey1).toBeDefined()
+      expect(serializedKey1!.labels[4]).toBe('C') // (1,1), no rotation
 
       // 2. Keys with 45° rotation at origin (3,3), sorted by y/x
-      expect(internalData.keys[2].labels[4]).toBe('D') // (4,4), 45° at (3,3)
-      expect(internalData.keys[3].labels[4]).toBe('B') // (5,5), 45° at (3,3)
+      const serializedKey2 = internalData.keys[2]
+      expect(serializedKey2).toBeDefined()
+      expect(serializedKey2!.labels[4]).toBe('D') // (4,4), 45° at (3,3)
+      const serializedKey3 = internalData.keys[3]
+      expect(serializedKey3).toBeDefined()
+      expect(serializedKey3!.labels[4]).toBe('B') // (5,5), 45° at (3,3)
 
       // 3. Keys with 90° rotation at origin (1,1)
-      expect(internalData.keys[4].labels[4]).toBe('E') // (2,2), 90° at (1,1)
+      const serializedKey4 = internalData.keys[4]
+      expect(serializedKey4).toBeDefined()
+      expect(serializedKey4!.labels[4]).toBe('E') // (2,2), 90° at (1,1)
 
       // Verify original store keys are unchanged
-      expect(store.keys[0].labels[4]).toBe('A')
-      expect(store.keys[1].labels[4]).toBe('B')
-      expect(store.keys[2].labels[4]).toBe('C')
-      expect(store.keys[3].labels[4]).toBe('D')
-      expect(store.keys[4].labels[4]).toBe('E')
+      const originalKey0 = store.keys[0]
+      expect(originalKey0).toBeDefined()
+      expect(originalKey0!.labels[4]).toBe('A')
+      const originalKey1 = store.keys[1]
+      expect(originalKey1).toBeDefined()
+      expect(originalKey1!.labels[4]).toBe('B')
+      const originalKey2 = store.keys[2]
+      expect(originalKey2).toBeDefined()
+      expect(originalKey2!.labels[4]).toBe('C')
+      const originalKey3 = store.keys[3]
+      expect(originalKey3).toBeDefined()
+      expect(originalKey3!.labels[4]).toBe('D')
+      const originalKey4 = store.keys[4]
+      expect(originalKey4).toBeDefined()
+      expect(originalKey4!.labels[4]).toBe('E')
     })
   })
 })

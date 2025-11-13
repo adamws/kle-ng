@@ -7,6 +7,6 @@
 
     "lib": [],
     "types": ["node", "jsdom"],
-    "noUncheckedIndexedAccess": false
+    "noUncheckedIndexedAccess": true
   }
 }

@@ -472,7 +472,8 @@ describe('KeyRenderer', () => {
 
       // Verify arc was called with correct radius (outercapwidth / 2 = 27)
       const firstArcCall = arcSpy.mock.calls[0]
-      expect(firstArcCall[2]).toBe(27) // radius = 54 / 2
+      expect(firstArcCall).toBeDefined()
+      expect(firstArcCall![2]).toBe(27) // radius = 54 / 2
     })
   })
 
@@ -512,8 +513,9 @@ describe('KeyRenderer', () => {
       // Center X should be around innercapx + innercapwidth / 2 = 8 + 19 = 27
       // Center Y should be around innercapy + innercapheight * 0.9 = 8 + 34.2 = 42.2
       const call = fillRectSpy.mock.calls[0]
-      const drawX = call[0]
-      const drawY = call[1]
+      expect(call).toBeDefined()
+      const drawX = call![0]
+      const drawY = call![1]
 
       // X should be centered (approximately)
       expect(drawX).toBeGreaterThan(20)

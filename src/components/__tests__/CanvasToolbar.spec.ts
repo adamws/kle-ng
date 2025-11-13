@@ -72,12 +72,13 @@ describe('CanvasToolbar', () => {
 
       // The new key should have ISO Enter characteristics
       const newKey = store.keys[store.keys.length - 1]
-      expect(newKey.width).toBe(1.25)
-      expect(newKey.height).toBe(2)
-      expect(newKey.width2).toBe(1.5)
-      expect(newKey.height2).toBe(1)
-      expect(newKey.x2).toBe(-0.25)
-      expect(newKey.labels[4]).toBe('Enter')
+      expect(newKey).toBeDefined()
+      expect(newKey!.width).toBe(1.25)
+      expect(newKey!.height).toBe(2)
+      expect(newKey!.width2).toBe(1.5)
+      expect(newKey!.height2).toBe(1)
+      expect(newKey!.x2).toBe(-0.25)
+      expect(newKey!.labels[4]).toBe('Enter')
 
       // Dropdown should be closed after selection
       expect(wrapper.find('.special-keys-dropdown').exists()).toBe(false)
@@ -102,11 +103,12 @@ describe('CanvasToolbar', () => {
 
       // The new key should be a standard 1x1 key
       const newKey = store.keys[store.keys.length - 1]
-      expect(newKey.width).toBe(1)
-      expect(newKey.height).toBe(1)
+      expect(newKey).toBeDefined()
+      expect(newKey!.width).toBe(1)
+      expect(newKey!.height).toBe(1)
       // Standard keys have width2/height2 equal to width/height (not undefined)
-      expect(newKey.width2).toBe(1)
-      expect(newKey.height2).toBe(1)
+      expect(newKey!.width2).toBe(1)
+      expect(newKey!.height2).toBe(1)
     })
   })
 
@@ -141,7 +143,9 @@ describe('CanvasToolbar', () => {
 
       // Add a key and select it
       store.addKey()
-      store.selectKey(store.keys[0])
+      const firstKey = store.keys[0]
+      expect(firstKey).toBeDefined()
+      store.selectKey(firstKey!)
       await wrapper.vm.$nextTick()
 
       // Delete button should be enabled
@@ -174,7 +178,9 @@ describe('CanvasToolbar', () => {
 
       // Add and select a key
       store.addKey()
-      store.selectKey(store.keys[0])
+      const firstKey = store.keys[0]
+      expect(firstKey).toBeDefined()
+      store.selectKey(firstKey!)
       await wrapper.vm.$nextTick()
 
       // Mirror tools should now be enabled

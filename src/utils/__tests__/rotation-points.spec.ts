@@ -34,8 +34,10 @@ describe('rotation-points', () => {
       // Check center
       const centers = points.filter((p) => p.type === 'center')
       expect(centers).toHaveLength(1)
-      expect(centers[0].x).toBe(0.5)
-      expect(centers[0].y).toBe(0.5)
+      const center = centers[0]
+      expect(center).toBeDefined()
+      expect(center!.x).toBe(0.5)
+      expect(center!.y).toBe(0.5)
     })
 
     it('should deduplicate overlapping corners for 2x2 grid', () => {
@@ -136,11 +138,13 @@ describe('rotation-points', () => {
       for (let i = 1; i < points.length; i++) {
         const prev = points[i - 1]
         const curr = points[i]
+        expect(prev).toBeDefined()
+        expect(curr).toBeDefined()
 
-        if (Math.abs(prev.y - curr.y) > 0.0001) {
-          expect(prev.y).toBeLessThan(curr.y)
+        if (Math.abs(prev!.y - curr!.y) > 0.0001) {
+          expect(prev!.y).toBeLessThan(curr!.y)
         } else {
-          expect(prev.x).toBeLessThanOrEqual(curr.x)
+          expect(prev!.x).toBeLessThanOrEqual(curr!.x)
         }
       }
     })

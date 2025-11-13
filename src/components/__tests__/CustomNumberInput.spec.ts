@@ -25,7 +25,9 @@ describe('CustomNumberInput', () => {
       // Should emit 0.25 (the default for move step)
       expect(wrapper.emitted('update:modelValue')).toBeTruthy()
       const emitted = wrapper.emitted('update:modelValue') as [number | undefined][]
-      const lastEmittedValue = emitted[emitted.length - 1][0]
+      const lastEmitted = emitted[emitted.length - 1]
+      expect(lastEmitted).toBeDefined()
+      const lastEmittedValue = lastEmitted![0]
       expect(lastEmittedValue).toBe(0.25)
     })
 
@@ -48,7 +50,9 @@ describe('CustomNumberInput', () => {
       // Should emit undefined
       expect(wrapper.emitted('update:modelValue')).toBeTruthy()
       const emitted = wrapper.emitted('update:modelValue') as [number | undefined][]
-      const lastEmittedValue = emitted[emitted.length - 1][0]
+      const lastEmitted = emitted[emitted.length - 1]
+      expect(lastEmitted).toBeDefined()
+      const lastEmittedValue = lastEmitted![0]
       expect(lastEmittedValue).toBe(undefined)
     })
 
@@ -125,7 +129,9 @@ describe('CustomNumberInput', () => {
       // Should emit 0.25
       const emitted = wrapper.emitted('update:modelValue') as [number | undefined][]
       expect(emitted).toBeTruthy()
-      const lastEmittedValue = emitted[emitted.length - 1][0]
+      const lastEmitted = emitted[emitted.length - 1]
+      expect(lastEmitted).toBeDefined()
+      const lastEmittedValue = lastEmitted![0]
       expect(lastEmittedValue).toBe(0.25)
 
       // The input should also display 0.25 after the modelValue is updated
@@ -164,7 +170,9 @@ describe('CustomNumberInput', () => {
         await input.trigger('wheel', { deltaY: -100 })
 
         expect(wrapper.emitted('update:modelValue')).toBeTruthy()
-        const lastEmitted = wrapper.emitted('update:modelValue')!.slice(-1)[0][0]
+        const lastEvent = wrapper.emitted('update:modelValue')!.slice(-1)[0]
+        expect(lastEvent).toBeDefined()
+        const lastEmitted = lastEvent![0]
         expect(lastEmitted).toBe(6)
       })
     })
@@ -186,7 +194,9 @@ describe('CustomNumberInput', () => {
 
         const allEmitted = wrapper.emitted('update:modelValue') as [number][]
         expect(allEmitted).toHaveLength(5)
-        expect(allEmitted[4][0]).toBe(5) // Should reach 5
+        const fifthEvent = allEmitted[4]
+        expect(fifthEvent).toBeDefined()
+        expect(fifthEvent![0]).toBe(5) // Should reach 5
       })
 
       it('should handle prop changes during user input', async () => {
@@ -206,7 +216,9 @@ describe('CustomNumberInput', () => {
         await input.trigger('blur')
 
         // Should prioritize user input over prop changes
-        const lastEmitted = wrapper.emitted('update:modelValue')!.slice(-1)[0][0]
+        const lastEvent = wrapper.emitted('update:modelValue')!.slice(-1)[0]
+        expect(lastEvent).toBeDefined()
+        const lastEmitted = lastEvent![0]
         expect(lastEmitted).toBe(1)
       })
 
@@ -532,7 +544,9 @@ describe('CustomNumberInput', () => {
       }
 
       // Should not go below 0
-      const lastEmittedValue = wrapper.emitted('update:modelValue')!.slice(-1)[0][0]
+      const lastEvent = wrapper.emitted('update:modelValue')!.slice(-1)[0]
+      expect(lastEvent).toBeDefined()
+      const lastEmittedValue = lastEvent![0]
       expect(lastEmittedValue).toBeGreaterThanOrEqual(0)
     })
 
@@ -548,7 +562,9 @@ describe('CustomNumberInput', () => {
       }
 
       // Should not go above 10
-      const lastEmittedValue = wrapper.emitted('update:modelValue')!.slice(-1)[0][0]
+      const lastEvent = wrapper.emitted('update:modelValue')!.slice(-1)[0]
+      expect(lastEvent).toBeDefined()
+      const lastEmittedValue = lastEvent![0]
       expect(lastEmittedValue).toBeLessThanOrEqual(10)
     })
   })
@@ -626,7 +642,9 @@ describe('CustomNumberInput', () => {
       const spinnerUp = wrapper.find('.spinner-up')
       await spinnerUp.trigger('click')
 
-      const emittedValue = wrapper.emitted('update:modelValue')![0][0] as number
+      const firstEvent = wrapper.emitted('update:modelValue')![0]
+      expect(firstEvent).toBeDefined()
+      const emittedValue = firstEvent![0] as number
       expect(Math.abs(emittedValue - 1.1)).toBeLessThan(0.001) // Account for floating point precision
     })
   })
