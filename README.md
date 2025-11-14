@@ -218,7 +218,7 @@ To edit connections use appropriate editing mode:
       New row/columns are assigned with first free numerical value.<br>
       It is possible to re-assign numbers later.
     </td>
-    <td>Hover and click on an element to remove.</td>
+    <td>Hover and click on an element to remove.<br>Hold Ctrl to remove entire row/column.</td>
   </tr>
 </table>
 

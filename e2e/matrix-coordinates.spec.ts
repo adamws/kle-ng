@@ -55,6 +55,10 @@ async function importLayoutJSON(page: import('@playwright/test').Page, layoutDat
 }
 
 test.describe('Matrix Coordinates Tool', () => {
+  // modal would overflow for default viewport size and we do not handle
+  // modal resizing yet
+  test.use({ viewport: { width: 1920, height: 1080 } })
+
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')

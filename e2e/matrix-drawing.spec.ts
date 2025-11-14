@@ -852,8 +852,10 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     await page.mouse.move(lineX, lineY)
     await page.waitForTimeout(200)
 
-    // Left-click on the row line to remove the row
+    // Hold Ctrl and left-click on the row line to remove the entire row
+    await page.keyboard.down('Control')
     await page.mouse.click(lineX, lineY, { button: 'left' })
+    await page.keyboard.up('Control')
     await page.waitForTimeout(300)
 
     // Export to verify row was removed
@@ -929,10 +931,12 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     // Verify remove button is active
     await expect(removeButton).toHaveClass(/btn-danger/)
 
-    // Move mouse to row line and left-click to remove
+    // Move mouse to row line and Ctrl+left-click to remove entire row
     await page.mouse.move(lineX, lineY)
     await page.waitForTimeout(200)
+    await page.keyboard.down('Control')
     await page.mouse.click(lineX, lineY, { button: 'left' })
+    await page.keyboard.up('Control')
     await page.waitForTimeout(300)
 
     // Verify row count decreased from 3 to 2
@@ -1023,10 +1027,12 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     // Verify remove button is active
     await expect(removeButton).toHaveClass(/btn-danger/)
 
-    // Move mouse to column line and left-click to remove
+    // Move mouse to column line and Ctrl+left-click to remove entire column
     await page.mouse.move(lineX, lineY)
     await page.waitForTimeout(200)
+    await page.keyboard.down('Control')
     await page.mouse.click(lineX, lineY, { button: 'left' })
+    await page.keyboard.up('Control')
     await page.waitForTimeout(300)
 
     // Verify column count decreased from 4 to 3 and row count remain at 3
@@ -1060,6 +1066,92 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     // Count occurrences - should have exactly 3 keys with column 1 (the second column we just drew)
     const col1Count = (layoutString.match(/,1"/g) || []).length
     expect(col1Count).toBe(3)
+  })
+
+  test('should remove single segment and split wire into two', async ({ page }) => {
+    // Create a 3x4 grid with pre-assigned matrix coordinates
+    const fixtureData = [
+      ['0,0', '0,1', '0,2', '0,3'],
+      ['1,0', '1,1', '1,2', '1,3'],
+      ['2,0', '2,1', '2,2', '2,3'],
+    ]
+
+    await importLayoutJSON(page, fixtureData)
+    await page.waitForTimeout(500)
+
+    // Open Matrix Coordinates Modal
+    await page.locator('.extra-tools-group button').click()
+    await page
+      .locator('.extra-tools-dropdown .dropdown-item')
+      .filter({ hasText: 'Add Switch Matrix Coordinates' })
+      .click()
+
+    const matrixModal = page.locator('.matrix-modal')
+    await expect(matrixModal).toBeVisible()
+    await page.waitForTimeout(500)
+
+    // Verify initial state: 3 rows and 4 columns
+    const rowsProgress = page.locator('.progress-label').filter({ hasText: 'Rows:' })
+    await expect(rowsProgress).toContainText('3 defined')
+    const colsProgress = page.locator('.progress-label').filter({ hasText: 'Columns:' })
+    await expect(colsProgress).toContainText('4 defined')
+
+    // Get canvas
+    const overlay = page.locator('canvas.matrix-annotation-overlay')
+    await expect(overlay).toBeVisible()
+    const canvasBox = await overlay.boundingBox()
+    if (!canvasBox) throw new Error('Canvas not found')
+
+    // Switch to remove mode
+    const removeButton = page.locator('button', { hasText: 'Remove' })
+    await removeButton.click()
+    await page.waitForTimeout(100)
+    await expect(removeButton).toHaveClass(/btn-danger/)
+
+    // Calculate position of segment between keys [1,1] and [1,2] in row 1
+    const unit = 54
+    const border = 9
+    const offset = unit / 2 + border
+
+    // Row 1 (second row), between second and third key
+    const row1Y = offset + unit
+    const key2CenterX = canvasBox.x + offset + unit
+    const key3CenterX = canvasBox.x + offset + 2 * unit
+    const segmentX = (key2CenterX + key3CenterX) / 2 // Midpoint between keys 1 and 2
+    const segmentY = canvasBox.y + row1Y
+
+    // Move mouse to segment and click WITHOUT Ctrl (segment removal)
+    await page.mouse.move(segmentX, segmentY)
+    await page.waitForTimeout(200)
+    await page.mouse.click(segmentX, segmentY, { button: 'left' })
+    await page.waitForTimeout(300)
+
+    // After segment removal, we should have 4 rows instead of 3
+    // (original row 1 was split into two separate rows: one with keys 0-1, another with keys 2-3)
+    await expect(rowsProgress).toContainText('4 defined')
+    await expect(colsProgress).toContainText('4 defined')
+
+    // Export and verify the split
+    const exportedLayout = await exportLayoutJSON(page)
+    const layoutString = JSON.stringify(exportedLayout)
+
+    // Row 0 and 2 should be unchanged
+    expect(layoutString).toContain('"0,0"')
+    expect(layoutString).toContain('"0,1"')
+    expect(layoutString).toContain('"0,2"')
+    expect(layoutString).toContain('"0,3"')
+    expect(layoutString).toContain('"2,0"')
+    expect(layoutString).toContain('"2,1"')
+    expect(layoutString).toContain('"2,2"')
+    expect(layoutString).toContain('"2,3"')
+
+    // Original row 1 should still exist with first portion (keys at columns 0-1)
+    expect(layoutString).toContain('"1,0"')
+    expect(layoutString).toContain('"1,1"')
+
+    // A new row (row 3, next available number) should have the second portion (keys at columns 2-3)
+    expect(layoutString).toContain('"3,2"')
+    expect(layoutString).toContain('"3,3"')
   })
 
   test('should not overeagerly grab next key', async ({ page }) => {

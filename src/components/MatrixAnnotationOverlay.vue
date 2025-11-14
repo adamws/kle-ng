@@ -57,6 +57,15 @@ const hoveredAnchor = ref<{
     distance: number
   }>
 } | null>(null)
+const hoveredSegment = ref<{
+  type: 'row' | 'column'
+  wireIndex: number
+  segmentStartIndex: number
+  segmentEndIndex: number
+  startKey: Key
+  endKey: Key
+} | null>(null)
+const ctrlKeyPressed = ref<boolean>(false)
 
 // Renumbering state
 const typedNumberBuffer = ref<string>('')
@@ -166,13 +175,14 @@ const isPointNearLine = (
 const updateCursor = () => {
   if (!canvasRef.value) return
 
-  // In remove mode, show crosshair cursor when hovering over elements
   if (matrixDrawingStore.drawingType === 'remove') {
-    if (hoveredRow.value !== null || hoveredColumn.value !== null || hoveredAnchor.value !== null) {
-      canvasRef.value.style.cursor = 'crosshair'
-    } else {
-      canvasRef.value.style.cursor = 'default'
-    }
+    // Show crosshair when hovering anything removable (node, segment, or wire)
+    const isHoveringRemovable =
+      hoveredAnchor.value !== null ||
+      hoveredSegment.value !== null ||
+      hoveredRow.value !== null ||
+      hoveredColumn.value !== null
+    canvasRef.value.style.cursor = isHoveringRemovable ? 'crosshair' : 'default'
     return
   }
 
@@ -193,6 +203,7 @@ const detectHover = (canvasX: number, canvasY: number) => {
   hoveredRow.value = null
   hoveredColumn.value = null
   hoveredAnchor.value = null
+  hoveredSegment.value = null
 
   // Check for node hover (priority over line hover)
   const allNodes: Array<{
@@ -257,29 +268,11 @@ const detectHover = (canvasX: number, canvasY: number) => {
     return
   }
 
-  // Check for line hover (rows)
-  matrixDrawingStore.completedRows.forEach((keySequence, rowIndex) => {
-    if (keySequence.length < 2) return
-
-    for (let i = 0; i < keySequence.length - 1; i++) {
-      const startKey = keySequence[i]
-      const endKey = keySequence[i + 1]
-      if (!startKey || !endKey) continue
-
-      const start = getKeyCenter(startKey)
-      const end = getKeyCenter(endKey)
-
-      if (isPointNearLine(canvasX, canvasY, start.x, start.y, end.x, end.y, LINE_HOVER_THRESHOLD)) {
-        hoveredRow.value = rowIndex
-        return
-      }
-    }
-  })
-
-  // Check for line hover (columns)
-  if (hoveredRow.value === null && hoveredColumn.value === null) {
-    matrixDrawingStore.completedColumns.forEach((keySequence, colIndex) => {
-      if (keySequence.length < 2) return
+  // Check for segment hover (rows) - priority over entire wire hover
+  if (!hoveredAnchor.value) {
+    // Check row segments
+    for (const [rowIndex, keySequence] of matrixDrawingStore.completedRows) {
+      if (keySequence.length < 2) continue
 
       for (let i = 0; i < keySequence.length - 1; i++) {
         const startKey = keySequence[i]
@@ -292,11 +285,51 @@ const detectHover = (canvasX: number, canvasY: number) => {
         if (
           isPointNearLine(canvasX, canvasY, start.x, start.y, end.x, end.y, LINE_HOVER_THRESHOLD)
         ) {
+          hoveredSegment.value = {
+            type: 'row',
+            wireIndex: rowIndex,
+            segmentStartIndex: i,
+            segmentEndIndex: i + 1,
+            startKey,
+            endKey,
+          }
+          hoveredRow.value = rowIndex
+          return
+        }
+      }
+    }
+  }
+
+  // Check for segment hover (columns) - priority over entire wire hover
+  if (!hoveredAnchor.value && !hoveredSegment.value) {
+    // Check column segments
+    for (const [colIndex, keySequence] of matrixDrawingStore.completedColumns) {
+      if (keySequence.length < 2) continue
+
+      for (let i = 0; i < keySequence.length - 1; i++) {
+        const startKey = keySequence[i]
+        const endKey = keySequence[i + 1]
+        if (!startKey || !endKey) continue
+
+        const start = getKeyCenter(startKey)
+        const end = getKeyCenter(endKey)
+
+        if (
+          isPointNearLine(canvasX, canvasY, start.x, start.y, end.x, end.y, LINE_HOVER_THRESHOLD)
+        ) {
+          hoveredSegment.value = {
+            type: 'column',
+            wireIndex: colIndex,
+            segmentStartIndex: i,
+            segmentEndIndex: i + 1,
+            startKey,
+            endKey,
+          }
           hoveredColumn.value = colIndex
           return
         }
       }
-    })
+    }
   }
 
   // Clear renumbering buffer if hover target changed
@@ -316,13 +349,22 @@ const detectHover = (canvasX: number, canvasY: number) => {
 
 // Mouse move handler - show preview of next segment and detect hover
 const handleMouseMove = (event: MouseEvent) => {
+  // Track Ctrl/Cmd key state
+  const previousCtrlState = ctrlKeyPressed.value
+  ctrlKeyPressed.value = event.ctrlKey || event.metaKey
+
   const canvasPos = getCanvasPosition(event)
 
   // In remove mode, always detect hover for targeting elements
   if (matrixDrawingStore.drawingType === 'remove') {
     detectHover(canvasPos.x, canvasPos.y)
     updateCursor()
-    renderCanvas()
+    // Re-render if Ctrl state changed to update visual feedback
+    if (previousCtrlState !== ctrlKeyPressed.value) {
+      renderCanvas()
+    } else {
+      renderCanvas()
+    }
     return
   }
 
@@ -417,23 +459,36 @@ const handleMouseMove = (event: MouseEvent) => {
 const handleClick = (event: MouseEvent) => {
   if (!matrixDrawingStore.isDrawing || !props.renderer) return
 
+  // Capture Ctrl/Cmd state at click time
+  const isCtrlHeld = event.ctrlKey || event.metaKey
+
   // Handle remove mode - directly remove hovered elements
   if (matrixDrawingStore.drawingType === 'remove') {
-    // Check what's hovered and remove it
-    if (hoveredRow.value !== null && hoveredAnchor.value === null) {
-      // Hovering over a row line - remove entire row
-      handleRemoveRow(hoveredRow.value)
-    } else if (hoveredColumn.value !== null && hoveredAnchor.value === null) {
-      // Hovering over a column line - remove entire column
-      handleRemoveColumn(hoveredColumn.value)
-    } else if (hoveredAnchor.value !== null) {
-      // Hovering over a node/anchor - remove that node
+    // Priority 1: Node removal (unchanged)
+    if (hoveredAnchor.value !== null) {
       handleRemoveNode({
         type: hoveredAnchor.value.type,
         index: hoveredAnchor.value.index,
         key: hoveredAnchor.value.key,
       })
+      return
     }
+
+    // Priority 2: Wire/Segment removal based on Ctrl state
+    if (isCtrlHeld) {
+      // CTRL HELD: Full wire removal
+      if (hoveredRow.value !== null) {
+        handleRemoveRow(hoveredRow.value)
+      } else if (hoveredColumn.value !== null) {
+        handleRemoveColumn(hoveredColumn.value)
+      }
+    } else {
+      // NO CTRL: Segment removal
+      if (hoveredSegment.value !== null) {
+        handleRemoveSegment(hoveredSegment.value)
+      }
+    }
+
     return
   }
 
@@ -516,6 +571,7 @@ const handleClick = (event: MouseEvent) => {
     hoveredRow.value = null
     hoveredColumn.value = null
     hoveredAnchor.value = null
+    hoveredSegment.value = null
     // Reset cursor to default while actively drawing
     if (canvasRef.value) {
       canvasRef.value.style.cursor = 'default'
@@ -540,6 +596,29 @@ const handleRightClick = () => {
       canvasRef.value.style.cursor = 'default'
     }
     renderCanvas()
+  }
+}
+
+// Keyboard event handlers for Ctrl/Cmd key tracking
+const handleCtrlKeyDown = (event: KeyboardEvent) => {
+  if (event.key === 'Control' || event.key === 'Meta') {
+    const previousState = ctrlKeyPressed.value
+    ctrlKeyPressed.value = true
+    // Update visual feedback when Ctrl state changes (highlight changes)
+    if (previousState !== ctrlKeyPressed.value && matrixDrawingStore.drawingType === 'remove') {
+      renderCanvas()
+    }
+  }
+}
+
+const handleCtrlKeyUp = (event: KeyboardEvent) => {
+  if (event.key === 'Control' || event.key === 'Meta') {
+    const previousState = ctrlKeyPressed.value
+    ctrlKeyPressed.value = false
+    // Update visual feedback when Ctrl state changes (highlight changes)
+    if (previousState !== ctrlKeyPressed.value && matrixDrawingStore.drawingType === 'remove') {
+      renderCanvas()
+    }
   }
 }
 
@@ -735,6 +814,11 @@ const handleRemoveRow = (rowIndex: number) => {
   // Update labels for all affected keys
   keysToUpdate.forEach((key) => updateKeyLabelAfterRemoval(key))
 
+  // Clear hover states
+  hoveredSegment.value = null
+  hoveredRow.value = null
+  hoveredColumn.value = null
+
   // Re-render to show the updated overlay
   renderCanvas()
 }
@@ -754,8 +838,53 @@ const handleRemoveColumn = (colIndex: number) => {
   // Update labels for all affected keys
   keysToUpdate.forEach((key) => updateKeyLabelAfterRemoval(key))
 
+  // Clear hover states
+  hoveredSegment.value = null
+  hoveredRow.value = null
+  hoveredColumn.value = null
+
   // Re-render to show the updated overlay
   renderCanvas()
+}
+
+// Handle remove segment action - splits wire at segment boundary
+const handleRemoveSegment = (segment: {
+  type: 'row' | 'column'
+  wireIndex: number
+  segmentStartIndex: number
+  segmentEndIndex: number
+  startKey: Key
+  endKey: Key
+}) => {
+  let newWireIndex: number | null = null
+
+  if (segment.type === 'row') {
+    newWireIndex = matrixDrawingStore.splitRowAtSegment(
+      segment.wireIndex,
+      segment.segmentStartIndex,
+      true, // skipSync
+    )
+  } else if (segment.type === 'column') {
+    newWireIndex = matrixDrawingStore.splitColumnAtSegment(
+      segment.wireIndex,
+      segment.segmentStartIndex,
+      true, // skipSync
+    )
+  }
+
+  if (newWireIndex !== null) {
+    // Success: log and re-render canvas
+    console.log(`Wire split. New ${segment.type} ${newWireIndex} created.`)
+    renderCanvas()
+  } else {
+    // Failure: log warning
+    console.warn('Failed to split segment:', segment)
+  }
+
+  // Clear hover states
+  hoveredSegment.value = null
+  hoveredRow.value = null
+  hoveredColumn.value = null
 }
 
 // Rendering
@@ -1045,18 +1174,27 @@ const renderErrorSequence = (keys: Key[]) => {
 const renderHoverEffects = () => {
   if (!ctx.value) return
 
-  // Render hovered row/column (thicker, highlighted line)
-  if (hoveredRow.value !== null) {
-    const keys = matrixDrawingStore.completedRows.get(hoveredRow.value)
-    if (keys) renderHoveredRow(keys)
+  // Check if we're in remove mode and Ctrl is NOT pressed
+  const isRemoveMode = matrixDrawingStore.drawingType === 'remove'
+  const shouldShowSegmentOnly = isRemoveMode && !ctrlKeyPressed.value
+
+  if (shouldShowSegmentOnly && hoveredSegment.value) {
+    // NO CTRL in remove mode: Show only the hovered segment
+    renderHoveredSegment(hoveredSegment.value)
+  } else {
+    // CTRL HELD or NOT in remove mode: Show full wire
+    if (hoveredRow.value !== null) {
+      const keys = matrixDrawingStore.completedRows.get(hoveredRow.value)
+      if (keys) renderHoveredRow(keys)
+    }
+
+    if (hoveredColumn.value !== null) {
+      const keys = matrixDrawingStore.completedColumns.get(hoveredColumn.value)
+      if (keys) renderHoveredColumn(keys)
+    }
   }
 
-  if (hoveredColumn.value !== null) {
-    const keys = matrixDrawingStore.completedColumns.get(hoveredColumn.value)
-    if (keys) renderHoveredColumn(keys)
-  }
-
-  // Render hovered node (highlight circle)
+  // Node hover (unchanged - always shows)
   if (hoveredAnchor.value) {
     renderHoveredNode(hoveredAnchor.value)
   }
@@ -1166,6 +1304,40 @@ const renderHoveredColumn = (keys: Key[]) => {
   })
 }
 
+// Render a hovered segment (same style as full wire, just one segment)
+const renderHoveredSegment = (segment: { type: 'row' | 'column'; startKey: Key; endKey: Key }) => {
+  if (!ctx.value) return
+
+  const start = getKeyCenter(segment.startKey)
+  const end = getKeyCenter(segment.endKey)
+
+  // Use same colors as full wire hover: blue for rows, green for columns
+  const lineColor = segment.type === 'row' ? '#007bff' : '#28a745'
+  const lineWidth = 4 // Same as full wire
+  const circleRadius = 7
+
+  // Draw solid line segment (same style as full wire)
+  ctx.value.strokeStyle = lineColor
+  ctx.value.lineWidth = lineWidth
+  ctx.value.globalAlpha = 0.7 // Same as full wire
+  ctx.value.beginPath()
+  ctx.value.moveTo(start.x, start.y)
+  ctx.value.lineTo(end.x, end.y)
+  ctx.value.stroke()
+  ctx.value.globalAlpha = 1.0
+
+  // Draw endpoint markers (circles at segment boundaries)
+  ;[start, end].forEach((point) => {
+    ctx.value!.fillStyle = lineColor
+    ctx.value!.strokeStyle = '#ffffff'
+    ctx.value!.lineWidth = 2
+    ctx.value!.beginPath()
+    ctx.value!.arc(point.x, point.y, circleRadius, 0, Math.PI * 2)
+    ctx.value!.fill()
+    ctx.value!.stroke()
+  })
+}
+
 // Watch for canvas property changes
 watch(
   () => [props.canvasWidth, props.canvasHeight, props.zoom],
@@ -1222,6 +1394,7 @@ const enableDrawing = (type: 'row' | 'column') => {
   hoveredRow.value = null
   hoveredColumn.value = null
   hoveredAnchor.value = null
+  hoveredSegment.value = null
   // Reset cursor
   if (canvasRef.value) {
     canvasRef.value.style.cursor = 'default'
@@ -1296,6 +1469,10 @@ watch(
 onMounted(() => {
   renderCanvas()
 
+  // Add keyboard event listeners for Ctrl/Cmd tracking
+  window.addEventListener('keydown', handleCtrlKeyDown)
+  window.addEventListener('keyup', handleCtrlKeyUp)
+
   // Add keyboard event listener for renumbering
   // Use capture phase to ensure we get events before modal's handler
   document.addEventListener('keydown', handleKeyDown, true)
@@ -1304,6 +1481,8 @@ onMounted(() => {
 // Cleanup
 onUnmounted(() => {
   // Remove keyboard event listeners
+  window.removeEventListener('keydown', handleCtrlKeyDown)
+  window.removeEventListener('keyup', handleCtrlKeyUp)
   document.removeEventListener('keydown', handleKeyDown, true)
 })
 </script>

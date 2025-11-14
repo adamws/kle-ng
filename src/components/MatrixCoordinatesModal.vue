@@ -304,7 +304,13 @@
                     <li><strong>Click existing wire</strong> to append/continue</li>
                   </ul>
                 </li>
-                <li><strong>Remove Mode:</strong> Click on rows, columns, or nodes to delete</li>
+                <li>
+                  <strong>Remove Mode:</strong>
+                  <ul class="small mb-0 ps-3">
+                    <li>Click on segment or nodes to delete</li>
+                    <li>Hold <strong>ctrl</strong> to remove entire row/column</li>
+                  </ul>
+                </li>
                 <li>
                   <strong>Change Row/Column number</strong>
                   <ul class="small mb-0 ps-3">
@@ -1099,6 +1105,9 @@ watch(
     matrixDrawingStore.setModalOpen(visible)
 
     if (visible) {
+      // Reset drawing type to 'row' when modal opens
+      setDrawingType('row')
+
       document.addEventListener('keydown', handleKeyDown)
       document.body.classList.add('modal-open')
     } else {

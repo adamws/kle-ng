@@ -364,6 +364,128 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
   }
 
   /**
+   * Split a row at a specific segment boundary
+   * Creates two rows: original keeps first portion, new row gets second portion
+   * @param rowIndex - The row number to split
+   * @param segmentIndex - The index of the segment to split at (0-based, must be < length-1)
+   * @param skipSync - If true, skip the next coordinate sync
+   * @returns The new row number, or null if split failed
+   */
+  const splitRowAtSegment = (
+    rowIndex: number,
+    segmentIndex: number,
+    skipSync = false,
+  ): number | null => {
+    // 1. Validate inputs
+    const row = completedRows.value.get(rowIndex)
+    if (!row || segmentIndex < 0 || segmentIndex >= row.length - 1) {
+      return null // Invalid input
+    }
+
+    // 2. Split the key array
+    const firstPortion = row.slice(0, segmentIndex + 1) // Include segment start
+    const secondPortion = row.slice(segmentIndex + 1) // Exclude segment start
+
+    // 3. Validate both portions are non-empty
+    if (firstPortion.length === 0 || secondPortion.length === 0) {
+      return null
+    }
+
+    // 4. Find next free row number
+    const newRowIndex = findNextFreeRowNumber()
+
+    // 5. Update original row with first portion
+    completedRows.value.set(rowIndex, firstPortion)
+
+    // 6. Create new row with second portion
+    completedRows.value.set(newRowIndex, secondPortion)
+
+    // 7. Update labels for all keys
+    firstPortion.forEach((key) => {
+      const currentLabel = key.labels[0] || ','
+      const parts = currentLabel.split(',')
+      parts[0] = String(rowIndex) // Update row part
+      key.labels[0] = parts.join(',')
+    })
+
+    secondPortion.forEach((key) => {
+      const currentLabel = key.labels[0] || ','
+      const parts = currentLabel.split(',')
+      parts[0] = String(newRowIndex) // Update row part to new number
+      key.labels[0] = parts.join(',')
+    })
+
+    // 8. Handle skipSync flag
+    if (skipSync) {
+      skipNextSync.value = true
+    }
+
+    // 9. Return new row number
+    return newRowIndex
+  }
+
+  /**
+   * Split a column at a specific segment boundary
+   * Creates two columns: original keeps first portion, new column gets second portion
+   * @param colIndex - The column number to split
+   * @param segmentIndex - The index of the segment to split at (0-based, must be < length-1)
+   * @param skipSync - If true, skip the next coordinate sync
+   * @returns The new column number, or null if split failed
+   */
+  const splitColumnAtSegment = (
+    colIndex: number,
+    segmentIndex: number,
+    skipSync = false,
+  ): number | null => {
+    // 1. Validate inputs
+    const col = completedColumns.value.get(colIndex)
+    if (!col || segmentIndex < 0 || segmentIndex >= col.length - 1) {
+      return null // Invalid input
+    }
+
+    // 2. Split the key array
+    const firstPortion = col.slice(0, segmentIndex + 1) // Include segment start
+    const secondPortion = col.slice(segmentIndex + 1) // Exclude segment start
+
+    // 3. Validate both portions are non-empty
+    if (firstPortion.length === 0 || secondPortion.length === 0) {
+      return null
+    }
+
+    // 4. Find next free column number
+    const newColIndex = findNextFreeColumnNumber()
+
+    // 5. Update original column with first portion
+    completedColumns.value.set(colIndex, firstPortion)
+
+    // 6. Create new column with second portion
+    completedColumns.value.set(newColIndex, secondPortion)
+
+    // 7. Update labels for all keys
+    firstPortion.forEach((key) => {
+      const currentLabel = key.labels[0] || ','
+      const parts = currentLabel.split(',')
+      parts[1] = String(colIndex) // Update column part
+      key.labels[0] = parts.join(',')
+    })
+
+    secondPortion.forEach((key) => {
+      const currentLabel = key.labels[0] || ','
+      const parts = currentLabel.split(',')
+      parts[1] = String(newColIndex) // Update column part to new number
+      key.labels[0] = parts.join(',')
+    })
+
+    // 8. Handle skipSync flag
+    if (skipSync) {
+      skipNextSync.value = true
+    }
+
+    // 9. Return new column number
+    return newColIndex
+  }
+
+  /**
    * Load existing matrix assignments from parsed data
    * This is used when continuing from partially annotated layouts
    * @param rows - Map of row assignments
@@ -524,6 +646,8 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
     removeKeyFromColumn,
     removeRow,
     removeColumn,
+    splitRowAtSegment,
+    splitColumnAtSegment,
     loadExistingAssignments,
     renumberRow,
     renumberColumn,
