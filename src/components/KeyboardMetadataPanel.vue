@@ -345,6 +345,26 @@ const updateBackcolor = () => {
 </script>
 
 <style scoped>
+/* Override Bootstrap's responsive column behavior - use flexbox for responsive wrapping */
+.keyboard-metadata-panel .col-lg-6.col-md-12 {
+  flex: 1 1 340px;
+  max-width: 500px;
+}
+
+/* On very small screens, allow property groups to be full width and remove padding */
+@media (max-width: 575.98px) {
+  .keyboard-metadata-panel .col-lg-6.col-md-12 {
+    padding-left: 0px;
+    padding-right: 0px;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .keyboard-metadata-panel .col-lg-6.col-md-12 {
+    max-width: 100%;
+  }
+}
+
 /* Property groups styling */
 .property-group {
   background: var(--bs-tertiary-bg);
