@@ -3,7 +3,7 @@
     <div class="row g-3">
       <!-- Left Column: Standard Metadata (with internal 2-column split) -->
       <div class="col-lg-6 col-md-12">
-        <div class="property-group h-100">
+        <div class="property-group">
           <h6 class="property-group-title">Keyboard Metadata</h6>
           <div class="row g-3">
             <!-- Left sub-column -->
@@ -79,6 +79,7 @@
                     <label class="form-label small mb-1">CSS</label>
                     <button
                       @click="showCssHelp"
+                      style="margin-top: -2px"
                       class="btn btn-sm btn-outline-secondary css-help-btn"
                       title="Help"
                     >
@@ -103,8 +104,8 @@
 
       <!-- Right Column: VIA Metadata -->
       <div class="col-lg-6 col-md-12">
-        <div class="property-group h-100 d-flex flex-column">
-          <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="property-group d-flex flex-column">
+          <div class="d-flex justify-content-between mb-2">
             <h6 class="property-group-title mb-0">VIA Metadata</h6>
             <div class="d-flex align-items-center gap-2">
               <div v-if="viaJsonError" class="text-danger small">
@@ -115,6 +116,7 @@
               </div>
               <button
                 @click="showViaHelp"
+                style="margin-top: -4px"
                 class="btn btn-sm btn-outline-secondary help-btn"
                 title="Help"
               >
@@ -381,7 +383,6 @@ const updateBackcolor = () => {
   margin-bottom: 8px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border-bottom: 1px solid var(--bs-border-color);
   padding-bottom: 4px;
 }
 
@@ -416,14 +417,14 @@ const updateBackcolor = () => {
 
 /* Help button styling */
 .help-btn {
-  padding: 0.25rem;
   font-size: 0.875rem;
   line-height: 1;
-  width: 28px;
-  height: 28px;
+  width: 20px;
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border: none;
 }
 
 .help-btn i {
@@ -431,16 +432,17 @@ const updateBackcolor = () => {
 }
 
 .css-help-btn {
-  font-size: 0.7rem;
+  font-size: 0.875rem;
   line-height: 1;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border: none;
 }
 
 .css-help-btn i {
-  font-size: 0.7rem;
+  font-size: 1rem;
 }
 </style>

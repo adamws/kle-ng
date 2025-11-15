@@ -7,7 +7,7 @@
           <!-- Column 1: Position and Rotation -->
           <div class="col-lg-3 col-md-6">
             <div class="property-group position-rotation-container">
-              <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="d-flex justify-content-between mb-2">
                 <h6 class="property-group-title mb-0">
                   {{
                     isAdvancedPositionMode ? 'Advanced Position & Rotation' : 'Position & Rotation'
@@ -15,7 +15,8 @@
                 </h6>
                 <button
                   @click="toggleAdvancedMode"
-                  class="btn btn-xs btn-outline-secondary toggle-mode-btn"
+                  style="margin-top: -2px"
+                  class="btn btn-outline-secondary toggle-mode-btn"
                   :title="
                     isAdvancedPositionMode ? 'Switch to Basic Mode' : 'Switch to Advanced Mode'
                   "
@@ -93,7 +94,7 @@
                         <small class="text-muted me-2">Size cannot be edited directly</small>
                         <button
                           @click="makeKeyRectangular"
-                          class="btn btn-xs btn-outline-primary ms-auto"
+                          class="btn btn-outline-primary ms-auto"
                           style="font-size: 10px; padding: 2px 6px"
                         >
                           Make Rectangular
@@ -372,7 +373,7 @@
                   <label class="form-label small mb-0">Top labels</label>
                   <button
                     @click="clearTopLabels"
-                    class="btn btn-xs btn-outline-secondary clear-labels-btn"
+                    class="btn btn-outline-secondary clear-labels-btn"
                     :disabled="isDisabled"
                     title="Clear all top labels"
                   >
@@ -557,7 +558,7 @@
                   <label class="form-label small mb-0">Front labels</label>
                   <button
                     @click="clearFrontLabels"
-                    class="btn btn-xs btn-outline-secondary clear-labels-btn"
+                    class="btn btn-outline-secondary clear-labels-btn"
                     :disabled="isDisabled"
                     title="Clear all front labels"
                   >
@@ -694,7 +695,7 @@
                   <label class="form-label small mb-0">Per-Label Text Size</label>
                   <button
                     @click="clearTextSizes"
-                    class="btn btn-xs btn-outline-secondary clear-labels-btn"
+                    class="btn btn-outline-secondary clear-labels-btn"
                     :disabled="isDisabled"
                     title="Clear all text sizes"
                   >
@@ -1659,7 +1660,6 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
   margin-bottom: 8px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border-bottom: 1px solid var(--bs-border-color);
   padding-bottom: 4px;
 }
 
