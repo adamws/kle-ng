@@ -42,29 +42,29 @@
               <thead>
                 <tr>
                   <th class="fw-semibold small border-top-0">Size (U)</th>
-                  <th class="text-end fw-semibold small border-top-0">Count</th>
+                  <th class="fw-semibold small border-top-0">Count</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="entry in keysBySize" :key="entry.size">
                   <td class="small align-middle">{{ entry.size }}</td>
-                  <td class="text-end small align-middle">{{ entry.count }}</td>
+                  <td class="small align-middle">{{ entry.count }}</td>
                 </tr>
                 <tr class="table-active border-top">
                   <td class="small align-middle"><strong>Total Keys</strong></td>
-                  <td class="text-end small align-middle">
+                  <td class="small align-middle">
                     <strong>{{ totalKeys }}</strong>
                   </td>
                 </tr>
                 <tr v-if="totalDecalKeys > 0" class="table-active border-top">
                   <td class="small align-middle"><strong>Regular Keys</strong></td>
-                  <td class="text-end small align-middle">
+                  <td class="small align-middle">
                     <strong>{{ totalKeysWithoutDecals }}</strong>
                   </td>
                 </tr>
                 <tr v-if="totalDecalKeys > 0" class="table-active border-top">
                   <td class="small align-middle"><strong>Decal Keys</strong></td>
-                  <td class="text-end small align-middle">
+                  <td class="small align-middle">
                     <strong>{{ totalDecalKeys }}</strong>
                   </td>
                 </tr>
@@ -77,7 +77,7 @@
                 <tr>
                   <th class="fw-semibold small border-top-0">Size (U)</th>
                   <th class="fw-semibold small border-top-0">Color</th>
-                  <th class="text-end fw-semibold small border-top-0">Count</th>
+                  <th class="fw-semibold small border-top-0">Count</th>
                 </tr>
               </thead>
               <tbody>
@@ -93,26 +93,26 @@
                       <code class="color-code">{{ entry.color }}</code>
                     </div>
                   </td>
-                  <td class="text-end small align-middle">{{ entry.count }}</td>
+                  <td class="small align-middle">{{ entry.count }}</td>
                 </tr>
                 <tr class="table-active border-top">
                   <td class="small align-middle"><strong>Total Keys</strong></td>
                   <td class="small align-middle"></td>
-                  <td class="text-end small align-middle">
+                  <td class="small align-middle">
                     <strong>{{ totalKeys }}</strong>
                   </td>
                 </tr>
                 <tr v-if="totalDecalKeys > 0" class="table-active border-top">
                   <td class="small align-middle"><strong>Regular Keys</strong></td>
                   <td class="small align-middle"></td>
-                  <td class="text-end small align-middle">
+                  <td class="small align-middle">
                     <strong>{{ totalKeysWithoutDecals }}</strong>
                   </td>
                 </tr>
                 <tr v-if="totalDecalKeys > 0" class="table-active border-top">
                   <td class="small align-middle"><strong>Decal Keys</strong></td>
                   <td class="small align-middle"></td>
-                  <td class="text-end small align-middle">
+                  <td class="small align-middle">
                     <strong>{{ totalDecalKeys }}</strong>
                   </td>
                 </tr>
@@ -122,7 +122,15 @@
         </div>
       </div>
 
-      <!-- Column 2: Keyboard Dimensions -->
+      <!-- Column 2: Key Center Positions -->
+      <div class="col-lg-3 col-md-6">
+        <div class="property-group">
+          <h6 class="property-group-title mb-2">Key Center Positions</h6>
+          <KeyCentersTable />
+        </div>
+      </div>
+
+      <!-- Column 3: Keyboard Dimensions -->
       <div class="col-lg-3 col-md-6">
         <div class="property-group">
           <h6 class="property-group-title mb-2">Keyboard Dimensions</h6>
@@ -159,6 +167,7 @@
 import { ref, computed } from 'vue'
 import { useKeyboardStore, Key } from '@/stores/keyboard'
 import { calculateKeyboardDimensions } from '@/utils/keyboard-dimensions'
+import KeyCentersTable from './KeyCentersTable.vue'
 
 const keyboardStore = useKeyboardStore()
 

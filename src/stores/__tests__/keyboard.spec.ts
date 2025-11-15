@@ -1294,4 +1294,35 @@ describe('Keyboard Store', () => {
       expect(originalKey4!.labels[4]).toBe('E')
     })
   })
+
+  describe('tempSelectedKeys for table hover', () => {
+    it('should initialize tempSelectedKeys as empty array', () => {
+      expect(store.tempSelectedKeys).toEqual([])
+    })
+
+    it('should allow setting tempSelectedKeys for table hover when not rect-selecting', () => {
+      store.addKey()
+      const key = store.keys[0]
+      expect(key).toBeDefined()
+
+      // Simulate table hover: set tempSelectedKeys directly
+      store.tempSelectedKeys = [key!]
+      expect(store.tempSelectedKeys).toHaveLength(1)
+      expect(store.tempSelectedKeys[0]).toBe(key)
+    })
+
+    it('should allow clearing tempSelectedKeys when table hover ends', () => {
+      store.addKey()
+      const key = store.keys[0]
+      expect(key).toBeDefined()
+
+      // Simulate table hover
+      store.tempSelectedKeys = [key!]
+      expect(store.tempSelectedKeys).toHaveLength(1)
+
+      // Simulate hover leave
+      store.tempSelectedKeys = []
+      expect(store.tempSelectedKeys).toHaveLength(0)
+    })
+  })
 })

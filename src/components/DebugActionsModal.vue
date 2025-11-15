@@ -6,19 +6,6 @@
     </div>
 
     <div class="panel-body">
-      <!-- Key Centers Section -->
-      <div class="section">
-        <label>
-          <input v-model="markerOptions.showLabels" type="checkbox" />
-          Labels
-        </label>
-        <label>
-          <input v-model="markerOptions.showDistances" type="checkbox" />
-          Distances
-        </label>
-        <button @click="markKeyCenters">Mark Centers</button>
-      </div>
-
       <!-- Line Drawing Section -->
       <div class="section">
         <div class="line-inputs">
@@ -92,13 +79,6 @@ import { findKeysAlongLine } from '@/utils/line-intersection'
 import CustomNumberInput from '@/components/CustomNumberInput.vue'
 
 interface DebugOverlayRef {
-  setDebugOptions: (options: {
-    markerSize?: number
-    markerColor?: string
-    showLabels?: boolean
-    showDistances?: boolean
-  }) => void
-  clearDebugMarkers: () => void
   drawDebugLine: (lineData: {
     point1: { x: number; y: number }
     point2: { x: number; y: number }
@@ -122,13 +102,6 @@ defineEmits<{
 
 const keyboardStore = useKeyboardStore()
 
-const markerOptions = ref({
-  markerSize: 8,
-  markerColor: '#ff0000',
-  showLabels: true,
-  showDistances: false,
-})
-
 const lineOptions = ref({
   point1: { x: 0, y: 0 },
   point2: { x: 5, y: 5 },
@@ -136,18 +109,6 @@ const lineOptions = ref({
   showKeyLabels: true,
   sensitivity: 0.0,
 })
-
-const markKeyCenters = () => {
-  if (props.debugOverlayRef) {
-    props.debugOverlayRef.setDebugOptions(markerOptions.value)
-  }
-}
-
-const clearMarkers = () => {
-  if (props.debugOverlayRef) {
-    props.debugOverlayRef.clearDebugMarkers()
-  }
-}
 
 const drawLine = () => {
   if (props.debugOverlayRef) {
@@ -175,7 +136,6 @@ const clearLine = () => {
 }
 
 const clearAll = () => {
-  clearMarkers()
   clearLine()
 }
 </script>

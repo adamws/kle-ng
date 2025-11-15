@@ -24,13 +24,6 @@ import { type Key } from '@/stores/keyboard'
 import DebugActionsModal from './DebugActionsModal.vue'
 
 interface DebugOverlayRef {
-  setDebugOptions: (options: {
-    markerSize?: number
-    markerColor?: string
-    showLabels?: boolean
-    showDistances?: boolean
-  }) => void
-  clearDebugMarkers: () => void
   drawDebugLine: (lineData: {
     point1: { x: number; y: number }
     point2: { x: number; y: number }

@@ -737,11 +737,15 @@ const renderKeyboard = () => {
         coordinateOffset.y * zoom.value * dpr,
       )
 
-      // During rectangle selection, show tempSelectedKeys for dynamic highlighting
-      const keysToHighlight =
-        keyboardStore.mouseDragMode === 'rect-select'
-          ? keyboardStore.tempSelectedKeys
-          : keyboardStore.selectedKeys
+      // During rectangle selection or table hover, show tempSelectedKeys for dynamic highlighting
+      // Otherwise show the actual selected keys
+      const keysToHighlight = (() => {
+        // Use tempSelectedKeys if actively rect-selecting OR if table hover has set keys
+        const shouldUseTempKeys =
+          keyboardStore.mouseDragMode === 'rect-select' || keyboardStore.tempSelectedKeys.length > 0
+
+        return shouldUseTempKeys ? keyboardStore.tempSelectedKeys : keyboardStore.selectedKeys
+      })()
 
       renderer.value.render(
         keyboardStore.keys,
