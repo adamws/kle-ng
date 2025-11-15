@@ -33,7 +33,7 @@
           </div>
           <div class="table-container">
             <table class="table table-sm table-striped mb-0">
-              <thead class="table-light">
+              <thead>
                 <tr>
                   <th class="fw-semibold small border-top-0">Size (U)</th>
                   <th class="text-end fw-semibold small border-top-0">Count</th>
@@ -98,7 +98,7 @@
           </div>
           <div class="table-container">
             <table class="table table-sm table-striped mb-0">
-              <thead class="table-light">
+              <thead>
                 <tr>
                   <th class="fw-semibold small border-top-0">Size (U)</th>
                   <th class="fw-semibold small border-top-0">Color</th>
@@ -367,6 +367,13 @@ const keysBySizeAndColor = computed(() => {
   border-radius: 0.375rem;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Table header styling with dark mode support */
+.table thead th {
+  background-color: var(--bs-secondary-bg);
+  color: var(--bs-body-color);
+  border-bottom: 1px solid var(--bs-border-color);
 }
 
 /* Responsive adjustments */
