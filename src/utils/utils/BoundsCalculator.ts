@@ -27,7 +27,6 @@ export interface MinMaxBounds {
  * This utility handles:
  * - Calculating bounds for single keys (with rotation support)
  * - Calculating aggregate bounds for multiple keys
- * - Accounting for stroke width in bounds
  * - Handling non-rectangular keys (ISO Enter, Big-Ass Enter)
  *
  * All calculations use decimal-math for precision to match the renderer.
@@ -107,7 +106,6 @@ export class BoundsCalculator {
    *
    * Returns the axis-aligned bounding box that contains the rotated key.
    * For non-rectangular keys (ISO Enter, Big-Ass Enter), includes both rectangles.
-   * Includes stroke width in calculations (1px).
    *
    * Algorithm:
    * 1. If no rotation: simple rectangle bounds
@@ -120,9 +118,6 @@ export class BoundsCalculator {
    * @returns Min/max bounds in canvas coordinates (pixels)
    */
   public calculateRotatedKeyBounds(key: Key): MinMaxBounds {
-    // Include stroke width in bounds calculation (keys use 1px stroke)
-    const strokeWidth = 1
-
     // If key has no rotation, use simple bounds
     if (!key.rotation_angle || key.rotation_angle === 0) {
       const unit = this.unit
@@ -154,8 +149,8 @@ export class BoundsCalculator {
       return {
         minX,
         minY,
-        maxX: maxX + strokeWidth,
-        maxY: maxY + strokeWidth,
+        maxX: maxX,
+        maxY: maxY,
       }
     }
 
@@ -219,12 +214,11 @@ export class BoundsCalculator {
       maxY = D.max(maxY, finalY)
     })
 
-    // Add stroke width to rotated bounds
     return {
       minX,
       minY,
-      maxX: maxX + strokeWidth,
-      maxY: maxY + strokeWidth,
+      maxX: maxX,
+      maxY: maxY,
     }
   }
 }

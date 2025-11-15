@@ -40,8 +40,8 @@ describe('BoundsCalculator', () => {
       ]
 
       const bounds = calculator.calculateBounds(keys as Key[])
-      expect(bounds.width).toBeGreaterThan(50) // Should span multiple keys
-      expect(bounds.height).toBeGreaterThan(50)
+      expect(bounds.width).toBe(150)
+      expect(bounds.height).toBe(150)
     })
   })
 
@@ -57,8 +57,8 @@ describe('BoundsCalculator', () => {
       const bounds = calculator.calculateRotatedKeyBounds(key as Key)
       expect(bounds.minX).toBe(0)
       expect(bounds.minY).toBe(0)
-      expect(bounds.maxX).toBe(51) // 50 + 1 for stroke
-      expect(bounds.maxY).toBe(51)
+      expect(bounds.maxX).toBe(50)
+      expect(bounds.maxY).toBe(50)
     })
 
     it('should calculate bounds for rotated key', () => {

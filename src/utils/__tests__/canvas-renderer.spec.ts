@@ -533,11 +533,11 @@ describe('CanvasRenderer', () => {
         maxY: number
       }
 
-      // For non-rotated key at (0,0) with size 1x1, bounds should include stroke width
-      expect(bounds.minX).toBe(0) // no padding on min bounds
-      expect(bounds.minY).toBe(0) // no padding on min bounds
-      expect(bounds.maxX).toBe(55) // unit (54) + stroke width (1)
-      expect(bounds.maxY).toBe(55) // unit (54) + stroke width (1)
+      // For non-rotated key at (0,0) with size 1x1
+      expect(bounds.minX).toBe(0)
+      expect(bounds.minY).toBe(0)
+      expect(bounds.maxX).toBe(54)
+      expect(bounds.maxY).toBe(54)
     })
 
     it('should calculate expanded bounds for rotated keys', () => {
