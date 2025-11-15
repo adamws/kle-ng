@@ -1,13 +1,18 @@
 <template>
   <div class="summary-panel">
-    <div class="row g-3 h-100">
-      <div class="col-md-6 col-lg-4">
-        <!-- Keys by Size Table -->
-        <div v-if="viewMode === 'size'" class="table-section">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="section-title mb-0">Keys</h6>
+    <div class="row g-3">
+      <!-- Column 1: Keys Statistics -->
+      <div class="col-lg-3 col-md-6">
+        <div class="property-group">
+          <div class="d-flex justify-content-between align-items-center mb-0">
+            <h6 class="property-group-title mb-2">Keys</h6>
             <!-- Toggle for view mode -->
-            <div class="btn-group" role="group" aria-label="Summary view mode">
+            <div
+              style="margin-top: -8px"
+              class="btn-group"
+              role="group"
+              aria-label="Summary view mode"
+            >
               <input
                 type="radio"
                 class="btn-check"
@@ -16,7 +21,7 @@
                 v-model="viewMode"
                 autocomplete="off"
               />
-              <label class="btn btn-outline-primary btn-sm" for="view-size">By Size</label>
+              <label class="btn btn-outline-primary btn-xs" for="view-size">By Size</label>
 
               <input
                 type="radio"
@@ -26,13 +31,14 @@
                 v-model="viewMode"
                 autocomplete="off"
               />
-              <label class="btn btn-outline-primary btn-sm" for="view-size-color"
+              <label class="btn btn-outline-primary btn-xs" for="view-size-color"
                 >By Size & Color</label
               >
             </div>
           </div>
-          <div class="table-container">
-            <table class="table table-sm table-striped mb-0">
+          <div class="table-responsive">
+            <!-- Keys by Size Table -->
+            <table v-if="viewMode === 'size'" class="table table-sm table-bordered mb-0">
               <thead>
                 <tr>
                   <th class="fw-semibold small border-top-0">Size (U)</th>
@@ -64,40 +70,9 @@
                 </tr>
               </tbody>
             </table>
-          </div>
-        </div>
 
-        <!-- Keys by Size and Color Table -->
-        <div v-else-if="viewMode === 'size-color'" class="table-section">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="section-title mb-0">Keys</h6>
-            <!-- Toggle for view mode -->
-            <div class="btn-group" role="group" aria-label="Summary view mode">
-              <input
-                type="radio"
-                class="btn-check"
-                id="view-size-2"
-                value="size"
-                v-model="viewMode"
-                autocomplete="off"
-              />
-              <label class="btn btn-outline-primary btn-sm" for="view-size-2">By Size</label>
-
-              <input
-                type="radio"
-                class="btn-check"
-                id="view-size-color-2"
-                value="size-color"
-                v-model="viewMode"
-                autocomplete="off"
-              />
-              <label class="btn btn-outline-primary btn-sm" for="view-size-color-2"
-                >By Size & Color</label
-              >
-            </div>
-          </div>
-          <div class="table-container">
-            <table class="table table-sm table-striped mb-0">
+            <!-- Keys by Size and Color Table -->
+            <table v-else-if="viewMode === 'size-color'" class="table table-sm table-bordered mb-0">
               <thead>
                 <tr>
                   <th class="fw-semibold small border-top-0">Size (U)</th>
@@ -146,6 +121,36 @@
           </div>
         </div>
       </div>
+
+      <!-- Column 2: Keyboard Dimensions -->
+      <div class="col-lg-3 col-md-6">
+        <div class="property-group">
+          <h6 class="property-group-title mb-2">Keyboard Dimensions</h6>
+          <div class="table-responsive">
+            <!-- Show dimensions if available -->
+            <table v-if="keyboardDimensions" class="table table-sm table-bordered mb-0">
+              <thead>
+                <tr>
+                  <th class="fw-semibold small border-top-0">Width (U)</th>
+                  <th class="fw-semibold small border-top-0">Height (U)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="small align-middle">{{ keyboardDimensions.widthFormatted }}</td>
+                  <td class="small align-middle">{{ keyboardDimensions.heightFormatted }}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Show empty state if no physical keys -->
+            <div v-else class="text-muted text-center py-2">
+              <i class="bi bi-rulers"></i>
+              <p class="mb-0 small">No physical keys</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -153,11 +158,17 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useKeyboardStore, Key } from '@/stores/keyboard'
+import { calculateKeyboardDimensions } from '@/utils/keyboard-dimensions'
 
 const keyboardStore = useKeyboardStore()
 
 // View mode toggle
 const viewMode = ref<'size' | 'size-color'>('size')
+
+// Calculate keyboard dimensions
+const keyboardDimensions = computed(() => {
+  return calculateKeyboardDimensions(keyboardStore.keys)
+})
 
 // Calculate total keys
 const totalKeys = computed(() => {
@@ -333,7 +344,27 @@ const keysBySizeAndColor = computed(() => {
 </script>
 
 <style scoped>
-.summary-panel {
+/* Override Bootstrap's responsive column behavior - use flexbox for responsive wrapping */
+.summary-panel .col-lg-3.col-md-6 {
+  flex: 1 1 340px;
+  max-width: 500px;
+}
+
+/* On very small screens, allow property groups to be full width and remove padding */
+@media (max-width: 575.98px) {
+  .summary-panel .col-lg-3.col-md-6 {
+    padding-left: 0px;
+    padding-right: 0px;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .summary-panel .col-lg-3.col-md-6 {
+    max-width: 100%;
+  }
+}
+
+.property-group {
   background: var(--bs-tertiary-bg);
   border: 1px solid var(--bs-border-color);
   border-radius: 6px;
@@ -341,9 +372,13 @@ const keysBySizeAndColor = computed(() => {
   height: 100%;
 }
 
-.section-title {
-  color: var(--bs-secondary-color);
+.property-group-title {
+  font-size: 0.75rem;
   font-weight: 600;
+  color: var(--bs-body-color);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .color-swatch {
@@ -363,9 +398,9 @@ const keysBySizeAndColor = computed(() => {
   line-height: 1;
 }
 
-.table-container {
+.table-responsive {
+  max-height: 400px;
   border-radius: 0.375rem;
-  overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
@@ -376,14 +411,28 @@ const keysBySizeAndColor = computed(() => {
   border-bottom: 1px solid var(--bs-border-color);
 }
 
+/* Dimension Display Styles */
+.control-label {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--bs-secondary-color);
+  margin-bottom: 2px;
+  font-weight: 500;
+}
+
+/* Extra small button size */
+.btn-xs {
+  --bs-btn-padding-y: 0.15rem;
+  --bs-btn-padding-x: 0.4rem;
+  --bs-btn-font-size: 0.7rem;
+  --bs-btn-border-radius: 0.25rem;
+  line-height: 1.2;
+}
+
 /* Responsive adjustments */
 @media (max-width: 576px) {
-  .summary-panel {
-    padding: 0.5rem;
-  }
-
-  .metric-value {
-    font-size: 1.25rem;
+  .property-group {
+    padding: 8px;
   }
 
   .color-code {

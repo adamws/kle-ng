@@ -82,7 +82,8 @@ describe('SummaryPanel', () => {
         },
       })
 
-      const rows = wrapper.findAll('tbody tr')
+      // Select only rows from the first column (Keys Statistics)
+      const rows = wrapper.findAll('.col-lg-3:first-child tbody tr')
       // Should only have summary row (Total Keys: 0)
       expect(rows).toHaveLength(1)
       const firstRow = rows[0]
@@ -301,7 +302,8 @@ describe('SummaryPanel', () => {
       // Switch to size-color view
       await wrapper.find('input[value="size-color"]').setValue(true)
 
-      const rows = wrapper.findAll('tbody tr:not(.table-active)')
+      // Select only rows from the first column (Keys Statistics)
+      const rows = wrapper.findAll('.col-lg-3:first-child tbody tr:not(.table-active)')
       expect(rows).toHaveLength(2) // Two different color groups
 
       // Should have one row with count 2 (red keys) and one with count 1 (green key)
@@ -327,7 +329,8 @@ describe('SummaryPanel', () => {
       })
 
       // Check individual counts
-      const rows = wrapper.findAll('tbody tr:not(.table-active)')
+      // Select only rows from the first column (Keys Statistics)
+      const rows = wrapper.findAll('.col-lg-3:first-child tbody tr:not(.table-active)')
       expect(rows).toHaveLength(3) // 1x1 (count 2), 2x1 (count 1), 6.25x1 (count 1)
 
       // Check total
@@ -349,7 +352,8 @@ describe('SummaryPanel', () => {
         },
       })
 
-      const dataRows = wrapper.findAll('tbody tr:not(.table-active)')
+      // Select only rows from the first column (Keys Statistics)
+      const dataRows = wrapper.findAll('.col-lg-3:first-child tbody tr:not(.table-active)')
 
       // First row should be the most frequent (2x1 with count 3)
       const firstDataRow = dataRows[0]
@@ -402,6 +406,225 @@ describe('SummaryPanel', () => {
       const thirdHeader = headers[2]
       expect(thirdHeader).toBeDefined()
       expect(thirdHeader!.text()).toBe('Count')
+    })
+  })
+
+  describe('Keyboard Dimensions', () => {
+    it('should display dimensions section header', () => {
+      const wrapper = mount(SummaryPanel, {
+        global: {
+          plugins: [pinia],
+        },
+      })
+
+      expect(wrapper.text()).toContain('Keyboard Dimensions')
+    })
+
+    it('should display dimensions for simple 2x2 layout', () => {
+      store.keys = [
+        createKey({ x: 0, y: 0, width: 1, height: 1 }),
+        createKey({ x: 1, y: 0, width: 1, height: 1 }),
+        createKey({ x: 0, y: 1, width: 1, height: 1 }),
+        createKey({ x: 1, y: 1, width: 1, height: 1 }),
+      ]
+
+      const wrapper = mount(SummaryPanel, {
+        global: {
+          plugins: [pinia],
+        },
+      })
+
+      const rows = wrapper.findAll('.col-lg-3:last-child tbody tr')
+      expect(rows).toHaveLength(1)
+
+      // Should display dimensions section
+      const firstRow = rows[0]
+      expect(firstRow).toBeDefined()
+      const cols = firstRow!.findAll('td')
+      expect(cols).toHaveLength(2)
+      expect(cols[0]!.text()).toBe('2') // Width
+      expect(cols[1]!.text()).toBe('2') // Height
+    })
+
+    it('should display dimensions for Planck-style 12×4 layout', () => {
+      const keys = []
+      for (let row = 0; row < 4; row++) {
+        for (let col = 0; col < 12; col++) {
+          keys.push(createKey({ x: col, y: row, width: 1, height: 1 }))
+        }
+      }
+      store.keys = keys
+
+      const wrapper = mount(SummaryPanel, {
+        global: {
+          plugins: [pinia],
+        },
+      })
+
+      // Should show 12x4 dimensions - check each dimension explicitly
+      const rows = wrapper.findAll('.col-lg-3:last-child tbody tr')
+      expect(rows).toHaveLength(1)
+
+      const firstRow = rows[0]
+      expect(firstRow).toBeDefined()
+      const cols = firstRow!.findAll('td')
+      expect(cols).toHaveLength(2)
+      expect(cols[0]!.text()).toBe('12') // Width
+      expect(cols[1]!.text()).toBe('4') // Height
+    })
+
+    it('should show empty state when no physical keys', () => {
+      store.keys = []
+
+      const wrapper = mount(SummaryPanel, {
+        global: {
+          plugins: [pinia],
+        },
+      })
+
+      expect(wrapper.text()).toContain('No physical keys')
+    })
+
+    it('should show empty state when only decal keys present', () => {
+      store.keys = [createKey({ x: 0, y: 0, width: 1, height: 1, decal: true })]
+
+      const wrapper = mount(SummaryPanel, {
+        global: {
+          plugins: [pinia],
+        },
+      })
+
+      expect(wrapper.text()).toContain('No physical keys')
+    })
+
+    it('should ignore decal keys in dimension calculation', () => {
+      store.keys = [
+        createKey({ x: 0, y: 0, width: 1, height: 1 }),
+        createKey({ x: 10, y: 10, width: 5, height: 5, decal: true }),
+      ]
+
+      const wrapper = mount(SummaryPanel, {
+        global: {
+          plugins: [pinia],
+        },
+      })
+
+      // Width and height should both be 1
+      const rows = wrapper.findAll('.col-lg-3:last-child tbody tr')
+      expect(rows).toHaveLength(1)
+
+      const firstRow = rows[0]
+      expect(firstRow).toBeDefined()
+      const cols = firstRow!.findAll('td')
+      expect(cols).toHaveLength(2)
+      expect(cols[0]!.text()).toBe('1') // Width
+      expect(cols[1]!.text()).toBe('1') // Height
+    })
+
+    it('should ignore ghost keys in dimension calculation', () => {
+      store.keys = [
+        createKey({ x: 0, y: 0, width: 1, height: 1 }),
+        createKey({ x: 20, y: 20, width: 5, height: 5, ghost: true }),
+      ]
+
+      const wrapper = mount(SummaryPanel, {
+        global: {
+          plugins: [pinia],
+        },
+      })
+
+      // Should only consider the 1x1 key - check explicitly
+      const rows = wrapper.findAll('.col-lg-3:last-child tbody tr')
+      expect(rows).toHaveLength(1)
+
+      const firstRow = rows[0]
+      expect(firstRow).toBeDefined()
+      const cols = firstRow!.findAll('td')
+      expect(cols).toHaveLength(2)
+      expect(cols[0]!.text()).toBe('1') // Width
+      expect(cols[1]!.text()).toBe('1') // Height
+    })
+
+    it('should display dimension displays with proper formatting', () => {
+      store.keys = [createKey({ x: 0, y: 0, width: 1.25, height: 2.625 })]
+
+      const wrapper = mount(SummaryPanel, {
+        global: {
+          plugins: [pinia],
+        },
+      })
+
+      const rows = wrapper.findAll('.col-lg-3:last-child tbody tr')
+      expect(rows).toHaveLength(1)
+
+      const firstRow = rows[0]
+      expect(firstRow).toBeDefined()
+      const cols = firstRow!.findAll('td')
+      expect(cols).toHaveLength(2)
+      expect(cols[0]!.text()).toBe('1.25') // Width
+      expect(cols[1]!.text()).toBe('2.625') // Height
+    })
+
+    it('should update dimensions when keys change', async () => {
+      store.keys = [createKey({ x: 0, y: 0, width: 1, height: 1 })]
+
+      const wrapper = mount(SummaryPanel, {
+        global: {
+          plugins: [pinia],
+        },
+      })
+
+      // Initial dimensions should be 1.0 x 1.0
+      const rows = wrapper.findAll('.col-lg-3:last-child tbody tr')
+      expect(rows).toHaveLength(1)
+
+      const firstRow = rows[0]
+      expect(firstRow).toBeDefined()
+      let cols = firstRow!.findAll('td')
+      expect(cols).toHaveLength(2)
+      expect(cols[0]!.text()).toBe('1') // Width
+      expect(cols[1]!.text()).toBe('1') // Height
+
+      // Add more keys
+      store.keys = [
+        createKey({ x: 0, y: 0, width: 1, height: 1 }),
+        createKey({ x: 1, y: 0, width: 1, height: 1 }),
+        createKey({ x: 2, y: 0, width: 1, height: 1 }),
+      ]
+
+      await wrapper.vm.$nextTick()
+
+      // Dimensions should update to 3x1
+      cols = firstRow!.findAll('td')
+      expect(cols).toHaveLength(2)
+      expect(cols[0]!.text()).toBe('3') // Width
+      expect(cols[1]!.text()).toBe('1') // Height
+    })
+
+    it('should handle keys with different sizes', () => {
+      store.keys = [
+        createKey({ x: 0, y: 0, width: 1, height: 1 }),
+        createKey({ x: 1, y: 0, width: 2.25, height: 1 }),
+        createKey({ x: 0, y: 1, width: 1.5, height: 1 }),
+        createKey({ x: 1.5, y: 1, width: 6.25, height: 1 }),
+      ]
+
+      const wrapper = mount(SummaryPanel, {
+        global: {
+          plugins: [pinia],
+        },
+      })
+
+      // Width: 1.5 + 6.25 = 7.75, Height: 2 rows
+      const rows = wrapper.findAll('.col-lg-3:last-child tbody tr')
+      expect(rows).toHaveLength(1)
+
+      const firstRow = rows[0]
+      expect(firstRow).toBeDefined()
+      const cols = firstRow!.findAll('td')
+      expect(cols).toHaveLength(2)
+      expect(cols[0]!.text()).toBe('7.75') // Width
+      expect(cols[1]!.text()).toBe('2') // Height
     })
   })
 })
