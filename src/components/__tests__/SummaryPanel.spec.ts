@@ -73,7 +73,7 @@ describe('SummaryPanel', () => {
       )
     })
 
-    it('should show empty table when no keys', () => {
+    it('should show empty state when no keys', () => {
       store.keys = []
 
       const wrapper = mount(SummaryPanel, {
@@ -82,14 +82,8 @@ describe('SummaryPanel', () => {
         },
       })
 
-      // Select only rows from the first column (Keys Statistics)
-      const rows = wrapper.findAll('.col-lg-3:first-child tbody tr')
-      // Should only have summary row (Total Keys: 0)
-      expect(rows).toHaveLength(1)
-      const firstRow = rows[0]
-      expect(firstRow).toBeDefined()
-      expect(firstRow!.text()).toContain('Total Keys')
-      expect(firstRow!.text()).toContain('0')
+      // Should show empty state message
+      expect(wrapper.text()).toContain('No keys')
     })
   })
 
@@ -371,6 +365,8 @@ describe('SummaryPanel', () => {
 
   describe('Column headers', () => {
     it('should show correct headers for size view', () => {
+      store.keys = [createKey({ width: 1, height: 1 })]
+
       const wrapper = mount(SummaryPanel, {
         global: {
           plugins: [pinia],
@@ -387,6 +383,8 @@ describe('SummaryPanel', () => {
     })
 
     it('should show correct headers for size-color view', async () => {
+      store.keys = [createKey({ width: 1, height: 1 })]
+
       const wrapper = mount(SummaryPanel, {
         global: {
           plugins: [pinia],
@@ -482,7 +480,7 @@ describe('SummaryPanel', () => {
         },
       })
 
-      expect(wrapper.text()).toContain('No physical keys')
+      expect(wrapper.text()).toContain('No keys')
     })
 
     it('should show empty state when only decal keys present', () => {
@@ -494,7 +492,7 @@ describe('SummaryPanel', () => {
         },
       })
 
-      expect(wrapper.text()).toContain('No physical keys')
+      expect(wrapper.text()).toContain('No keys')
     })
 
     it('should ignore decal keys in dimension calculation', () => {

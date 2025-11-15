@@ -36,7 +36,13 @@
               >
             </div>
           </div>
-          <div class="table-responsive">
+
+          <div v-if="totalKeys === 0" class="text-muted text-center py-3">
+            <i class="bi bi-grid-3x3"></i>
+            <p class="mb-0 small">No keys</p>
+          </div>
+
+          <div v-else class="table-responsive">
             <!-- Keys by Size Table -->
             <table v-if="viewMode === 'size'" class="table table-sm table-bordered mb-0">
               <thead>
@@ -134,9 +140,9 @@
       <div class="col-lg-3 col-md-6">
         <div class="property-group">
           <h6 class="property-group-title mb-2">Keyboard Dimensions</h6>
-          <div class="table-responsive">
+          <div v-if="keyboardDimensions" class="table-responsive">
             <!-- Show dimensions if available -->
-            <table v-if="keyboardDimensions" class="table table-sm table-bordered mb-0">
+            <table class="table table-sm table-bordered mb-0">
               <thead>
                 <tr>
                   <th class="fw-semibold small border-top-0">Width (U)</th>
@@ -150,12 +156,12 @@
                 </tr>
               </tbody>
             </table>
+          </div>
 
-            <!-- Show empty state if no physical keys -->
-            <div v-else class="text-muted text-center py-2">
-              <i class="bi bi-rulers"></i>
-              <p class="mb-0 small">No physical keys</p>
-            </div>
+          <!-- Show empty state if no physical keys -->
+          <div v-else class="text-muted text-center py-3">
+            <i class="bi bi-grid-3x3"></i>
+            <p class="mb-0 small">No keys</p>
           </div>
         </div>
       </div>
