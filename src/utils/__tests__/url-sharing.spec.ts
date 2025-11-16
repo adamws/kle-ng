@@ -9,6 +9,7 @@ import {
   extractGistFromCurrentUrl,
   fetchGistLayout,
   clearGistFromUrl,
+  extractErgogenUrlData,
 } from '../url-sharing'
 import { Key, KeyboardMetadata, Keyboard } from '@adamws/kle-serial'
 
@@ -546,6 +547,128 @@ describe('url-sharing', () => {
 
         expect(extracted2).toEqual(sampleKeyboard)
         expect(extractGistFromCurrentUrl()).toBeNull()
+      })
+    })
+  })
+
+  describe('ergogen functionality', () => {
+    describe('extractErgogenUrlData', () => {
+      // Real Ergogen URL from ergogen.xyz
+      const ERGOGEN_URL =
+        'https://ergogen.xyz/#N4Igxg9gdgZglgcxALhAWwKYBcCGyA6UABERlAnFBskQCwB0AjPQAyEAOElWAzgcUQBe0DH0IkSaHFgBOcAB78JEnFDAALCDKXKJMiLizUiAVnG7IAGwCuaKGIG6i7SgGsAnjqdzyXp0VcMd3oedkscTyIAWjNHf0DgrURKGgBtKMYAJgAaaMYATgBdc38AoJDcBAQMbSIskt00OAATZstqBqcEipwqmppY0spmjEVO3W6eSuraqIA2cZJKKm1FiUnp-ujM8f0AdwdSgCMDLAg0P2VNTEuJM-Y-LHVbI5hVW9UNLVuSGQwYGhSWQKAD6yxqIJOWDOaDWPHUcBgWDSUQA7LkMkVxlZbPYfkQqDhVnErucOiSJuVQn8cM0aJlmJlBqUysFQuFIlFMgAONYkbpJChQFGMZiokwYrEUkhvYks1khdg0ulEBn0Jl8hXsiI0Lm86XrcqClJEdL5egS6JS7wQA74p4vHT6QzGLlsARNGT6OV6f6A6RyeQglxQDwg64YBrNOBTT7GTKZADM9HFmXyqNR3JAAF8gA'
+
+      // Extract just the hash part for testing
+      const ERGOGEN_HASH =
+        'N4Igxg9gdgZglgcxALhAWwKYBcCGyA6UABERlAnFBskQCwB0AjPQAyEAOElWAzgcUQBe0DH0IkSaHFgBOcAB78JEnFDAALCDKXKJMiLizUiAVnG7IAGwCuaKGIG6i7SgGsAnjqdzyXp0VcMd3oedkscTyIAWjNHf0DgrURKGgBtKMYAJgAaaMYATgBdc38AoJDcBAQMbSIskt00OAATZstqBqcEipwqmppY0spmjEVO3W6eSuraqIA2cZJKKm1FiUnp-ujM8f0AdwdSgCMDLAg0P2VNTEuJM-Y-LHVbI5hVW9UNLVuSGQwYGhSWQKAD6yxqIJOWDOaDWPHUcBgWDSUQA7LkMkVxlZbPYfkQqDhVnErucOiSJuVQn8cM0aJlmJlBqUysFQuFIlFMgAONYkbpJChQFGMZiokwYrEUkhvYks1khdg0ulEBn0Jl8hXsiI0Lm86XrcqClJEdL5egS6JS7wQA74p4vHT6QzGLlsARNGT6OV6f6A6RyeQglxQDwg64YBrNOBTT7GTKZADM9HFmXyqNR3JAAF8gA'
+
+      it('should extract config from ergogen.xyz URL', () => {
+        mockLocation.href = ERGOGEN_URL
+        mockLocation.hash = `#${ERGOGEN_HASH}`
+
+        const extracted = extractErgogenUrlData()
+
+        expect(extracted).toBeDefined()
+        expect(extracted).toHaveProperty('config')
+        expect(typeof extracted!.config).toBe('string')
+        expect(extracted!.config).toContain('meta:')
+        expect(extracted!.config).toContain('points:')
+      })
+
+      it('should return null for non-ergogen URLs', () => {
+        mockLocation.href = 'http://localhost:3000/'
+        mockLocation.hash = '#share=some-data'
+
+        const extracted = extractErgogenUrlData()
+
+        expect(extracted).toBeNull()
+      })
+
+      it('should return null when ergogen URL has no hash', () => {
+        mockLocation.href = 'https://ergogen.xyz/'
+        mockLocation.hash = ''
+
+        const extracted = extractErgogenUrlData()
+
+        expect(extracted).toBeNull()
+      })
+
+      it('should return null for invalid compressed data', () => {
+        mockLocation.href = 'https://ergogen.xyz/#invalid-data'
+        mockLocation.hash = '#invalid-data'
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+        const extracted = extractErgogenUrlData()
+
+        expect(extracted).toBeNull()
+        expect(consoleSpy).toHaveBeenCalled()
+
+        consoleSpy.mockRestore()
+      })
+
+      it('should extract YAML config that can be processed by ergogen', async () => {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore - ergogen is a JavaScript library without type definitions
+        const ergogen = (await import('ergogen')).default
+        const yaml = await import('js-yaml')
+        const { ergogenPointsToKeyboard } = await import('../ergogen-converter')
+
+        mockLocation.href = ERGOGEN_URL
+        mockLocation.hash = `#${ERGOGEN_HASH}`
+
+        const extracted = extractErgogenUrlData()
+
+        expect(extracted).toBeDefined()
+
+        // Parse YAML
+        const config = yaml.load(extracted!.config)
+        expect(config).toBeDefined()
+
+        // Process with ergogen
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore - ergogen.process() accepts second parameter but types are incomplete
+        const results = await ergogen.process(config, { debug: true })
+        expect(results).toBeDefined()
+        expect(results.points).toBeDefined()
+
+        // Convert to keyboard
+        const keyboard = ergogenPointsToKeyboard(results.points)
+        expect(keyboard).toBeDefined()
+        expect(keyboard.keys).toBeDefined()
+        expect(keyboard.keys.length).toBeGreaterThan(0)
+
+        // This specific URL should generate a layout with multiple keys
+        // (exact count depends on the YAML config, but it should be > 10)
+        expect(keyboard.keys.length).toBeGreaterThan(10)
+      })
+
+      it('should handle malformed JSON in decompressed data', () => {
+        // Create a compressed string that decodes to invalid JSON
+        const invalidData = 'not valid json'
+        const compressed = LZString.compressToEncodedURIComponent(invalidData)
+
+        mockLocation.href = `https://ergogen.xyz/#${compressed}`
+        mockLocation.hash = `#${compressed}`
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+        const extracted = extractErgogenUrlData()
+
+        expect(extracted).toBeNull()
+        expect(consoleSpy).toHaveBeenCalled()
+
+        consoleSpy.mockRestore()
+      })
+
+      it('should return null when decompressed JSON lacks config property', () => {
+        // Create a compressed string with valid JSON but wrong structure
+        const wrongStructure = { notConfig: 'some data' }
+        const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(wrongStructure))
+
+        mockLocation.href = `https://ergogen.xyz/#${compressed}`
+        mockLocation.hash = `#${compressed}`
+
+        const extracted = extractErgogenUrlData()
+
+        expect(extracted).toBeNull()
       })
     })
   })

@@ -240,3 +240,37 @@ export function clearGistFromUrl(): void {
     window.history.replaceState({}, document.title, url)
   }
 }
+
+/**
+ * Extract Ergogen config data from current URL if it's an ergogen.xyz URL
+ * Ergogen uses the same lzstring encoding as kle-ng
+ * Returns { config: "YAML string" } or null
+ */
+export function extractErgogenUrlData(): { config: string } | null {
+  try {
+    const hash = window.location.hash
+    const url = window.location.href
+
+    // Check if it's an ergogen.xyz URL with hash
+    if (url.includes('ergogen.xyz') && hash && hash.length > 1) {
+      const encodedData = hash.substring(1) // Remove '#'
+      const decompressed = LZString.decompressFromEncodedURIComponent(encodedData)
+
+      if (!decompressed) {
+        throw new Error('Failed to decompress Ergogen URL data')
+      }
+
+      const data = JSON.parse(decompressed)
+
+      // Ergogen URLs have a "config" property with YAML string
+      if (data && typeof data.config === 'string') {
+        return data
+      }
+    }
+
+    return null
+  } catch (error) {
+    console.error('Error extracting Ergogen URL data:', error)
+    return null
+  }
+}

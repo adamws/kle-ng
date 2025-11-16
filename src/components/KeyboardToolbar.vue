@@ -564,8 +564,12 @@ const importFromUrl = async () => {
     // Convert GitHub blob URLs to raw URLs
     url = convertGitHubBlobToRaw(url)
 
+    // Check if it's an Ergogen URL (ergogen.xyz with hash)
+    if (url.includes('ergogen.xyz') && url.includes('#')) {
+      await importFromErgogenUrl(url)
+    }
     // Check if it's a share link with encoded data (#share=...)
-    if (url.includes('#share=')) {
+    else if (url.includes('#share=')) {
       await importFromShareLink(url)
     }
     // Check if it's a URL import link (#url=...) or old gist format (#gist=...) for backward compatibility
@@ -769,6 +773,56 @@ const processJsonLayout = async (
   }
 
   keyboardStore.filename = storedFilename
+}
+
+const importFromErgogenUrl = async (ergogenUrl: string) => {
+  try {
+    // Extract hash from URL
+    const hashIndex = ergogenUrl.indexOf('#')
+    if (hashIndex === -1) {
+      throw new Error('Invalid Ergogen URL: no hash fragment found')
+    }
+
+    const encodedData = ergogenUrl.substring(hashIndex + 1)
+    const decompressed = LZString.decompressFromEncodedURIComponent(encodedData)
+
+    if (!decompressed) {
+      throw new Error('Failed to decompress Ergogen URL data')
+    }
+
+    const data = JSON.parse(decompressed)
+
+    if (!data || typeof data.config !== 'string') {
+      throw new Error('Invalid Ergogen URL data structure')
+    }
+
+    // Parse YAML config
+    const config = yaml.load(data.config)
+
+    // Process with ergogen
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore - ergogen.process() accepts second parameter but types are incomplete
+    const results = await ergogen.process(config, { debug: true })
+
+    if (!results.points || Object.keys(results.points).length === 0) {
+      throw new Error('No points generated from Ergogen config')
+    }
+
+    // Convert to Keyboard
+    const keyboard = ergogenPointsToKeyboard(results.points)
+
+    // Load the keyboard
+    keyboardStore.loadKeyboard(keyboard)
+    keyboardStore.filename = 'ergogen-import'
+
+    toast.showSuccess(
+      `Ergogen layout imported from URL: ${Object.keys(results.points).length} keys`,
+      'Import Successful',
+    )
+  } catch (error) {
+    console.error('Error importing from Ergogen URL:', error)
+    throw error
+  }
 }
 
 const importFromDirectUrl = async (url: string) => {

@@ -13,6 +13,7 @@ import {
   fetchGistLayout,
   clearGistFromUrl,
   clearUrlFromHash,
+  extractErgogenUrlData,
 } from '../utils/url-sharing'
 import {
   createEmptyLabels,
@@ -24,6 +25,11 @@ import { useFontStore } from './font'
 import { svgCache } from '../utils/caches/SVGCache'
 import { parseCache } from '../utils/caches/ParseCache'
 import { imageCache } from '../utils/caches/ImageCache'
+import { ergogenPointsToKeyboard } from '../utils/ergogen-converter'
+import yaml from 'js-yaml'
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore - ergogen is a JavaScript library without type definitions
+import ergogen from 'ergogen'
 
 export { Key, Keyboard, KeyboardMetadata, type Array12 } from '@adamws/kle-serial'
 
@@ -589,7 +595,12 @@ export const useKeyboardStore = defineStore('keyboard', () => {
       return
     }
 
-    // Check if there's a shared layout in the URL first
+    // Check for Ergogen URL first (ergogen.xyz with hash)
+    if (await loadFromErgogenUrl()) {
+      return // Successfully loaded from Ergogen URL
+    }
+
+    // Check if there's a shared layout in the URL
     if (loadFromShareUrl()) {
       return // Successfully loaded from share URL
     }
@@ -1385,6 +1396,57 @@ export const useKeyboardStore = defineStore('keyboard', () => {
       return false
     } catch (error) {
       console.error('Error loading layout from gist URL:', error)
+      return false
+    }
+  }
+
+  const loadFromErgogenUrl = async (): Promise<boolean> => {
+    try {
+      const ergogenData = extractErgogenUrlData()
+      if (ergogenData) {
+        try {
+          // Parse YAML config
+          const config = yaml.load(ergogenData.config)
+
+          // Process with ergogen
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore - ergogen.process() accepts second parameter but types are incomplete
+          const results = await ergogen.process(config, { debug: true })
+
+          if (!results.points || Object.keys(results.points).length === 0) {
+            throw new Error('No points generated from Ergogen config')
+          }
+
+          // Convert to Keyboard
+          const keyboard = ergogenPointsToKeyboard(results.points)
+
+          // Load the keyboard
+          loadKeyboard(keyboard)
+
+          // Clear hash after loading
+          window.history.replaceState({}, document.title, window.location.href.split('#')[0])
+
+          toast.showSuccess(
+            `Ergogen layout imported from URL: ${Object.keys(results.points).length} keys`,
+            'Import Successful',
+          )
+
+          return true
+        } catch (parseError) {
+          const errorMessage =
+            parseError instanceof Error ? parseError.message : 'Unknown error occurred'
+
+          toast.showError(
+            `Failed to import Ergogen layout: ${errorMessage}`,
+            'Ergogen Import Failed',
+          )
+
+          throw parseError
+        }
+      }
+      return false
+    } catch (error) {
+      console.error('Error loading Ergogen URL:', error)
       return false
     }
   }
