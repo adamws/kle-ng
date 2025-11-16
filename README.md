@@ -293,6 +293,13 @@ kle-ng supports importing and exporting keyboard layouts in multiple formats:
 - Export layouts as PNG images with embedded layout data for documentation and sharing
 - Import PNG files with embedded layout data to recover the editable layout
 
+**Ergogen Format**
+
+[Ergogen](https://ergogen.xyz/) is a keyboard layout generator that uses YAML configuration to define ergonomic keyboard layouts.
+kle-ng can import layouts directly from ergogen.xyz share URLs (e.g., `https://ergogen.xyz/#N4Igxg9gdg...`).
+These URLs contain compressed YAML configurations that kle-ng decodes, processes with the Ergogen library,
+and converts to KLE format for editing. This allows you to take Ergogen-generated layouts and refine them in kle-ng.
+
 **VIA/Vial Format**
 
 [VIA](https://www.caniusevia.com/) and [Vial](https://get.vial.today/) are keyboard configuration tools
@@ -370,6 +377,7 @@ kle-ng supports multiple ways to import keyboard layouts:
   - **From URL**: Enter any of the supported URL formats:
     - **Direct JSON URLs**: Any publicly accessible JSON file
     - **GitHub Gists URL**: Link to a gist with a layout file (see gist requirements below)
+    - **Ergogen URLs**: ergogen.xyz share links (e.g., `https://ergogen.xyz/#N4Igxg9gdg...`)
     - **Share Links**: Existing share links from other kle-ng instances
 - **Drag and Drop**: Drag layout files directly onto the editor
 - **Share Links**: Open layouts shared via URL (see Share Links section below):
@@ -378,7 +386,7 @@ kle-ng supports multiple ways to import keyboard layouts:
 
 <img src="resources/gifs/file-drag-and-drop.gif">
 
-Supported file formats: JSON (KLE format), PNG (with embedded layout data), VIA/Vial JSON
+Supported file formats: JSON (KLE format), PNG (with embedded layout data), VIA/Vial JSON, Ergogen YAML
 
 **Gist File Requirements:**
 
