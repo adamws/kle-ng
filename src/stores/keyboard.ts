@@ -15,12 +15,11 @@ import {
   clearUrlFromHash,
 } from '../utils/url-sharing'
 import {
-  shrinkArray,
   createEmptyLabels,
   createEmptyTextColors,
   createEmptyTextSizes,
 } from '../utils/array-helpers'
-import { sortKeysForSerialization } from '../utils/serialization'
+import { getSerializedData as getSerializedDataUtil } from '../utils/serialization'
 import { useFontStore } from './font'
 import { svgCache } from '../utils/caches/SVGCache'
 import { parseCache } from '../utils/caches/ParseCache'
@@ -523,6 +522,8 @@ export const useKeyboardStore = defineStore('keyboard', () => {
 
   /**
    * Serializes the current keyboard layout in the specified format.
+   * Wrapper around the utility function that builds a Keyboard from the store state.
+   *
    * @param format - The serialization format:
    *   - 'internal': Returns Keyboard object (default)
    *   - 'kle': Returns KLE compact format (array-based)
@@ -533,106 +534,9 @@ export const useKeyboardStore = defineStore('keyboard', () => {
   const getSerializedData = (format: 'kle' | 'kle-internal' | 'internal' = 'internal'): any => {
     const keyboard = new Keyboard()
     keyboard.keys = JSON.parse(JSON.stringify(keys.value))
-
-    // Sort keys for optimal serialization
-    sortKeysForSerialization(keyboard.keys)
-
     keyboard.meta = JSON.parse(JSON.stringify(metadata.value))
 
-    if (format === 'kle') {
-      return Serial.serialize(getRoundedKeyboard(keyboard))
-    }
-
-    if (format === 'kle-internal') {
-      // Use getKleInternalFormatForExport to ensure correct property order
-      // This is necessary because Key instances, when JSON.stringified, have
-      // their array properties (labels, textColor, textSize) appearing last
-      // due to constructor initialization, which doesn't match the expected order
-      return getKleInternalFormatForExport(keyboard)
-    }
-
-    return keyboard
-  }
-
-  const getRoundedKeyboard = (keyboard: Keyboard): Keyboard => {
-    const roundToSixDecimals = (value: number): number => {
-      return D.round(value, 6)
-    }
-
-    const roundedKeys = keyboard.keys.map((key) => {
-      const roundedKey = { ...key }
-
-      // Round all numeric properties to 6 decimal places
-      if (typeof roundedKey.x === 'number') roundedKey.x = roundToSixDecimals(roundedKey.x)
-      if (typeof roundedKey.y === 'number') roundedKey.y = roundToSixDecimals(roundedKey.y)
-      if (typeof roundedKey.width === 'number')
-        roundedKey.width = roundToSixDecimals(roundedKey.width)
-      if (typeof roundedKey.height === 'number')
-        roundedKey.height = roundToSixDecimals(roundedKey.height)
-      if (typeof roundedKey.x2 === 'number') roundedKey.x2 = roundToSixDecimals(roundedKey.x2)
-      if (typeof roundedKey.y2 === 'number') roundedKey.y2 = roundToSixDecimals(roundedKey.y2)
-      if (typeof roundedKey.width2 === 'number')
-        roundedKey.width2 = roundToSixDecimals(roundedKey.width2)
-      if (typeof roundedKey.height2 === 'number')
-        roundedKey.height2 = roundToSixDecimals(roundedKey.height2)
-      if (typeof roundedKey.rotation_x === 'number')
-        roundedKey.rotation_x = roundToSixDecimals(roundedKey.rotation_x)
-      if (typeof roundedKey.rotation_y === 'number')
-        roundedKey.rotation_y = roundToSixDecimals(roundedKey.rotation_y)
-      if (typeof roundedKey.rotation_angle === 'number')
-        roundedKey.rotation_angle = roundToSixDecimals(roundedKey.rotation_angle)
-
-      return roundedKey
-    })
-
-    const roundedKeyboard = new Keyboard()
-    roundedKeyboard.keys = roundedKeys
-    roundedKeyboard.meta = keyboard.meta
-
-    return roundedKeyboard
-  }
-
-  /**
-   * Helper to create kle-internal format with shrunk arrays for file export.
-   * This is necessary because Key instances, when JSON.stringified, have
-   * their array properties (labels, textColor, textSize) appearing last
-   * due to constructor initialization, which doesn't match the expected order.
-   * @param keyboard - The keyboard to serialize
-   * @returns Serialized keyboard with shrunk arrays and proper property order
-   */
-  const getKleInternalFormatForExport = (keyboard: Keyboard) => {
-    const roundedKeyboard = getRoundedKeyboard(keyboard)
-
-    // Create plain objects with shrunk arrays
-    return {
-      meta: roundedKeyboard.meta,
-      keys: roundedKeyboard.keys.map((key) => ({
-        color: key.color,
-        labels: shrinkArray(key.labels),
-        textColor: shrinkArray(key.textColor),
-        textSize: shrinkArray(key.textSize),
-        default: key.default,
-        x: key.x,
-        y: key.y,
-        width: key.width,
-        height: key.height,
-        x2: key.x2,
-        y2: key.y2,
-        width2: key.width2,
-        height2: key.height2,
-        rotation_x: key.rotation_x,
-        rotation_y: key.rotation_y,
-        rotation_angle: key.rotation_angle,
-        decal: key.decal,
-        ghost: key.ghost,
-        stepped: key.stepped,
-        nub: key.nub,
-        profile: key.profile,
-        sm: key.sm,
-        sb: key.sb,
-        st: key.st,
-      })),
-    }
+    return getSerializedDataUtil(keyboard, format)
   }
 
   const loadKLELayout = (kleData: unknown) => {

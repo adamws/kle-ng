@@ -85,7 +85,7 @@
     <input
       ref="fileInput"
       type="file"
-      accept=".json,.png"
+      accept=".json,.png,.yaml,.yml"
       @change="handleFileUpload"
       style="display: none"
     />
@@ -155,7 +155,12 @@ import { parseBorderRadius, createRoundedRectanglePath } from '@/utils/border-ra
 import { createPngWithKleLayout, extractKleLayout, hasKleMetadata } from '@/utils/png-metadata'
 import { isViaFormat, convertViaToKle, convertKleToVia } from '@/utils/via-import'
 import { decodeLayoutFromUrl, fetchGistLayout } from '@/utils/url-sharing'
+import { ergogenPointsToKeyboard } from '@/utils/ergogen-converter'
 import LZString from 'lz-string'
+import yaml from 'js-yaml'
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore - ergogen is a JavaScript library without type definitions
+import ergogen from 'ergogen'
 
 // Store
 const keyboardStore = useKeyboardStore()
@@ -271,6 +276,45 @@ const handleFileUpload = async (event: Event) => {
           'This PNG file does not contain layout data. Only PNG files exported from this tool contain the necessary metadata to import layouts.',
           'No Layout Data',
         )
+      }
+      return
+    }
+
+    // Handle YAML files (Ergogen format)
+    if (file.name.toLowerCase().endsWith('.yaml') || file.name.toLowerCase().endsWith('.yml')) {
+      console.log(`Processing Ergogen YAML file: ${file.name}`)
+
+      try {
+        const text = await file.text()
+        const config = yaml.load(text)
+
+        // Process with ergogen to get points
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const results = await (ergogen as any).process(config, { debug: true })
+
+        if (!results.points || Object.keys(results.points).length === 0) {
+          throw new Error('No points generated from Ergogen config')
+        }
+
+        // Convert ergogen points to Keyboard
+        const keyboard = ergogenPointsToKeyboard(results.points)
+
+        // Load the keyboard
+        keyboardStore.loadKeyboard(keyboard)
+        keyboardStore.filename = filenameWithoutExt
+
+        toast.showSuccess(
+          `Ergogen layout imported: ${Object.keys(results.points).length} keys`,
+          'Import Successful',
+        )
+      } catch (error) {
+        console.error('Error processing Ergogen YAML:', error)
+        const errorMessage =
+          error instanceof Error
+            ? `Ergogen conversion failed: ${error.message}`
+            : 'Failed to process Ergogen YAML'
+        toast.showError(errorMessage, 'Ergogen Import Failed')
+        throw error
       }
       return
     }

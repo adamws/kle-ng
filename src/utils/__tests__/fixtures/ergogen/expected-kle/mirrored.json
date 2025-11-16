@@ -1,0 +1,43 @@
+[
+  [
+    {
+      "x": 1
+    },
+    "matrix_ring_top",
+    {
+      "x": 2.263158
+    },
+    "mirror_matrix_ring_top"
+  ],
+  [
+    {
+      "y": -0.736842
+    },
+    "matrix_pinky_top",
+    {
+      "x": 4.263158
+    },
+    "mirror_matrix_pinky_top"
+  ],
+  [
+    {
+      "x": 1,
+      "y": -0.263158
+    },
+    "matrix_ring_bottom",
+    {
+      "x": 2.263158
+    },
+    "mirror_matrix_ring_bottom"
+  ],
+  [
+    {
+      "y": -0.736842
+    },
+    "matrix_pinky_bottom",
+    {
+      "x": 4.263158
+    },
+    "mirror_matrix_pinky_bottom"
+  ]
+]

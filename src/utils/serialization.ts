@@ -1,5 +1,7 @@
 import JSON5 from 'json5'
-import type { Key } from '@adamws/kle-serial'
+import { Key, Keyboard, Serial } from '@adamws/kle-serial'
+import { D } from './decimal-math'
+import { shrinkArray } from './array-helpers'
 
 /**
  * Sort keys for optimal serialization (matches keyboard-layout-editor approach).
@@ -104,4 +106,129 @@ function isLikelyKleArrayWithoutBrackets(input: string): boolean {
   ]
 
   return klePatterns.some((pattern) => pattern.test(trimmed))
+}
+
+/**
+ * Round all numeric properties of a keyboard to 6 decimal places
+ * for consistent serialization output.
+ *
+ * @param keyboard - The keyboard to round
+ * @returns A new keyboard with rounded numeric values
+ */
+export function getRoundedKeyboard(keyboard: Keyboard): Keyboard {
+  const roundToSixDecimals = (value: number): number => {
+    return D.round(value, 6)
+  }
+
+  const roundedKeys = keyboard.keys.map((key) => {
+    const roundedKey = { ...key }
+
+    // Round all numeric properties to 6 decimal places
+    if (typeof roundedKey.x === 'number') roundedKey.x = roundToSixDecimals(roundedKey.x)
+    if (typeof roundedKey.y === 'number') roundedKey.y = roundToSixDecimals(roundedKey.y)
+    if (typeof roundedKey.width === 'number')
+      roundedKey.width = roundToSixDecimals(roundedKey.width)
+    if (typeof roundedKey.height === 'number')
+      roundedKey.height = roundToSixDecimals(roundedKey.height)
+    if (typeof roundedKey.x2 === 'number') roundedKey.x2 = roundToSixDecimals(roundedKey.x2)
+    if (typeof roundedKey.y2 === 'number') roundedKey.y2 = roundToSixDecimals(roundedKey.y2)
+    if (typeof roundedKey.width2 === 'number')
+      roundedKey.width2 = roundToSixDecimals(roundedKey.width2)
+    if (typeof roundedKey.height2 === 'number')
+      roundedKey.height2 = roundToSixDecimals(roundedKey.height2)
+    if (typeof roundedKey.rotation_x === 'number')
+      roundedKey.rotation_x = roundToSixDecimals(roundedKey.rotation_x)
+    if (typeof roundedKey.rotation_y === 'number')
+      roundedKey.rotation_y = roundToSixDecimals(roundedKey.rotation_y)
+    if (typeof roundedKey.rotation_angle === 'number')
+      roundedKey.rotation_angle = roundToSixDecimals(roundedKey.rotation_angle)
+
+    return roundedKey
+  })
+
+  return {
+    meta: keyboard.meta,
+    keys: roundedKeys,
+  }
+}
+
+/**
+ * Get KLE internal format with proper property ordering for JSON export.
+ * This ensures that when stringified, properties appear in the correct order
+ * (matching keyboard-layout-editor behavior).
+ *
+ * Note: This is necessary because Key instances, when JSON.stringified, have
+ * their array properties (labels, textColor, textSize) appearing last
+ * due to constructor initialization, which doesn't match the expected order.
+ *
+ * @param keyboard - The keyboard to serialize
+ * @returns Serialized keyboard with shrunk arrays and proper property order
+ */
+export function getKleInternalFormatForExport(keyboard: Keyboard) {
+  const roundedKeyboard = getRoundedKeyboard(keyboard)
+
+  // Create plain objects with shrunk arrays
+  return {
+    meta: roundedKeyboard.meta,
+    keys: roundedKeyboard.keys.map((key) => ({
+      color: key.color,
+      labels: shrinkArray(key.labels),
+      textColor: shrinkArray(key.textColor),
+      textSize: shrinkArray(key.textSize),
+      default: key.default,
+      x: key.x,
+      y: key.y,
+      width: key.width,
+      height: key.height,
+      x2: key.x2,
+      y2: key.y2,
+      width2: key.width2,
+      height2: key.height2,
+      rotation_x: key.rotation_x,
+      rotation_y: key.rotation_y,
+      rotation_angle: key.rotation_angle,
+      decal: key.decal,
+      ghost: key.ghost,
+      stepped: key.stepped,
+      nub: key.nub,
+      profile: key.profile,
+      sm: key.sm,
+      sb: key.sb,
+      st: key.st,
+    })),
+  }
+}
+
+/**
+ * Serialize a keyboard to the specified format.
+ *
+ * @param keyboard - The keyboard to serialize
+ * @param format - The output format:
+ *   - 'internal': Returns the Keyboard object directly (no serialization)
+ *   - 'kle': Returns KLE compact format (array-based)
+ *   - 'kle-internal': Returns object format with proper property ordering for JSON export
+ * @returns The serialized keyboard data
+ */
+
+export function getSerializedData(
+  keyboard: Keyboard,
+  format: 'kle' | 'kle-internal' | 'internal' = 'internal',
+): unknown[] | Keyboard | ReturnType<typeof getKleInternalFormatForExport> {
+  // Clone the keyboard to avoid modifying the original
+  const clonedKeyboard = new Keyboard()
+  clonedKeyboard.keys = JSON.parse(JSON.stringify(keyboard.keys))
+  clonedKeyboard.meta = JSON.parse(JSON.stringify(keyboard.meta))
+
+  // Sort keys for optimal serialization
+  sortKeysForSerialization(clonedKeyboard.keys)
+
+  if (format === 'kle') {
+    return Serial.serialize(getRoundedKeyboard(clonedKeyboard))
+  }
+
+  if (format === 'kle-internal') {
+    return getKleInternalFormatForExport(clonedKeyboard)
+  }
+
+  return clonedKeyboard
 }

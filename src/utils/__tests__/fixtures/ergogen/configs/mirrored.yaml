@@ -1,0 +1,17 @@
+# Split keyboard with mirroring
+# Tests mirror functionality for split layouts
+meta:
+  engine: 4.1.0
+points:
+  zones:
+    matrix:
+      columns:
+        pinky:
+        ring:
+          key.stagger: 5
+      rows:
+        bottom:
+        top:
+  mirror:
+    ref: matrix_pinky_bottom
+    distance: 100

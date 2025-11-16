@@ -1,0 +1,16 @@
+# Layout with rotated keys
+# Tests rotation handling with splay and origin offsets
+meta:
+  engine: 4.1.0
+points:
+  zones:
+    matrix:
+      anchor:
+        rotate: 10
+      columns:
+        col1:
+        col2:
+          key.splay: -15
+          key.origin: [-5, -10]
+      rows:
+        row1:
