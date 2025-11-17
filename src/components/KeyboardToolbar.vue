@@ -155,12 +155,9 @@ import { parseBorderRadius, createRoundedRectanglePath } from '@/utils/border-ra
 import { createPngWithKleLayout, extractKleLayout, hasKleMetadata } from '@/utils/png-metadata'
 import { isViaFormat, convertViaToKle, convertKleToVia } from '@/utils/via-import'
 import { decodeLayoutFromUrl, fetchGistLayout } from '@/utils/url-sharing'
-import { ergogenPointsToKeyboard } from '@/utils/ergogen-converter'
+import { ergogenGetPoints, ergogenPointsToKeyboard } from '@/utils/ergogen-converter'
 import LZString from 'lz-string'
 import yaml from 'js-yaml'
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore - ergogen is a JavaScript library without type definitions
-import ergogen from 'ergogen'
 
 // Store
 const keyboardStore = useKeyboardStore()
@@ -288,23 +285,21 @@ const handleFileUpload = async (event: Event) => {
         const text = await file.text()
         const config = yaml.load(text)
 
-        // Process with ergogen to get points
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const results = await (ergogen as any).process(config, { debug: true })
+        const points = await ergogenGetPoints(config)
 
-        if (!results.points || Object.keys(results.points).length === 0) {
+        if (!points || Object.keys(points).length === 0) {
           throw new Error('No points generated from Ergogen config')
         }
 
         // Convert ergogen points to Keyboard
-        const keyboard = ergogenPointsToKeyboard(results.points)
+        const keyboard = ergogenPointsToKeyboard(points)
 
         // Load the keyboard
         keyboardStore.loadKeyboard(keyboard)
         keyboardStore.filename = filenameWithoutExt
 
         toast.showSuccess(
-          `Ergogen layout imported: ${Object.keys(results.points).length} keys`,
+          `Ergogen layout imported: ${Object.keys(points).length} keys`,
           'Import Successful',
         )
       } catch (error) {
@@ -799,24 +794,21 @@ const importFromErgogenUrl = async (ergogenUrl: string) => {
     // Parse YAML config
     const config = yaml.load(data.config)
 
-    // Process with ergogen
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore - ergogen.process() accepts second parameter but types are incomplete
-    const results = await ergogen.process(config, { debug: true })
+    const points = await ergogenGetPoints(config)
 
-    if (!results.points || Object.keys(results.points).length === 0) {
+    if (!points || Object.keys(points).length === 0) {
       throw new Error('No points generated from Ergogen config')
     }
 
     // Convert to Keyboard
-    const keyboard = ergogenPointsToKeyboard(results.points)
+    const keyboard = ergogenPointsToKeyboard(points)
 
     // Load the keyboard
     keyboardStore.loadKeyboard(keyboard)
     keyboardStore.filename = 'ergogen-import'
 
     toast.showSuccess(
-      `Ergogen layout imported from URL: ${Object.keys(results.points).length} keys`,
+      `Ergogen layout imported from URL: ${Object.keys(points).length} keys`,
       'Import Successful',
     )
   } catch (error) {

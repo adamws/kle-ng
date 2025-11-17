@@ -1,5 +1,8 @@
 import { Key, Keyboard } from '@adamws/kle-serial'
 import Decimal from 'decimal.js'
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore - ergogen is a JavaScript library without type definitions
+import ergogen from 'ergogen'
 
 /**
  * TypeScript interfaces for Ergogen data structures
@@ -30,6 +33,37 @@ export interface ErgogenPoint {
 }
 
 export type ErgogenPoints = Record<string, ErgogenPoint>
+
+export async function ergogenGetPoints(config: unknown): Promise<ErgogenPoints> {
+  if (!config || typeof config !== 'object' || !('points' in config)) {
+    throw new Error("Config does not contain 'points'")
+  }
+
+  const configWithPoints = config as { points: unknown; units?: unknown }
+
+  // ergogen used by ergogen.xyz (website) is patched and supports footprints
+  // which are not supported on current ergogen upstream release
+  // this means that layouts exported with ergogen.xyz may not be compatible
+  // with ergogen package we use in kle-ng
+  // For that reason, ignore everything except the 'points' and 'units'
+  // (we do not need anything else anyway)
+
+  // Process with ergogen - include units if defined
+  const ergogenConfig: { points: unknown; units?: unknown } = { points: configWithPoints.points }
+  if (configWithPoints.units !== undefined) {
+    ergogenConfig.units = configWithPoints.units
+  }
+
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore - ergogen.process() accepts second parameter but types are incomplete
+  const results = await ergogen.process(ergogenConfig, { debug: true })
+
+  if (!results.points) {
+    throw new Error('Ergogen processing did not generate any points')
+  }
+
+  return results.points as ErgogenPoints
+}
 
 /**
  * Convert ergogen points to a Keyboard object

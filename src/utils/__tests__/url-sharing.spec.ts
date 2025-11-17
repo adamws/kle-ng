@@ -606,11 +606,8 @@ describe('url-sharing', () => {
       })
 
       it('should extract YAML config that can be processed by ergogen', async () => {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore - ergogen is a JavaScript library without type definitions
-        const ergogen = (await import('ergogen')).default
         const yaml = await import('js-yaml')
-        const { ergogenPointsToKeyboard } = await import('../ergogen-converter')
+        const { ergogenGetPoints, ergogenPointsToKeyboard } = await import('../ergogen-converter')
 
         mockLocation.href = ERGOGEN_URL
         mockLocation.hash = `#${ERGOGEN_HASH}`
@@ -623,15 +620,11 @@ describe('url-sharing', () => {
         const config = yaml.load(extracted!.config)
         expect(config).toBeDefined()
 
-        // Process with ergogen
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore - ergogen.process() accepts second parameter but types are incomplete
-        const results = await ergogen.process(config, { debug: true })
-        expect(results).toBeDefined()
-        expect(results.points).toBeDefined()
+        const points = await ergogenGetPoints(config)
+        expect(points).toBeDefined()
 
         // Convert to keyboard
-        const keyboard = ergogenPointsToKeyboard(results.points)
+        const keyboard = ergogenPointsToKeyboard(points)
         expect(keyboard).toBeDefined()
         expect(keyboard.keys).toBeDefined()
         expect(keyboard.keys.length).toBeGreaterThan(0)

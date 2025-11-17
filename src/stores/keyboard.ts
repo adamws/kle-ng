@@ -25,11 +25,8 @@ import { useFontStore } from './font'
 import { svgCache } from '../utils/caches/SVGCache'
 import { parseCache } from '../utils/caches/ParseCache'
 import { imageCache } from '../utils/caches/ImageCache'
-import { ergogenPointsToKeyboard } from '../utils/ergogen-converter'
+import { ergogenGetPoints, ergogenPointsToKeyboard } from '../utils/ergogen-converter'
 import yaml from 'js-yaml'
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore - ergogen is a JavaScript library without type definitions
-import ergogen from 'ergogen'
 
 export { Key, Keyboard, KeyboardMetadata, type Array12 } from '@adamws/kle-serial'
 
@@ -1408,17 +1405,14 @@ export const useKeyboardStore = defineStore('keyboard', () => {
           // Parse YAML config
           const config = yaml.load(ergogenData.config)
 
-          // Process with ergogen
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore - ergogen.process() accepts second parameter but types are incomplete
-          const results = await ergogen.process(config, { debug: true })
+          const points = await ergogenGetPoints(config)
 
-          if (!results.points || Object.keys(results.points).length === 0) {
+          if (!points || Object.keys(points).length === 0) {
             throw new Error('No points generated from Ergogen config')
           }
 
           // Convert to Keyboard (preserve spacing metadata)
-          const keyboard = ergogenPointsToKeyboard(results.points)
+          const keyboard = ergogenPointsToKeyboard(points)
 
           // Load the keyboard
           loadKeyboard(keyboard)
@@ -1427,7 +1421,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
           window.history.replaceState({}, document.title, window.location.href.split('#')[0])
 
           toast.showSuccess(
-            `Ergogen layout imported from URL: ${Object.keys(results.points).length} keys`,
+            `Ergogen layout imported from URL: ${Object.keys(points).length} keys`,
             'Import Successful',
           )
 
