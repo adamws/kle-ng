@@ -34,20 +34,47 @@ Events:
       <table class="table table-sm table-bordered table-hover mb-0">
         <thead>
           <tr>
-            <th class="fw-semibold small border-top-0">#</th>
-            <th class="fw-semibold small border-top-0">X ({{ units }})</th>
-            <th class="fw-semibold small border-top-0">Y ({{ units }})</th>
+            <th
+              class="fw-semibold small border-top-0 sortable-header"
+              @click="handleSort('index')"
+              :class="{ sorted: sortColumn === 'index' }"
+            >
+              <div class="d-flex align-items-center justify-content-between">
+                <span>#</span>
+                <i :class="['bi', getSortIcon('index')]" class="sort-icon"></i>
+              </div>
+            </th>
+            <th
+              class="fw-semibold small border-top-0 sortable-header"
+              @click="handleSort('x')"
+              :class="{ sorted: sortColumn === 'x' }"
+            >
+              <div class="d-flex align-items-center justify-content-between">
+                <span>X ({{ units }})</span>
+                <i :class="['bi', getSortIcon('x')]" class="sort-icon"></i>
+              </div>
+            </th>
+            <th
+              class="fw-semibold small border-top-0 sortable-header"
+              @click="handleSort('y')"
+              :class="{ sorted: sortColumn === 'y' }"
+            >
+              <div class="d-flex align-items-center justify-content-between">
+                <span>Y ({{ units }})</span>
+                <i :class="['bi', getSortIcon('y')]" class="sort-icon"></i>
+              </div>
+            </th>
           </tr>
         </thead>
         <tbody>
           <tr
-            v-for="(item, index) in keyCenters"
-            :key="index"
+            v-for="item in keyCenters"
+            :key="item.originalIndex"
             :class="{ 'table-active': isHovered(item.key) }"
             @mouseenter="handleRowHover(item.key)"
             @mouseleave="handleRowLeave()"
           >
-            <td class="small">{{ index }}</td>
+            <td class="small">{{ item.originalIndex }}</td>
             <td class="small font-monospace">
               {{ formatCoordinate(item.center.x, 'x') }}
             </td>
@@ -62,10 +89,14 @@ Events:
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useKeyboardStore, type Key } from '@/stores/keyboard'
 import { getKeyCenter } from '@/utils/keyboard-geometry'
 import { D } from '@/utils/decimal-math'
+
+// Sorting types
+type SortColumn = 'index' | 'x' | 'y'
+type SortDirection = 'asc' | 'desc'
 
 // Define props
 interface Props {
@@ -79,6 +110,34 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const keyboardStore = useKeyboardStore()
+
+// Sorting state
+const sortColumn = ref<SortColumn>('index')
+const sortDirection = ref<SortDirection>('asc')
+
+/**
+ * Handle column header click for sorting
+ */
+const handleSort = (column: SortColumn) => {
+  if (sortColumn.value === column) {
+    // Toggle direction if same column
+    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    // Set new column with ascending direction
+    sortColumn.value = column
+    sortDirection.value = 'asc'
+  }
+}
+
+/**
+ * Get sort icon for a column
+ */
+const getSortIcon = (column: SortColumn): string => {
+  if (sortColumn.value !== column) {
+    return 'bi-arrow-down-up' // Neutral sort icon
+  }
+  return sortDirection.value === 'asc' ? 'bi-sort-numeric-down' : 'bi-sort-numeric-up'
+}
 
 /**
  * Format coordinate value according to selected units
@@ -98,13 +157,38 @@ const formatCoordinate = (value: number, axis: 'x' | 'y'): string => {
 }
 
 /**
- * Calculate center positions for all keys in KLE order
+ * Calculate center positions for all keys with sorting applied
  */
 const keyCenters = computed(() => {
-  return keyboardStore.keys.map((key) => ({
+  const items = keyboardStore.keys.map((key, index) => ({
     key,
     center: getKeyCenter(key),
+    originalIndex: index,
   }))
+
+  // Apply sorting
+  return items.sort((a, b) => {
+    let valueA: number
+    let valueB: number
+
+    switch (sortColumn.value) {
+      case 'index':
+        valueA = a.originalIndex
+        valueB = b.originalIndex
+        break
+      case 'x':
+        valueA = a.center.x
+        valueB = b.center.x
+        break
+      case 'y':
+        valueA = a.center.y
+        valueB = b.center.y
+        break
+    }
+
+    const comparison = valueA - valueB
+    return sortDirection.value === 'asc' ? comparison : -comparison
+  })
 })
 
 /**
@@ -177,10 +261,47 @@ const handleRowLeave = () => {
   font-variant-numeric: tabular-nums;
 }
 
+/* Sortable header styles */
+.sortable-header {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease;
+  position: relative;
+}
+
+.sortable-header:hover {
+  background-color: var(--bs-secondary-bg-subtle);
+}
+
+.sortable-header.sorted {
+  background-color: var(--bs-primary-bg-subtle);
+}
+
+/* Sort icon styles */
+.sort-icon {
+  font-size: 0.75rem;
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
+  min-width: 12px;
+}
+
+.sortable-header.sorted .sort-icon {
+  opacity: 1;
+}
+
+.sortable-header:hover .sort-icon {
+  opacity: 0.8;
+}
+
 /* Responsive adjustments */
 @media (max-width: 576px) {
   .table-wrapper {
     max-height: 300px;
+  }
+
+  /* Hide sort icons on very small screens to save space */
+  .sort-icon {
+    display: none;
   }
 }
 </style>

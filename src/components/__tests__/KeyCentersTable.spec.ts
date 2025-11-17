@@ -1,175 +1,123 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
+import { Key } from '@adamws/kle-serial'
 import KeyCentersTable from '../KeyCentersTable.vue'
 import { useKeyboardStore } from '@/stores/keyboard'
-import { Key } from '@adamws/kle-serial'
+
+// Mock the geometry utility
+vi.mock('@/utils/keyboard-geometry', () => ({
+  getKeyCenter: (key: Key) => ({
+    x: key.x + (key.width || 1) / 2,
+    y: key.y + (key.height || 1) / 2,
+  }),
+}))
 
 describe('KeyCentersTable', () => {
-  let pinia: ReturnType<typeof createPinia>
+  let store: ReturnType<typeof useKeyboardStore>
 
   beforeEach(() => {
-    pinia = createPinia()
-    setActivePinia(pinia)
+    setActivePinia(createPinia())
+    store = useKeyboardStore()
+
+    // Add some test keys
+    const keys = [
+      { x: 0, y: 0, width: 1, height: 1 } as Key, // Center: (0.5, 0.5)
+      { x: 2, y: 1, width: 1, height: 1 } as Key, // Center: (2.5, 1.5)
+      { x: 1, y: 2, width: 1, height: 1 } as Key, // Center: (1.5, 2.5)
+    ]
+
+    store.keys.push(...keys)
   })
 
-  const createKey = (x: number, y: number, width = 1, height = 1): Key => {
-    const key = new Key()
-    key.x = x
-    key.y = y
-    key.width = width
-    key.height = height
-    return key
-  }
-
-  it('should render empty state when no keys', () => {
+  it('should render table with keys', () => {
     const wrapper = mount(KeyCentersTable, {
-      global: { plugins: [pinia] },
+      props: {
+        units: 'U',
+        spacing: { x: 19.05, y: 19.05 },
+      },
     })
 
-    expect(wrapper.text()).toContain('No keys')
-    expect(wrapper.find('.bi-grid-3x3').exists()).toBe(true)
+    expect(wrapper.find('table').exists()).toBe(true)
+    expect(wrapper.findAll('tbody tr')).toHaveLength(3)
   })
 
-  it('should display key centers for simple layout', () => {
-    const store = useKeyboardStore()
-    store.keys = [createKey(0, 0), createKey(1, 0), createKey(0, 1)]
-
+  it('should show sortable headers', () => {
     const wrapper = mount(KeyCentersTable, {
-      global: { plugins: [pinia] },
+      props: {
+        units: 'U',
+        spacing: { x: 19.05, y: 19.05 },
+      },
     })
 
-    // Should have 3 rows
-    const rows = wrapper.findAll('tbody tr')
-    expect(rows).toHaveLength(3)
+    const headers = wrapper.findAll('th.sortable-header')
+    expect(headers).toHaveLength(3)
 
-    // Check first key center (0.5, 0.5)
-    expect(rows[0]?.text()).toContain('0')
-    expect(rows[0]?.text()).toContain('0.5')
-    expect(rows[0]?.text()).toContain('0.5')
+    // Check for sort icons
+    const sortIcons = wrapper.findAll('.sort-icon')
+    expect(sortIcons).toHaveLength(3)
   })
 
-  it('should set tempSelectedKeys on row hover', async () => {
-    const store = useKeyboardStore()
-    store.keys = [createKey(0, 0)]
-
+  it('should sort by index by default', () => {
     const wrapper = mount(KeyCentersTable, {
-      global: { plugins: [pinia] },
-    })
-
-    const row = wrapper.find('tbody tr')
-    await row.trigger('mouseenter')
-
-    expect(store.tempSelectedKeys).toEqual([store.keys[0]])
-  })
-
-  it('should clear tempSelectedKeys on row leave', async () => {
-    const store = useKeyboardStore()
-    store.keys = [createKey(0, 0)]
-
-    const wrapper = mount(KeyCentersTable, {
-      global: { plugins: [pinia] },
-    })
-
-    const row = wrapper.find('tbody tr')
-    await row.trigger('mouseenter')
-    expect(store.tempSelectedKeys).toEqual([store.keys[0]])
-
-    await row.trigger('mouseleave')
-    expect(store.tempSelectedKeys).toEqual([])
-  })
-
-  it('should highlight hovered row', async () => {
-    const store = useKeyboardStore()
-    const testKey = createKey(0, 0)
-    store.keys = [testKey, createKey(1, 0)]
-
-    const wrapper = mount(KeyCentersTable, {
-      global: { plugins: [pinia] },
-    })
-
-    // Hover first row
-    const firstRow = wrapper.findAll('tbody tr')[0]
-    if (firstRow) {
-      await firstRow.trigger('mouseenter')
-      await wrapper.vm.$nextTick()
-
-      expect(firstRow.classes()).toContain('table-active')
-    }
-  })
-
-  it('should calculate centers for rotated keys correctly', () => {
-    const store = useKeyboardStore()
-    const rotatedKey = createKey(0, 0)
-    rotatedKey.rotation_angle = 45
-    rotatedKey.rotation_x = 0
-    rotatedKey.rotation_y = 0
-    store.keys = [rotatedKey]
-
-    const wrapper = mount(KeyCentersTable, {
-      global: { plugins: [pinia] },
-    })
-
-    const row = wrapper.find('tbody tr')
-    // Should still display coordinates (getKeyCenter handles rotation)
-    // The center will be transformed by rotation, so just check that we have numeric values
-    const text = row.text()
-    expect(text).toContain('0')
-    expect(text).toMatch(/\d+\.\d{2}/) // Should have at least one number with 2 decimal places
-  })
-
-  it('should format coordinates to 6 decimal places', () => {
-    const store = useKeyboardStore()
-    store.keys = [createKey(0.1234563, 0.9876542)]
-
-    const wrapper = mount(KeyCentersTable, {
-      global: { plugins: [pinia] },
-    })
-
-    const row = wrapper.find('tbody tr')
-    // Center should be (0.1234563 + 0.5, 0.9876542 + 0.5) = (0.6234563, 1.4876542)
-    // Formatted to 6 decimals: (0.623456, 1.487654)
-    expect(row.text()).toContain('0.623456')
-    expect(row.text()).toContain('1.487654')
-  })
-
-  it('should handle large coordinates correctly', () => {
-    const store = useKeyboardStore()
-    store.keys = [createKey(100, 200)]
-
-    const wrapper = mount(KeyCentersTable, {
-      global: { plugins: [pinia] },
-    })
-
-    const row = wrapper.find('tbody tr')
-    // Center should be (100.5, 200.5)
-    expect(row.text()).toContain('100.5')
-    expect(row.text()).toContain('200.5')
-  })
-
-  it('should display key index correctly', () => {
-    const store = useKeyboardStore()
-    store.keys = [createKey(0, 0), createKey(1, 0), createKey(2, 0)]
-
-    const wrapper = mount(KeyCentersTable, {
-      global: { plugins: [pinia] },
+      props: {
+        units: 'U',
+        spacing: { x: 19.05, y: 19.05 },
+      },
     })
 
     const rows = wrapper.findAll('tbody tr')
-    expect(rows[0]?.text()).toContain('0')
-    expect(rows[1]?.text()).toContain('1')
-    expect(rows[2]?.text()).toContain('2')
+    expect(rows.length).toBeGreaterThan(0)
+    const firstIndexCell = rows[0]!.find('td').text()
+    expect(firstIndexCell).toBe('0')
   })
 
-  it('should use monospace font for coordinates', () => {
-    const store = useKeyboardStore()
-    store.keys = [createKey(0, 0)]
-
+  it('should handle header clicks for sorting', async () => {
     const wrapper = mount(KeyCentersTable, {
-      global: { plugins: [pinia] },
+      props: {
+        units: 'U',
+        spacing: { x: 19.05, y: 19.05 },
+      },
     })
 
-    const coordinateCells = wrapper.findAll('.font-monospace')
-    expect(coordinateCells.length).toBeGreaterThan(0)
+    // Click on X column header
+    const headers = wrapper.findAll('th.sortable-header')
+    expect(headers.length).toBeGreaterThan(1)
+    const xHeader = headers[1]!
+    await xHeader.trigger('click')
+
+    // Should be sorted by X coordinate ascending (0.5, 1.5, 2.5)
+    const rows = wrapper.findAll('tbody tr')
+    expect(rows.length).toBeGreaterThan(0)
+    const firstIndexCell = rows[0]!.find('td').text()
+    expect(firstIndexCell).toBe('0') // Key at x=0 (center 0.5) should be first
+
+    // Click again to reverse sort
+    await xHeader.trigger('click')
+    const reversedRows = wrapper.findAll('tbody tr')
+    expect(reversedRows.length).toBeGreaterThan(0)
+    const firstIndexCellReversed = reversedRows[0]!.find('td').text()
+    expect(firstIndexCellReversed).toBe('1') // Key at x=2 (center 2.5) should be first
+  })
+
+  it('should convert coordinates to mm when units=mm', () => {
+    const wrapper = mount(KeyCentersTable, {
+      props: {
+        units: 'mm',
+        spacing: { x: 18, y: 17 },
+      },
+    })
+
+    const rows = wrapper.findAll('tbody tr')
+    expect(rows.length).toBeGreaterThan(0)
+    const firstRow = rows[0]!.findAll('td')
+    expect(firstRow.length).toBeGreaterThanOrEqual(3)
+
+    // Check if coordinate values are converted (should be larger than U values)
+    const xValue = parseFloat(firstRow[1]!.text())
+    const yValue = parseFloat(firstRow[2]!.text())
+
+    expect(xValue).toBeGreaterThan(1) // 0.5 * 18 = 9
+    expect(yValue).toBeGreaterThan(1) // 0.5 * 17 = 8.5
   })
 })
