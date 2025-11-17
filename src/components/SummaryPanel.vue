@@ -131,28 +131,98 @@
       <!-- Column 2: Key Center Positions -->
       <div class="col-lg-3 col-md-6">
         <div class="property-group">
-          <h6 class="property-group-title mb-2">Key Center Positions</h6>
-          <KeyCentersTable />
+          <div class="d-flex justify-content-between align-items-center mb-0">
+            <h6 class="property-group-title mb-2">Key Center Positions</h6>
+            <!-- Toggle for unit mode -->
+            <div
+              style="margin-top: -8px"
+              class="btn-group"
+              role="group"
+              aria-label="Key centers unit mode"
+            >
+              <input
+                type="radio"
+                class="btn-check"
+                id="centers-units-u"
+                value="U"
+                v-model="keyCenterUnits"
+                autocomplete="off"
+              />
+              <label class="btn btn-outline-primary btn-xs" for="centers-units-u">U</label>
+
+              <input
+                type="radio"
+                class="btn-check"
+                id="centers-units-mm"
+                value="mm"
+                v-model="keyCenterUnits"
+                autocomplete="off"
+              />
+              <label class="btn btn-outline-primary btn-xs" for="centers-units-mm">mm</label>
+            </div>
+          </div>
+          <KeyCentersTable :units="keyCenterUnits" :spacing="spacingInfo" />
         </div>
       </div>
 
       <!-- Column 3: Keyboard Dimensions -->
       <div class="col-lg-3 col-md-6">
         <div class="property-group">
-          <h6 class="property-group-title mb-2">Keyboard Dimensions</h6>
+          <div class="d-flex justify-content-between align-items-center mb-0">
+            <h6 class="property-group-title mb-2">Keyboard Dimensions</h6>
+            <!-- Toggle for unit mode -->
+            <div
+              style="margin-top: -8px"
+              class="btn-group"
+              role="group"
+              aria-label="Dimensions unit mode"
+            >
+              <input
+                type="radio"
+                class="btn-check"
+                id="dimensions-units-u"
+                value="U"
+                v-model="dimensionUnits"
+                autocomplete="off"
+              />
+              <label class="btn btn-outline-primary btn-xs" for="dimensions-units-u">U</label>
+
+              <input
+                type="radio"
+                class="btn-check"
+                id="dimensions-units-mm"
+                value="mm"
+                v-model="dimensionUnits"
+                autocomplete="off"
+              />
+              <label class="btn btn-outline-primary btn-xs" for="dimensions-units-mm">mm</label>
+            </div>
+          </div>
           <div v-if="keyboardDimensions" class="table-responsive">
             <!-- Show dimensions if available -->
             <table class="table table-sm table-bordered mb-0">
               <thead>
                 <tr>
-                  <th class="fw-semibold small border-top-0">Width (U)</th>
-                  <th class="fw-semibold small border-top-0">Height (U)</th>
+                  <th class="fw-semibold small border-top-0">Width ({{ dimensionUnits }})</th>
+                  <th class="fw-semibold small border-top-0">Height ({{ dimensionUnits }})</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td class="small align-middle">{{ keyboardDimensions.widthFormatted }}</td>
-                  <td class="small align-middle">{{ keyboardDimensions.heightFormatted }}</td>
+                  <td class="small align-middle">
+                    {{
+                      dimensionUnits === 'U'
+                        ? keyboardDimensions.widthFormatted
+                        : keyboardDimensions.widthMmFormatted
+                    }}
+                  </td>
+                  <td class="small align-middle">
+                    {{
+                      dimensionUnits === 'U'
+                        ? keyboardDimensions.heightFormatted
+                        : keyboardDimensions.heightMmFormatted
+                    }}
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -180,9 +250,21 @@ const keyboardStore = useKeyboardStore()
 // View mode toggle
 const viewMode = ref<'size' | 'size-color'>('size')
 
+// Unit toggles for key centers and dimensions (default to 'U')
+const keyCenterUnits = ref<'U' | 'mm'>('U')
+const dimensionUnits = ref<'U' | 'mm'>('U')
+
+// Get spacing information from metadata (default to 19.05x19.05 if missing)
+const spacingInfo = computed(() => {
+  return {
+    x: keyboardStore.metadata.spacing_x || 19.05,
+    y: keyboardStore.metadata.spacing_y || 19.05,
+  }
+})
+
 // Calculate keyboard dimensions
 const keyboardDimensions = computed(() => {
-  return calculateKeyboardDimensions(keyboardStore.keys)
+  return calculateKeyboardDimensions(keyboardStore.keys, spacingInfo.value)
 })
 
 // Calculate total keys

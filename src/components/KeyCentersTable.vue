@@ -35,8 +35,8 @@ Events:
         <thead>
           <tr>
             <th class="fw-semibold small border-top-0">#</th>
-            <th class="fw-semibold small border-top-0">X (U)</th>
-            <th class="fw-semibold small border-top-0">Y (U)</th>
+            <th class="fw-semibold small border-top-0">X ({{ units }})</th>
+            <th class="fw-semibold small border-top-0">Y ({{ units }})</th>
           </tr>
         </thead>
         <tbody>
@@ -49,10 +49,10 @@ Events:
           >
             <td class="small">{{ index }}</td>
             <td class="small font-monospace">
-              {{ item.center.x.toFixed(6).replace(/\.?0+$/, '') }}
+              {{ formatCoordinate(item.center.x, 'x') }}
             </td>
             <td class="small font-monospace">
-              {{ item.center.y.toFixed(6).replace(/\.?0+$/, '') }}
+              {{ formatCoordinate(item.center.y, 'y') }}
             </td>
           </tr>
         </tbody>
@@ -65,8 +65,37 @@ Events:
 import { computed } from 'vue'
 import { useKeyboardStore, type Key } from '@/stores/keyboard'
 import { getKeyCenter } from '@/utils/keyboard-geometry'
+import { D } from '@/utils/decimal-math'
+
+// Define props
+interface Props {
+  units: 'U' | 'mm'
+  spacing: { x: number; y: number }
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  units: 'U',
+  spacing: () => ({ x: 19.05, y: 19.05 }),
+})
 
 const keyboardStore = useKeyboardStore()
+
+/**
+ * Format coordinate value according to selected units
+ */
+const formatCoordinate = (value: number, axis: 'x' | 'y'): string => {
+  if (props.units === 'U') {
+    // Return in units (no conversion needed)
+    return value.toFixed(6).replace(/\.?0+$/, '')
+  } else {
+    // Convert to mm using spacing
+    const spacingValue = axis === 'x' ? props.spacing.x : props.spacing.y
+    const mmValue = D.mul(value, spacingValue)
+    return Number(mmValue)
+      .toFixed(6)
+      .replace(/\.?0+$/, '')
+  }
+}
 
 /**
  * Calculate center positions for all keys in KLE order
