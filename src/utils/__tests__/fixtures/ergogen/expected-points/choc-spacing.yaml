@@ -1,0 +1,148 @@
+matrix_one_home:
+  x: 0
+  'y': 0
+  r: 0
+  meta:
+    stagger: 0
+    spread: 19
+    splay: 0
+    origin:
+      - 0
+      - 0
+    orient: 0
+    shift:
+      - 0
+      - 0
+    rotate: 0
+    adjust: {}
+    width: 18
+    height: 18
+    padding: 17
+    autobind: 10
+    skip: false
+    asym: both
+    colrow: one_home
+    name: matrix_one_home
+    zone: &ref_1
+      columns:
+        one: &ref_0
+          key: {}
+          rows: {}
+          name: one
+        two: &ref_2
+          key:
+            spread: 1cx
+          rows: {}
+          name: two
+      rows:
+        home:
+          padding: 1cy
+        top:
+          padding: 1cy
+      name: matrix
+    col: *ref_0
+    row: home
+    bind:
+      - 10
+      - 10
+      - 0
+      - 0
+matrix_one_top:
+  x: 0
+  'y': 17
+  r: 0
+  meta:
+    stagger: 0
+    spread: 19
+    splay: 0
+    origin:
+      - 0
+      - 0
+    orient: 0
+    shift:
+      - 0
+      - 0
+    rotate: 0
+    adjust: {}
+    width: 18
+    height: 18
+    padding: 17
+    autobind: 10
+    skip: false
+    asym: both
+    colrow: one_top
+    name: matrix_one_top
+    zone: *ref_1
+    col: *ref_0
+    row: top
+    bind:
+      - 0
+      - 10
+      - 10
+      - 0
+matrix_two_home:
+  x: 18
+  'y': 0
+  r: 0
+  meta:
+    stagger: 0
+    spread: 18
+    splay: 0
+    origin:
+      - 0
+      - 0
+    orient: 0
+    shift:
+      - 0
+      - 0
+    rotate: 0
+    adjust: {}
+    width: 18
+    height: 18
+    padding: 17
+    autobind: 10
+    skip: false
+    asym: both
+    colrow: two_home
+    name: matrix_two_home
+    zone: *ref_1
+    col: *ref_2
+    row: home
+    bind:
+      - 10
+      - 0
+      - 0
+      - 10
+matrix_two_top:
+  x: 18
+  'y': 17
+  r: 0
+  meta:
+    stagger: 0
+    spread: 18
+    splay: 0
+    origin:
+      - 0
+      - 0
+    orient: 0
+    shift:
+      - 0
+      - 0
+    rotate: 0
+    adjust: {}
+    width: 18
+    height: 18
+    padding: 17
+    autobind: 10
+    skip: false
+    asym: both
+    colrow: two_top
+    name: matrix_two_top
+    zone: *ref_1
+    col: *ref_2
+    row: top
+    bind:
+      - 0
+      - 0
+      - 10
+      - 10

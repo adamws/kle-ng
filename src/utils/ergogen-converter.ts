@@ -12,9 +12,20 @@ export interface ErgogenPoint {
     width?: number
     height?: number
     padding?: number
+    spread?: number
     label?: string
     name?: string
     origin?: [number, number]
+    zone?: {
+      columns?: Record<string, { key?: { spread?: string | number }; name?: string }>
+      rows?: Record<string, { padding?: string | number }>
+      name?: string
+    }
+    col?: {
+      key?: { spread?: string | number }
+      name?: string
+    }
+    row?: string
   }
 }
 
@@ -36,9 +47,7 @@ export type ErgogenPoints = Record<string, ErgogenPoint>
 export function ergogenPointsToKeyboard(points: ErgogenPoints): Keyboard {
   const keyboard = new Keyboard()
 
-  // ========================================================================
   // UNIT DETECTION
-  // ========================================================================
   // Ergogen allows custom unit configuration:
   // - $default_width: 'u-1' (typically 18)
   // - $default_height: 'u-1' (typically 18)
@@ -49,32 +58,93 @@ export function ergogenPointsToKeyboard(points: ErgogenPoints): Keyboard {
 
   const widths: number[] = []
   const heights: number[] = []
-  const paddings: number[] = []
 
   for (const point of Object.values(points)) {
     if (point.meta) {
       if (point.meta.width !== undefined) widths.push(point.meta.width)
       if (point.meta.height !== undefined) heights.push(point.meta.height)
-      if (point.meta.padding !== undefined) paddings.push(point.meta.padding)
     }
   }
 
-  // Find most common padding (this is the spacing unit) - do this FIRST
-  let spacingUnit = 19 // default fallback
-  if (paddings.length > 0) {
-    const paddingCounts: Record<number, number> = {}
-    for (const p of paddings) {
-      paddingCounts[p] = (paddingCounts[p] || 0) + 1
+  // DETECT X AND Y SPACING FROM ZONE CONFIGURATION
+  // Ergogen uses:
+  // - spread: horizontal spacing between columns (X dimension)
+  // - padding: vertical spacing between rows (Y dimension)
+  // These are defined in the zone configuration and inherit through YAML anchors
+
+  let spacingUnitX = 19 // default fallback
+  let spacingUnitY = 19 // default fallback
+
+  // Get zone configuration from the first point (all points in a zone share the same zone config)
+  const firstPoint = Object.values(points)[0]
+  if (firstPoint?.meta?.zone) {
+    const zone = firstPoint.meta.zone
+
+    // Collect spread values from columns that have explicit spread configured
+    const explicitSpreads: number[] = []
+    if (zone.columns) {
+      for (const [colName, colConfig] of Object.entries(zone.columns)) {
+        // If this column has an explicit spread value (not default)
+        if (colConfig?.key?.spread !== undefined) {
+          // Find a point in this column to get the resolved numeric spread value
+          for (const point of Object.values(points)) {
+            if (point.meta?.col?.name === colName && point.meta.spread !== undefined) {
+              explicitSpreads.push(point.meta.spread)
+              break // Only need one point per column
+            }
+          }
+        }
+      }
     }
-    const mostCommon = Object.keys(paddingCounts).reduce((a, b) =>
-      paddingCounts[Number(a)]! > paddingCounts[Number(b)]! ? a : b,
-    )
-    spacingUnit = Number(mostCommon)
+
+    // Collect padding values from rows that have explicit padding configured
+    const explicitPaddings: number[] = []
+    if (zone.rows) {
+      for (const [rowName, rowConfig] of Object.entries(zone.rows)) {
+        // If this row has an explicit padding value (not default)
+        if (rowConfig?.padding !== undefined) {
+          // Find a point in this row to get the resolved numeric padding value
+          for (const point of Object.values(points)) {
+            if (point.meta?.row === rowName && point.meta.padding !== undefined) {
+              explicitPaddings.push(point.meta.padding)
+              break // Only need one point per row
+            }
+          }
+        }
+      }
+    }
+
+    // Use explicit values if available, otherwise keep defaults
+    if (explicitSpreads.length > 0) {
+      // Use the most common explicit spread (or smallest if tied)
+      const spreadCounts: Record<number, number> = {}
+      for (const s of explicitSpreads) {
+        spreadCounts[s] = (spreadCounts[s] || 0) + 1
+      }
+      const maxCount = Math.max(...Object.values(spreadCounts))
+      const mostCommonValues = Object.keys(spreadCounts)
+        .filter((k) => spreadCounts[Number(k)] === maxCount)
+        .map(Number)
+      spacingUnitX = Math.min(...mostCommonValues)
+    }
+
+    if (explicitPaddings.length > 0) {
+      // Use the most common explicit padding (or smallest if tied)
+      const paddingCounts: Record<number, number> = {}
+      for (const p of explicitPaddings) {
+        paddingCounts[p] = (paddingCounts[p] || 0) + 1
+      }
+      const maxCount = Math.max(...Object.values(paddingCounts))
+      const mostCommonValues = Object.keys(paddingCounts)
+        .filter((k) => paddingCounts[Number(k)] === maxCount)
+        .map(Number)
+      spacingUnitY = Math.min(...mostCommonValues)
+    }
   }
 
   // Find most common width (this is the standard key size)
   // For keyboards with few keys, default to (spacing - 1) which is ergogen's standard
-  let standardWidth = spacingUnit > 1 ? spacingUnit - 1 : 18
+  let standardWidth = spacingUnitX > 1 ? spacingUnitX - 1 : 18
   if (widths.length >= 2) {
     // Need at least 2 keys to reliably determine standard
     const widthCounts: Record<number, number> = {}
@@ -88,7 +158,7 @@ export function ergogenPointsToKeyboard(points: ErgogenPoints): Keyboard {
   }
 
   // Find most common height (this is the standard key height)
-  let standardHeight = spacingUnit > 1 ? spacingUnit - 1 : 18
+  let standardHeight = spacingUnitY > 1 ? spacingUnitY - 1 : 18
   if (heights.length >= 2) {
     const heightCounts: Record<number, number> = {}
     for (const h of heights) {
@@ -100,25 +170,25 @@ export function ergogenPointsToKeyboard(points: ErgogenPoints): Keyboard {
     standardHeight = Number(mostCommonHeight)
   }
 
-  // ========================================================================
-  // NORMALIZATION FUNCTIONS
-  // ========================================================================
+  // Preserve spacing information for future use (e.g., calculating physical positions)
+  keyboard.meta.spacing_x = spacingUnitX // Horizontal spacing in mm/U
+  keyboard.meta.spacing_y = spacingUnitY // Vertical spacing in mm/U
+
   // KLE uses a unified "U" unit system:
   // - For POSITIONS: use spacing unit (the grid/padding)
   // - For WIDTH: use standard width (most common key width)
   // - For HEIGHT: use standard height (most common key height)
 
-  const normalizePosition = (value: number): number =>
-    new Decimal(value).div(spacingUnit).toNumber()
+  const normalizeX = (value: number): number => new Decimal(value).div(spacingUnitX).toNumber()
+
+  const normalizeY = (value: number): number => new Decimal(value).div(spacingUnitY).toNumber()
 
   const normalizeWidth = (value: number): number => new Decimal(value).div(standardWidth).toNumber()
 
   const normalizeHeight = (value: number): number =>
     new Decimal(value).div(standardHeight).toNumber()
 
-  // ========================================================================
   // STEP 1: CONVERT TO KLE UNITS AND FIND TOPMOST POINT
-  // ========================================================================
   // Following the Python reference implementation from kle_serial.py
 
   const keys: Array<{
@@ -142,8 +212,8 @@ export function ergogenPointsToKeyboard(points: ErgogenPoints): Keyboard {
     const height = normalizeHeight(keyHeight)
 
     // Convert ergogen coordinates (center-based, in mm) to KLE units
-    const x = normalizePosition(point.x)
-    const y = normalizePosition(point.y)
+    const x = normalizeX(point.x)
+    const y = normalizeY(point.y)
 
     // Track topmost (highest Y in ergogen = bottom in KLE before flip)
     const yDecimal = new Decimal(y)
@@ -166,9 +236,7 @@ export function ergogenPointsToKeyboard(points: ErgogenPoints): Keyboard {
     })
   }
 
-  // ========================================================================
   // STEP 2: FLIP Y-AXIS AND CONVERT CENTER TO CORNER
-  // ========================================================================
 
   for (const item of keys) {
     // Flip Y-axis using topmost reference (ergogen Y-up → KLE Y-down)
@@ -191,9 +259,7 @@ export function ergogenPointsToKeyboard(points: ErgogenPoints): Keyboard {
     item.key.labels[0] = item.name
   }
 
-  // ========================================================================
   // STEP 3: NORMALIZE TO REMOVE NEGATIVE COORDINATES
-  // ========================================================================
 
   if (keys.length > 0) {
     // Find minimum x and y
@@ -219,9 +285,7 @@ export function ergogenPointsToKeyboard(points: ErgogenPoints): Keyboard {
     }
   }
 
-  // ========================================================================
   // STEP 4: SET ROTATION ORIGINS AND BUILD KEYBOARD
-  // ========================================================================
 
   for (const item of keys) {
     // Set final x, y positions
@@ -237,9 +301,7 @@ export function ergogenPointsToKeyboard(points: ErgogenPoints): Keyboard {
     keyboard.keys.push(item.key)
   }
 
-  // ========================================================================
-  // SORT KEYS IN KLE COORDINATE SPACE
-  // ========================================================================
+  // STEP 5: SORT KEYS IN KLE COORDINATE SPACE
   // Sort keys by their final KLE positions (top-to-bottom, left-to-right)
   // This must be done AFTER coordinate conversion and normalization
   // to ensure proper ordering in the serialized output

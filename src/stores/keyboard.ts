@@ -1417,7 +1417,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
             throw new Error('No points generated from Ergogen config')
           }
 
-          // Convert to Keyboard
+          // Convert to Keyboard (preserve spacing metadata)
           const keyboard = ergogenPointsToKeyboard(results.points)
 
           // Load the keyboard

@@ -59,6 +59,35 @@
                   title="CSS border-radius (e.g., '10px', '5px 10px', '10px 20px 30px 40px', '10px / 20px'). Defaults to 6px when empty. Supports separate corners and elliptical radii. Affects both canvas display and PNG export."
                 />
               </div>
+              <div class="mb-3">
+                <label class="form-label small mb-1">Spacing (mm/U)</label>
+                <div class="row g-2">
+                  <div class="col-6">
+                    <label class="spacing-label">X</label>
+                    <CustomNumberInput
+                      v-model="currentSpacingX"
+                      @change="updateSpacing('spacing_x', currentSpacingX, 19.05)"
+                      :value-on-clear="19.05"
+                      :step="0.05"
+                      :min="1"
+                      title="Horizontal spacing in millimeters per U. Default: 19.05mm (Cherry MX standard)"
+                      size="compact"
+                    />
+                  </div>
+                  <div class="col-6">
+                    <label class="spacing-label">Y</label>
+                    <CustomNumberInput
+                      v-model="currentSpacingY"
+                      @change="updateSpacing('spacing_y', currentSpacingY, 19.05)"
+                      :value-on-clear="19.05"
+                      :step="0.05"
+                      :min="1"
+                      title="Vertical spacing in millimeters per U. Default: 19.05mm (Cherry MX standard)"
+                      size="compact"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- Right sub-column: Notes and CSS -->
@@ -166,6 +195,7 @@ import { ref, watch } from 'vue'
 import { useKeyboardStore } from '@/stores/keyboard'
 import { useFontStore } from '@/stores/font'
 import ColorPicker from './ColorPicker.vue'
+import CustomNumberInput from './CustomNumberInput.vue'
 import CssHelpModal from './CssHelpModal.vue'
 import ViaHelpModal from './ViaHelpModal.vue'
 import LZString from 'lz-string'
@@ -200,6 +230,8 @@ const currentNotes = ref('')
 const currentCss = ref('')
 const currentBackcolor = ref('#ffffff')
 const currentRadii = ref('')
+const currentSpacingX = ref<number>(19.05)
+const currentSpacingY = ref<number>(19.05)
 
 // VIA metadata state
 const viaMetadataJson = ref('')
@@ -289,6 +321,8 @@ const updateCurrentValues = () => {
   currentCss.value = metadata.css || ''
   currentBackcolor.value = metadata.backcolor || '#ffffff'
   currentRadii.value = metadata.radii || ''
+  currentSpacingX.value = metadata.spacing_x || 19.05
+  currentSpacingY.value = metadata.spacing_y || 19.05
 
   // Parse VIA metadata
   parseViaMetadata()
@@ -304,9 +338,15 @@ watch(
 )
 
 // Update metadata in store
-const updateMetadata = (field: keyof typeof keyboardStore.metadata, value: string) => {
+const updateMetadata = (field: string, value: string | number | undefined) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(keyboardStore.metadata as any)[field] = value
+  keyboardStore.saveState()
+}
+
+const updateSpacing = (field: string, value: number, defaultval: number) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(keyboardStore.metadata as any)[field] = value !== defaultval ? value : undefined
   keyboardStore.saveState()
 }
 
@@ -400,6 +440,15 @@ const updateBackcolor = () => {
   font-size: 0.7rem;
   font-weight: 500;
   margin-bottom: 0.25rem;
+}
+
+.spacing-label {
+  font-size: 0.65rem;
+  color: var(--bs-body-color);
+  font-weight: 500;
+  display: block;
+  margin-bottom: 1px;
+  line-height: 1;
 }
 
 /* JSON validation styling */

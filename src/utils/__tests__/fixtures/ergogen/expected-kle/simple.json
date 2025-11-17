@@ -1,4 +1,8 @@
 [
+  {
+    "spacing_x": 19,
+    "spacing_y": 19
+  },
   ["matrix_outer_top", "matrix_inner_top"],
   ["matrix_outer_bottom", "matrix_inner_bottom"]
 ]
