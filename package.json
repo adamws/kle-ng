@@ -28,7 +28,7 @@
     "bootstrap": "^5.3.8",
     "bootstrap-icons": "^1.13.1",
     "decimal.js": "^10.6.0",
-    "ergogen": "github:ergogen/ergogen",
+    "ergogen": "^4.2.1",
     "js-yaml": "^4.1.0",
     "json5": "^2.2.3",
     "lz-string": "^1.5.0",
