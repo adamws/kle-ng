@@ -1690,6 +1690,9 @@ const handleRotationAngleChange = (angle: number) => {
   // Apply rotation directly to the keys
   keyboardStore.updateRotationPreview(angle)
 
+  // Update canvas size to accommodate rotated keys that may extend beyond current bounds
+  updateCanvasSize()
+
   // Re-render to show changes
   renderScheduler.schedule(renderKeyboard)
 }
