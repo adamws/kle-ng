@@ -223,7 +223,9 @@ export function getSerializedData(
   sortKeysForSerialization(clonedKeyboard.keys)
 
   if (format === 'kle') {
-    return Serial.serialize(getRoundedKeyboard(clonedKeyboard))
+    // Apply rounding to 6 decimal places for consistent JSON export
+    const roundedKeyboard = getRoundedKeyboard(clonedKeyboard)
+    return Serial.serialize(roundedKeyboard)
   }
 
   if (format === 'kle-internal') {
@@ -231,4 +233,24 @@ export function getSerializedData(
   }
 
   return clonedKeyboard
+}
+
+/**
+ * Stringify JSON data with 6 decimal places rounding for numeric values
+ * to match the JSON Editor display behavior.
+ *
+ * @param data - The data to stringify
+ * @param space - Number of spaces for indentation (default: 2)
+ * @returns JSON string with rounded numeric values
+ */
+export function stringifyWithRounding(data: unknown, space = 2): string {
+  const replacer = (key: string, value: unknown): unknown => {
+    if (typeof value === 'number') {
+      // Round to 6 decimal places maximum for consistent precision
+      return D.format(value, 6)
+    }
+    return value
+  }
+
+  return JSON.stringify(data, replacer, space)
 }

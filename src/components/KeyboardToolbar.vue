@@ -154,6 +154,7 @@ import { toast } from '@/composables/useToast'
 import { parseBorderRadius, createRoundedRectanglePath } from '@/utils/border-radius'
 import { createPngWithKleLayout, extractKleLayout, hasKleMetadata } from '@/utils/png-metadata'
 import { isViaFormat, convertViaToKle, convertKleToVia } from '@/utils/via-import'
+import { stringifyWithRounding } from '@/utils/serialization'
 import { decodeLayoutFromUrl, fetchGistLayout } from '@/utils/url-sharing'
 import { ergogenGetPoints, ergogenPointsToKeyboard } from '@/utils/ergogen-converter'
 import LZString from 'lz-string'
@@ -330,7 +331,7 @@ const handleFileUpload = async (event: Event) => {
 // Export functions
 const downloadJson = () => {
   const data = keyboardStore.getSerializedData('kle')
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+  const blob = new Blob([stringifyWithRounding(data, 2)], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
@@ -341,7 +342,7 @@ const downloadJson = () => {
 
 const downloadKleInternalJson = () => {
   const data = keyboardStore.getSerializedData('kle-internal')
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+  const blob = new Blob([stringifyWithRounding(data, 2)], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
