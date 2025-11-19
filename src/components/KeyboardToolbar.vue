@@ -155,10 +155,9 @@ import { parseBorderRadius, createRoundedRectanglePath } from '@/utils/border-ra
 import { createPngWithKleLayout, extractKleLayout, hasKleMetadata } from '@/utils/png-metadata'
 import { isViaFormat, convertViaToKle, convertKleToVia } from '@/utils/via-import'
 import { stringifyWithRounding } from '@/utils/serialization'
-import { decodeLayoutFromUrl, fetchGistLayout } from '@/utils/url-sharing'
-import { ergogenGetPoints, ergogenPointsToKeyboard } from '@/utils/ergogen-converter'
+import { decodeLayoutFromUrl, fetchGistLayout, loadErgogenKeyboard } from '@/utils/url-sharing'
+import { parseErgogenConfig } from '@/utils/ergogen-converter'
 import LZString from 'lz-string'
-import yaml from 'js-yaml'
 
 // Store
 const keyboardStore = useKeyboardStore()
@@ -284,25 +283,13 @@ const handleFileUpload = async (event: Event) => {
 
       try {
         const text = await file.text()
-        const config = yaml.load(text)
-
-        const points = await ergogenGetPoints(config)
-
-        if (!points || Object.keys(points).length === 0) {
-          throw new Error('No points generated from Ergogen config')
-        }
-
-        // Convert ergogen points to Keyboard
-        const keyboard = ergogenPointsToKeyboard(points)
+        const keyboard = await parseErgogenConfig(text)
 
         // Load the keyboard
         keyboardStore.loadKeyboard(keyboard)
         keyboardStore.filename = filenameWithoutExt
 
-        toast.showSuccess(
-          `Ergogen layout imported: ${Object.keys(points).length} keys`,
-          'Import Successful',
-        )
+        toast.showSuccess(`Ergogen layout imported`, 'Import Successful')
       } catch (error) {
         console.error('Error processing Ergogen YAML:', error)
         const errorMessage =
@@ -773,43 +760,18 @@ const processJsonLayout = async (
 
 const importFromErgogenUrl = async (ergogenUrl: string) => {
   try {
-    // Extract hash from URL
-    const hashIndex = ergogenUrl.indexOf('#')
-    if (hashIndex === -1) {
-      throw new Error('Invalid Ergogen URL: no hash fragment found')
+    const keyboard = await loadErgogenKeyboard(ergogenUrl)
+
+    if (!keyboard) {
+      throw new Error('No valid Ergogen data found in URL')
     }
-
-    const encodedData = ergogenUrl.substring(hashIndex + 1)
-    const decompressed = LZString.decompressFromEncodedURIComponent(encodedData)
-
-    if (!decompressed) {
-      throw new Error('Failed to decompress Ergogen URL data')
-    }
-
-    const data = JSON.parse(decompressed)
-
-    if (!data || typeof data.config !== 'string') {
-      throw new Error('Invalid Ergogen URL data structure')
-    }
-
-    // Parse YAML config
-    const config = yaml.load(data.config)
-
-    const points = await ergogenGetPoints(config)
-
-    if (!points || Object.keys(points).length === 0) {
-      throw new Error('No points generated from Ergogen config')
-    }
-
-    // Convert to Keyboard
-    const keyboard = ergogenPointsToKeyboard(points)
 
     // Load the keyboard
     keyboardStore.loadKeyboard(keyboard)
     keyboardStore.filename = 'ergogen-import'
 
     toast.showSuccess(
-      `Ergogen layout imported from URL: ${Object.keys(points).length} keys`,
+      `Ergogen layout imported from URL: ${Object.keys(keyboard.keys).length} keys`,
       'Import Successful',
     )
   } catch (error) {

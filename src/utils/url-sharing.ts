@@ -1,5 +1,13 @@
 import * as LZString from 'lz-string'
 import { Serial, Keyboard } from '@adamws/kle-serial'
+import { parseErgogenConfig } from './ergogen-converter'
+
+/**
+ * Result of ergogen URL extraction
+ */
+export interface ErgogenUrlData {
+  config: string
+}
 
 /**
  * Encode layout data into a compressed URL-safe string using KLE format
@@ -242,18 +250,18 @@ export function clearGistFromUrl(): void {
 }
 
 /**
- * Extract Ergogen config data from current URL if it's an ergogen.xyz URL
- * Ergogen uses the same lzstring encoding as kle-ng
- * Returns { config: "YAML string" } or null
+ * Extracts ergogen config data from a URL
+ * @param url - The URL to extract from. If null, uses current window location
+ * @returns Ergogen config data or null if not found/invalid
  */
-export function extractErgogenUrlData(): { config: string } | null {
+export function extractErgogenUrlData(url: string | null = null): ErgogenUrlData | null {
   try {
-    const hash = window.location.hash
-    const url = window.location.href
+    const targetUrl = url || window.location.href
+    const targetHash = url ? new URL(url).hash : window.location.hash
 
     // Check if it's an ergogen.xyz URL with hash
-    if (url.includes('ergogen.xyz') && hash && hash.length > 1) {
-      const encodedData = hash.substring(1) // Remove '#'
+    if (targetUrl.includes('ergogen.xyz') && targetHash && targetHash.length > 1) {
+      const encodedData = targetHash.substring(1) // Remove '#'
       const decompressed = LZString.decompressFromEncodedURIComponent(encodedData)
 
       if (!decompressed) {
@@ -271,6 +279,25 @@ export function extractErgogenUrlData(): { config: string } | null {
     return null
   } catch (error) {
     console.error('Error extracting Ergogen URL data:', error)
+    return null
+  }
+}
+
+/**
+ * Complete pipeline: extract ergogen config from URL and convert to keyboard
+ * @param url - The URL to extract from. If null, uses current window location
+ * @returns Keyboard layout or null if no ergogen data found
+ */
+export async function loadErgogenKeyboard(url: string | null = null): Promise<Keyboard | null> {
+  try {
+    const ergogenData = extractErgogenUrlData(url)
+    if (!ergogenData) {
+      return null
+    }
+
+    return await parseErgogenConfig(ergogenData.config)
+  } catch (error) {
+    console.error('Error loading Ergogen keyboard from URL:', error)
     return null
   }
 }

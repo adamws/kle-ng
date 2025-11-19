@@ -3,6 +3,7 @@ import Decimal from 'decimal.js'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore - ergogen is a JavaScript library without type definitions
 import ergogen from 'ergogen'
+import yaml from 'js-yaml'
 
 /**
  * TypeScript interfaces for Ergogen data structures
@@ -361,4 +362,28 @@ export function ergogenPointsToKeyboard(points: ErgogenPoints): Keyboard {
 
   // Return the Keyboard object - caller can serialize as needed
   return keyboard
+}
+
+/**
+ * Parses ergogen config and converts it to a keyboard layout
+ * @param config - The YAML config string from ergogen
+ * @returns Keyboard layout
+ */
+export async function parseErgogenConfig(config: string): Promise<Keyboard> {
+  try {
+    // Parse YAML config
+    const parsedConfig = yaml.load(config)
+
+    const points = await ergogenGetPoints(parsedConfig)
+
+    if (!points || Object.keys(points).length === 0) {
+      throw new Error('No points generated from Ergogen config')
+    }
+
+    // Convert to Keyboard
+    return ergogenPointsToKeyboard(points)
+  } catch (error) {
+    console.error('Error parsing Ergogen config:', error)
+    throw error instanceof Error ? error : new Error('Failed to parse Ergogen config')
+  }
 }
