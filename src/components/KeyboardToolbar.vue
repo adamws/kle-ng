@@ -120,8 +120,8 @@
                 @keyup.enter="importFromUrl"
               />
               <div class="form-text">
-                Paste a link to a JSON file, GitHub Gist, or a share link. All formats are
-                automatically detected.
+                Paste a link to a JSON file, GitHub Gist, Ergogen layout or a kle-ng share link. All
+                formats are automatically detected.
               </div>
             </div>
           </div>

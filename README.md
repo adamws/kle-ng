@@ -293,13 +293,6 @@ kle-ng supports importing and exporting keyboard layouts in multiple formats:
 - Export layouts as PNG images with embedded layout data for documentation and sharing
 - Import PNG files with embedded layout data to recover the editable layout
 
-**Ergogen Format**
-
-[Ergogen](https://ergogen.xyz/) is a keyboard layout generator that uses YAML configuration to define ergonomic keyboard layouts.
-kle-ng can import layouts directly from ergogen.xyz share URLs (e.g., `https://ergogen.xyz/#N4Igxg9gdg...`).
-These URLs contain compressed YAML configurations that kle-ng decodes, processes with the Ergogen library,
-and converts to KLE format for editing. This allows you to take Ergogen-generated layouts and refine them in kle-ng.
-
 **VIA/Vial Format**
 
 [VIA](https://www.caniusevia.com/) and [Vial](https://get.vial.today/) are keyboard configuration tools
@@ -368,6 +361,50 @@ It is the user's responsibility to maintain VIA format [specification](https://w
 Layouts which contain `_kleng_via_data` metadata can be exported back to VIA JSON format.
 Exporting works by decompressing the `_kleng_via_data` field and injecting layout data back to the `layouts` value.
 
+**Ergogen Format**
+
+[Ergogen](https://ergogen.xyz/) is a keyboard layout generator that uses YAML configuration to define ergonomic keyboard layouts.
+kle-ng can import layouts directly from yaml files or ergogen.xyz share URLs (e.g., `https://ergogen.xyz/#N4Igxg9gdg...`).
+These URLs contain compressed YAML configurations that kle-ng decodes, processes with the Ergogen library,
+and converts to KLE format for editing. This allows you to take Ergogen-generated layouts and refine them in kle-ng.
+
+<table>
+<tr>
+<td>Imported file</td>
+<td>Import result</td>
+</tr>
+<tr>
+<td>
+
+```yaml
+meta:
+  engine: 4.1.0
+points:
+  zones:
+    matrix:
+      anchor:
+        rotate: 5
+[...cut for readability...]
+  rotate: -20
+  mirror:
+    ref: matrix_pinky_home
+    distance: 223.7529778
+```
+
+</td>
+<td>
+
+<a href="https://editor.keyboard-tools.xyz/#share=NobwRAzgDghgxgSwHYHMD6APMAuAjATgBpJZFU0BPHAgX0NDACdqBWYxrbABgDo2mq2AEw8AbC1wAOACwBmYpwC0vfoOV86YALYwALowQY0UZAGsKaAEYB7XbutawAXXrgOOXgHYWkyQXaCuGKSLPhSCjjqqpEqmjr6hsZmFgAWDgCmzq5MnEFcuJ6ispIBHjyeBPj4QhHYUcRqscTxBkYmSOZo9lBZDMzCXOy5YviiXELyAjgisp74xfxKKg0xGs16rWgG5DZ2Dr1unCJcxVxypXg8cqPztfVgjWvaG4nb6GlamS59RzynXKJpBdlmAlnwVnUms8EkY3l1rD1vodpuUhCxPEJcBcRNJPNJcOFQatopCni1EloEAATKkAG3SVls9kcSJyOFkPABnjxWKmlxYsmk0jRdxBjxYcReRkpNPpaA+X2y7mwHOkXHwhV5jEEKnwuNkkzBJKikphaBldIZ3QObJVfHRas8Fw5BKEvkNxIhJvWZuQVPSRl2zJtyo53Ld3gu0j+om8J1F4IexM0uhSAFctJYAGYwJBoJDpGCMLrpzMhzgcyRVYUlPkiAqyfxE0nGqHkox+gPyjLlnDRoT4oW17XUHgTQX4WtGr1tqVoTtGa2s5XR6SiXDq4eCDksAV+KeepMt02bZAF4tB-bLzjRyQnAlblHr-FCUQJ1tkudn9LFhW97AsDwuDSBIxQXEEsZCga74zp+vpIOe8KIkqfbDjePAyOIsg1HygG4K+aK8tOR7emAqYZtmubdp8JYUSGOCFEMOCAdIvhVm+fKiGOngGrMMEkVC5GZjmeY5sWQmWPRdSMbangYVwLCYosh7inECCMIw1jiaWlGiUWtFlsukSsUx2CSFcuLoo+AFAQREj8apzTqZp2kUSJ1FWjpUmKEIgy2uZwFVhi4FiHicgei2sESk5GlaeaX4IT+SH-uZ0j4Oqtx1mIwH4RxxGOdozlxe286Jb+PbXjg5mSAa+STCOdq7sUhL5cmMUufF8GIZeLJKpw+CcopohFCF45pQekUCWSRXFiVC7JZV2ADbIeqiDV2JATxTatce7XFQl-pGH+i0DYp+GyPwDXRrIsYsPGzb3AVlKxa5wlUQW+kSf+A08bG90NS6+Hug5bWFS9nWnkgh2MnsvU-DgA2+HIaXAnweo8RFj2g89HUlRacpLn11C8EIr43UQfJBAKQoig9YrYzNEMUtSloef+G58GtxQUw1OI8i1KkM+DeMs3KPXs7wYRqriqPKZNT2MyVcKE-DeBBGiYyxiF1yiJlO2kTj+1mnCx1E2raN3pITpZbM8whCDu1g7jc5wuLRl1Lgl25CIQiFPqqMVFU1QOwbitzu0nQq8ieAiAKinB5TwShAL8tC87ZoR6kFVm-h5R6gSWqCCI4hSOcdOJgrwvh8kMPBk4ThAA">
+  <img src="resources/ergogen-import-result.png">
+</a>
+
+
+</td>
+</tr>
+</table>
+
+The kle-ng **does not** support export to ergogen format.
+
 ### Importing
 
 kle-ng supports multiple ways to import keyboard layouts:
@@ -380,9 +417,11 @@ kle-ng supports multiple ways to import keyboard layouts:
     - **Ergogen URLs**: ergogen.xyz share links (e.g., `https://ergogen.xyz/#N4Igxg9gdg...`)
     - **Share Links**: Existing share links from other kle-ng instances
 - **Drag and Drop**: Drag layout files directly onto the editor
-- **Share Links**: Open layouts shared via URL (see Share Links section below):
-  - **Universal URL format**: [https://editor.keyboard-tools.xyz/#url=https://gist.github.com/adamws/e0ee43da3b3b096bfdd60d54c7487e8b](https://editor.keyboard-tools.xyz/#url=https://gist.github.com/adamws/e0ee43da3b3b096bfdd60d54c7487e8b)
+- **Share Links**: Open layouts shared via URL
+  - **kle-ng** share link: [https://editor.keyboard-tools.xyz/#share=NrDeC...](https://editor.keyboard-tools.xyz/#share=NrDeCICdwLgZgKwIDRQB6wIysgT1gCyoYwC024+ZR4AhrAAwC+q4AusmOCeS+O5wg9MfAV2GiOXaDAY4ScqFUUkKVUgwB0AJgSTB3LPvFHWUoaf7nDMbanUFjF205vbXJd2YMyakEnA4VHCaAOwolLCkjt7AVpzxcWIQMph+AZoAnJnhAGwEmPkMmXCh2UGwIQAcmDkIuXBwDIWNmQyBNuSa7QgExdlw2tm5CLUApqSh9lFa2XOZVQRVVdpVcLntrjLa6YRZuaFVCDkHCOuZxxUwBN25hYcEBNrahf3EUSEHL2dVuQuhaQYRwmVWmZEw3QYUOhy3qoVCfxEZjYQA)
   - **Direct Gist ID**: [https://editor.keyboard-tools.xyz/#gist=e0ee43da3b3b096bfdd60d54c7487e8b](https://editor.keyboard-tools.xyz/#gist=e0ee43da3b3b096bfdd60d54c7487e8b)
+  [-](-) **Universal URL format**: [https://editor.keyboard-tools.xyz/#url=xxx](https://editor.keyboard-tools.xyz/#url=https://gist.github.com/adamws/e0ee43da3b3b096bfdd60d54c7487e8b)
+    - supports Gist and Ergogen URL's as `url=` parameter
 
 <img src="resources/gifs/file-drag-and-drop.gif">
 
@@ -400,19 +439,6 @@ When importing from GitHub Gists, kle-ng will automatically search for layout fi
 The JSON file may contain any recognizable layout format.
 
 **Note:** GitHub API has rate limits for unauthenticated requests. If you encounter rate limit errors, wait a few minutes before trying again.
-
-#### Share Links
-
-kle-ng provides a quick way to share your keyboard layouts with others using compressed URL share links.
-
-**Creating a Share Link:**
-
-1. Click the **Share Link** button in the toolbar (next to Import/Export)
-2. The shareable link will be automatically copied to your clipboard
-3. Share the link with others - they can open it to view your layout
-
-The share link contains your entire layout encoded in the URL hash (e.g., [`#share=NrDeC...`](https://editor.keyboard-tools.xyz/#share=NrDeCICdwLgZgKwIDRQB6wIysgT1gCyoYwC024+ZR4AhrAAwC+q4AusmOCeS+O5wg9MfAV2GiOXaDAY4ScqFUUkKVUgwB0AJgSTB3LPvFHWUoaf7nDMbanUFjF205vbXJd2YMyakEnA4VHCaAOwolLCkjt7AVpzxcWIQMph+AZoAnJnhAGwEmPkMmXCh2UGwIQAcmDkIuXBwDIWNmQyBNuSa7QgExdlw2tm5CLUApqSh9lFa2XOZVQRVVdpVcLntrjLa6YRZuaFVCDkHCOuZxxUwBN25hYcEBNrahf3EUSEHL2dVuQuhaQYRwmVWmZEw3QYUOhy3qoVCfxEZjYQA)).
-The layout data is compressed using LZ-String compression to create compact, shareable URLs.
 
 ## Custom Fonts
 
