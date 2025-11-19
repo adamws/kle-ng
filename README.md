@@ -420,7 +420,7 @@ kle-ng supports multiple ways to import keyboard layouts:
 - **Share Links**: Open layouts shared via URL
   - **kle-ng** share link: [https://editor.keyboard-tools.xyz/#share=NrDeC...](https://editor.keyboard-tools.xyz/#share=NrDeCICdwLgZgKwIDRQB6wIysgT1gCyoYwC024+ZR4AhrAAwC+q4AusmOCeS+O5wg9MfAV2GiOXaDAY4ScqFUUkKVUgwB0AJgSTB3LPvFHWUoaf7nDMbanUFjF205vbXJd2YMyakEnA4VHCaAOwolLCkjt7AVpzxcWIQMph+AZoAnJnhAGwEmPkMmXCh2UGwIQAcmDkIuXBwDIWNmQyBNuSa7QgExdlw2tm5CLUApqSh9lFa2XOZVQRVVdpVcLntrjLa6YRZuaFVCDkHCOuZxxUwBN25hYcEBNrahf3EUSEHL2dVuQuhaQYRwmVWmZEw3QYUOhy3qoVCfxEZjYQA)
   - **Direct Gist ID**: [https://editor.keyboard-tools.xyz/#gist=e0ee43da3b3b096bfdd60d54c7487e8b](https://editor.keyboard-tools.xyz/#gist=e0ee43da3b3b096bfdd60d54c7487e8b)
-  [-](-) **Universal URL format**: [https://editor.keyboard-tools.xyz/#url=xxx](https://editor.keyboard-tools.xyz/#url=https://gist.github.com/adamws/e0ee43da3b3b096bfdd60d54c7487e8b)
+  - **Universal URL format**: [https://editor.keyboard-tools.xyz/#url=xxx](https://editor.keyboard-tools.xyz/#url=https://gist.github.com/adamws/e0ee43da3b3b096bfdd60d54c7487e8b)
     - supports Gist and Ergogen URL's as `url=` parameter
 
 <img src="resources/gifs/file-drag-and-drop.gif">
