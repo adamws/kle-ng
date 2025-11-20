@@ -2,6 +2,7 @@ import type { Key } from '@adamws/kle-serial'
 import polygonClippingLib from 'polygon-clipping'
 import type { MultiPolygon } from 'polygon-clipping'
 import type { KeyRenderParams } from '../canvas-renderer'
+import { isNonRectangular } from '../key-utils'
 
 /**
  * Options for rendering a key
@@ -113,11 +114,7 @@ export class KeyRenderer {
 
     const params: Partial<KeyRenderParams> = {}
 
-    params.nonRectangular =
-      key.width !== key.width2 ||
-      key.height !== key.height2 ||
-      key.x2 !== undefined ||
-      key.y2 !== undefined
+    params.nonRectangular = isNonRectangular(key)
 
     params.capwidth = sizes.unit * key.width
     params.capheight = sizes.unit * key.height

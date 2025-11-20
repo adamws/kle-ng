@@ -189,7 +189,7 @@ describe('SummaryPanel', () => {
         },
       })
 
-      expect(wrapper.find('tbody').text()).toContain('2 × 1+1 × 1 (non-rectangular)')
+      expect(wrapper.find('tbody').text()).toContain('2 × 1+1 × 1')
     })
   })
 

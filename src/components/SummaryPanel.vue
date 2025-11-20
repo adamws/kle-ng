@@ -243,6 +243,7 @@
 import { ref, computed } from 'vue'
 import { useKeyboardStore, Key } from '@/stores/keyboard'
 import { calculateKeyboardDimensions } from '@/utils/keyboard-dimensions'
+import { isIsoEnter, isBigAssEnter, isNonRectangular } from '@/utils/key-utils'
 import KeyCentersTable from './KeyCentersTable.vue'
 
 const keyboardStore = useKeyboardStore()
@@ -288,72 +289,28 @@ const formatKeySize = (key: Key): string => {
   const height = key.height || 1
   const width2 = key.width2
   const height2 = key.height2
-  const x2 = key.x2
-  const y2 = key.y2
 
-  // Check for ISO Enter (1.25 × 2 with 1.5 × 1 secondary)
-  if (
-    width === 1.25 &&
-    height === 2 &&
-    width2 === 1.5 &&
-    height2 === 1 &&
-    x2 === -0.25 &&
-    y2 === 0
-  ) {
-    return 'ISO Enter'
-  }
-
-  // Check for Big-Ass Enter (1.5 × 2 with 2.25 × 1 secondary)
-  if (
-    width === 1.5 &&
-    height === 2 &&
-    width2 === 2.25 &&
-    height2 === 1 &&
-    x2 === -0.75 &&
-    y2 === 1
-  ) {
-    return 'Big-Ass Enter'
-  }
-
-  // Check for stepped keys using the stepped property
   const isStepped = key.stepped === true
+  let sizeString = ''
 
-  // Check for non-rectangular keys (not stepped and has secondary dimensions or offsets)
-  const isNonRectangular =
-    !isStepped &&
-    (width !== (width2 || width) ||
-      height !== (height2 || height) ||
-      (x2 !== undefined && x2 !== 0) ||
-      (y2 !== undefined && y2 !== 0))
+  if (isIsoEnter(key)) {
+    sizeString = 'ISO Enter'
+  } else if (isBigAssEnter(key)) {
+    sizeString = 'Big-Ass Enter'
+  } else {
+    sizeString = `${width} × ${height}`
+
+    if (isNonRectangular(key)) {
+      const secondarySize = `${width2 || width} × ${height2 || height}`
+      sizeString += `+${secondarySize}`
+    }
+  }
 
   if (isStepped) {
-    const primarySize = width === height ? `${width} × ${width}` : `${width} × ${height}`
-    const secondarySize =
-      (width2 || width) === (height2 || height)
-        ? `${width2 || width} × ${width2 || width}`
-        : `${width2 || width} × ${height2 || height}`
-
-    if (primarySize === secondarySize) {
-      return `${primarySize} (stepped)`
-    }
-    return `${primarySize}+${secondarySize} (stepped)`
+    sizeString += ' (stepped)'
   }
 
-  if (isNonRectangular) {
-    const primarySize = width === height ? `${width} × ${width}` : `${width} × ${height}`
-    const secondarySize =
-      (width2 || width) === (height2 || height)
-        ? `${width2 || width} × ${width2 || width}`
-        : `${width2 || width} × ${height2 || height}`
-
-    if (primarySize === secondarySize) {
-      return `${primarySize} (non-rectangular)`
-    }
-    return `${primarySize}+${secondarySize} (non-rectangular)`
-  }
-
-  // Regular rectangular keys
-  return width === height ? `${width} × ${width}` : `${width} × ${height}`
+  return sizeString
 }
 
 // Helper function to get key color (prioritize key color, fallback to default)

@@ -916,6 +916,7 @@ import CustomNumberInput from './CustomNumberInput.vue'
 import { D } from '@/utils/decimal-math'
 import { recentlyUsedColorsManager } from '@/utils/recently-used-colors'
 import { isValidHex, normalizeHex } from '@/utils/color-utils'
+import { isNonRectangular as isNonRectangularUtil } from '@/utils/key-utils'
 
 const keyboardStore = useKeyboardStore()
 
@@ -944,18 +945,7 @@ const isNonRectangular = computed(() => {
   const key = selectedKeys.value[0]
   if (!key) return false
 
-  // Stepped keys are rectangular with visual steps - they should allow size editing
-  // Only truly non-rectangular keys (like ISO Enter) are non-rectangular
-
-  // Check for non-rectangular keys - these have position offsets (x2, y2) or height differences
-  const hasNonRectangularProperties =
-    (key.height2 !== undefined && key.height2 !== key.height) || // Different heights (like ISO Enter)
-    (key.x2 !== undefined && key.x2 !== 0) || // X position offset
-    (key.y2 !== undefined && key.y2 !== 0) // Y position offset
-
-  // Stepped keys with only width differences are still rectangular
-  // Only keys with non-rectangular properties (height/position differences) are non-rectangular
-  return hasNonRectangularProperties
+  return isNonRectangularUtil(key)
 })
 
 const isRotaryEncoder = computed(() => {
