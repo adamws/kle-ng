@@ -493,8 +493,101 @@ export class KeyRenderer {
 
     ctx.save()
 
-    // Apply rotation if needed
-    if (key.rotation_angle) {
+    // Check if this is an axis-aligned rotation (0°, 90°, 180°, 270°)
+    const axisAlignedAngle = this.getAxisAlignedRotation(key.rotation_angle)
+
+    // For axis-aligned rotations, rotate the rectangles first, THEN apply alignment
+    // This ensures perfect pixel alignment for rotated keys
+    if (axisAlignedAngle !== null && axisAlignedAngle !== 0) {
+      // Rotate all rectangle corners around the origin
+      const rotateRect = (x: number, y: number, width: number, height: number) => {
+        // Get all 4 corners
+        const corners = [
+          this.rotatePoint(x, y, params.origin_x, params.origin_y, axisAlignedAngle),
+          this.rotatePoint(x + width, y, params.origin_x, params.origin_y, axisAlignedAngle),
+          this.rotatePoint(
+            x + width,
+            y + height,
+            params.origin_x,
+            params.origin_y,
+            axisAlignedAngle,
+          ),
+          this.rotatePoint(x, y + height, params.origin_x, params.origin_y, axisAlignedAngle),
+        ]
+
+        // Find bounding box
+        const minX = Math.min(...corners.map((c) => c.x))
+        const minY = Math.min(...corners.map((c) => c.y))
+        const newWidth = axisAlignedAngle === 90 || axisAlignedAngle === 270 ? height : width
+        const newHeight = axisAlignedAngle === 90 || axisAlignedAngle === 270 ? width : height
+
+        return { x: minX, y: minY, width: newWidth, height: newHeight }
+      }
+
+      // Rotate outer rectangle
+      const outerRotated = rotateRect(
+        params.outercapx,
+        params.outercapy,
+        params.outercapwidth,
+        params.outercapheight,
+      )
+      params.outercapx = outerRotated.x
+      params.outercapy = outerRotated.y
+      params.outercapwidth = outerRotated.width
+      params.outercapheight = outerRotated.height
+
+      // Rotate inner rectangle
+      const innerRotated = rotateRect(
+        params.innercapx,
+        params.innercapy,
+        params.innercapwidth,
+        params.innercapheight,
+      )
+      params.innercapx = innerRotated.x
+      params.innercapy = innerRotated.y
+      params.innercapwidth = innerRotated.width
+      params.innercapheight = innerRotated.height
+
+      // Rotate text rectangle
+      const textRotated = rotateRect(
+        params.textcapx,
+        params.textcapy,
+        params.textcapwidth,
+        params.textcapheight,
+      )
+      params.textcapx = textRotated.x
+      params.textcapy = textRotated.y
+      params.textcapwidth = textRotated.width
+      params.textcapheight = textRotated.height
+
+      // For non-rectangular keys, rotate secondary rectangles
+      if (params.nonRectangular && params.outercapx2 !== undefined) {
+        const outer2Rotated = rotateRect(
+          params.outercapx2,
+          params.outercapy2!,
+          params.outercapwidth2!,
+          params.outercapheight2!,
+        )
+        params.outercapx2 = outer2Rotated.x
+        params.outercapy2 = outer2Rotated.y
+        params.outercapwidth2 = outer2Rotated.width
+        params.outercapheight2 = outer2Rotated.height
+
+        const inner2Rotated = rotateRect(
+          params.innercapx2!,
+          params.innercapy2!,
+          params.innercapwidth2!,
+          params.innercapheight2!,
+        )
+        params.innercapx2 = inner2Rotated.x
+        params.innercapy2 = inner2Rotated.y
+        params.innercapwidth2 = inner2Rotated.width
+        params.innercapheight2 = inner2Rotated.height
+      }
+    }
+
+    // For non-axis-aligned rotations, apply canvas rotation
+    if (key.rotation_angle && axisAlignedAngle === null) {
       ctx.translate(params.origin_x, params.origin_y)
       ctx.rotate((key.rotation_angle * Math.PI) / 180)
       ctx.translate(-params.origin_x, -params.origin_y)
@@ -508,34 +601,40 @@ export class KeyRenderer {
     // Unified rendering: same algorithm for all key types
 
     // Apply alignment for consistent pixel boundaries
-    if (params.nonRectangular && params.outercapx2 !== undefined) {
-      params = this.alignNonRectangularKeyParams(params)
-    } else {
-      // Apply same pixel alignment logic to rectangular keys
-      const originalOuterX = params.outercapx
-      const originalOuterY = params.outercapy
+    // Only apply alignment for non-rotated keys OR axis-aligned rotations (90°/180°/270°)
+    // Skip alignment for arbitrary angles
+    const shouldAlign = !key.rotation_angle || axisAlignedAngle !== null
 
-      const alignedOuter = this.alignRectToPixels(
-        params.outercapx,
-        params.outercapy,
-        params.outercapwidth,
-        params.outercapheight,
-      )
+    if (shouldAlign) {
+      if (params.nonRectangular && params.outercapx2 !== undefined) {
+        params = this.alignNonRectangularKeyParams(params)
+      } else {
+        // Apply same pixel alignment logic to rectangular keys
+        const originalOuterX = params.outercapx
+        const originalOuterY = params.outercapy
 
-      // Calculate how much the outer rectangle moved
-      const deltaX = alignedOuter.x - originalOuterX
-      const deltaY = alignedOuter.y - originalOuterY
+        const alignedOuter = this.alignRectToPixels(
+          params.outercapx,
+          params.outercapy,
+          params.outercapwidth,
+          params.outercapheight,
+        )
 
-      // Update outer rectangle
-      params.outercapx = alignedOuter.x
-      params.outercapy = alignedOuter.y
-      params.outercapwidth = alignedOuter.width
-      params.outercapheight = alignedOuter.height
+        // Calculate how much the outer rectangle moved
+        const deltaX = alignedOuter.x - originalOuterX
+        const deltaY = alignedOuter.y - originalOuterY
 
-      // Update inner rectangle by the same offset
-      params.innercapx = params.innercapx + deltaX
-      params.innercapy = params.innercapy + deltaY
-      // Inner width/height don't change, just position
+        // Update outer rectangle
+        params.outercapx = alignedOuter.x
+        params.outercapy = alignedOuter.y
+        params.outercapwidth = alignedOuter.width
+        params.outercapheight = alignedOuter.height
+
+        // Update inner rectangle by the same offset
+        params.innercapx = params.innercapx + deltaX
+        params.innercapy = params.innercapy + deltaY
+        // Inner width/height don't change, just position
+      }
     }
 
     // Build rectangles array - same structure for regular and non-rectangular keys
@@ -759,6 +858,46 @@ export class KeyRenderer {
     const bFinal = Math.min(255, Math.max(0, Math.round(fromLinear(bNew))))
 
     return `#${rFinal.toString(16).padStart(2, '0')}${gFinal.toString(16).padStart(2, '0')}${bFinal.toString(16).padStart(2, '0')}`
+  }
+
+  /**
+   * Check if rotation angle is axis-aligned (0°, 90°, 180°, 270°).
+   */
+  private getAxisAlignedRotation(rotationAngle: number | undefined): number | null {
+    if (!rotationAngle) return 0
+
+    const normalized = ((rotationAngle % 360) + 360) % 360
+    const tolerance = 0.01
+
+    if (Math.abs(normalized) < tolerance || Math.abs(normalized - 360) < tolerance) return 0
+    if (Math.abs(normalized - 90) < tolerance) return 90
+    if (Math.abs(normalized - 180) < tolerance) return 180
+    if (Math.abs(normalized - 270) < tolerance) return 270
+
+    return null
+  }
+
+  /**
+   * Rotate a point around an origin.
+   */
+  private rotatePoint(
+    x: number,
+    y: number,
+    originX: number,
+    originY: number,
+    angleDegrees: number,
+  ): { x: number; y: number } {
+    const angleRad = (angleDegrees * Math.PI) / 180
+    const cos = Math.cos(angleRad)
+    const sin = Math.sin(angleRad)
+
+    const dx = x - originX
+    const dy = y - originY
+
+    return {
+      x: originX + dx * cos - dy * sin,
+      y: originY + dx * sin + dy * cos,
+    }
   }
 
   /**

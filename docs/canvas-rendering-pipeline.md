@@ -272,7 +272,8 @@ interface RenderOptions {
 - **Multiple key shapes**: Rectangular, non-rectangular (ISO Enter, Big-Ass Enter), circular (rotary encoders)
 - **Vector union**: Seamless non-rectangular key rendering using polygon-clipping
 - **Pixel alignment**: Ensures crisp 1px borders on all screens
-- **Rotation support**: Proper transformation handling
+- **Axis-aligned rotation optimization**: Special handling for 90°/180°/270° rotations for perfect pixel alignment
+- **Rotation support**: Proper transformation handling for arbitrary angles
 - **Color calculation**: Lab color space lightening for realistic appearance (with caching)
 - **Performance optimized**: Native Math operations, color lightening cache
 
@@ -283,14 +284,32 @@ interface RenderOptions {
 const params = getRenderParams(key, options)
 // → Returns: outer cap, inner cap, text area dimensions
 
-// 2. Apply pixel alignment
-const alignedParams = alignRectToPixels(params)
-// → Ensures crisp edges on all screens
+// 2. Check if axis-aligned rotation (0°, 90°, 180°, 270°)
+const axisAlignedAngle = getAxisAlignedRotation(key.rotation_angle)
 
-// 3. Apply rotation transformation (if needed)
-ctx.translate(origin_x, origin_y)
-ctx.rotate(angle)
-ctx.translate(-origin_x, -origin_y)
+// 3a. For axis-aligned rotations: rotate coordinates FIRST
+if (axisAlignedAngle !== null && axisAlignedAngle !== 0) {
+  // Rotate all rectangles mathematically (no canvas transformation)
+  params.outer = rotateRect(params.outer, origin, axisAlignedAngle)
+  params.inner = rotateRect(params.inner, origin, axisAlignedAngle)
+  params.text = rotateRect(params.text, origin, axisAlignedAngle)
+  // For non-rectangular: also rotate secondary rectangles
+}
+
+// 3b. Apply pixel alignment (works perfectly on axis-aligned rotated rectangles)
+const shouldAlign = !key.rotation_angle || axisAlignedAngle !== null
+if (shouldAlign) {
+  params = alignRectToPixels(params)
+  // → Crisp edges for non-rotated and axis-aligned rotated keys
+}
+
+// 3c. For non-axis-aligned rotations: use canvas transformation
+if (key.rotation_angle && axisAlignedAngle === null) {
+  ctx.translate(origin_x, origin_y)
+  ctx.rotate(angle)
+  ctx.translate(-origin_x, -origin_y)
+  // → Smooth antialiased rendering for arbitrary angles
+}
 
 // 4. Draw key shape
 if (isCircular) {
@@ -1165,7 +1184,7 @@ WITH deduplication (current):
 
 This fix resolved critical drag lag issues where redundant renders caused performance degradation during mouse operations.
 
-### 3. Pixel Alignment
+### 3. Pixel Alignment and Rotation Handling
 
 **Problem**: Non-aligned strokes render blurry
 
@@ -1191,6 +1210,25 @@ alignRectToPixels(x, y, width, height):
   alignedHeight = Math.round(y + height) - Math.round(y)
   return { x: alignedX, y: alignedY, width: alignedWidth, height: alignedHeight }
 ```
+
+**Axis-Aligned Rotation Optimization**:
+
+For rotations at exactly 90°, 180°, or 270°, the system uses a special rendering approach to maintain perfect pixel alignment:
+
+1. **Detect axis-aligned rotations**: Check if rotation angle is within 0.01° of 0°, 90°, 180°, or 270°
+2. **Rotate coordinates first**: Apply mathematical rotation to all rectangle coordinates (outer, inner, text)
+3. **Then apply pixel alignment**: Align the already-rotated rectangles to pixel boundaries
+4. **Skip canvas rotation**: Don't use `ctx.rotate()` for the key shapes (only for labels)
+
+This ensures crisp edges for the most common rotation angles while avoiding the misalignment that would occur if alignment
+was applied before rotation (see [#30](https://github.com/adamws/kle-ng/issues/30)).
+
+For non-axis-aligned rotations (45°, 89°, 91°, etc.):
+- Skip pixel alignment entirely
+- Apply ctx.rotate() transformation
+- Result: Smooth antialiased rendering,
+    - small visual 'jump' when transitioning angles 89°→90°→91° due to change of render approach,
+    user must really pay attention to notice
 
 ### 4. Progressive Rendering
 
