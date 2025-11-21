@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { promises as fs } from 'fs'
+import { KeyboardEditorPage } from './pages/KeyboardEditorPage'
 
 // Helper function to export and parse layout JSON
 async function exportLayoutJSON(page: import('@playwright/test').Page) {
@@ -84,35 +85,22 @@ test.describe('Matrix Coordinates Tool', () => {
   })
 
   test('should open modal when clicked', async ({ page }) => {
-    // Open Extra Tools dropdown
-    await page.locator('.extra-tools-group button').click()
-    await page.waitForSelector('.extra-tools-dropdown', { state: 'visible' })
+    const editor = new KeyboardEditorPage(page)
 
-    // Click the matrix coordinates tool
-    const matrixTool = page.locator('.extra-tools-dropdown .dropdown-item').filter({
-      hasText: 'Add Switch Matrix Coordinates',
-    })
-    await matrixTool.click()
+    // Open matrix coordinates modal
+    await editor.matrix.open()
 
-    // Check that modal opens
-    await expect(page.locator('.matrix-modal')).toBeVisible()
+    // Check that modal opens with proper title
+    await editor.matrix.expectVisible()
     await expect(page.locator('.panel-title')).toContainText('Add Switch Matrix Coordinates')
   })
 
   test('should display proper drawing interface', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Open the matrix coordinates modal
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({
-        hasText: 'Add Switch Matrix Coordinates',
-      })
-      .click()
-
-    await expect(page.locator('.matrix-modal')).toBeVisible()
-
-    // Wait for modal content to load
-    await page.waitForTimeout(500)
+    await editor.matrix.open()
+    await editor.matrix.expectVisible()
 
     // Check that we're in the drawing step (no labels on keys means direct to drawing)
     const drawSection = page.locator('.draw-section')
@@ -134,19 +122,11 @@ test.describe('Matrix Coordinates Tool', () => {
   })
 
   test('should close modal with Close button', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Open modal
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({
-        hasText: 'Add Switch Matrix Coordinates',
-      })
-      .click()
-
-    await expect(page.locator('.matrix-modal')).toBeVisible()
-
-    // Wait for modal content to load
-    await page.waitForTimeout(500)
+    await editor.matrix.open()
+    await editor.matrix.expectVisible()
 
     // Click Close button in footer
     await page.locator('.matrix-modal .panel-footer button').filter({ hasText: 'Close' }).click()
@@ -156,23 +136,15 @@ test.describe('Matrix Coordinates Tool', () => {
   })
 
   test('should cancel modal with Escape key', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // First add a key to ensure warning step is shown
-    await page.click('button[title="Add Standard Key"]')
-    await page.waitForTimeout(300)
+    await editor.toolbar.addKey()
+    await editor.expectKeyCount(1)
 
     // Open modal
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({
-        hasText: 'Add Switch Matrix Coordinates',
-      })
-      .click()
-
-    await expect(page.locator('.matrix-modal')).toBeVisible()
-
-    // Wait for modal content to load
-    await page.waitForTimeout(500)
+    await editor.matrix.open()
+    await editor.matrix.expectVisible()
 
     // Press Escape key
     await page.keyboard.press('Escape')
@@ -182,54 +154,45 @@ test.describe('Matrix Coordinates Tool', () => {
   })
 
   test('should apply matrix coordinates to keyboard layout', async ({ page }) => {
-    // First, add some keys to work with
-    await page.click('button[title="Add Standard Key"]')
-    await page.click('button[title="Add Standard Key"]')
-    await page.click('button[title="Add Standard Key"]')
+    const editor = new KeyboardEditorPage(page)
 
-    // Wait a moment for keys to be added
-    await page.waitForTimeout(500)
+    // First, add some keys to work with
+    await editor.toolbar.addKey()
+    await editor.toolbar.addKey()
+    await editor.toolbar.addKey()
+    await editor.expectKeyCount(3)
 
     // Open matrix coordinates modal
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({
-        hasText: 'Add Switch Matrix Coordinates',
-      })
-      .click()
-
-    await expect(page.locator('.matrix-modal')).toBeVisible()
-
-    // Wait for modal content to load - we should be in drawing step directly
-    await page.waitForTimeout(500)
+    await editor.matrix.open()
+    await editor.matrix.expectVisible()
 
     // Click Annotate Automatically button
-    await page.locator('.matrix-modal button').filter({ hasText: 'Annotate Automatically' }).click()
-
-    // Modal should not close
-    await expect(page.locator('.matrix-modal')).toBeVisible()
-
-    // Wait for automatic annotation to complete
-    await page.waitForTimeout(1000)
+    await editor.matrix.autoAnnotate()
 
     // Check Annotation Complete section
     const successSection = page.locator('.alert-success')
     await expect(successSection).toBeVisible()
     await expect(successSection).toContainText('Annotation Complete!')
 
-    // Use Escape key to close the modal instead of clicking the Close button
+    // Use Escape key to close the modal
     await page.keyboard.press('Escape')
 
     // Verify modal closes
     await expect(page.locator('.matrix-modal')).not.toBeVisible()
 
     // Check that keys now have matrix coordinates in the JSON editor
-    // Open JSON editor panel (assuming it exists)
     const jsonToggle = page.locator('button').filter({ hasText: 'JSON' }).first()
     if (await jsonToggle.isVisible()) {
       await jsonToggle.click()
-      await page.waitForTimeout(500)
+
+      // Wait for JSON panel using RAF
+      await page.evaluate(() => {
+        return new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve())
+          })
+        })
+      })
 
       // Check that the JSON contains matrix coordinates
       const jsonContent = page.locator('.json-editor, textarea, .monaco-editor')
@@ -242,26 +205,16 @@ test.describe('Matrix Coordinates Tool', () => {
   })
 
   test('should work with different key arrangements', async ({ page }) => {
-    // Add keys in a specific pattern
-    await page.click('button[title="Add Standard Key"]')
-    await page.click('button[title="Add Standard Key"]')
+    const editor = new KeyboardEditorPage(page)
 
-    // Wait for keys to be added
-    await page.waitForTimeout(300)
+    // Add keys in a specific pattern
+    await editor.toolbar.addKey()
+    await editor.toolbar.addKey()
+    await editor.expectKeyCount(2)
 
     // Apply matrix coordinates
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({
-        hasText: 'Add Switch Matrix Coordinates',
-      })
-      .click()
-
-    await expect(page.locator('.matrix-modal')).toBeVisible()
-
-    // Wait for modal content to load - we should be in drawing step directly
-    await page.waitForTimeout(500)
+    await editor.matrix.open()
+    await editor.matrix.expectVisible()
 
     // Now click Close button to exit
     await page.locator('.matrix-modal .panel-footer button').filter({ hasText: 'Close' }).click()
@@ -271,9 +224,11 @@ test.describe('Matrix Coordinates Tool', () => {
   })
 
   test('should handle mobile responsive layout', async ({ page, isMobile }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // First add a key to ensure warning step is shown
-    await page.click('button[title="Add Standard Key"]')
-    await page.waitForTimeout(300)
+    await editor.toolbar.addKey()
+    await editor.expectKeyCount(1)
 
     if (!isMobile) {
       // Set mobile viewport
@@ -281,18 +236,8 @@ test.describe('Matrix Coordinates Tool', () => {
     }
 
     // Open modal
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({
-        hasText: 'Add Switch Matrix Coordinates',
-      })
-      .click()
-
-    await expect(page.locator('.matrix-modal')).toBeVisible()
-
-    // Wait for modal content to load
-    await page.waitForTimeout(500)
+    await editor.matrix.open()
+    await editor.matrix.expectVisible()
 
     // On mobile, modal should be positioned at bottom
     // Check that modal has proper mobile styling
@@ -305,54 +250,30 @@ test.describe('Matrix Coordinates Tool', () => {
   })
 
   test('should skip to completion state when layout is already annotated', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Add keys first
-    await page.click('button[title="Add Standard Key"]')
-    await page.click('button[title="Add Standard Key"]')
-    await page.waitForTimeout(300)
+    await editor.toolbar.addKey()
+    await editor.toolbar.addKey()
+    await editor.expectKeyCount(2)
 
     // Apply matrix coordinates once
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({
-        hasText: 'Add Switch Matrix Coordinates',
-      })
-      .click()
-
-    await expect(page.locator('.matrix-modal')).toBeVisible()
-
-    // Wait for modal content to load
-    await page.waitForTimeout(500)
+    await editor.matrix.open()
+    await editor.matrix.expectVisible()
 
     // Since we have no labels, we should be in drawing step directly
     await expect(page.locator('.draw-section')).toBeVisible()
 
     // Click Annotate Automatically to apply coordinates
-    await page.locator('.matrix-modal button').filter({ hasText: 'Annotate Automatically' }).click()
+    await editor.matrix.autoAnnotate()
 
-    // Wait for annotation to complete
-    await page.waitForTimeout(1000)
-
-    // Use Escape key to close the modal instead of clicking the Close button
+    // Use Escape key to close the modal
     await page.keyboard.press('Escape')
     await expect(page.locator('.matrix-modal')).not.toBeVisible()
 
-    // Wait for state to update
-    await page.waitForTimeout(500)
-
     // Re-open the modal
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({
-        hasText: 'Add Switch Matrix Coordinates',
-      })
-      .click()
-
-    await expect(page.locator('.matrix-modal')).toBeVisible()
-
-    // Wait for modal content to load
-    await page.waitForTimeout(500)
+    await editor.matrix.open()
+    await editor.matrix.expectVisible()
 
     // Should skip warning and go directly to draw step with "Layout Already Annotated" message
     await expect(page.locator('.draw-section')).toBeVisible()
@@ -364,6 +285,8 @@ test.describe('Matrix Coordinates Tool', () => {
   })
 
   test('should NOT clear labels when modal opens with warning step', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Load a layout with labels using KLE format
     const fixtureWithLabels = [
       ['A', 'B', 'C'],
@@ -373,20 +296,22 @@ test.describe('Matrix Coordinates Tool', () => {
 
     // Load layout with labels via JSON import
     await importLayoutJSON(page, fixtureWithLabels)
-    await page.waitForTimeout(500)
+
+    // Wait for import using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Get initial layout via JSON export
     const initialLayout = await exportLayoutJSON(page)
 
     // Open Matrix Coordinates Modal
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({ hasText: 'Add Switch Matrix Coordinates' })
-      .click()
-
-    await expect(page.locator('.matrix-modal')).toBeVisible()
-    await page.waitForTimeout(500)
+    await editor.matrix.open()
+    await editor.matrix.expectVisible()
 
     // Should be in warning step (because there are labels)
     const warningAlert = page.locator('.alert-warning')
@@ -413,6 +338,8 @@ test.describe('Matrix Coordinates Tool', () => {
   })
 
   test('should preserve labels when user clicks Cancel in warning step', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Load a layout with labels
     const fixtureWithLabels = [
       ['X', 'Y', 'Z'],
@@ -422,25 +349,35 @@ test.describe('Matrix Coordinates Tool', () => {
     // Ensure the app is fully loaded by waiting for a visible element
     await page.waitForSelector('.keyboard-canvas-container', { state: 'visible', timeout: 15000 })
 
-    // Wait a bit for Vue/Pinia to initialize after the DOM is ready
-    await page.waitForTimeout(1000)
+    // Wait for app initialization using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve())
+          })
+        })
+      })
+    })
 
     // Load layout with labels via JSON import
     await importLayoutJSON(page, fixtureWithLabels)
-    await page.waitForTimeout(500)
+
+    // Wait for import using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Get initial layout via JSON export
     const initialLayout = await exportLayoutJSON(page)
 
     // Open modal
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({ hasText: 'Add Switch Matrix Coordinates' })
-      .click()
-
-    await expect(page.locator('.matrix-modal')).toBeVisible()
-    await page.waitForTimeout(500)
+    await editor.matrix.open()
+    await editor.matrix.expectVisible()
 
     // Should show warning
     await expect(page.locator('.alert-warning')).toBeVisible()
@@ -474,6 +411,8 @@ test.describe('Matrix Coordinates Tool', () => {
   })
 
   test('should clear labels ONLY when user clicks OK in warning step', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Load a layout with labels
     const fixtureWithLabels = [
       ['Q', 'W', 'E'],
@@ -482,7 +421,15 @@ test.describe('Matrix Coordinates Tool', () => {
 
     // Load layout with labels via JSON import
     await importLayoutJSON(page, fixtureWithLabels)
-    await page.waitForTimeout(500)
+
+    // Wait for import using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Verify initial labels exist via JSON export
     const initialLayout = await exportLayoutJSON(page)
@@ -498,14 +445,8 @@ test.describe('Matrix Coordinates Tool', () => {
     expect(hasInitialLabels).toBe(true)
 
     // Open modal
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({ hasText: 'Add Switch Matrix Coordinates' })
-      .click()
-
-    await expect(page.locator('.matrix-modal')).toBeVisible()
-    await page.waitForTimeout(500)
+    await editor.matrix.open()
+    await editor.matrix.expectVisible()
 
     // Should show warning
     await expect(page.locator('.alert-warning')).toBeVisible()
@@ -514,7 +455,14 @@ test.describe('Matrix Coordinates Tool', () => {
     const okButton = page.locator('.matrix-modal .panel-footer button').filter({ hasText: 'OK' })
     await okButton.click()
 
-    await page.waitForTimeout(500)
+    // Wait for transition using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Should now be in draw step
     await expect(page.locator('.draw-section')).toBeVisible()
@@ -536,29 +484,23 @@ test.describe('Matrix Coordinates Tool', () => {
   })
 
   test('should show "Annotation Complete!" after automatic annotation', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Add some keys to annotate
-    await page.click('button[title="Add Standard Key"]')
-    await page.click('button[title="Add Standard Key"]')
-    await page.click('button[title="Add Standard Key"]')
-    await page.waitForTimeout(500)
+    await editor.toolbar.addKey()
+    await editor.toolbar.addKey()
+    await editor.toolbar.addKey()
+    await editor.expectKeyCount(3)
 
     // Open matrix coordinates modal
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({
-        hasText: 'Add Switch Matrix Coordinates',
-      })
-      .click()
-
-    await expect(page.locator('.matrix-modal')).toBeVisible()
-    await page.waitForTimeout(500)
+    await editor.matrix.open()
+    await editor.matrix.expectVisible()
 
     // Should be in draw step (no labels means skip warning)
     await expect(page.locator('.draw-section')).toBeVisible()
 
     // Click Annotate Automatically
-    await page.locator('.matrix-modal button').filter({ hasText: 'Annotate Automatically' }).click()
+    await editor.matrix.autoAnnotate()
 
     // Wait for annotation to complete and success message to appear
     const completionAlert = page.locator('.alert-success')
@@ -569,7 +511,6 @@ test.describe('Matrix Coordinates Tool', () => {
     // Close the modal using Escape key
     await page.keyboard.press('Escape')
     await expect(page.locator('.matrix-modal')).not.toBeVisible()
-    await page.waitForTimeout(300)
 
     // Regression test: Verify that keys can be selected after closing modal
     // (Previously, the overlay was blocking clicks after automatic annotation)
@@ -579,7 +520,15 @@ test.describe('Matrix Coordinates Tool', () => {
     // Click on a key (approximate center of first key at position 0,0)
     // With unit=54px and border=9px, first key center is at approximately (36, 36)
     await canvas.click({ position: { x: 36, y: 36 } })
-    await page.waitForTimeout(200)
+
+    // Wait for selection using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Verify that the key was selected by checking the Selected counter
     await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
@@ -591,6 +540,8 @@ test.describe('Matrix Coordinates Tool', () => {
   }) => {
     // Skip this test on non-Chromium browsers since we're asserting screenshots
     test.skip(browserName !== 'chromium', 'Screenshots only verified on Chromium')
+
+    const editor = new KeyboardEditorPage(page)
 
     // Open the presets dropdown
     const presetButton = page.locator('.preset-dropdown button.preset-select')
@@ -619,22 +570,18 @@ test.describe('Matrix Coordinates Tool', () => {
       { timeout: 10000 },
     )
 
-    // Wait a bit more to ensure layout is fully rendered
-    await page.waitForTimeout(500)
+    // Wait for layout rendering using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Open matrix coordinates modal
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({
-        hasText: 'Add Switch Matrix Coordinates',
-      })
-      .click()
-
-    await expect(page.locator('.matrix-modal')).toBeVisible()
-
-    // Wait for modal content to load
-    await page.waitForTimeout(500)
+    await editor.matrix.open()
+    await editor.matrix.expectVisible()
 
     // Should skip warning step and go directly to draw step
     const drawSection = page.locator('.draw-section')
@@ -646,8 +593,16 @@ test.describe('Matrix Coordinates Tool', () => {
     await expect(completionAlert).toContainText('Layout Already Annotated')
     await expect(completionAlert).toContainText('valid "row,column" annotations')
 
-    // Wait for matrix overlay to be rendered on canvas
-    await page.waitForTimeout(1000)
+    // Wait for matrix overlay to be rendered on canvas using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve())
+          })
+        })
+      })
+    })
 
     // Take a screenshot of the keyboard canvas to verify matrix preview is rendered
     const canvas = page.locator('.keyboard-canvas-container')
@@ -658,6 +613,8 @@ test.describe('Matrix Coordinates Tool', () => {
   })
 
   test('should present choice when opening partially annotated layout', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     const fixtureData = [
       ['0,0', '0,1', '0,2', '0,3'],
       [',0', ',1', ',2', ',3'],
@@ -666,17 +623,28 @@ test.describe('Matrix Coordinates Tool', () => {
 
     // Load layout with labels via JSON import
     await importLayoutJSON(page, fixtureData)
-    await page.waitForTimeout(500)
+
+    // Wait for layout to render
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Open modal
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({ hasText: 'Add Switch Matrix Coordinates' })
-      .click()
+    await editor.matrix.open()
+    await editor.matrix.expectVisible()
 
-    await expect(page.locator('.matrix-modal')).toBeVisible()
-    await page.waitForTimeout(500)
+    // Wait for modal content to stabilize
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Should show warning
     const warningAlert = page.locator('.alert-warning')
