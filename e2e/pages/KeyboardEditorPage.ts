@@ -2,6 +2,7 @@ import { Locator, Page, expect } from '@playwright/test'
 import { BasePage } from './BasePage'
 import { ToolbarComponent } from './components/ToolbarComponent'
 import { CanvasComponent } from './components/CanvasComponent'
+import { RotationToolComponent } from './components/RotationToolComponent'
 import { SELECTORS } from '../constants/selectors'
 
 /**
@@ -22,6 +23,7 @@ import { SELECTORS } from '../constants/selectors'
 export class KeyboardEditorPage extends BasePage {
   readonly toolbar: ToolbarComponent
   readonly canvas: CanvasComponent
+  readonly rotation: RotationToolComponent
 
   private readonly keysCounter: Locator
   private readonly selectedCounter: Locator
@@ -31,6 +33,7 @@ export class KeyboardEditorPage extends BasePage {
     super(page)
     this.toolbar = new ToolbarComponent(page)
     this.canvas = new CanvasComponent(page)
+    this.rotation = new RotationToolComponent(page)
 
     // Initialize locators for counters and indicators
     this.keysCounter = page.locator(SELECTORS.COUNTERS.KEYS)
