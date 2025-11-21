@@ -262,10 +262,18 @@ test.describe('Single Key Rendering Tests', () => {
       // Wait for network requests to complete
       await helper.page.waitForLoadState('networkidle')
 
-      // Wait for image to load and re-render
-      await helper.page.waitForTimeout(3000)
-      await helper.waitForRender()
-      await helper.page.waitForTimeout(1000)
+      // Wait for image to load and render using RAF waits
+      await helper.page.evaluate(() => {
+        return new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => resolve())
+              })
+            })
+          })
+        })
+      })
 
       await expect(helper.getCanvas()).toHaveScreenshot('labels/html-image-center.png')
     })
@@ -277,9 +285,19 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeyLabel('topLeft', `<img src="${testImage}">`)
 
       await helper.page.waitForLoadState('networkidle')
-      await helper.page.waitForTimeout(3000)
-      await helper.waitForRender()
-      await helper.page.waitForTimeout(1000)
+
+      // Wait for image to load and render using RAF waits
+      await helper.page.evaluate(() => {
+        return new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => resolve())
+              })
+            })
+          })
+        })
+      })
 
       await expect(helper.getCanvas()).toHaveScreenshot('labels/html-image-top-left.png')
     })
@@ -291,9 +309,19 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeyLabel('bottomRight', `<img src="${testImage}">`)
 
       await helper.page.waitForLoadState('networkidle')
-      await helper.page.waitForTimeout(3000)
-      await helper.waitForRender()
-      await helper.page.waitForTimeout(1000)
+
+      // Wait for image to load and render using RAF waits
+      await helper.page.evaluate(() => {
+        return new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => resolve())
+              })
+            })
+          })
+        })
+      })
 
       await expect(helper.getCanvas()).toHaveScreenshot('labels/html-image-bottom-right.png')
     })
@@ -307,9 +335,19 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeyLabel('bottomRight', `<img src="${testImage}">`)
 
       await helper.page.waitForLoadState('networkidle')
-      await helper.page.waitForTimeout(3000)
-      await helper.waitForRender()
-      await helper.page.waitForTimeout(1000)
+
+      // Wait for images to load and render using RAF waits
+      await helper.page.evaluate(() => {
+        return new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => resolve())
+              })
+            })
+          })
+        })
+      })
 
       await expect(helper.getCanvas()).toHaveScreenshot('labels/html-image-multiple.png')
     })
@@ -322,9 +360,17 @@ test.describe('Single Key Rendering Tests', () => {
 
       // Wait for image to load
       await helper.page.waitForLoadState('networkidle')
-      await helper.page.waitForTimeout(1000)
-      await helper.waitForRender()
-      await helper.page.waitForTimeout(500)
+
+      // Wait for SVG to load and render using RAF waits
+      await helper.page.evaluate(() => {
+        return new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => resolve())
+            })
+          })
+        })
+      })
 
       await expect(helper.getCanvas()).toHaveScreenshot('labels/html-svg-center.png')
     })
@@ -335,9 +381,17 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeyLabel('topLeft', `<img src="${testSvg}">`)
 
       await helper.page.waitForLoadState('networkidle')
-      await helper.page.waitForTimeout(1000)
-      await helper.waitForRender()
-      await helper.page.waitForTimeout(500)
+
+      // Wait for SVG to load and render using RAF waits
+      await helper.page.evaluate(() => {
+        return new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => resolve())
+            })
+          })
+        })
+      })
 
       await expect(helper.getCanvas()).toHaveScreenshot('labels/html-svg-top-left.png')
     })
@@ -350,9 +404,17 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeyLabel('bottomRight', `<img src="${testSvg}">`)
 
       await helper.page.waitForLoadState('networkidle')
-      await helper.page.waitForTimeout(1000)
-      await helper.waitForRender()
-      await helper.page.waitForTimeout(500)
+
+      // Wait for SVGs to load and render using RAF waits
+      await helper.page.evaluate(() => {
+        return new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => resolve())
+            })
+          })
+        })
+      })
 
       await expect(helper.getCanvas()).toHaveScreenshot('labels/html-svg-multiple.png')
     })
@@ -363,9 +425,15 @@ test.describe('Single Key Rendering Tests', () => {
         '<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="12" fill="#FF5722"/><path d="M12 16 L15 19 L20 13" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>'
       await helper.setKeyLabel('center', inlineSvg)
 
-      // Wait for rendering
+      // Wait for rendering with additional RAF waits
       await helper.waitForRender()
-      await helper.page.waitForTimeout(1000)
+      await helper.page.evaluate(() => {
+        return new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve())
+          })
+        })
+      })
 
       await expect(helper.getCanvas()).toHaveScreenshot('labels/html-inline-svg-center.png')
     })
@@ -376,8 +444,15 @@ test.describe('Single Key Rendering Tests', () => {
         '<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" fill="#2196F3"/><text x="12" y="16" text-anchor="middle" fill="white" font-size="14" font-weight="bold">A</text></svg>'
       await helper.setKeyLabel('topLeft', inlineSvg)
 
+      // Wait for rendering with additional RAF waits
       await helper.waitForRender()
-      await helper.page.waitForTimeout(1000)
+      await helper.page.evaluate(() => {
+        return new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve())
+          })
+        })
+      })
 
       await expect(helper.getCanvas()).toHaveScreenshot('labels/html-inline-svg-top-left.png')
     })
@@ -395,8 +470,15 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeyLabel('center', svgGreen)
       await helper.setKeyLabel('bottomRight', svgBlue)
 
+      // Wait for rendering with additional RAF waits
       await helper.waitForRender()
-      await helper.page.waitForTimeout(1000)
+      await helper.page.evaluate(() => {
+        return new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve())
+          })
+        })
+      })
 
       await expect(helper.getCanvas()).toHaveScreenshot('labels/html-inline-svg-multiple.png')
     })
