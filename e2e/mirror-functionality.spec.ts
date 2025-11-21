@@ -45,7 +45,13 @@ test.describe('Mirror Functionality', () => {
     await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
 
     // Wait for canvas to adjust size for mirror mode
-    await page.waitForTimeout(100)
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Click on canvas to perform mirror operation
     // For horizontal mirror, click below the key to set the mirror axis
@@ -86,7 +92,13 @@ test.describe('Mirror Functionality', () => {
     await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
 
     // Wait for canvas to adjust size for mirror mode
-    await page.waitForTimeout(100)
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Click on canvas to perform mirror operation
     // For vertical mirror, click to the right of the key to set the mirror axis
@@ -138,7 +150,13 @@ test.describe('Mirror Functionality', () => {
     await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
 
     // Wait for canvas to adjust size for mirror mode
-    await page.waitForTimeout(100)
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Click on canvas to perform mirror operation
     // For horizontal mirror, click below the key to set the mirror axis
@@ -186,7 +204,13 @@ test.describe('Mirror Functionality', () => {
     await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
 
     // Wait for canvas to adjust size for mirror mode
-    await page.waitForTimeout(100)
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Click on canvas to perform mirror operation
     // For vertical mirror, click to the right of the key to set the mirror axis
@@ -243,7 +267,20 @@ test.describe('Mirror Functionality', () => {
     await page
       .locator('.keyboard-canvas')
       .click({ position: { x: 155, y: 47 }, modifiers: ['Control'], force: true })
-    await page.waitForTimeout(300)
+
+    // Wait for multi-select to complete
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => resolve())
+            })
+          })
+        })
+      })
+    })
+
     // Verify all keys are selected (flexible - accept whatever keys we have)
     const selectedText = await page.locator('.selected-counter').textContent()
     const selectedCount = parseInt(selectedText?.match(/Selected: (\d+)/)?.[1] || '0')
@@ -257,13 +294,31 @@ test.describe('Mirror Functionality', () => {
       .click()
     // Wait for button to become active
     await expect(page.locator('button[title="Mirror Vertical"]')).toHaveClass(/active/)
-    await page.waitForTimeout(300)
+
+    // Wait for mode switch to complete
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => resolve())
+            })
+          })
+        })
+      })
+    })
 
     // Verify keys are still selected after switching to mirror mode
     await expect(page.locator('.selected-counter')).toContainText(`Selected: ${selectedCount}`)
 
     // Wait for canvas to adjust size for mirror mode
-    await page.waitForTimeout(100)
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Click on canvas to perform mirror operation
     // For horizontal mirror, click below the keys to set the mirror axis
@@ -311,7 +366,20 @@ test.describe('Mirror Functionality', () => {
     await page
       .locator('.keyboard-canvas')
       .click({ position: { x: 101, y: 47 }, modifiers: ['Control'], force: true })
-    await page.waitForTimeout(300)
+
+    // Wait for multi-select to complete
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => resolve())
+            })
+          })
+        })
+      })
+    })
+
     // Verify all keys are selected (flexible - accept whatever keys we have)
     const selectedText = await page.locator('.selected-counter').textContent()
     const selectedCount = parseInt(selectedText?.match(/Selected: (\d+)/)?.[1] || '0')
@@ -321,13 +389,31 @@ test.describe('Mirror Functionality', () => {
     await page.locator('button[title="Mirror Vertical"]').click()
     // Wait for button to become active
     await expect(page.locator('button[title="Mirror Vertical"]')).toHaveClass(/active/)
-    await page.waitForTimeout(300)
+
+    // Wait for mode switch to complete
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => resolve())
+            })
+          })
+        })
+      })
+    })
 
     // Verify keys are still selected after switching to mirror mode
     await expect(page.locator('.selected-counter')).toContainText(`Selected: ${selectedCount}`)
 
     // Wait for canvas to adjust size for mirror mode
-    await page.waitForTimeout(100)
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Click on canvas to perform mirror operation
     // For vertical mirror, click to the right of the keys to set the mirror axis
