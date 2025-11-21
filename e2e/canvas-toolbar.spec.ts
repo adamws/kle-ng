@@ -1,82 +1,72 @@
 import { test, expect } from '@playwright/test'
 import { CanvasTestHelper } from './helpers/canvas-test-helpers'
+import { CanvasToolbarHelper } from './helpers/canvas-toolbar-helpers'
+import { WaitHelpers } from './helpers/wait-helpers'
 
 test.describe('Canvas Toolbar', () => {
   let canvasHelper: CanvasTestHelper
+  let toolbarHelper: CanvasToolbarHelper
+  let waitHelpers: WaitHelpers
 
   test.beforeEach(async ({ page }) => {
     canvasHelper = new CanvasTestHelper(page)
+    waitHelpers = new WaitHelpers(page)
+    toolbarHelper = new CanvasToolbarHelper(page, waitHelpers)
     await page.goto('/')
   })
 
   test.describe('Toolbar Visibility and Layout', () => {
     test('should display canvas toolbar with all sections', async ({ page }) => {
       // Check that canvas toolbar is visible
-      await expect(page.locator('.canvas-toolbar')).toBeVisible()
+      await toolbarHelper.expectToolbarVisible()
 
       // Move Step is now in app footer, not canvas toolbar
-      await expect(page.locator('.move-step-control input[type="number"]')).toBeVisible()
+      await expect(toolbarHelper.getMoveStepInput()).toBeVisible()
       await expect(page.locator('.move-step-control .input-suffix')).toBeVisible()
 
       // Check key tool buttons are present (drag & drop tool no longer exists)
-      await expect(
-        page.locator('button[title="Selection Mode - Left click to select, middle drag to move"]'),
-      ).toBeVisible()
+      await expect(toolbarHelper.getSelectionButton()).toBeVisible()
       await expect(page.locator('button[title="Add Standard Key"]')).toBeVisible()
-      await expect(page.locator('button[title="Mirror Vertical"]')).toBeVisible()
-      await expect(page.locator('.mirror-group .dropdown-btn')).toBeVisible()
+      await expect(toolbarHelper.getMirrorButton()).toBeVisible()
+      await expect(toolbarHelper.getMirrorDropdownButton()).toBeVisible()
     })
 
-    test('should have selection tool active by default', async ({ page }) => {
-      const selectionButton = page.locator(
-        'button[title="Selection Mode - Left click to select, middle drag to move"]',
-      )
-      await expect(selectionButton).toHaveClass(/active/)
+    test('should have selection tool active by default', async () => {
+      await toolbarHelper.expectSelectionModeActive()
     })
 
-    test('should show correct tooltips for tool buttons', async ({ page }) => {
-      await expect(
-        page.locator('button[title="Selection Mode - Left click to select, middle drag to move"]'),
-      ).toBeVisible()
+    test('should show correct tooltips for tool buttons', async () => {
+      await expect(toolbarHelper.getSelectionButton()).toBeVisible()
       // Drag and drop functionality is integrated into Selection Mode
-      await expect(page.locator('button[title="Mirror Vertical"]')).toBeVisible()
-      await expect(page.locator('.mirror-group .dropdown-btn')).toBeVisible()
+      await expect(toolbarHelper.getMirrorButton()).toBeVisible()
+      await expect(toolbarHelper.getMirrorDropdownButton()).toBeVisible()
     })
   })
 
   test.describe('Move Step Control', () => {
-    test('should have default move step value of 0.25', async ({ page }) => {
+    test('should have default move step value of 0.25', async () => {
       // Move step input is now in the app footer, not canvas toolbar
-      const stepInput = page.locator('.move-step-control input[type="number"]')
-      await expect(stepInput).toHaveValue('0.25')
+      await toolbarHelper.expectMoveStep('0.25')
     })
 
-    test('should accept valid move step values', async ({ page }) => {
-      const stepInput = page.locator('.move-step-control input[type="number"]')
-
+    test('should accept valid move step values', async () => {
       // Test setting to 0.5
-      await stepInput.fill('0.5')
-      await stepInput.blur()
-      await expect(stepInput).toHaveValue('0.5')
+      await toolbarHelper.setMoveStep('0.5')
+      await toolbarHelper.expectMoveStep('0.5')
 
       // Test setting to 1.0 (browsers may normalize to "1")
-      await stepInput.fill('1.0')
-      await stepInput.blur()
+      await toolbarHelper.setMoveStep('1.0')
       // Accept both "1.0" and "1" as valid representations
-      const value1 = await stepInput.inputValue()
-      expect(value1).toMatch(/^1(\.0)?$/)
+      await toolbarHelper.expectMoveStep(/^1(\.0)?$/)
 
       // Test setting to minimum value 0.05
-      await stepInput.fill('0.05')
-      await stepInput.blur()
-      await expect(stepInput).toHaveValue('0.05')
+      await toolbarHelper.setMoveStep('0.05')
+      await toolbarHelper.expectMoveStep('0.05')
 
       // Test setting to maximum value 5.0 (browsers may normalize to "5")
-      await stepInput.fill('5.0')
-      await stepInput.blur()
+      await toolbarHelper.setMoveStep('5.0')
       // Accept both "5.0" and "5" as valid representations
-      const value5 = await stepInput.inputValue()
-      expect(value5).toMatch(/^5(\.0)?$/)
+      await toolbarHelper.expectMoveStep(/^5(\.0)?$/)
     })
 
     test('should integrate with key position controls', async ({ page }) => {
@@ -84,9 +74,7 @@ test.describe('Canvas Toolbar', () => {
       await canvasHelper.addKey()
 
       // Set move step to 0.5
-      const stepInput = page.locator('.move-step-control input[type="number"]')
-      await stepInput.fill('0.5')
-      await stepInput.blur()
+      await toolbarHelper.setMoveStep('0.5')
 
       // Check that position input step attributes are updated
       const positionInputs = page.locator('.key-properties-panel input[title*="Position"]')
@@ -96,36 +84,27 @@ test.describe('Canvas Toolbar', () => {
   })
 
   test.describe('Tool Selection', () => {
-    test('should switch between tools correctly', async ({ page }) => {
+    test('should switch between tools correctly', async () => {
       // Add a key first so mirror tools become enabled
       await canvasHelper.addKey()
 
-      const selectionButton = page.locator(
-        'button[title="Selection Mode - Left click to select, middle drag to move"]',
-      )
-      const mirrorButton = page.locator('button[title="Mirror Vertical"]')
-
       // Initially Selection Mode should be active
-      await expect(selectionButton).toHaveClass(/active/)
+      await toolbarHelper.expectSelectionModeActive()
 
       // Switch to horizontal mirror
-      await page.locator('.mirror-group .dropdown-btn').click()
-      await page
-        .locator('.mirror-dropdown .dropdown-item')
-        .filter({ hasText: 'Mirror Horizontal' })
-        .click()
-      await expect(mirrorButton).toHaveClass(/active/)
-      await expect(selectionButton).not.toHaveClass(/active/)
+      await toolbarHelper.selectMirrorHorizontal()
+      await toolbarHelper.expectMirrorModeActive()
+      await toolbarHelper.expectSelectionModeInactive()
 
       // Switch to vertical mirror
-      await mirrorButton.click()
-      await expect(mirrorButton).toHaveClass(/active/)
-      await expect(selectionButton).not.toHaveClass(/active/)
+      await toolbarHelper.selectMirrorVertical()
+      await toolbarHelper.expectMirrorModeActive()
+      await toolbarHelper.expectSelectionModeInactive()
 
       // Switch back to Selection Mode
-      await selectionButton.click()
-      await expect(selectionButton).toHaveClass(/active/)
-      await expect(mirrorButton).not.toHaveClass(/active/)
+      await toolbarHelper.selectSelectionMode()
+      await toolbarHelper.expectSelectionModeActive()
+      await toolbarHelper.expectMirrorModeInactive()
     })
   })
 
@@ -135,10 +114,7 @@ test.describe('Canvas Toolbar', () => {
       await canvasHelper.addKey()
 
       // Ensure we're in select mode
-      const selectButton = page.locator(
-        'button[title="Selection Mode - Left click to select, middle drag to move"]',
-      )
-      await selectButton.click()
+      await toolbarHelper.selectSelectionMode()
 
       // The key should be selected by default after adding
       await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
@@ -149,10 +125,7 @@ test.describe('Canvas Toolbar', () => {
       await canvasHelper.addMultipleKeys(5)
 
       // Ensure we're in select mode
-      const selectButton = page.locator(
-        'button[title="Selection Mode - Left click to select, middle drag to move"]',
-      )
-      await selectButton.click()
+      await toolbarHelper.selectSelectionMode()
 
       // Keys should be added successfully first
       await expect(page.locator('.keys-counter')).toContainText('Keys: 5')
@@ -171,18 +144,12 @@ test.describe('Canvas Toolbar', () => {
     })
 
     test('should deselect keys when pressing Escape', async ({ page }) => {
-      // Fixed: Use Escape key instead of canvas click to avoid container interception
-      const canvasHelper = new CanvasTestHelper(page)
-
       // Add a key and ensure it's selected
       await canvasHelper.addKey()
       await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
 
       // Use the helper's deselect method which is more reliable
       await canvasHelper.deselectAllKeys()
-
-      // Deselection should be immediate
-      // Wait for selection counter to update
 
       // Verify keys are deselected
       await expect(page.locator('.selected-counter')).toContainText('Selected: 0')
@@ -191,18 +158,15 @@ test.describe('Canvas Toolbar', () => {
 
   test.describe('Enhanced Selection Mode with Drag & Drop', () => {
     // Testing the new enhanced selection mode with integrated rectangle selection and multi-key drag
-    test('should enable drag and drop in selection mode', async ({ page }) => {
+    test('should enable drag and drop in selection mode', async () => {
       // Add a key to test with
       await canvasHelper.addKey()
 
       // Ensure Selection Mode is active (should be default)
-      const selectionButton = page.locator(
-        'button[title="Selection Mode - Left click to select, middle drag to move"]',
-      )
-      await selectionButton.click()
+      await toolbarHelper.selectSelectionMode()
 
       // Verify Selection Mode is active
-      await expect(selectionButton).toHaveClass(/active/)
+      await toolbarHelper.expectSelectionModeActive()
 
       // Canvas should be visible and interactive
       const canvas = canvasHelper.getCanvas()
@@ -214,13 +178,10 @@ test.describe('Canvas Toolbar', () => {
       await canvasHelper.addKey()
 
       // Ensure Selection Mode is active
-      const selectionButton = page.locator(
-        'button[title="Selection Mode - Left click to select, middle drag to move"]',
-      )
-      await selectionButton.click()
+      await toolbarHelper.selectSelectionMode()
 
       // Verify Selection Mode is active
-      await expect(selectionButton).toHaveClass(/active/)
+      await toolbarHelper.expectSelectionModeActive()
 
       // The key should exist and be selected
       await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
@@ -232,7 +193,7 @@ test.describe('Canvas Toolbar', () => {
 
       // Key should exist and selection mode allows dragging
       await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
-      await expect(selectionButton).toHaveClass(/active/)
+      await toolbarHelper.expectSelectionModeActive()
     })
 
     test('should support multi-key dragging when multiple keys are selected', async ({ page }) => {
@@ -243,10 +204,7 @@ test.describe('Canvas Toolbar', () => {
       await expect(page.locator('.keys-counter')).toContainText('Keys: 3')
 
       // Ensure Selection Mode is active
-      const selectionButton = page.locator(
-        'button[title="Selection Mode - Left click to select, middle drag to move"]',
-      )
-      await selectionButton.click()
+      await toolbarHelper.selectSelectionMode()
 
       // Select all keys using Ctrl+A
       const canvas = canvasHelper.getCanvas()
@@ -261,7 +219,7 @@ test.describe('Canvas Toolbar', () => {
       expect(statusTextBefore).toMatch(/Selected: [1-3]/)
 
       // Verify multi-key selection works in Selection Mode (drag functionality available)
-      await expect(selectionButton).toHaveClass(/active/)
+      await toolbarHelper.expectSelectionModeActive()
 
       // All keys should exist and be ready for multi-key operations
       await expect(page.locator('.keys-counter')).toContainText('Keys: 3')
@@ -275,17 +233,12 @@ test.describe('Canvas Toolbar', () => {
       await expect(page.locator('.keys-counter')).toContainText('Keys: 3')
 
       // Ensure Selection Mode is active
-      const selectionButton = page.locator(
-        'button[title="Selection Mode - Left click to select, middle drag to move"]',
-      )
-      await selectionButton.click()
-      await expect(selectionButton).toHaveClass(/active/)
+      await toolbarHelper.selectSelectionMode()
+      await toolbarHelper.expectSelectionModeActive()
 
       // Clear any existing selection by clicking empty area
       const canvas = canvasHelper.getCanvas()
-      await canvas.click({ position: { x: 10, y: 10 } })
-
-      await page.waitForTimeout(200)
+      await toolbarHelper.clearSelectionByCanvasClick(canvas)
 
       // Now try rectangular selection in Selection Mode
       // Get canvas bounds for positioning
@@ -312,7 +265,7 @@ test.describe('Canvas Toolbar', () => {
       expect(selectedStatus).toMatch(/Selected: [1-3]/)
 
       // Verify we're still in Selection Mode
-      await expect(selectionButton).toHaveClass(/active/)
+      await toolbarHelper.expectSelectionModeActive()
     })
 
     test('should maintain relative positions during multi-key drag (formation preservation)', async ({
@@ -335,10 +288,7 @@ test.describe('Canvas Toolbar', () => {
       await expect(page.locator('.keys-counter')).toContainText('Keys: 3')
 
       // Ensure Selection Mode is active
-      const selectionButton = page.locator(
-        'button[title="Selection Mode - Left click to select, middle drag to move"]',
-      )
-      await selectionButton.click()
+      await toolbarHelper.selectSelectionMode()
 
       // Select all keys using Ctrl+A
       const canvas = canvasHelper.getCanvas()
@@ -353,7 +303,7 @@ test.describe('Canvas Toolbar', () => {
 
       // Get initial positions of all keys (this would be implementation-dependent)
       // For now, we just verify the multi-key selection works
-      await expect(selectionButton).toHaveClass(/active/)
+      await toolbarHelper.expectSelectionModeActive()
       await expect(page.locator('.keys-counter')).toContainText('Keys: 3')
     })
 
@@ -362,17 +312,12 @@ test.describe('Canvas Toolbar', () => {
       await canvasHelper.addMultipleKeys(3)
 
       // Set a specific move step for snapping
-      const stepInput = page.locator('.move-step-control input[type="number"]')
-      await stepInput.fill('0.5')
-      await stepInput.blur()
+      await toolbarHelper.setMoveStep('0.5')
       // Verify move step is set
-      await expect(stepInput).toHaveValue('0.5')
+      await toolbarHelper.expectMoveStep('0.5')
 
       // Ensure Selection Mode is active (for multi-key drag capability)
-      const selectionButton = page.locator(
-        'button[title="Selection Mode - Left click to select, middle drag to move"]',
-      )
-      await selectionButton.click()
+      await toolbarHelper.selectSelectionMode()
 
       // Select all keys
       const canvas = canvasHelper.getCanvas()
@@ -386,7 +331,7 @@ test.describe('Canvas Toolbar', () => {
       expect(statusText).toMatch(/Selected: [1-3]/)
 
       // Verify we're in Selection Mode which supports multi-key dragging with snapping
-      await expect(selectionButton).toHaveClass(/active/)
+      await toolbarHelper.expectSelectionModeActive()
     })
 
     test('should detect selected vs unselected key clicks for drag behavior', async ({ page }) => {
@@ -394,10 +339,7 @@ test.describe('Canvas Toolbar', () => {
       await canvasHelper.addMultipleKeys(3)
 
       // Ensure Selection Mode is active
-      const selectionButton = page.locator(
-        'button[title="Selection Mode - Left click to select, middle drag to move"]',
-      )
-      await selectionButton.click()
+      await toolbarHelper.selectSelectionMode()
 
       // Select some keys using Ctrl+A
       const canvas = canvasHelper.getCanvas()
@@ -415,89 +357,61 @@ test.describe('Canvas Toolbar', () => {
       // 2. Unselected key clicked -> should select and drag only that key
       // (This is behavioral testing - the actual drag detection would require more complex canvas interaction)
 
-      await expect(selectionButton).toHaveClass(/active/)
+      await toolbarHelper.expectSelectionModeActive()
       await expect(page.locator('.keys-counter')).toContainText('Keys: 3')
     })
   })
 
   test.describe('Mirror Tools Functionality', () => {
-    test('should activate horizontal mirror mode', async ({ page }) => {
-      const canvasHelper = new CanvasTestHelper(page)
-
+    test('should activate horizontal mirror mode', async () => {
       // Add a key first - mirror tools are only enabled when keys exist
       await canvasHelper.addKey()
       await canvasHelper.setKeyLabel('center', 'A')
 
-      // Click the mirror dropdown and select horizontal
-      await page.locator('.mirror-group .dropdown-btn').click()
-      await page
-        .locator('.mirror-dropdown .dropdown-item')
-        .filter({ hasText: 'Mirror Horizontal' })
-        .click()
+      // Select horizontal mirror mode
+      await toolbarHelper.selectMirrorHorizontal()
 
-      // Verify main mirror button is active
-      const mirrorButton = page.locator('button[title="Mirror Vertical"]')
-      await expect(mirrorButton).toHaveClass(/active/)
+      // Verify mirror mode is active
+      await toolbarHelper.expectMirrorModeActive()
 
       // Other tools should not be active
-      await expect(
-        page.locator('button[title="Selection Mode - Left click to select, middle drag to move"]'),
-      ).not.toHaveClass(/active/)
+      await toolbarHelper.expectSelectionModeInactive()
     })
 
-    test('should activate vertical mirror mode', async ({ page }) => {
-      const canvasHelper = new CanvasTestHelper(page)
-
+    test('should activate vertical mirror mode', async () => {
       // Add a key first - mirror tools are only enabled when keys exist
       await canvasHelper.addKey()
       await canvasHelper.setKeyLabel('center', 'B')
 
-      // Click the main mirror button (vertical is default)
-      const mirrorVButton = page.locator('button[title="Mirror Vertical"]')
-      await mirrorVButton.click()
+      // Select vertical mirror mode
+      await toolbarHelper.selectMirrorVertical()
 
       // Verify it's active
-      await expect(mirrorVButton).toHaveClass(/active/)
+      await toolbarHelper.expectMirrorModeActive()
 
       // Other tools should not be active
-      await expect(
-        page.locator('button[title="Selection Mode - Left click to select, middle drag to move"]'),
-      ).not.toHaveClass(/active/)
+      await toolbarHelper.expectSelectionModeInactive()
     })
 
-    test('should show mirror preview when hovering in mirror mode', async ({ page }) => {
-      // Fixed: Use force hover to bypass element instability
-      const canvasHelper = new CanvasTestHelper(page)
-
+    test('should show mirror preview when hovering in mirror mode', async () => {
       // Add a key to mirror
       await canvasHelper.addKey()
       await canvasHelper.setKeyLabel('center', 'C')
 
       // Switch to horizontal mirror mode
-      await page.locator('.mirror-group .dropdown-btn').click()
-      await page
-        .locator('.mirror-dropdown .dropdown-item')
-        .filter({ hasText: 'Mirror Horizontal' })
-        .click()
+      await toolbarHelper.selectMirrorHorizontal()
 
       // Get canvas
       const canvas = canvasHelper.getCanvas()
 
-      // Hover over canvas to show mirror preview
-
+      // Hover over canvas to show mirror preview (use force to bypass element instability)
       await canvas.hover({ position: { x: 200, y: 100 }, force: true })
 
       // Canvas should remain visible during preview
       await expect(canvas).toBeVisible()
-
-      // The canvas should still be visible (basic check)
-      await expect(canvas).toBeVisible()
     })
 
     test('should create mirrored keys when clicking mirror axis', async ({ page }) => {
-      // Fixed: Use force click to bypass container interception
-      const canvasHelper = new CanvasTestHelper(page)
-
       // Add a key to mirror
       await canvasHelper.addKey()
       await canvasHelper.setKeyLabel('center', 'D')
@@ -506,18 +420,13 @@ test.describe('Canvas Toolbar', () => {
       await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
 
       // Switch to horizontal mirror mode
-      await page.locator('.mirror-group .dropdown-btn').click()
-      await page
-        .locator('.mirror-dropdown .dropdown-item')
-        .filter({ hasText: 'Mirror Horizontal' })
-        .click()
+      await toolbarHelper.selectMirrorHorizontal()
 
       // Verify mode is active
-      await expect(page.locator('button[title="Mirror Vertical"]')).toHaveClass(/active/)
+      await toolbarHelper.expectMirrorModeActive()
 
-      // Get canvas and click to set mirror axis and create mirror
+      // Get canvas and click to set mirror axis and create mirror (use force to bypass container interception)
       const canvas = canvasHelper.getCanvas()
-
       await canvas.click({ position: { x: 200, y: 100 }, force: true })
 
       // Wait for mirror operation to complete - should add at least one more key or keep original
@@ -537,9 +446,7 @@ test.describe('Canvas Toolbar', () => {
       await canvasHelper.addKey()
 
       // Change move step in toolbar
-      const stepInput = page.locator('.move-step-control input[type="number"]')
-      await stepInput.fill('0.75')
-      await stepInput.blur()
+      await toolbarHelper.setMoveStep('0.75')
 
       // Check that position input step attributes are updated
       const xPositionInput = page.locator('input[title="X Position"]').first()
@@ -557,11 +464,9 @@ test.describe('Canvas Toolbar', () => {
       await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
 
       // Set a specific move step (0.5U)
-      const stepInput = page.locator('.move-step-control input[type="number"]')
-      await stepInput.fill('0.5')
-      await stepInput.blur()
+      await toolbarHelper.setMoveStep('0.5')
       // Wait for move step to be applied
-      await expect(stepInput).toHaveValue('0.5')
+      await toolbarHelper.expectMoveStep('0.5')
 
       // Get the current key position
       const xPosInput = page.locator('input[title="X Position"]').first()
@@ -599,34 +504,25 @@ test.describe('Canvas Toolbar', () => {
     // Note: Mirror tools are designed to automatically revert to select mode after mirror operations
     // This is expected UX behavior to prevent accidental mirror operations
 
-    test('should maintain move step value across tool changes', async ({ page }) => {
-      const canvasHelper = new CanvasTestHelper(page)
-
+    test('should maintain move step value across tool changes', async () => {
       // Add a key first so mirror tools are enabled
       await canvasHelper.addKey()
 
       // Set move step to a specific value
-      const stepInput = page.locator('.move-step-control input[type="number"]')
-      await stepInput.fill('1.5')
-      await stepInput.blur()
+      await toolbarHelper.setMoveStep('1.5')
 
       // Switch tools
-      const selectionButton = page.locator(
-        'button[title="Selection Mode - Left click to select, middle drag to move"]',
-      )
-      await selectionButton.click()
-
-      const mirrorButton = page.locator('button[title="Mirror Vertical"]')
-      await mirrorButton.click()
+      await toolbarHelper.selectSelectionMode()
+      await toolbarHelper.selectMirrorVertical()
 
       // Move step should be preserved
-      await expect(stepInput).toHaveValue('1.5')
+      await toolbarHelper.expectMoveStep('1.5')
     })
   })
 
   test.describe('Error Handling and Edge Cases', () => {
     test('should handle invalid move step values gracefully', async ({ page }) => {
-      const stepInput = page.locator('.move-step-control input[type="number"]')
+      const stepInput = toolbarHelper.getMoveStepInput()
 
       // Test value below minimum (0.05)
       await stepInput.fill('0.01')
@@ -668,15 +564,12 @@ test.describe('Canvas Toolbar', () => {
 
     test('should handle drag operations with no keys selected', async ({ page }) => {
       // Ensure Selection Mode is active (drag & drop integrated)
-      const selectionButton = page.locator(
-        'button[title="Selection Mode - Left click to select, middle drag to move"]',
-      )
-      await selectionButton.click()
+      await toolbarHelper.selectSelectionMode()
 
       // Verify canvas is still functional with no keys (drag operations should be safe)
       const canvas = canvasHelper.getCanvas()
       await expect(canvas).toBeVisible()
-      await expect(selectionButton).toHaveClass(/active/)
+      await toolbarHelper.expectSelectionModeActive()
 
       // Should not cause any errors - no keys to drag
       await expect(page.locator('.keys-counter')).toContainText('Keys: 0')
@@ -684,8 +577,7 @@ test.describe('Canvas Toolbar', () => {
 
     test('should handle mirror operations with no keys selected', async ({ page }) => {
       // Mirror buttons should be disabled when no keys are selected
-      const mirrorButton = page.locator('button[title="Mirror Vertical"]')
-      await expect(mirrorButton).toBeDisabled()
+      await expect(toolbarHelper.getMirrorButton()).toBeDisabled()
 
       // Canvas should still be functional
       const canvas = canvasHelper.getCanvas()
@@ -693,50 +585,37 @@ test.describe('Canvas Toolbar', () => {
       await expect(page.locator('.keys-counter')).toContainText('Keys: 0')
     })
 
-    test('should show mirror axis position tooltip when hovering', async ({ page }) => {
-      // Fixed: Use force hover to bypass element instability
+    test('should show mirror axis position tooltip when hovering', async () => {
       // Add a key first so mirror mode is available
       await canvasHelper.addKey()
 
       // Change move step to test snapping
-      const moveStepInput = page.locator('.move-step-control input[type="number"]')
-      await moveStepInput.fill('0.25')
+      await toolbarHelper.setMoveStep('0.25')
 
       // Switch to horizontal mirror mode
-      await page.locator('.mirror-group .dropdown-btn').click()
-      await page
-        .locator('.mirror-dropdown .dropdown-item')
-        .filter({ hasText: 'Mirror Horizontal' })
-        .click()
-      await expect(page.locator('button[title="Mirror Vertical"]')).toHaveClass(/active/)
+      await toolbarHelper.selectMirrorHorizontal()
+      await toolbarHelper.expectMirrorModeActive()
 
-      // Get canvas and hover over it to trigger mirror preview
+      // Get canvas and hover over it to trigger mirror preview (use force to bypass element instability)
       const canvas = canvasHelper.getCanvas()
-
       await canvas.hover({ position: { x: 200, y: 150 }, force: true })
 
       // Wait for the preview to appear - canvas should remain visible
       await expect(canvas).toBeVisible()
 
-      // The canvas should show the mirror axis (we can't directly test canvas content,
-      // but we can verify the canvas is responding to mouse movement in mirror mode)
-      await expect(canvas).toBeVisible()
-
       // Move mouse to different position to test snapping behavior
-
       await canvas.hover({ position: { x: 250, y: 200 }, force: true })
+
       // Canvas should still be visible after hover
       await expect(canvas).toBeVisible()
 
       // Verify mode is still active
-      await expect(page.locator('button[title="Mirror Vertical"]')).toHaveClass(/active/)
+      await toolbarHelper.expectMirrorModeActive()
     })
   })
 
   test.describe('Responsive Design', () => {
     test('should maintain functionality on smaller screens', async ({ page }) => {
-      const canvasHelper = new CanvasTestHelper(page)
-
       // Add a key first so mirror tools are enabled
       await canvasHelper.addKey()
 
@@ -744,17 +623,15 @@ test.describe('Canvas Toolbar', () => {
       await page.setViewportSize({ width: 600, height: 800 })
 
       // Toolbar should still be visible and functional
-      await expect(page.locator('.canvas-toolbar')).toBeVisible()
+      await toolbarHelper.expectToolbarVisible()
 
       // Tools should still be clickable
-      const mirrorButton = page.locator('button[title="Mirror Vertical"]')
-      await mirrorButton.click()
-      await expect(mirrorButton).toHaveClass(/active/)
+      await toolbarHelper.selectMirrorVertical()
+      await toolbarHelper.expectMirrorModeActive()
 
       // Move step input should still work
-      const stepInput = page.locator('.move-step-control input[type="number"]')
-      await stepInput.fill('0.75')
-      await expect(stepInput).toHaveValue('0.75')
+      await toolbarHelper.setMoveStep('0.75')
+      await toolbarHelper.expectMoveStep('0.75')
     })
   })
 })
