@@ -21,6 +21,13 @@ export class CanvasComponent {
   }
 
   /**
+   * Click on the canvas to focus it
+   */
+  async click() {
+    await this.canvas.click()
+  }
+
+  /**
    * Click on a key at the given row/column position
    * @param row - Row index (0-based)
    * @param col - Column index (0-based, defaults to 0)

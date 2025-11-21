@@ -26,22 +26,25 @@ test.describe('Keyboard Layout Editor', () => {
   })
 
   test('should load the application', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     await expect(page.locator('h1')).toContainText('Keyboard Layout Editor NG')
-    // Check that main components are loaded instead of specific subtitle text
-    await expect(page.locator('.keyboard-canvas')).toBeVisible()
+    // Check that main components are loaded
+    await editor.canvas.expectVisible()
   })
 
   test('should have main interface components', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Check toolbar is present
     await expect(page.locator('.keyboard-toolbar')).toBeVisible()
     await expect(page.locator('button[title="Add Standard Key"]')).toBeVisible()
 
     // Check canvas is present
-    await expect(page.locator('.keyboard-canvas')).toBeVisible()
+    await editor.canvas.expectVisible()
 
     // Check properties panel is present
     await expect(page.locator('.key-properties-panel')).toBeVisible()
-    // Properties panel header may have different text or structure, just check panel exists
   })
 
   test('should add keys and update status', async ({ page }) => {
@@ -59,22 +62,25 @@ test.describe('Keyboard Layout Editor', () => {
   })
 
   test('should add multiple keys', async ({ page }) => {
-    // Add 5 keys individually (simplified functionality)
-    const addButton = page.locator('button[title="Add Standard Key"]')
+    const editor = new KeyboardEditorPage(page)
+
+    // Add 5 keys individually
     for (let i = 0; i < 5; i++) {
-      await addButton.click()
+      await editor.toolbar.addKey()
     }
 
     // Should show 5 keys
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 5')
+    await editor.expectKeyCount(5)
   })
 
   test('should show key properties when key is selected', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Add a key
-    await page.click('button[title="Add Standard Key"]')
+    await editor.toolbar.addKey()
 
     // Key should be selected after adding
-    await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
+    await editor.expectSelectedCount(1)
 
     // Should show property inputs - check for center label input (main label)
     await expect(page.locator('.labels-grid input[type="text"]').nth(4)).toBeVisible()
@@ -119,6 +125,8 @@ test.describe('Keyboard Layout Editor', () => {
   })
 
   test('should load presets', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Select ANSI 104 preset by dispatching click event directly
     await page.waitForSelector('.dropdown-item', { state: 'attached', timeout: 5000 })
 
@@ -146,43 +154,42 @@ test.describe('Keyboard Layout Editor', () => {
     })
 
     // Verify the final key count
-    const finalKeysCount = await page.locator('.keys-counter').textContent()
-    expect(finalKeysCount?.trim()).toBe('Keys: 104')
+    await editor.expectKeyCount(104)
   })
 
   test('should handle undo/redo operations', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Add a key
-    await page.click('button[title="Add Standard Key"]')
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+    await editor.toolbar.addKey()
+    await editor.expectKeyCount(1)
 
     // Undo should be enabled
-    const undoButton = page.locator('button[title="Undo"]')
-    await expect(undoButton).not.toHaveAttribute('disabled')
+    await editor.toolbar.expectUndoEnabled()
 
     // Undo the addition
-    await undoButton.click()
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 0')
+    await editor.toolbar.undo()
+    await editor.expectKeyCount(0)
 
     // Redo should be enabled
-    const redoButton = page.locator('button[title="Redo"]')
-    await expect(redoButton).not.toHaveAttribute('disabled')
+    await editor.toolbar.expectRedoEnabled()
 
     // Redo the addition
-    await redoButton.click()
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+    await editor.toolbar.redo()
+    await editor.expectKeyCount(1)
   })
 
   test('should handle copy/paste operations', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Add a key
-    await page.click('button[title="Add Standard Key"]')
+    await editor.toolbar.addKey()
 
     // Key should be selected by default
-    await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
+    await editor.expectSelectedCount(1)
 
     // Focus the canvas for keyboard shortcuts
-    const canvas = page.locator('.keyboard-canvas')
-    await canvas.click()
-    await canvas.waitFor({ state: 'attached' })
+    await editor.canvas.click()
 
     // Copy the key using keyboard shortcut (Ctrl+C)
     await page.keyboard.press('Control+c')
@@ -191,31 +198,26 @@ test.describe('Keyboard Layout Editor', () => {
     await page.keyboard.press('Control+v')
 
     // Should now have 2 keys
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 2')
+    await editor.expectKeyCount(2)
   })
 
   test('should delete selected keys', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Add some keys
-    await page.click('button[title="Add Standard Key"]')
-    await page.click('button[title="Add Standard Key"]')
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 2')
+    await editor.toolbar.addKey()
+    await editor.toolbar.addKey()
+    await editor.expectKeyCount(2)
 
-    // Focus the canvas before keyboard shortcut
-    const canvas = page.locator('.keyboard-canvas')
-    await canvas.click()
-    await canvas.waitFor({ state: 'attached' }) // Ensure canvas is ready
-
-    // Select all keys (Ctrl+A)
-    await page.keyboard.press('Control+a')
-    await expect(page.locator('.selected-counter')).toContainText('Selected: 2')
+    // Select all keys
+    await editor.canvas.selectAll()
+    await editor.expectSelectedCount(2)
 
     // Delete selected keys
-    const deleteButton = page.locator('button[title="Delete Keys"]')
-    await expect(deleteButton).not.toHaveAttribute('disabled')
-    await deleteButton.click()
+    await editor.toolbar.deleteKeys()
 
     // Should have no keys
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 0')
+    await editor.expectKeyCount(0)
   })
 
   test('should collapse properties panel', async ({ page }) => {
@@ -247,32 +249,30 @@ test.describe('Keyboard Layout Editor', () => {
   })
 
   test('should show dirty state indicator', async ({ page }) => {
-    // Initially should not be dirty (unsaved changes indicator should not exist)
-    await expect(page.locator('.text-warning').filter({ hasText: 'Unsaved changes' })).toBeHidden()
+    const editor = new KeyboardEditorPage(page)
+
+    // Initially should not have unsaved changes
+    await editor.expectNoUnsavedChanges()
 
     // Add a key to make it dirty
-    await page.click('button[title="Add Standard Key"]')
-    // Wait for key to be added
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+    await editor.toolbar.addKey()
+    await editor.expectKeyCount(1)
 
     // Should show unsaved indicator
-    await expect(page.locator('.text-warning').filter({ hasText: 'Unsaved changes' })).toBeVisible()
+    await editor.expectUnsavedChanges()
   })
 
   test('should handle copy/paste operations via keyboard shortcuts', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Add a key first
-    await page.click('button[title="Add Standard Key"]')
+    await editor.toolbar.addKey()
 
     // Ensure key is selected (should be by default)
-    await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
+    await editor.expectSelectedCount(1)
 
     // Focus the canvas for keyboard shortcuts
-    const canvas = page.locator('.keyboard-canvas')
-    await canvas.click()
-    await canvas.waitFor({ state: 'attached' })
-
-    // Test copy/paste using keyboard shortcuts
-    const undoButton = page.locator('button[title="Undo"]')
+    await editor.canvas.click()
 
     // Copy using Ctrl+C
     await page.keyboard.press('Control+c')
@@ -281,13 +281,13 @@ test.describe('Keyboard Layout Editor', () => {
     await page.keyboard.press('Control+v')
 
     // Should now have 2 keys
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 2')
+    await editor.expectKeyCount(2)
 
     // Test undo functionality
-    await expect(undoButton).not.toHaveAttribute('disabled')
-    await undoButton.click()
+    await editor.toolbar.expectUndoEnabled()
+    await editor.toolbar.undo()
 
     // Should be back to 1 key
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+    await editor.expectKeyCount(1)
   })
 })
