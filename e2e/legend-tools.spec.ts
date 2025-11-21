@@ -140,7 +140,15 @@ test.describe('Legend Tools Panel', () => {
 
       // First add a key if none exists (keyboard starts with 0 keys)
       await page.locator('button[title="Add Standard Key"]').click()
-      await page.waitForTimeout(100)
+
+      // Wait for key to be added using RAF
+      await page.evaluate(() => {
+        return new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve())
+          })
+        })
+      })
 
       // Key should be automatically selected after adding, but let's ensure inputs are enabled
       await expect(page.locator('input[title="Top Left"]').first()).toBeEnabled()
@@ -186,7 +194,15 @@ test.describe('Legend Tools Panel', () => {
     test('should align legends when button clicked', async ({ page }) => {
       // First add a key (keyboard starts with 0 keys)
       await page.locator('button[title="Add Standard Key"]').click()
-      await page.waitForTimeout(100)
+
+      // Wait for key to be added using RAF
+      await page.evaluate(() => {
+        return new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve())
+          })
+        })
+      })
 
       // Add a legend in non-aligned position
       await page.locator('input[title="Top Center"]').first().fill('Test') // Top-center position
@@ -253,7 +269,15 @@ test.describe('Legend Tools Panel', () => {
     test('should move legend from one position to another', async ({ page }) => {
       // First add a key (keyboard starts with 0 keys)
       await page.locator('button[title="Add Standard Key"]').click()
-      await page.waitForTimeout(100)
+
+      // Wait for key to be added using RAF
+      await page.evaluate(() => {
+        return new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve())
+          })
+        })
+      })
 
       // Add a legend to top-left position
       await page.locator('input[title="Top Left"]').first().fill('MoveMe')
@@ -271,7 +295,15 @@ test.describe('Legend Tools Panel', () => {
 
       // Click move button
       await page.locator('.btn-outline-secondary i.bi-arrow-right').click()
-      await page.waitForTimeout(100) // Allow move operation to complete
+
+      // Wait for move operation to complete using RAF
+      await page.evaluate(() => {
+        return new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve())
+          })
+        })
+      })
 
       // Panel should remain open
       await expect(page.locator('.legend-tools-panel')).toBeVisible()
@@ -312,7 +344,15 @@ test.describe('Legend Tools Panel', () => {
     test('should allow multiple operations without closing', async ({ page }) => {
       // First add a key (keyboard starts with 0 keys)
       await page.locator('button[title="Add Standard Key"]').click()
-      await page.waitForTimeout(100)
+
+      // Wait for key to be added using RAF
+      await page.evaluate(() => {
+        return new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve())
+          })
+        })
+      })
 
       // Add some legends - mix of letters and numbers
       await page.locator('input[title="Top Left"]').first().fill('A')
@@ -335,7 +375,15 @@ test.describe('Legend Tools Panel', () => {
       await page.locator('input[value="1"]').first().click({ force: true }) // From position 1
       await page.locator('input[value="2"]').nth(1).click({ force: true }) // To position 2
       await page.locator('.btn-outline-secondary i.bi-arrow-right').click()
-      await page.waitForTimeout(100) // Allow move operation to complete
+
+      // Wait for move operation to complete using RAF
+      await page.evaluate(() => {
+        return new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve())
+          })
+        })
+      })
 
       // Panel should still be open
       await expect(page.locator('.legend-tools-panel')).toBeVisible()
@@ -401,7 +449,15 @@ test.describe('Legend Tools Panel', () => {
     test('should handle keys with no legends gracefully', async ({ page }) => {
       // Add a key but don't add any legends to it
       await page.locator('button[title="Add Standard Key"]').click()
-      await page.waitForTimeout(100)
+
+      // Wait for key to be added using RAF
+      await page.evaluate(() => {
+        return new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve())
+          })
+        })
+      })
 
       // Open legend tools panel and switch to move tab
       await page.locator('[title="Extra Tools"]').click()
