@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { WaitHelpers } from './helpers/wait-helpers'
 
 // Type declaration for the global toast helper
 declare global {
@@ -47,6 +48,7 @@ test.describe('Toast Stacking System', () => {
   })
 
   test('should stack multiple toasts vertically without overlapping', async ({ page }) => {
+    const waitHelpers = new WaitHelpers(page)
     // Trigger multiple toasts with delays
     await page.evaluate(() => {
       const showToast = (message: string, title: string, delay: number) => {
@@ -60,23 +62,13 @@ test.describe('Toast Stacking System', () => {
       showToast('Third toast', 'Toast 3', 200)
     })
 
-    // Wait for all toasts to appear
-    await page.waitForSelector('.toast-notification', { timeout: 5000 })
+    // Wait for all 3 toasts to appear
+    const toasts = page.locator('.toast-notification')
+    await expect(toasts).toHaveCount(3, { timeout: 5000 })
 
     // Allow animations to complete using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              requestAnimationFrame(() => resolve())
-            })
-          })
-        })
-      })
-    })
+    await waitHelpers.waitForQuadAnimationFrame()
 
-    const toasts = page.locator('.toast-notification')
     const toastCount = await toasts.count()
     expect(toastCount).toBe(3)
 
@@ -104,6 +96,7 @@ test.describe('Toast Stacking System', () => {
   })
 
   test('should handle toast removal and remaining toasts should move up', async ({ page }) => {
+    const waitHelpers = new WaitHelpers(page)
     // Show multiple toasts with long duration
     await page.evaluate(() => {
       window.__kleToast.showSuccess('First toast', 'Toast 1', { duration: 10000 })
@@ -116,17 +109,7 @@ test.describe('Toast Stacking System', () => {
     })
 
     // Wait for all toasts to appear using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              requestAnimationFrame(() => resolve())
-            })
-          })
-        })
-      })
-    })
+    await waitHelpers.waitForQuadAnimationFrame()
 
     const toasts = page.locator('.toast-notification')
     await expect(toasts).toHaveCount(3)
@@ -142,17 +125,7 @@ test.describe('Toast Stacking System', () => {
     await toasts.nth(0).locator('.toast-close').click()
 
     // Wait for animation to complete using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              requestAnimationFrame(() => resolve())
-            })
-          })
-        })
-      })
-    })
+    await waitHelpers.waitForQuadAnimationFrame()
 
     // Check that only 2 toasts remain
     await expect(toasts).toHaveCount(2)
@@ -169,6 +142,7 @@ test.describe('Toast Stacking System', () => {
   })
 
   test('should display different toast types with correct styling', async ({ page }) => {
+    const waitHelpers = new WaitHelpers(page)
     // Show different types of toasts
     await page.evaluate(() => {
       window.__kleToast.showSuccess('Success message', 'Success', { duration: 10000 })
@@ -184,19 +158,7 @@ test.describe('Toast Stacking System', () => {
     })
 
     // Wait for all toast types to appear using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              requestAnimationFrame(() => {
-                requestAnimationFrame(() => resolve())
-              })
-            })
-          })
-        })
-      })
-    })
+    await waitHelpers.waitForAnimationFrames(5)
 
     const toasts = page.locator('.toast-notification')
     await expect(toasts).toHaveCount(4)
@@ -263,6 +225,7 @@ test.describe('Toast Stacking System', () => {
   })
 
   test('should handle rapid toast creation without breaking layout', async ({ page }) => {
+    const waitHelpers = new WaitHelpers(page)
     // Rapidly create multiple toasts
     await page.evaluate(() => {
       for (let i = 0; i < 6; i++) {
@@ -271,15 +234,7 @@ test.describe('Toast Stacking System', () => {
     })
 
     // Wait for rapid creation to complete using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => resolve())
-          })
-        })
-      })
-    })
+    await waitHelpers.waitForAnimationFrames(3)
 
     const toasts = page.locator('.toast-notification')
     const toastCount = await toasts.count()

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { WaitHelpers } from './helpers/wait-helpers'
 
 test.describe('Legend Tools Panel', () => {
   test.beforeEach(async ({ page }) => {
@@ -135,6 +136,7 @@ test.describe('Legend Tools Panel', () => {
     })
 
     test('should remove legends from keys', async ({ page }) => {
+      const waitHelpers = new WaitHelpers(page)
       // Wait for the page to be fully loaded
       await page.waitForLoadState('networkidle')
 
@@ -142,13 +144,7 @@ test.describe('Legend Tools Panel', () => {
       await page.locator('button[title="Add Standard Key"]').click()
 
       // Wait for key to be added using RAF
-      await page.evaluate(() => {
-        return new Promise<void>((resolve) => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => resolve())
-          })
-        })
-      })
+      await waitHelpers.waitForDoubleAnimationFrame()
 
       // Key should be automatically selected after adding, but let's ensure inputs are enabled
       await expect(page.locator('input[title="Top Left"]').first()).toBeEnabled()
@@ -192,17 +188,12 @@ test.describe('Legend Tools Panel', () => {
     })
 
     test('should align legends when button clicked', async ({ page }) => {
+      const waitHelpers = new WaitHelpers(page)
       // First add a key (keyboard starts with 0 keys)
       await page.locator('button[title="Add Standard Key"]').click()
 
       // Wait for key to be added using RAF
-      await page.evaluate(() => {
-        return new Promise<void>((resolve) => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => resolve())
-          })
-        })
-      })
+      await waitHelpers.waitForDoubleAnimationFrame()
 
       // Add a legend in non-aligned position
       await page.locator('input[title="Top Center"]').first().fill('Test') // Top-center position
@@ -267,17 +258,12 @@ test.describe('Legend Tools Panel', () => {
     })
 
     test('should move legend from one position to another', async ({ page }) => {
+      const waitHelpers = new WaitHelpers(page)
       // First add a key (keyboard starts with 0 keys)
       await page.locator('button[title="Add Standard Key"]').click()
 
       // Wait for key to be added using RAF
-      await page.evaluate(() => {
-        return new Promise<void>((resolve) => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => resolve())
-          })
-        })
-      })
+      await waitHelpers.waitForDoubleAnimationFrame()
 
       // Add a legend to top-left position
       await page.locator('input[title="Top Left"]').first().fill('MoveMe')
@@ -297,13 +283,7 @@ test.describe('Legend Tools Panel', () => {
       await page.locator('.btn-outline-secondary i.bi-arrow-right').click()
 
       // Wait for move operation to complete using RAF
-      await page.evaluate(() => {
-        return new Promise<void>((resolve) => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => resolve())
-          })
-        })
-      })
+      await waitHelpers.waitForDoubleAnimationFrame()
 
       // Panel should remain open
       await expect(page.locator('.legend-tools-panel')).toBeVisible()
@@ -342,17 +322,12 @@ test.describe('Legend Tools Panel', () => {
     })
 
     test('should allow multiple operations without closing', async ({ page }) => {
+      const waitHelpers = new WaitHelpers(page)
       // First add a key (keyboard starts with 0 keys)
       await page.locator('button[title="Add Standard Key"]').click()
 
       // Wait for key to be added using RAF
-      await page.evaluate(() => {
-        return new Promise<void>((resolve) => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => resolve())
-          })
-        })
-      })
+      await waitHelpers.waitForDoubleAnimationFrame()
 
       // Add some legends - mix of letters and numbers
       await page.locator('input[title="Top Left"]').first().fill('A')
@@ -377,13 +352,7 @@ test.describe('Legend Tools Panel', () => {
       await page.locator('.btn-outline-secondary i.bi-arrow-right').click()
 
       // Wait for move operation to complete using RAF
-      await page.evaluate(() => {
-        return new Promise<void>((resolve) => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => resolve())
-          })
-        })
-      })
+      await waitHelpers.waitForDoubleAnimationFrame()
 
       // Panel should still be open
       await expect(page.locator('.legend-tools-panel')).toBeVisible()
@@ -447,17 +416,12 @@ test.describe('Legend Tools Panel', () => {
     })
 
     test('should handle keys with no legends gracefully', async ({ page }) => {
+      const waitHelpers = new WaitHelpers(page)
       // Add a key but don't add any legends to it
       await page.locator('button[title="Add Standard Key"]').click()
 
       // Wait for key to be added using RAF
-      await page.evaluate(() => {
-        return new Promise<void>((resolve) => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => resolve())
-          })
-        })
-      })
+      await waitHelpers.waitForDoubleAnimationFrame()
 
       // Open legend tools panel and switch to move tab
       await page.locator('[title="Extra Tools"]').click()

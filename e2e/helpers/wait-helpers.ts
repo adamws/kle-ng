@@ -207,4 +207,71 @@ export class WaitHelpers {
   ) {
     await expect(locator).toContainText(expectedText, options)
   }
+
+  /**
+   * Wait for a specified number of animation frames to complete
+   * This is a flexible helper that can be used for any RAF depth
+   *
+   * @param count - Number of animation frames to wait (default: 2)
+   *
+   * @example
+   * // Wait for 2 frames (most common - canvas renders, simple DOM updates)
+   * await waitHelpers.waitForAnimationFrames(2)
+   *
+   * // Wait for 4 frames (complex operations like multi-select)
+   * await waitHelpers.waitForAnimationFrames(4)
+   *
+   * // Wait for timing-based animations (~1200ms at 60fps)
+   * await waitHelpers.waitForAnimationFrames(12)
+   */
+  async waitForAnimationFrames(count: number = 2) {
+    await this.page.evaluate((frameCount) => {
+      return new Promise<void>((resolve) => {
+        const waitFrames = (remaining: number) => {
+          if (remaining === 0) {
+            resolve()
+            return
+          }
+          requestAnimationFrame(() => waitFrames(remaining - 1))
+        }
+        waitFrames(frameCount)
+      })
+    }, count)
+  }
+
+  /**
+   * Wait for double animation frame (2 RAF cycles)
+   * This is the most common pattern for canvas renders and simple DOM updates
+   *
+   * Use this when:
+   * - After adding/removing keys
+   * - After modifying key properties
+   * - After canvas size adjustments
+   * - After simple state changes
+   *
+   * @example
+   * await helper.addKey()
+   * await waitHelpers.waitForDoubleAnimationFrame()
+   */
+  async waitForDoubleAnimationFrame() {
+    await this.waitForAnimationFrames(2)
+  }
+
+  /**
+   * Wait for quad animation frame (4 RAF cycles)
+   * Use this for complex operations that need multiple render cycles
+   *
+   * Use this when:
+   * - After multi-select operations (Ctrl+click)
+   * - After mode switches (mirror, matrix)
+   * - After complex state changes
+   * - After image loading
+   *
+   * @example
+   * await page.click('.key', { modifiers: ['Control'] })
+   * await waitHelpers.waitForQuadAnimationFrame()
+   */
+  async waitForQuadAnimationFrame() {
+    await this.waitForAnimationFrames(4)
+  }
 }

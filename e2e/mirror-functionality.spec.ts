@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { WaitHelpers } from './helpers/wait-helpers'
 
 test.describe('Mirror Functionality', () => {
   // Canvas rendering tests only run on Chromium since we've verified
@@ -17,6 +18,7 @@ test.describe('Mirror Functionality', () => {
   })
 
   test('should mirror single key horizontally - baseline screenshot', async ({ page }) => {
+    const waitHelpers = new WaitHelpers(page)
     // Add a key
     await page.locator('button[title="Add Standard Key"]').click()
     // Wait for key counter to update to ensure key is added
@@ -45,13 +47,7 @@ test.describe('Mirror Functionality', () => {
     await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
 
     // Wait for canvas to adjust size for mirror mode
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Click on canvas to perform mirror operation
     // For horizontal mirror, click below the key to set the mirror axis
@@ -68,6 +64,7 @@ test.describe('Mirror Functionality', () => {
   })
 
   test('should mirror single key vertically - baseline screenshot', async ({ page }) => {
+    const waitHelpers = new WaitHelpers(page)
     // Add a key
     await page.locator('button[title="Add Standard Key"]').click()
     // Wait for key counter to update to ensure key is added
@@ -92,13 +89,7 @@ test.describe('Mirror Functionality', () => {
     await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
 
     // Wait for canvas to adjust size for mirror mode
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Click on canvas to perform mirror operation
     // For vertical mirror, click to the right of the key to set the mirror axis
@@ -115,6 +106,7 @@ test.describe('Mirror Functionality', () => {
   })
 
   test('should mirror rotated key horizontally - baseline screenshot', async ({ page }) => {
+    const waitHelpers = new WaitHelpers(page)
     // Add a key
     await page.locator('button[title="Add Standard Key"]').click()
     // Wait for key counter to update to ensure key is added
@@ -150,13 +142,7 @@ test.describe('Mirror Functionality', () => {
     await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
 
     // Wait for canvas to adjust size for mirror mode
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Click on canvas to perform mirror operation
     // For horizontal mirror, click below the key to set the mirror axis
@@ -173,6 +159,7 @@ test.describe('Mirror Functionality', () => {
   })
 
   test('should mirror rotated key vertically - baseline screenshot', async ({ page }) => {
+    const waitHelpers = new WaitHelpers(page)
     // Add a key
     await page.locator('button[title="Add Standard Key"]').click()
     // Wait for key counter to update to ensure key is added
@@ -204,13 +191,7 @@ test.describe('Mirror Functionality', () => {
     await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
 
     // Wait for canvas to adjust size for mirror mode
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Click on canvas to perform mirror operation
     // For vertical mirror, click to the right of the key to set the mirror axis
@@ -227,6 +208,7 @@ test.describe('Mirror Functionality', () => {
   })
 
   test('should mirror multiple keys horizontally - baseline screenshot', async ({ page }) => {
+    const waitHelpers = new WaitHelpers(page)
     // Add first key
     await page.locator('button[title="Add Standard Key"]').click()
     // Wait for key counter to update
@@ -269,17 +251,7 @@ test.describe('Mirror Functionality', () => {
       .click({ position: { x: 155, y: 47 }, modifiers: ['Control'], force: true })
 
     // Wait for multi-select to complete
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              requestAnimationFrame(() => resolve())
-            })
-          })
-        })
-      })
-    })
+    await waitHelpers.waitForQuadAnimationFrame()
 
     // Verify all keys are selected (flexible - accept whatever keys we have)
     const selectedText = await page.locator('.selected-counter').textContent()
@@ -296,29 +268,13 @@ test.describe('Mirror Functionality', () => {
     await expect(page.locator('button[title="Mirror Vertical"]')).toHaveClass(/active/)
 
     // Wait for mode switch to complete
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              requestAnimationFrame(() => resolve())
-            })
-          })
-        })
-      })
-    })
+    await waitHelpers.waitForQuadAnimationFrame()
 
     // Verify keys are still selected after switching to mirror mode
     await expect(page.locator('.selected-counter')).toContainText(`Selected: ${selectedCount}`)
 
     // Wait for canvas to adjust size for mirror mode
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Click on canvas to perform mirror operation
     // For horizontal mirror, click below the keys to set the mirror axis
@@ -339,6 +295,7 @@ test.describe('Mirror Functionality', () => {
   })
 
   test('should mirror multiple keys vertically - baseline screenshot', async ({ page }) => {
+    const waitHelpers = new WaitHelpers(page)
     // Add first key
     await page.locator('button[title="Add Standard Key"]').click()
     // Wait for key counter to update
@@ -368,17 +325,7 @@ test.describe('Mirror Functionality', () => {
       .click({ position: { x: 101, y: 47 }, modifiers: ['Control'], force: true })
 
     // Wait for multi-select to complete
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              requestAnimationFrame(() => resolve())
-            })
-          })
-        })
-      })
-    })
+    await waitHelpers.waitForQuadAnimationFrame()
 
     // Verify all keys are selected (flexible - accept whatever keys we have)
     const selectedText = await page.locator('.selected-counter').textContent()
@@ -391,29 +338,13 @@ test.describe('Mirror Functionality', () => {
     await expect(page.locator('button[title="Mirror Vertical"]')).toHaveClass(/active/)
 
     // Wait for mode switch to complete
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              requestAnimationFrame(() => resolve())
-            })
-          })
-        })
-      })
-    })
+    await waitHelpers.waitForQuadAnimationFrame()
 
     // Verify keys are still selected after switching to mirror mode
     await expect(page.locator('.selected-counter')).toContainText(`Selected: ${selectedCount}`)
 
     // Wait for canvas to adjust size for mirror mode
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Click on canvas to perform mirror operation
     // For vertical mirror, click to the right of the keys to set the mirror axis

@@ -1,7 +1,12 @@
 import { Page, Locator, expect } from '@playwright/test'
+import { WaitHelpers } from './wait-helpers'
 
 export class CanvasTestHelper {
-  constructor(private page: Page) {}
+  private waitHelpers: WaitHelpers
+
+  constructor(private page: Page) {
+    this.waitHelpers = new WaitHelpers(page)
+  }
 
   async addKey() {
     // The Add Key button has the correct title "Add Standard Key"
@@ -306,18 +311,9 @@ export class CanvasTestHelper {
     await expect(this.getCanvas()).toBeVisible()
     // Ensure canvas is attached and ready for interaction
     await this.getCanvas().waitFor({ state: 'attached' })
-    // Wait for requestAnimationFrame to complete - this ensures the renderScheduler
+    // Wait for double animation frame - this ensures the renderScheduler
     // has processed any pending render callbacks
-    await this.page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          // Wait one more frame to ensure the render has completed
-          requestAnimationFrame(() => {
-            resolve()
-          })
-        })
-      })
-    })
+    await this.waitHelpers.waitForDoubleAnimationFrame()
   }
 
   getCanvas(): Locator {
