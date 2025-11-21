@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { promises as fs } from 'fs'
+import { KeyboardEditorPage } from './pages/KeyboardEditorPage'
 
 // Helper function to export and parse layout JSON
 async function exportLayoutJSON(page: import('@playwright/test').Page) {
@@ -68,6 +69,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
   test('should draw rows and columns on 3x3 grid with automatic intermediate key selection', async ({
     page,
   }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // 3x3 grid layout fixture (KLE format: nested arrays with empty strings for keys)
     const fixtureData = [
       ['', '', ''],
@@ -79,116 +82,41 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     await importLayoutJSON(page, fixtureData)
 
     // Verify layout has 9 keys via UI
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 9')
-
-    // Small delay to ensure canvas renders
-    await page.waitForTimeout(500)
+    await editor.expectKeyCount(9)
 
     // Open Matrix Coordinates Modal
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({
-        hasText: 'Add Switch Matrix Coordinates',
-      })
-      .click()
-
-    // Wait for modal to be visible
-    const matrixModal = page.locator('.matrix-modal')
-    await expect(matrixModal).toBeVisible()
-
-    // Wait for modal content to load (should skip directly to drawing step since no labels)
-    await page.waitForTimeout(500)
+    await editor.matrix.open()
+    await editor.matrix.expectVisible()
 
     // Drawing is now automatically enabled in row mode by default
-    // Verify the "Draw Rows" button is active (has primary styling)
-    const rowButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Rows' })
-    await expect(rowButton).toHaveClass(/btn-draw-rows/)
+    await editor.matrix.expectRowModeActive()
 
-    // Now the overlay should be visible
-    const overlay = page.locator('canvas.matrix-annotation-overlay')
-    await expect(overlay).toBeVisible()
+    // Draw three rows: click first and last key of each row
+    // The middle key should be automatically added via line intersection
+    await editor.matrix.drawRow(0, 2, 0) // Row 0: columns 0-2
+    await editor.matrix.drawRow(0, 2, 1) // Row 1: columns 0-2
+    await editor.matrix.drawRow(0, 2, 2) // Row 2: columns 0-2
 
-    // Get canvas bounding box for click calculations
-    const overlayBox = await overlay.boundingBox()
-    if (!overlayBox) throw new Error('Matrix overlay not found')
+    // Switch to column mode
+    await editor.matrix.switchToColumnMode()
+    await editor.matrix.expectColumnModeActive()
 
-    // Calculate key centers in screen coordinates
-    // 3x3 grid: keys at (0,0), (1,0), (2,0), (0,1), (1,1), (2,1), (0,2), (1,2), (2,2)
-    // With unit=54px and canvas border, keys are at:
-    // Row 0: 27px, 81px, 135px (y=27px)
-    // Row 1: 27px, 81px, 135px (y=81px)
-    // Row 2: 27px, 81px, 135px (y=135px)
-
-    const unit = 54 // Default unit size
-    const border = 9 // Canvas border
-    const offset = unit / 2 + border // Center of first key
-
-    // First row: click first key (0,0) and last key (2,0)
-    // The middle key (1,0) should be automatically added via line intersection
-    // Second click automatically finishes the sequence
-    await overlay.click({ position: { x: offset, y: offset } })
-    await page.waitForTimeout(100)
-
-    await overlay.click({ position: { x: offset + unit * 2, y: offset } })
-    await page.waitForTimeout(200)
-
-    // Second row: click first key (0,1) and last key (2,1)
-    // The middle key (1,1) should be automatically added
-    await overlay.click({ position: { x: offset, y: offset + unit } })
-    await page.waitForTimeout(100)
-
-    await overlay.click({ position: { x: offset + unit * 2, y: offset + unit } })
-    await page.waitForTimeout(200)
-
-    // Third row: click first key (0,2) and last key (2,2)
-    // The middle key (1,2) should be automatically added
-    await overlay.click({ position: { x: offset, y: offset + unit * 2 } })
-    await page.waitForTimeout(100)
-
-    await overlay.click({ position: { x: offset + unit * 2, y: offset + unit * 2 } })
-    await page.waitForTimeout(200)
-
-    // Switch to column mode by clicking the "Draw Columns" button
-    const columnButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Columns' })
-    await columnButton.click()
-    await page.waitForTimeout(100)
-
-    // Verify column button is now active
-    await expect(columnButton).toHaveClass(/btn-draw-columns/)
-
-    // First column: click top key (0,0) and bottom key (0,2)
-    // The middle key (0,1) should be automatically added
-    await overlay.click({ position: { x: offset, y: offset } })
-    await page.waitForTimeout(100)
-
-    await overlay.click({ position: { x: offset, y: offset + unit * 2 } })
-    await page.waitForTimeout(200)
-
-    // Second column: click top key (1,0) and bottom key (1,2)
-    // The middle key (1,1) should be automatically added
-    await overlay.click({ position: { x: offset + unit, y: offset } })
-    await page.waitForTimeout(100)
-
-    await overlay.click({ position: { x: offset + unit, y: offset + unit * 2 } })
-    await page.waitForTimeout(200)
-
-    // Third column: click top key (2,0) and bottom key (2,2)
-    // The middle key (2,1) should be automatically added
-    await overlay.click({ position: { x: offset + unit * 2, y: offset } })
-    await page.waitForTimeout(100)
-
-    await overlay.click({ position: { x: offset + unit * 2, y: offset + unit * 2 } })
-    await page.waitForTimeout(200)
+    // Draw three columns: click top and bottom key of each column
+    // The middle key should be automatically added
+    await editor.matrix.drawColumn(0, 2, 0) // Column 0: rows 0-2
+    await editor.matrix.drawColumn(0, 2, 1) // Column 1: rows 0-2
+    await editor.matrix.drawColumn(0, 2, 2) // Column 2: rows 0-2
 
     // Take screenshot for visual verification
     // Should show 3 rows and 3 columns, all with 3 keys each (first, middle, last)
-    await expect(overlay).toHaveScreenshot('matrix-drawing-3x3-grid.png')
+    await editor.matrix.expectOverlayScreenshot('matrix-drawing-3x3-grid.png')
   })
 
   test('should annotate 3x3 grid automatically with same result as manual drawing', async ({
     page,
   }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // 3x3 grid layout fixture (KLE format: nested arrays with empty strings for keys)
     const fixtureData = [
       ['', '', ''],
@@ -200,43 +128,18 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     await importLayoutJSON(page, fixtureData)
 
     // Verify layout has 9 keys via UI
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 9')
-
-    // Small delay to ensure canvas renders
-    await page.waitForTimeout(500)
+    await editor.expectKeyCount(9)
 
     // Open Matrix Coordinates Modal
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({
-        hasText: 'Add Switch Matrix Coordinates',
-      })
-      .click()
-
-    // Wait for modal to be visible
-    const matrixModal = page.locator('.matrix-modal')
-    await expect(matrixModal).toBeVisible()
-
-    // Wait for modal content to load (should skip directly to drawing step since no labels)
-    await page.waitForTimeout(500)
+    await editor.matrix.open()
+    await editor.matrix.expectVisible()
 
     // Click the "Annotate Automatically" button
-    const autoAnnotateButton = page
-      .locator('.matrix-modal button')
-      .filter({ hasText: 'Annotate Automatically' })
-    await autoAnnotateButton.click()
-
-    // Wait for annotation to complete
-    await page.waitForTimeout(500)
-
-    // Verify the overlay is visible and showing the annotated matrix
-    const overlay = page.locator('canvas.matrix-annotation-overlay')
-    await expect(overlay).toBeVisible()
+    await editor.matrix.autoAnnotate()
 
     // Take screenshot for visual verification - should match manual drawing result
     // Should show 3 rows and 3 columns automatically computed from key positions
-    await expect(overlay).toHaveScreenshot('matrix-drawing-3x3-grid-automatic.png')
+    await editor.matrix.expectOverlayScreenshot('matrix-drawing-3x3-grid-automatic.png')
 
     // Verify that the completion message is shown
     const completionAlert = page
@@ -268,6 +171,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
   test('should only catch clicked keys with default sensitivity (0.3) on diagonal line', async ({
     page,
   }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Layout with diagonal opportunity: first row has 2x 1U keys, second row has 1.5U + 1U keys
     // User spec: [[{"a":0},"",""], [{"w":1.5},"",""]]
     // Actual keys created:
@@ -284,42 +189,15 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     await importLayoutJSON(page, fixtureData)
 
     // Verify layout has 4 keys via UI
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 4')
-
-    // Small delay to ensure canvas renders
-    await page.waitForTimeout(500)
+    await editor.expectKeyCount(4)
 
     // Default sensitivity is 0.3 - we assume this is the default value
     // The test logic will verify behavior through UI interactions and JSON export
 
     // Open Matrix Coordinates Modal
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({
-        hasText: 'Add Switch Matrix Coordinates',
-      })
-      .click()
-
-    // Wait for modal to be visible
-    const matrixModal = page.locator('.matrix-modal')
-    await expect(matrixModal).toBeVisible()
-
-    // Wait for modal content to load (should skip directly to drawing step since no labels)
-    await page.waitForTimeout(500)
-
-    // Drawing is automatically enabled in row mode by default
-    // Verify the "Draw Rows" button is active
-    const rowButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Rows' })
-    await expect(rowButton).toHaveClass(/btn-draw-rows/)
-
-    // Now the overlay should be visible
-    const overlay = page.locator('canvas.matrix-annotation-overlay')
-    await expect(overlay).toBeVisible()
-
-    // Get canvas bounding box for click calculations
-    const overlayBox = await overlay.boundingBox()
-    if (!overlayBox) throw new Error('Matrix overlay not found')
+    await editor.matrix.open()
+    await editor.matrix.expectVisible()
+    await editor.matrix.expectRowModeActive()
 
     const unit = 54 // Default unit size
     const border = 9 // Canvas border
@@ -336,50 +214,43 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const lastKeyY = offset + 1.0 * unit
 
     // First click: top-left key
-    await overlay.click({ position: { x: firstKeyX, y: firstKeyY } })
-    await page.waitForTimeout(100)
+    await editor.matrix.clickAt(firstKeyX, firstKeyY)
 
     // Second click: bottom-right key - this should complete the sequence
     // With default sensitivity (0.3), should catch ONLY the 2 clicked keys, not intermediate ones
-    // Use force:true because the overlay may be re-rendering after first click, causing instability
+    const overlay = editor.matrix.getOverlay()
     await overlay.click({ position: { x: lastKeyX, y: lastKeyY }, force: true })
-    await page.waitForTimeout(200)
+
+    // Wait for drawing to complete using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Verify that exactly 1 row was created with exactly 2 keys
     // We verify this through UI state and visual confirmation since we can't access store directly
     // The screenshot verification will confirm the expected behavior
 
     // Take screenshot for visual verification
-    await expect(overlay).toHaveScreenshot('matrix-drawing-diagonal-default-sensitivity.png')
+    await editor.matrix.expectOverlayScreenshot('matrix-drawing-diagonal-default-sensitivity.png')
   })
 
   test('should prevent assigning same key to multiple rows', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Simple layout with 3 keys in a row
     const fixtureData = [['', '', '']]
 
     // Import layout via JSON
     await importLayoutJSON(page, fixtureData)
 
-    await page.waitForTimeout(500)
-
     // Open Matrix Coordinates Modal
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({ hasText: 'Add Switch Matrix Coordinates' })
-      .click()
-
-    const matrixModal = page.locator('.matrix-modal')
-    await expect(matrixModal).toBeVisible()
-    await page.waitForTimeout(500)
-
-    // Drawing is automatically enabled in row mode by default
-    // Verify the "Draw Rows" button is active
-    const rowButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Rows' })
-    await expect(rowButton).toHaveClass(/btn-draw-rows/)
-
-    const overlay = page.locator('canvas.matrix-annotation-overlay')
-    await expect(overlay).toBeVisible()
+    await editor.matrix.open()
+    await editor.matrix.expectVisible()
+    await editor.matrix.expectRowModeActive()
 
     const unit = 54
     const border = 9
@@ -391,17 +262,32 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const key2X = offset + unit
     const key2Y = offset
 
-    await overlay.click({ position: { x: key1X, y: key1Y } })
-    await page.waitForTimeout(100)
+    await editor.matrix.clickAt(key1X, key1Y)
+
+    const overlay = editor.matrix.getOverlay()
     await overlay.click({ position: { x: key2X, y: key2Y }, force: true })
-    await page.waitForTimeout(200)
+
+    // Wait for row to complete using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Verify first row completed with 2 keys through UI state
     // We can't access store directly, so we rely on visual/UI verification
 
     // Now try to draw second row: click first key again (should start continuation of row 0)
     await overlay.click({ position: { x: key1X, y: key1Y }, force: true })
-    await page.waitForTimeout(100)
+
+    // Wait for click to register
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => resolve())
+      })
+    })
 
     // Current sequence should have 1 key (key1, starting continuation of row 0)
     // We can't access store directly, so we rely on the UI behavior
@@ -410,7 +296,15 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const key3X = offset + 2 * unit
     const key3Y = offset
     await overlay.click({ position: { x: key3X, y: key3Y }, force: true })
-    await page.waitForTimeout(200)
+
+    // Wait for sequence to complete using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Sequence should be completed (second click finishes it)
     // We can't access store directly, so we rely on UI behavior and JSON export
@@ -424,35 +318,21 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
   })
 
   test('should prevent assigning same key to multiple columns', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Simple layout with 3 keys in a column (vertical)
     const fixtureData = [[''], [''], ['']]
 
     // Import layout via JSON
     await importLayoutJSON(page, fixtureData)
 
-    await page.waitForTimeout(500)
-
     // Open Matrix Coordinates Modal
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({ hasText: 'Add Switch Matrix Coordinates' })
-      .click()
+    await editor.matrix.open()
+    await editor.matrix.expectVisible()
 
-    const matrixModal = page.locator('.matrix-modal')
-    await expect(matrixModal).toBeVisible()
-    await page.waitForTimeout(500)
-
-    // Switch to column mode by clicking the "Draw Columns" button
-    const columnButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Columns' })
-    await columnButton.click()
-    await page.waitForTimeout(100)
-
-    // Verify column button is now active
-    await expect(columnButton).toHaveClass(/btn-draw-columns/)
-
-    const overlay = page.locator('canvas.matrix-annotation-overlay')
-    await expect(overlay).toBeVisible()
+    // Switch to column mode
+    await editor.matrix.switchToColumnMode()
+    await editor.matrix.expectColumnModeActive()
 
     const unit = 54
     const border = 9
@@ -464,17 +344,32 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const key2X = offset
     const key2Y = offset + unit
 
-    await overlay.click({ position: { x: key1X, y: key1Y } })
-    await page.waitForTimeout(100)
+    await editor.matrix.clickAt(key1X, key1Y)
+
+    const overlay = editor.matrix.getOverlay()
     await overlay.click({ position: { x: key2X, y: key2Y }, force: true })
-    await page.waitForTimeout(200)
+
+    // Wait for column to complete using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Verify first column completed with 2 keys through UI state
     // We can't access store directly, so we rely on visual/UI verification
 
     // Now try to draw second column: click first key again (should start continuation of column 0)
     await overlay.click({ position: { x: key1X, y: key1Y }, force: true })
-    await page.waitForTimeout(100)
+
+    // Wait for click to register
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => resolve())
+      })
+    })
 
     // Current sequence should have 1 key (key1, starting continuation of column 0)
     // We can't access store directly, so we rely on the UI behavior
@@ -483,7 +378,15 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const key3X = offset
     const key3Y = offset + 2 * unit
     await overlay.click({ position: { x: key3X, y: key3Y }, force: true })
-    await page.waitForTimeout(200)
+
+    // Wait for sequence to complete using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Sequence should be completed (second click finishes it)
     // We can't access store directly, so we rely on UI behavior and JSON export
@@ -500,33 +403,23 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
   })
 
   test('should prevent creating duplicate matrix positions', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Layout with 2 keys
     const fixtureData = [['', '']]
 
     // Import layout via JSON
     await importLayoutJSON(page, fixtureData)
 
-    await page.waitForTimeout(500)
-
     // Open Matrix Coordinates Modal
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({ hasText: 'Add Switch Matrix Coordinates' })
-      .click()
+    await editor.matrix.open()
+    await editor.matrix.expectVisible()
+    await editor.matrix.expectRowModeActive()
 
-    const matrixModal = page.locator('.matrix-modal')
-    await expect(matrixModal).toBeVisible()
-    await page.waitForTimeout(500)
-
-    const overlay = page.locator('canvas.matrix-annotation-overlay')
+    const overlay = editor.matrix.getOverlay()
     const unit = 54
     const border = 9
     const offset = unit / 2 + border
-
-    // Verify row mode is active by default
-    const rowButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Rows' })
-    await expect(rowButton).toHaveClass(/btn-draw-rows/)
 
     // Assign both keys to row 0
     const key1X = offset
@@ -534,21 +427,33 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const key2X = offset + unit
     const key2Y = offset
 
-    await overlay.click({ position: { x: key1X, y: key1Y } })
-    await page.waitForTimeout(100)
+    await editor.matrix.clickAt(key1X, key1Y)
     await overlay.click({ position: { x: key2X, y: key2Y }, force: true })
-    await page.waitForTimeout(200)
+
+    // Wait for row assignment using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Now assign both keys to column 0
     // Switch to column mode
-    const columnButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Columns' })
-    await columnButton.click()
-    await page.waitForTimeout(100)
+    await editor.matrix.switchToColumnMode()
 
-    await overlay.click({ position: { x: key1X, y: key1Y } })
-    await page.waitForTimeout(100)
+    await editor.matrix.clickAt(key1X, key1Y)
     await overlay.click({ position: { x: key2X, y: key2Y }, force: true })
-    await page.waitForTimeout(200)
+
+    // Wait for column assignment attempt using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Check final matrix labels - both keys should have same row but different columns would create duplicate
     // Since both keys already have row 0, and we're trying to assign them same column,
@@ -570,32 +475,20 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
   test('should allow continuing an existing row by clicking a key that already has a row', async ({
     page,
   }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Layout with 4 keys in a row
     const fixtureData = [['', '', '', '']]
 
     // Import layout via JSON
     await importLayoutJSON(page, fixtureData)
 
-    await page.waitForTimeout(500)
-
     // Open Matrix Coordinates Modal
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({ hasText: 'Add Switch Matrix Coordinates' })
-      .click()
+    await editor.matrix.open()
+    await editor.matrix.expectVisible()
+    await editor.matrix.expectRowModeActive()
 
-    const matrixModal = page.locator('.matrix-modal')
-    await expect(matrixModal).toBeVisible()
-    await page.waitForTimeout(500)
-
-    // Drawing is automatically enabled in row mode by default
-    const rowButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Rows' })
-    await expect(rowButton).toHaveClass(/btn-draw-rows/)
-
-    const overlay = page.locator('canvas.matrix-annotation-overlay')
-    await expect(overlay).toBeVisible()
-
+    const overlay = editor.matrix.getOverlay()
     const unit = 54
     const border = 9
     const offset = unit / 2 + border
@@ -606,10 +499,17 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const key2X = offset + unit
     const key2Y = offset
 
-    await overlay.click({ position: { x: key1X, y: key1Y } })
-    await page.waitForTimeout(100)
+    await editor.matrix.clickAt(key1X, key1Y)
     await overlay.click({ position: { x: key2X, y: key2Y }, force: true })
-    await page.waitForTimeout(200)
+
+    // Wait for row to complete using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Verify first row has 2 keys through UI state
     // We can't access store directly, so we rely on visual/UI verification
@@ -619,9 +519,24 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const key3Y = offset
 
     await overlay.click({ position: { x: key2X, y: key2Y }, force: true })
-    await page.waitForTimeout(100)
+
+    // Wait for click to register
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => resolve())
+      })
+    })
+
     await overlay.click({ position: { x: key3X, y: key3Y }, force: true })
-    await page.waitForTimeout(200)
+
+    // Wait for row continuation to complete using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Verify we still have only 1 row, but now with 3 keys
     // We can't access store directly, so we rely on UI behavior and JSON export
@@ -640,36 +555,23 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
   test('should allow continuing an existing column by clicking a key that already has a column', async ({
     page,
   }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Layout with 4 keys in a column
     const fixtureData = [[''], [''], [''], ['']]
 
     // Import layout via JSON
     await importLayoutJSON(page, fixtureData)
 
-    await page.waitForTimeout(500)
-
     // Open Matrix Coordinates Modal
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({ hasText: 'Add Switch Matrix Coordinates' })
-      .click()
-
-    const matrixModal = page.locator('.matrix-modal')
-    await expect(matrixModal).toBeVisible()
-    await page.waitForTimeout(500)
+    await editor.matrix.open()
+    await editor.matrix.expectVisible()
 
     // Switch to column mode
-    const columnButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Columns' })
-    await columnButton.click()
-    await page.waitForTimeout(100)
+    await editor.matrix.switchToColumnMode()
+    await editor.matrix.expectColumnModeActive()
 
-    // Verify column button is active
-    await expect(columnButton).toHaveClass(/btn-draw-columns/)
-
-    const overlay = page.locator('canvas.matrix-annotation-overlay')
-    await expect(overlay).toBeVisible()
-
+    const overlay = editor.matrix.getOverlay()
     const unit = 54
     const border = 9
     const offset = unit / 2 + border
@@ -680,10 +582,17 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const key2X = offset
     const key2Y = offset + unit
 
-    await overlay.click({ position: { x: key1X, y: key1Y } })
-    await page.waitForTimeout(100)
+    await editor.matrix.clickAt(key1X, key1Y)
     await overlay.click({ position: { x: key2X, y: key2Y }, force: true })
-    await page.waitForTimeout(200)
+
+    // Wait for column to complete using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Verify first column has 2 keys through UI state
     // We can't access store directly, so we rely on visual/UI verification
@@ -693,9 +602,24 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const key3Y = offset + 2 * unit
 
     await overlay.click({ position: { x: key2X, y: key2Y }, force: true })
-    await page.waitForTimeout(100)
+
+    // Wait for click to register
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => resolve())
+      })
+    })
+
     await overlay.click({ position: { x: key3X, y: key3Y }, force: true })
-    await page.waitForTimeout(200)
+
+    // Wait for column continuation to complete using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Verify we still have only 1 column, but now with 3 keys
     // We can't access store directly, so we rely on UI behavior and JSON export
@@ -713,6 +637,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
   })
 
   test('should remove node from matrix via remove mode', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Create a 3x3 grid with pre-assigned matrix coordinates
     // Format: Each key has label "row,col" in first position
     const fixtureData = [
@@ -725,18 +651,11 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     await importLayoutJSON(page, fixtureData)
 
     // Verify layout has 9 keys
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 9')
-
-    await page.waitForTimeout(500)
+    await editor.expectKeyCount(9)
 
     // Open Matrix Coordinates Modal
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({ hasText: 'Add Switch Matrix Coordinates' })
-      .click()
+    await editor.matrix.open()
 
-    // Wait for modal to be visible
     const matrixModal = page.locator('.matrix-modal')
     await expect(matrixModal).toBeVisible()
 
@@ -748,16 +667,30 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     await expect(matrixModal).toContainText('3 defined')
     await expect(matrixModal).toContainText('Columns:')
 
-    await page.waitForTimeout(500)
+    // Wait for modal to be ready using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
-    // Get the canvas overlay (where the matrix is rendered)
-    const overlay = page.locator('canvas.matrix-annotation-overlay')
+    const overlay = editor.matrix.getOverlay()
     await expect(overlay).toBeVisible()
 
     // Switch to remove mode by clicking the "Remove" button
     const removeButton = page.locator('.matrix-modal button').filter({ hasText: 'Remove' })
     await removeButton.click()
-    await page.waitForTimeout(100)
+
+    // Wait for mode switch using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Verify remove button is active (has danger styling)
     await expect(removeButton).toHaveClass(/btn-danger/)
@@ -767,8 +700,6 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     if (!canvasBox) throw new Error('Canvas not found')
 
     // Calculate position of the first key (top-left, should be at 0,0 in layout)
-    // Canvas uses unit size to position keys, with some offset
-    // Assume unit size is approximately 54 pixels (default)
     const unit = 54
     const offset = 10 // Small offset from canvas edge
 
@@ -778,7 +709,17 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
 
     // Left-click on the first key to remove the node
     await page.mouse.click(key1X, key1Y, { button: 'left' })
-    await page.waitForTimeout(300)
+
+    // Wait for removal using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve())
+          })
+        })
+      })
+    })
 
     // The first key should no longer have a label
     // Export to verify
@@ -799,6 +740,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
   })
 
   test('should remove entire row via remove mode', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Create a 3x3 grid with pre-assigned matrix coordinates
     const fixtureData = [
       ['0,0', '0,1', '0,2'],
@@ -809,30 +752,42 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     // Import layout via JSON
     await importLayoutJSON(page, fixtureData)
 
-    await page.waitForTimeout(500)
+    // Verify layout has 9 keys
+    await editor.expectKeyCount(9)
 
     // Open Matrix Coordinates Modal
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({ hasText: 'Add Switch Matrix Coordinates' })
-      .click()
+    await editor.matrix.open()
 
     const matrixModal = page.locator('.matrix-modal')
     await expect(matrixModal).toBeVisible()
 
-    await page.waitForTimeout(500)
+    // Wait for modal to be ready using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Switch to remove mode
     const removeButton = page.locator('.matrix-modal button').filter({ hasText: 'Remove' })
     await removeButton.click()
-    await page.waitForTimeout(100)
+
+    // Wait for mode switch using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Verify remove button is active
     await expect(removeButton).toHaveClass(/btn-danger/)
 
     // Get the canvas overlay
-    const overlay = page.locator('canvas.matrix-annotation-overlay')
+    const overlay = editor.matrix.getOverlay()
     await expect(overlay).toBeVisible()
 
     const canvasBox = await overlay.boundingBox()
@@ -850,13 +805,31 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
 
     // First move mouse to trigger hover detection
     await page.mouse.move(lineX, lineY)
-    await page.waitForTimeout(200)
+
+    // Wait for hover to register using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Hold Ctrl and left-click on the row line to remove the entire row
     await page.keyboard.down('Control')
     await page.mouse.click(lineX, lineY, { button: 'left' })
     await page.keyboard.up('Control')
-    await page.waitForTimeout(300)
+
+    // Wait for removal using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve())
+          })
+        })
+      })
+    })
 
     // Export to verify row was removed
     const exportedLayout = await exportLayoutJSON(page)
@@ -874,6 +847,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
   })
 
   test('should reuse freed row numbers when drawing after removal', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Create a 4x3 grid with pre-assigned matrix coordinates
     // Format: Each key has label "row,col" in first position
     const fixtureData = [
@@ -883,21 +858,18 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     ]
 
     await importLayoutJSON(page, fixtureData)
-    await page.waitForTimeout(500)
+
+    // Verify layout has 12 keys
+    await editor.expectKeyCount(12)
 
     // Open Matrix Coordinates Modal
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({ hasText: 'Add Switch Matrix Coordinates' })
-      .click()
+    await editor.matrix.open()
 
     const matrixModal = page.locator('.matrix-modal')
     await expect(matrixModal).toBeVisible()
-    await page.waitForTimeout(500)
 
     // Now overlay should be visible
-    const overlay = page.locator('canvas.matrix-annotation-overlay')
+    const overlay = editor.matrix.getOverlay()
     await expect(overlay).toBeVisible()
 
     // Verify 3 rows and 4 column created
@@ -926,18 +898,45 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     // Switch to remove mode
     const removeButton = page.locator('button', { hasText: 'Remove' })
     await removeButton.click()
-    await page.waitForTimeout(100)
+
+    // Wait for mode switch using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Verify remove button is active
     await expect(removeButton).toHaveClass(/btn-danger/)
 
     // Move mouse to row line and Ctrl+left-click to remove entire row
     await page.mouse.move(lineX, lineY)
-    await page.waitForTimeout(200)
+
+    // Wait for hover to register using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
+
     await page.keyboard.down('Control')
     await page.mouse.click(lineX, lineY, { button: 'left' })
     await page.keyboard.up('Control')
-    await page.waitForTimeout(300)
+
+    // Wait for removal using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve())
+          })
+        })
+      })
+    })
 
     // Verify row count decreased from 3 to 2
     await expect(rowsProgress).toContainText('2 defined')
@@ -951,9 +950,28 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
 
     // Draw the new row
     await overlay.click({ position: { x: offset, y: row1Y }, force: true })
-    await page.waitForTimeout(150)
+
+    // Wait for first click using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
+
     await overlay.click({ position: { x: offset + 3 * unit, y: row1Y }, force: true })
-    await page.waitForTimeout(300)
+
+    // Wait for row to complete using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve())
+          })
+        })
+      })
+    })
 
     // Verify we're back to 3 rows
     await expect(rowsProgress).toContainText('3 defined')
@@ -970,6 +988,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
   })
 
   test('should reuse freed column numbers when drawing after removal', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Create a 4x3 grid with pre-assigned matrix coordinates
     // Format: Each key has label "row,col" in first position
     const fixtureData = [
@@ -979,21 +999,18 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     ]
 
     await importLayoutJSON(page, fixtureData)
-    await page.waitForTimeout(500)
+
+    // Verify layout has 12 keys
+    await editor.expectKeyCount(12)
 
     // Open Matrix Coordinates Modal
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({ hasText: 'Add Switch Matrix Coordinates' })
-      .click()
+    await editor.matrix.open()
 
     const matrixModal = page.locator('.matrix-modal')
     await expect(matrixModal).toBeVisible()
-    await page.waitForTimeout(500)
 
     // Now overlay should be visible
-    const overlay = page.locator('canvas.matrix-annotation-overlay')
+    const overlay = editor.matrix.getOverlay()
     await expect(overlay).toBeVisible()
 
     // Verify 3 rows and 4 column created
@@ -1022,18 +1039,45 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     // Switch to remove mode
     const removeButton = page.locator('button', { hasText: 'Remove' })
     await removeButton.click()
-    await page.waitForTimeout(100)
+
+    // Wait for mode switch using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Verify remove button is active
     await expect(removeButton).toHaveClass(/btn-danger/)
 
     // Move mouse to column line and Ctrl+left-click to remove entire column
     await page.mouse.move(lineX, lineY)
-    await page.waitForTimeout(200)
+
+    // Wait for hover to register using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
+
     await page.keyboard.down('Control')
     await page.mouse.click(lineX, lineY, { button: 'left' })
     await page.keyboard.up('Control')
-    await page.waitForTimeout(300)
+
+    // Wait for removal using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve())
+          })
+        })
+      })
+    })
 
     // Verify column count decreased from 4 to 3 and row count remain at 3
     await expect(rowsProgress).toContainText('3 defined')
@@ -1042,7 +1086,15 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     // Switch to column drawing mode
     const columnButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Columns' })
     await columnButton.click()
-    await page.waitForTimeout(100)
+
+    // Wait for mode switch using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Verify column button is active
     await expect(columnButton).toHaveClass(/btn-draw-columns/)
@@ -1050,9 +1102,28 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
 
     // Draw the new column
     await overlay.click({ position: { x: col1X, y: offset }, force: true })
-    await page.waitForTimeout(100)
+
+    // Wait for first click using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
+
     await overlay.click({ position: { x: col1X, y: offset + 2 * unit }, force: true })
-    await page.waitForTimeout(200)
+
+    // Wait for column to complete using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve())
+          })
+        })
+      })
+    })
 
     // Verify we're back to 4 columns
     await expect(rowsProgress).toContainText('3 defined')
@@ -1069,6 +1140,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
   })
 
   test('should remove single segment and split wire into two', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Create a 3x4 grid with pre-assigned matrix coordinates
     const fixtureData = [
       ['0,0', '0,1', '0,2', '0,3'],
@@ -1077,18 +1150,15 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     ]
 
     await importLayoutJSON(page, fixtureData)
-    await page.waitForTimeout(500)
+
+    // Verify layout has 12 keys
+    await editor.expectKeyCount(12)
 
     // Open Matrix Coordinates Modal
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({ hasText: 'Add Switch Matrix Coordinates' })
-      .click()
+    await editor.matrix.open()
 
     const matrixModal = page.locator('.matrix-modal')
     await expect(matrixModal).toBeVisible()
-    await page.waitForTimeout(500)
 
     // Verify initial state: 3 rows and 4 columns
     const rowsProgress = page.locator('.progress-label').filter({ hasText: 'Rows:' })
@@ -1097,7 +1167,7 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     await expect(colsProgress).toContainText('4 defined')
 
     // Get canvas
-    const overlay = page.locator('canvas.matrix-annotation-overlay')
+    const overlay = editor.matrix.getOverlay()
     await expect(overlay).toBeVisible()
     const canvasBox = await overlay.boundingBox()
     if (!canvasBox) throw new Error('Canvas not found')
@@ -1105,7 +1175,16 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     // Switch to remove mode
     const removeButton = page.locator('button', { hasText: 'Remove' })
     await removeButton.click()
-    await page.waitForTimeout(100)
+
+    // Wait for mode switch using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
+
     await expect(removeButton).toHaveClass(/btn-danger/)
 
     // Calculate position of segment between keys [1,1] and [1,2] in row 1
@@ -1122,9 +1201,28 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
 
     // Move mouse to segment and click WITHOUT Ctrl (segment removal)
     await page.mouse.move(segmentX, segmentY)
-    await page.waitForTimeout(200)
+
+    // Wait for hover to register using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
+
     await page.mouse.click(segmentX, segmentY, { button: 'left' })
-    await page.waitForTimeout(300)
+
+    // Wait for segment removal using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve())
+          })
+        })
+      })
+    })
 
     // After segment removal, we should have 4 rows instead of 3
     // (original row 1 was split into two separate rows: one with keys 0-1, another with keys 2-3)
@@ -1155,6 +1253,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
   })
 
   test('should not overeagerly grab next key', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // this is specific bug reproduction scenario where long key (space) was incorrectly
     // added to drawing even if mouse was not clicking there
     const fixtureData = [
@@ -1168,29 +1268,17 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     await importLayoutJSON(page, fixtureData)
 
     // Verify layout has 4 keys via UI
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 4')
-
-    // Small delay to ensure canvas renders
-    await page.waitForTimeout(500)
+    await editor.expectKeyCount(4)
 
     // Open Matrix Coordinates Modal
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({
-        hasText: 'Add Switch Matrix Coordinates',
-      })
-      .click()
+    await editor.matrix.open()
 
     // Wait for modal to be visible
     const matrixModal = page.locator('.matrix-modal')
     await expect(matrixModal).toBeVisible()
 
-    // Wait for modal content to load (should skip directly to drawing step since no labels)
-    await page.waitForTimeout(500)
-
     // Now the overlay should be visible
-    const overlay = page.locator('canvas.matrix-annotation-overlay')
+    const overlay = editor.matrix.getOverlay()
     await expect(overlay).toBeVisible()
 
     // Get canvas bounding box for click calculations
@@ -1209,10 +1297,28 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     // AND the last key should not be added (that was the bug - it was added anyway)
     // Second click automatically finishes the sequence
     await overlay.click({ position: { x: 171, y: 27 } })
-    await page.waitForTimeout(100)
+
+    // Wait for first click using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     await overlay.click({ position: { x: 171, y: 135 } })
-    await page.waitForTimeout(200)
+
+    // Wait for row to complete using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve())
+          })
+        })
+      })
+    })
 
     const exportedLayout = await exportLayoutJSON(page)
     const layoutString = JSON.stringify(exportedLayout)
@@ -1227,6 +1333,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
   })
 
   test('should renumber rows by typing digits while hovering', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Create a 3x3 grid with pre-assigned matrix coordinates
     const fixtureData = [
       ['0,0', '0,1', '0,2'],
@@ -1235,25 +1343,30 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     ]
 
     await importLayoutJSON(page, fixtureData)
-    await page.waitForTimeout(500)
+
+    // Verify layout has 9 keys
+    await editor.expectKeyCount(9)
 
     // Open Matrix Coordinates Modal
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({ hasText: 'Add Switch Matrix Coordinates' })
-      .click()
+    await editor.matrix.open()
 
     const matrixModal = page.locator('.matrix-modal')
     await expect(matrixModal).toBeVisible()
-    await page.waitForTimeout(500)
 
     // Switch to Draw Rows mode
     const rowButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Rows' })
     await rowButton.click()
-    await page.waitForTimeout(100)
 
-    const overlay = page.locator('canvas.matrix-annotation-overlay')
+    // Wait for mode switch using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
+
+    const overlay = editor.matrix.getOverlay()
     await expect(overlay).toBeVisible()
 
     const canvasBox = await overlay.boundingBox()
@@ -1271,14 +1384,32 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
 
     // Move mouse to hover over row 0
     await page.mouse.move(lineX, lineY)
-    await page.waitForTimeout(200)
+
+    // Wait for hover to register using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Type '5' to renumber row 0 to row 5
     await page.keyboard.press('5')
     // Add a letter to check if it is ignored
     await page.keyboard.press('a')
     await page.keyboard.press('Enter')
-    await page.waitForTimeout(300)
+
+    // Wait for renumbering using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve())
+          })
+        })
+      })
+    })
 
     // Export and verify row 0 became row 5
     let exportedLayout = await exportLayoutJSON(page)
@@ -1297,11 +1428,29 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     // Now test swapping: hover over row 1 and type '5'
     const row1LineY = canvasBox.y + offset + unit
     await page.mouse.move(lineX, row1LineY)
-    await page.waitForTimeout(200)
+
+    // Wait for hover to register using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     await page.keyboard.press('5')
     await page.keyboard.press('Enter')
-    await page.waitForTimeout(300)
+
+    // Wait for renumbering using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve())
+          })
+        })
+      })
+    })
 
     // Export and verify swap occurred
     exportedLayout = await exportLayoutJSON(page)
@@ -1319,6 +1468,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
   })
 
   test('should renumber columns by typing digits while hovering', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Create a 3x3 grid with pre-assigned matrix coordinates
     const fixtureData = [
       ['0,0', '0,1', '0,2'],
@@ -1327,25 +1478,30 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     ]
 
     await importLayoutJSON(page, fixtureData)
-    await page.waitForTimeout(500)
+
+    // Verify layout has 9 keys
+    await editor.expectKeyCount(9)
 
     // Open Matrix Coordinates Modal
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({ hasText: 'Add Switch Matrix Coordinates' })
-      .click()
+    await editor.matrix.open()
 
     const matrixModal = page.locator('.matrix-modal')
     await expect(matrixModal).toBeVisible()
-    await page.waitForTimeout(500)
 
     // Switch to Draw Columns mode
     const columnButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Columns' })
     await columnButton.click()
-    await page.waitForTimeout(100)
 
-    const overlay = page.locator('canvas.matrix-annotation-overlay')
+    // Wait for mode switch using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
+
+    const overlay = editor.matrix.getOverlay()
     await expect(overlay).toBeVisible()
 
     const canvasBox = await overlay.boundingBox()
@@ -1363,12 +1519,30 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
 
     // Move mouse to hover over column 0
     await page.mouse.move(lineX, lineY)
-    await page.waitForTimeout(200)
+
+    // Wait for hover to register using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Type '7' to renumber column 0 to column 7
     await page.keyboard.press('7')
     await page.keyboard.press('Enter')
-    await page.waitForTimeout(300)
+
+    // Wait for renumbering using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve())
+          })
+        })
+      })
+    })
 
     // Export and verify column 0 became column 7
     const exportedLayout = await exportLayoutJSON(page)
@@ -1387,6 +1561,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
   })
 
   test('should handle multi-digit row numbers', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Create a 2x2 grid
     const fixtureData = [
       ['0,0', '0,1'],
@@ -1394,25 +1570,30 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     ]
 
     await importLayoutJSON(page, fixtureData)
-    await page.waitForTimeout(500)
+
+    // Verify layout has 4 keys
+    await editor.expectKeyCount(4)
 
     // Open Matrix Coordinates Modal
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({ hasText: 'Add Switch Matrix Coordinates' })
-      .click()
+    await editor.matrix.open()
 
     const matrixModal = page.locator('.matrix-modal')
     await expect(matrixModal).toBeVisible()
-    await page.waitForTimeout(500)
 
     // Switch to Draw Rows mode
     const rowButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Rows' })
     await rowButton.click()
-    await page.waitForTimeout(100)
 
-    const overlay = page.locator('canvas.matrix-annotation-overlay')
+    // Wait for mode switch using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
+
+    const overlay = editor.matrix.getOverlay()
     await expect(overlay).toBeVisible()
 
     const canvasBox = await overlay.boundingBox()
@@ -1429,13 +1610,31 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const lineY = canvasBox.y + offset
 
     await page.mouse.move(lineX, lineY)
-    await page.waitForTimeout(200)
+
+    // Wait for hover to register using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Type '1' then '0' to renumber to row 10
     await page.keyboard.press('1')
     await page.keyboard.press('0')
     await page.keyboard.press('Enter')
-    await page.waitForTimeout(300)
+
+    // Wait for renumbering using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve())
+          })
+        })
+      })
+    })
 
     // Export and verify row became row 10
     const exportedLayout = await exportLayoutJSON(page)
@@ -1446,6 +1645,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
   })
 
   test('should cancel renumbering with Escape key', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Create a 3x3 grid
     const fixtureData = [
       ['0,0', '0,1', '0,2'],
@@ -1454,25 +1655,30 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     ]
 
     await importLayoutJSON(page, fixtureData)
-    await page.waitForTimeout(500)
+
+    // Verify layout has 9 keys
+    await editor.expectKeyCount(9)
 
     // Open Matrix Coordinates Modal
-    await page.locator('.extra-tools-group button').click()
-    await page
-      .locator('.extra-tools-dropdown .dropdown-item')
-      .filter({ hasText: 'Add Switch Matrix Coordinates' })
-      .click()
+    await editor.matrix.open()
 
     const matrixModal = page.locator('.matrix-modal')
     await expect(matrixModal).toBeVisible()
-    await page.waitForTimeout(500)
 
     // Switch to Draw Rows mode
     const rowButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Rows' })
     await rowButton.click()
-    await page.waitForTimeout(100)
 
-    const overlay = page.locator('canvas.matrix-annotation-overlay')
+    // Wait for mode switch using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
+
+    const overlay = editor.matrix.getOverlay()
     await expect(overlay).toBeVisible()
 
     const canvasBox = await overlay.boundingBox()
@@ -1489,15 +1695,41 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const lineY = canvasBox.y + offset
 
     await page.mouse.move(lineX, lineY)
-    await page.waitForTimeout(200)
+
+    // Wait for hover to register using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Type '5' to start renumbering
     await page.keyboard.press('5')
-    await page.waitForTimeout(100)
+
+    // Wait for input to register using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve())
+        })
+      })
+    })
 
     // Press Escape to cancel
     await page.keyboard.press('Escape')
-    await page.waitForTimeout(300)
+
+    // Wait for cancellation using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve())
+          })
+        })
+      })
+    })
 
     // Export and verify row 0 is still row 0 (not renumbered to 5)
     const exportedLayout = await exportLayoutJSON(page)

@@ -33,7 +33,7 @@ export class MatrixModalComponent {
     this.applyButton = page.locator('.matrix-modal button').filter({ hasText: 'Apply' })
     this.autoAnnotateButton = page
       .locator('.matrix-modal button')
-      .filter({ hasText: 'Auto-Annotate' })
+      .filter({ hasText: 'Annotate Automatically' })
   }
 
   /**
