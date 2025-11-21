@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test'
 import { promises as fs } from 'fs'
 import path from 'path'
+import { ImportExportHelper } from './helpers/import-export-helpers'
+import { WaitHelpers } from './helpers/wait-helpers'
 
 test.describe('JSON Import/Export Functionality', () => {
   // Canvas rendering tests only run on Chromium since we've verified
@@ -11,11 +13,18 @@ test.describe('JSON Import/Export Functionality', () => {
     'Canvas rendering tests only run on Chromium (verified identical across browsers)',
   )
 
+  let helper: ImportExportHelper
+  let waitHelpers: WaitHelpers
+
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
 
     // Wait for app to load
     await expect(page.locator('.canvas-toolbar')).toBeVisible()
+
+    // Initialize helpers
+    waitHelpers = new WaitHelpers(page)
+    helper = new ImportExportHelper(page, waitHelpers)
   })
 
   test.describe('JSON Import Tests', () => {
@@ -23,24 +32,8 @@ test.describe('JSON Import/Export Functionality', () => {
       // Initially should show 0 keys
       await expect(page.locator('.keys-counter')).toContainText('Keys: 0')
 
-      // Get the file path
-      const filePath = path.resolve('e2e/fixtures/simple-layout.json')
-
-      // Click import dropdown and select "From File"
-      const importButton = page.locator('button', { hasText: 'Import' })
-      await expect(importButton).toBeVisible()
-
-      // Set up file chooser event handler
-      const fileChooserPromise = page.waitForEvent('filechooser')
-      await importButton.click()
-      // Wait for dropdown to be visible
-      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
-      await page.locator('a', { hasText: 'From File' }).click()
-      const fileChooser = await fileChooserPromise
-      await fileChooser.setFiles(filePath)
-
-      // Wait for import to complete - should have 8 keys (2 rows x 4 keys each)
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 8')
+      // Import simple layout (2 rows x 4 keys = 8 keys total)
+      await helper.importFromFile('e2e/fixtures/simple-layout.json', 8)
 
       // Verify some of the imported keys are visible
       await expect(page.locator('.selected-counter')).toContainText('Selected: 0')
@@ -50,51 +43,21 @@ test.describe('JSON Import/Export Functionality', () => {
     })
 
     test('should import complex layout with colors and rotation', async ({ page }) => {
-      // Import complex layout
-      const filePath = path.resolve('e2e/fixtures', 'complex-layout.json')
-
-      const fileChooserPromise = page.waitForEvent('filechooser')
-      await page.locator('button', { hasText: 'Import' }).click()
-      // Wait for dropdown to be visible
-      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
-      await page.locator('a', { hasText: 'From File' }).click()
-      const fileChooser = await fileChooserPromise
-      await fileChooser.setFiles(filePath)
-
-      // Wait for keys to be imported (Esc, F1, F2, Tab, Q, W = 6 keys)
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 6')
+      // Import complex layout (Esc, F1, F2, Tab, Q, W = 6 keys)
+      await helper.importFromFile('e2e/fixtures/complex-layout.json', 6)
 
       // Take screenshot to verify complex layout with colors and rotation
       await expect(page.locator('.keyboard-canvas')).toHaveScreenshot('complex-layout-imported.png')
     })
 
-    test('should import empty layout', async ({ page }) => {
-      // Import empty layout
-      const filePath = path.resolve('e2e/fixtures', 'empty-layout.json')
-
-      const fileChooserPromise = page.waitForEvent('filechooser')
-      await page.locator('button', { hasText: 'Import' }).click()
-      // Wait for dropdown to be visible
-      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
-      await page.locator('a', { hasText: 'From File' }).click()
-      const fileChooser = await fileChooserPromise
-      await fileChooser.setFiles(filePath)
-
-      // Should remain at 0 keys
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 0')
+    test('should import empty layout', async () => {
+      // Import empty layout (should have 0 keys)
+      await helper.importFromFile('e2e/fixtures/empty-layout.json', 0)
     })
 
     test('should handle invalid JSON gracefully', async ({ page }) => {
-      // Import invalid JSON and expect error toast notification
-      const filePath = path.resolve('e2e/fixtures', 'invalid.json')
-
-      const fileChooserPromise = page.waitForEvent('filechooser')
-      await page.locator('button', { hasText: 'Import' }).click()
-      // Wait for dropdown to be visible
-      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
-      await page.locator('a', { hasText: 'From File' }).click()
-      const fileChooser = await fileChooserPromise
-      await fileChooser.setFiles(filePath)
+      // Import invalid JSON (should show error, no keys imported)
+      await helper.importFromFile('e2e/fixtures/invalid.json')
 
       // Wait for error toast notification to appear
       await expect(page.locator('.toast-notification')).toBeVisible()
@@ -106,38 +69,16 @@ test.describe('JSON Import/Export Functionality', () => {
     })
 
     test('should import layout with rotated keys', async ({ page }) => {
-      // Import layout with rotated keys
-      const filePath = path.resolve('e2e/fixtures', 'rotated-keys.json')
-
-      const fileChooserPromise = page.waitForEvent('filechooser')
-      await page.locator('button', { hasText: 'Import' }).click()
-      // Wait for dropdown to be visible
-      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
-      await page.locator('a', { hasText: 'From File' }).click()
-      const fileChooser = await fileChooserPromise
-      await fileChooser.setFiles(filePath)
-
-      // Should have 3 keys
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 3')
+      // Import layout with rotated keys (3 keys)
+      await helper.importFromFile('e2e/fixtures/rotated-keys.json', 3)
 
       // Take screenshot to verify rotated keys
       await expect(page.locator('.keyboard-canvas')).toHaveScreenshot('rotated-keys-imported.png')
     })
 
     test('should import VIA format layout', async ({ page }) => {
-      // Import VIA format layout
-      const filePath = path.resolve('e2e/fixtures', 'via-layout.json')
-
-      const fileChooserPromise = page.waitForEvent('filechooser')
-      await page.locator('button', { hasText: 'Import' }).click()
-      // Wait for dropdown to be visible
-      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
-      await page.locator('a', { hasText: 'From File' }).click()
-      const fileChooser = await fileChooserPromise
-      await fileChooser.setFiles(filePath)
-
-      // Should have 8 keys (2 rows x 4 keys each)
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 8')
+      // Import VIA format layout (2 rows x 4 keys = 8 keys)
+      await helper.importFromFile('e2e/fixtures/via-layout.json', 8)
 
       // Verify success message indicates VIA format
       await expect(page.locator('.toast-notification')).toBeVisible()
@@ -155,133 +96,38 @@ test.describe('JSON Import/Export Functionality', () => {
       await page.locator('button[title="Add Standard Key"]').click()
       await expect(page.locator('.keys-counter')).toContainText('Keys: 2')
 
-      // Mock showSaveFilePicker to avoid file picker dialog in tests
-      // Instead, make it return undefined so the fallback download path is used
-      await page.evaluate(() => {
-        delete (window as Window & { showSaveFilePicker?: unknown }).showSaveFilePicker
-      })
+      // Export as PNG
+      const pngPath = await helper.exportToPNG('simple-export.png')
 
-      // Set up download promise before clicking export
-      const downloadPromise = page.waitForEvent('download')
-
-      // Click export dropdown
-      const exportButton = page.locator('button', { hasText: 'Export' })
-      await exportButton.click()
-
-      // Click download PNG option
-      await page.locator('a', { hasText: 'Download PNG' }).click()
-
-      // Wait for download to start (should not throw DOMException)
-      const download = await downloadPromise
-
-      // Verify download properties
-      expect(download.suggestedFilename()).toMatch(/\.png$/)
-
-      // Save and verify the downloaded file exists and is valid PNG
-      const downloadPath = path.resolve('e2e/test-output', download.suggestedFilename())
-      await download.saveAs(downloadPath)
-
-      // Read file and verify it's a PNG (starts with PNG signature)
-      const fileBuffer = await fs.readFile(downloadPath)
-      // PNG signature: 89 50 4E 47 0D 0A 1A 0A
-      expect(fileBuffer[0]).toBe(0x89)
-      expect(fileBuffer[1]).toBe(0x50)
-      expect(fileBuffer[2]).toBe(0x4e)
-      expect(fileBuffer[3]).toBe(0x47)
+      // Verify PNG file is valid
+      await helper.verifyPNGSignature(pngPath)
     })
 
-    test('should export PNG with image labels without taint error', async ({ page }) => {
-      // Import a simple layout first
-      const filePath = path.resolve('e2e/fixtures', 'simple-layout.json')
-      const fileChooserPromise = page.waitForEvent('filechooser')
-      await page.locator('button', { hasText: 'Import' }).click()
-      // Wait for dropdown to be visible
-      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
-      await page.locator('a', { hasText: 'From File' }).click()
-      const fileChooser = await fileChooserPromise
-      await fileChooser.setFiles(filePath)
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 8')
+    test('should export PNG with image labels without taint error', async () => {
+      // Import a simple layout first (8 keys)
+      await helper.importFromFile('e2e/fixtures/simple-layout.json', 8)
 
-      // Mock showSaveFilePicker to avoid file picker dialog
-      await page.evaluate(() => {
-        delete (window as Window & { showSaveFilePicker?: unknown }).showSaveFilePicker
-      })
+      // Export as PNG (this should NOT throw DOMException for tainted canvas)
+      const pngPath = await helper.exportToPNG('png-export-test.png')
 
-      // Wait a bit for canvas to render
-      await page.waitForTimeout(500)
-
-      // Set up download promise before clicking export
-      const downloadPromise = page.waitForEvent('download')
-
-      // Click export dropdown
-      const exportButton = page.locator('button', { hasText: 'Export' })
-      await exportButton.click()
-
-      // Click download PNG option - this should NOT throw DOMException
-      await page.locator('a', { hasText: 'Download PNG' }).click()
-
-      // Wait for download to start (should not throw DOMException)
-      const download = await downloadPromise
-
-      // Verify download succeeded
-      expect(download.suggestedFilename()).toMatch(/\.png$/)
-
-      // Save and verify the downloaded file
-      const downloadPath = path.resolve('e2e/test-output', 'png-export-test.png')
-      await download.saveAs(downloadPath)
-
-      // Verify it's a valid PNG
-      const fileBuffer = await fs.readFile(downloadPath)
-      expect(fileBuffer[0]).toBe(0x89)
-      expect(fileBuffer[1]).toBe(0x50)
-      expect(fileBuffer[2]).toBe(0x4e)
-      expect(fileBuffer[3]).toBe(0x47)
+      // Verify PNG file is valid
+      await helper.verifyPNGSignature(pngPath)
     })
 
     test('should roundtrip PNG export and import', async ({ page }) => {
-      // Import a layout
-      const filePath = path.resolve('e2e/fixtures', 'complex-layout.json')
-      const fileChooserPromise = page.waitForEvent('filechooser')
-      await page.locator('button', { hasText: 'Import' }).click()
-      // Wait for dropdown to be visible
-      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
-      await page.locator('a', { hasText: 'From File' }).click()
-      const fileChooser = await fileChooserPromise
-      await fileChooser.setFiles(filePath)
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 6')
-
-      // Mock showSaveFilePicker
-      await page.evaluate(() => {
-        delete (window as Window & { showSaveFilePicker?: unknown }).showSaveFilePicker
-      })
+      // Import a layout (6 keys)
+      await helper.importFromFile('e2e/fixtures/complex-layout.json', 6)
 
       // Export as PNG
-      const downloadPromise = page.waitForEvent('download')
-      const exportButton = page.locator('button', { hasText: 'Export' })
-      await exportButton.click()
-      await page.locator('a', { hasText: 'Download PNG' }).click()
-      const download = await downloadPromise
-
-      // Save the PNG
-      const downloadPath = path.resolve('e2e/test-output', 'roundtrip-test.png')
-      await download.saveAs(downloadPath)
+      const pngPath = await helper.exportToPNG('roundtrip-test.png')
 
       // Reload the page to get a clean state
       await page.reload()
       await expect(page.locator('.canvas-toolbar')).toBeVisible()
       await expect(page.locator('.keys-counter')).toContainText('Keys: 0')
 
-      // Re-import the PNG
-      const fileChooserPromise2 = page.waitForEvent('filechooser')
-      await page.locator('button', { hasText: 'Import' }).click()
-      // Wait for dropdown to be visible
-      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
-      await page.locator('a', { hasText: 'From File' }).click()
-      const fileChooser2 = await fileChooserPromise2
-      await fileChooser2.setFiles(downloadPath)
-
-      // Verify the layout was restored
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 6')
+      // Re-import the exported PNG (should restore 6 keys)
+      await helper.importFromFile(pngPath, 6)
 
       // Verify it's the same layout by visual comparison
       await expect(page.locator('.keyboard-canvas')).toHaveScreenshot('png-roundtrip-result.png')
@@ -295,60 +141,26 @@ test.describe('JSON Import/Export Functionality', () => {
       await page.locator('button[title="Add Standard Key"]').click()
       await expect(page.locator('.keys-counter')).toContainText('Keys: 2')
 
-      // Set up download promise before clicking export
-      const downloadPromise = page.waitForEvent('download')
-
-      // Click export dropdown
-      const exportButton = page.locator('button', { hasText: 'Export' })
-      await exportButton.click()
-
-      // Click download JSON option
-      await page.locator('a', { hasText: 'Download JSON' }).click()
-
-      // Wait for download to start
-      const download = await downloadPromise
-
-      // Verify download properties
-      expect(download.suggestedFilename()).toMatch(/\.json$/)
-
-      // Save and verify the downloaded content
-      const downloadPath = path.resolve('e2e/test-output', download.suggestedFilename())
-      await download.saveAs(downloadPath)
+      // Export as JSON
+      const jsonPath = await helper.exportToJSON('simple-export.json')
 
       // Read and verify the exported JSON
-      const exportedContent = await fs.readFile(downloadPath, 'utf-8')
-      const exportedData = JSON.parse(exportedContent)
+      const exportedData = await helper.verifyJSONContent(jsonPath)
 
       // Should be an array (KLE format)
       expect(Array.isArray(exportedData)).toBe(true)
-      expect(exportedData.length).toBeGreaterThan(0)
+      expect((exportedData as unknown[]).length).toBeGreaterThan(0)
     })
 
-    test('should export complex layout with properties', async ({ page }) => {
-      // Import a complex layout first
-      const filePath = path.resolve('e2e/fixtures', 'complex-layout.json')
-      const fileChooserPromise = page.waitForEvent('filechooser')
-      await page.locator('button', { hasText: 'Import' }).click()
-      // Wait for dropdown to be visible
-      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
-      await page.locator('a', { hasText: 'From File' }).click()
-      const fileChooser = await fileChooserPromise
-      await fileChooser.setFiles(filePath)
+    test('should export complex layout with properties', async () => {
+      // Import a complex layout first (6 keys)
+      await helper.importFromFile('e2e/fixtures/complex-layout.json', 6)
 
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 6')
-
-      // Export the layout
-      const downloadPromise = page.waitForEvent('download')
-      await page.locator('button', { hasText: 'Export' }).click()
-      await page.locator('a', { hasText: 'Download JSON' }).click()
-
-      const download = await downloadPromise
-      const downloadPath = path.resolve('e2e/test-output', download.suggestedFilename())
-      await download.saveAs(downloadPath)
+      // Export the layout as JSON
+      const jsonPath = await helper.exportToJSON('complex-export.json')
 
       // Verify the exported content contains complex properties
-      const exportedContent = await fs.readFile(downloadPath, 'utf-8')
-      const exportedData = JSON.parse(exportedContent)
+      const exportedData = await helper.verifyJSONContent(jsonPath)
 
       expect(Array.isArray(exportedData)).toBe(true)
       // Should contain color and rotation properties
@@ -361,84 +173,47 @@ test.describe('JSON Import/Export Functionality', () => {
       // Ensure layout is empty
       await expect(page.locator('.keys-counter')).toContainText('Keys: 0')
 
-      // Export empty layout
-      const downloadPromise = page.waitForEvent('download')
-      await page.locator('button', { hasText: 'Export' }).click()
-      await page.locator('a', { hasText: 'Download JSON' }).click()
-
-      const download = await downloadPromise
-      const downloadPath = path.resolve('e2e/test-output', download.suggestedFilename())
-      await download.saveAs(downloadPath)
+      // Export empty layout as JSON
+      const jsonPath = await helper.exportToJSON('empty-export.json')
 
       // Verify exported empty layout
-      const exportedContent = await fs.readFile(downloadPath, 'utf-8')
-      const exportedData = JSON.parse(exportedContent)
+      const exportedData = await helper.verifyJSONContent(jsonPath)
 
       expect(Array.isArray(exportedData)).toBe(true)
-      expect(exportedData.length).toBe(0)
+      expect((exportedData as unknown[]).length).toBe(0)
     })
   })
 
   test.describe('Round-trip Tests', () => {
-    test('should maintain layout integrity through import-export cycle', async ({ page }) => {
-      // Import original layout
+    test('should maintain layout integrity through import-export cycle', async () => {
+      // Read original layout
       const originalFile = path.resolve('e2e/fixtures', 'complex-layout.json')
       const originalContent = await fs.readFile(originalFile, 'utf-8')
       const originalData = JSON.parse(originalContent)
 
-      const fileChooserPromise = page.waitForEvent('filechooser')
-      await page.locator('button', { hasText: 'Import' }).click()
-      // Wait for dropdown to be visible
-      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
-      await page.locator('a', { hasText: 'From File' }).click()
-      const fileChooser = await fileChooserPromise
-      await fileChooser.setFiles(originalFile)
-
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 6')
+      // Import the layout (6 keys)
+      await helper.importFromFile(originalFile, 6)
 
       // Export the imported layout
-      const downloadPromise = page.waitForEvent('download')
-      await page.locator('button', { hasText: 'Export' }).click()
-      await page.locator('a', { hasText: 'Download JSON' }).click()
-
-      const download = await downloadPromise
-      const exportPath = path.resolve('e2e/test-output', 'round-trip-export.json')
-      await download.saveAs(exportPath)
+      const exportPath = await helper.exportToJSON('round-trip-export.json')
 
       // Compare original and exported data
-      const exportedContent = await fs.readFile(exportPath, 'utf-8')
-      const exportedData = JSON.parse(exportedContent)
+      const exportedData = await helper.verifyJSONContent(exportPath)
 
       // Both should be arrays
       expect(Array.isArray(originalData)).toBe(true)
       expect(Array.isArray(exportedData)).toBe(true)
 
       // Should have same number of rows (approximate comparison due to internal processing)
-      expect(exportedData.length).toBeGreaterThan(0)
+      expect((exportedData as unknown[]).length).toBeGreaterThan(0)
     })
 
-    test('should preserve key properties through round-trip', async ({ page }) => {
-      // Import rotated keys layout
-      const filePath = path.resolve('e2e/fixtures', 'rotated-keys.json')
-
-      const fileChooserPromise = page.waitForEvent('filechooser')
-      await page.locator('button', { hasText: 'Import' }).click()
-      // Wait for dropdown to be visible
-      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
-      await page.locator('a', { hasText: 'From File' }).click()
-      const fileChooser = await fileChooserPromise
-      await fileChooser.setFiles(filePath)
-
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 3')
+    test('should preserve key properties through round-trip', async () => {
+      // Import rotated keys layout (3 keys)
+      await helper.importFromFile('e2e/fixtures/rotated-keys.json', 3)
 
       // Export the layout
-      const downloadPromise = page.waitForEvent('download')
-      await page.locator('button', { hasText: 'Export' }).click()
-      await page.locator('a', { hasText: 'Download JSON' }).click()
-
-      const download = await downloadPromise
-      const exportPath = path.resolve('e2e/test-output', 'rotated-keys-export.json')
-      await download.saveAs(exportPath)
+      const exportPath = await helper.exportToJSON('rotated-keys-export.json')
 
       // Verify rotation properties are preserved
       const exportedContent = await fs.readFile(exportPath, 'utf-8')
@@ -447,36 +222,20 @@ test.describe('JSON Import/Export Functionality', () => {
       expect(exportedContent.includes('"r":')).toBe(true)
     })
 
-    test('should correctly handle rotary encoder property through round-trip', async ({ page }) => {
+    test('should correctly handle rotary encoder property through round-trip', async () => {
       // This targets bug fixed in adamws/kle-serial v0.17.1,
-      // some properties where not deserialized propertly (including 'Switch Mount' which we use to
+      // some properties where not deserialized properly (including 'Switch Mount' which we use to
       // mark rotary encoder)
 
-      // Import rotary encoder layout
+      // Import rotary encoder layout (3 keys)
       const filePath = path.resolve('e2e/fixtures', 'simple-rotary-encoder.json')
-
-      const fileChooserPromise = page.waitForEvent('filechooser')
-      await page.locator('button', { hasText: 'Import' }).click()
-      // Wait for dropdown to be visible
-      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
-      await page.locator('a', { hasText: 'From File' }).click()
-      const fileChooser = await fileChooserPromise
-      await fileChooser.setFiles(filePath)
-
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 3')
+      await helper.importFromFile(filePath, 3)
 
       // Export the layout
-      const downloadPromise = page.waitForEvent('download')
-      await page.locator('button', { hasText: 'Export' }).click()
-      await page.locator('a', { hasText: 'Download JSON' }).click()
+      const exportPath = await helper.exportToJSON('simple-rotary-encoder-export.json')
 
-      const download = await downloadPromise
-      const exportPath = path.resolve('e2e/test-output', 'simple-rotary-encoder-export.json')
-      await download.saveAs(exportPath)
-
-      // Verify that are equal
-      const exportedContent = await fs.readFile(exportPath, 'utf-8')
-      const exportedData = JSON.parse(exportedContent)
+      // Verify that imported and exported data are equal
+      const exportedData = await helper.verifyJSONContent(exportPath)
       const importedContent = await fs.readFile(filePath, 'utf-8')
       const importedData = JSON.parse(importedContent)
 
@@ -486,34 +245,18 @@ test.describe('JSON Import/Export Functionality', () => {
 
   test.describe('Integration Tests', () => {
     test('should handle import then modify then export workflow', async ({ page }) => {
-      // Import simple layout
-      const filePath = path.resolve('e2e/fixtures', 'simple-layout.json')
-      const fileChooserPromise = page.waitForEvent('filechooser')
-      await page.locator('button', { hasText: 'Import' }).click()
-      // Wait for dropdown to be visible
-      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
-      await page.locator('a', { hasText: 'From File' }).click()
-      const fileChooser = await fileChooserPromise
-      await fileChooser.setFiles(filePath)
-
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 8')
+      // Import simple layout (8 keys)
+      await helper.importFromFile('e2e/fixtures/simple-layout.json', 8)
 
       // Add one more key
       await page.locator('button[title="Add Standard Key"]').click()
       await expect(page.locator('.keys-counter')).toContainText('Keys: 9')
 
       // Export modified layout
-      const downloadPromise = page.waitForEvent('download')
-      await page.locator('button', { hasText: 'Export' }).click()
-      await page.locator('a', { hasText: 'Download JSON' }).click()
+      const exportPath = await helper.exportToJSON('modified-layout.json')
 
-      const download = await downloadPromise
-      const exportPath = path.resolve('e2e/test-output', 'modified-layout.json')
-      await download.saveAs(exportPath)
-
-      // Verify exported layout has the additional key
-      const exportedContent = await fs.readFile(exportPath, 'utf-8')
-      const exportedData = JSON.parse(exportedContent)
+      // Verify exported layout is valid JSON array
+      const exportedData = await helper.verifyJSONContent(exportPath)
       expect(Array.isArray(exportedData)).toBe(true)
     })
 
@@ -525,17 +268,8 @@ test.describe('JSON Import/Export Functionality', () => {
         page.locator('div.small.text-warning', { hasText: 'Unsaved changes' }),
       ).toBeHidden()
 
-      // Import a layout
-      const filePath = path.resolve('e2e/fixtures', 'simple-layout.json')
-      const fileChooserPromise = page.waitForEvent('filechooser')
-      await page.locator('button', { hasText: 'Import' }).click()
-      // Wait for dropdown to be visible
-      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
-      await page.locator('a', { hasText: 'From File' }).click()
-      const fileChooser = await fileChooserPromise
-      await fileChooser.setFiles(filePath)
-
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 8')
+      // Import a layout (8 keys)
+      await helper.importFromFile('e2e/fixtures/simple-layout.json', 8)
 
       // Should still not show unsaved changes after import (import establishes new baseline)
       await expect(
@@ -552,39 +286,15 @@ test.describe('JSON Import/Export Functionality', () => {
       ).toBeVisible()
     })
 
-    test('should handle multiple imports in sequence', async ({ page }) => {
-      // Import first layout
-      let filePath = path.resolve('e2e/fixtures', 'simple-layout.json')
-      let fileChooserPromise = page.waitForEvent('filechooser')
-      await page.locator('button', { hasText: 'Import' }).click()
-      // Wait for dropdown to be visible
-      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
-      await page.locator('a', { hasText: 'From File' }).click()
-      let fileChooser = await fileChooserPromise
-      await fileChooser.setFiles(filePath)
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 8')
+    test('should handle multiple imports in sequence', async () => {
+      // Import first layout (8 keys)
+      await helper.importFromFile('e2e/fixtures/simple-layout.json', 8)
 
-      // Import second layout (should replace first)
-      filePath = path.resolve('e2e/fixtures', 'rotated-keys.json')
-      fileChooserPromise = page.waitForEvent('filechooser')
-      await page.locator('button', { hasText: 'Import' }).click()
-      // Wait for dropdown to be visible
-      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
-      await page.locator('a', { hasText: 'From File' }).click()
-      fileChooser = await fileChooserPromise
-      await fileChooser.setFiles(filePath)
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 3')
+      // Import second layout (should replace first with 3 keys)
+      await helper.importFromFile('e2e/fixtures/rotated-keys.json', 3)
 
-      // Import empty layout
-      filePath = path.resolve('e2e/fixtures', 'empty-layout.json')
-      fileChooserPromise = page.waitForEvent('filechooser')
-      await page.locator('button', { hasText: 'Import' }).click()
-      // Wait for dropdown to be visible
-      await expect(page.locator('.dropdown-menu:has(a:has-text("From File"))')).toBeVisible()
-      await page.locator('a', { hasText: 'From File' }).click()
-      fileChooser = await fileChooserPromise
-      await fileChooser.setFiles(filePath)
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 0')
+      // Import empty layout (should clear to 0 keys)
+      await helper.importFromFile('e2e/fixtures/empty-layout.json', 0)
     })
   })
 })
