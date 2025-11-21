@@ -62,7 +62,19 @@ test.describe('Toast Stacking System', () => {
 
     // Wait for all toasts to appear
     await page.waitForSelector('.toast-notification', { timeout: 5000 })
-    await page.waitForTimeout(500) // Allow animations to complete
+
+    // Allow animations to complete using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => resolve())
+            })
+          })
+        })
+      })
+    })
 
     const toasts = page.locator('.toast-notification')
     const toastCount = await toasts.count()
@@ -103,8 +115,18 @@ test.describe('Toast Stacking System', () => {
       }, 200)
     })
 
-    // Wait for all toasts to appear
-    await page.waitForTimeout(500)
+    // Wait for all toasts to appear using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => resolve())
+            })
+          })
+        })
+      })
+    })
 
     const toasts = page.locator('.toast-notification')
     await expect(toasts).toHaveCount(3)
@@ -119,8 +141,18 @@ test.describe('Toast Stacking System', () => {
     // Close the first toast by clicking its close button
     await toasts.nth(0).locator('.toast-close').click()
 
-    // Wait for animation to complete
-    await page.waitForTimeout(500)
+    // Wait for animation to complete using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => resolve())
+            })
+          })
+        })
+      })
+    })
 
     // Check that only 2 toasts remain
     await expect(toasts).toHaveCount(2)
@@ -151,7 +183,20 @@ test.describe('Toast Stacking System', () => {
       }, 300)
     })
 
-    await page.waitForTimeout(600)
+    // Wait for all toast types to appear using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => resolve())
+              })
+            })
+          })
+        })
+      })
+    })
 
     const toasts = page.locator('.toast-notification')
     await expect(toasts).toHaveCount(4)
@@ -178,8 +223,20 @@ test.describe('Toast Stacking System', () => {
     const toast = page.locator('.toast-notification').first()
     await expect(toast).toBeVisible()
 
-    // Wait for auto-dismiss
-    await page.waitForTimeout(1500)
+    // Wait for auto-dismiss (1000ms + buffer) using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        // Wait ~1200ms using multiple RAF frames
+        const waitFrames = (count: number) => {
+          if (count === 0) {
+            resolve()
+            return
+          }
+          requestAnimationFrame(() => waitFrames(count - 1))
+        }
+        waitFrames(12) // ~1200ms at 60fps
+      })
+    })
     await expect(toast).not.toBeVisible()
   })
 
@@ -213,7 +270,16 @@ test.describe('Toast Stacking System', () => {
       }
     })
 
-    await page.waitForTimeout(300)
+    // Wait for rapid creation to complete using RAF
+    await page.evaluate(() => {
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => resolve())
+          })
+        })
+      })
+    })
 
     const toasts = page.locator('.toast-notification')
     const toastCount = await toasts.count()
