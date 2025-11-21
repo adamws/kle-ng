@@ -366,7 +366,7 @@ Exporting works by decompressing the `_kleng_via_data` field and injecting layou
 [Ergogen](https://ergogen.xyz/) is a keyboard layout generator that uses YAML configuration to define ergonomic keyboard layouts.
 kle-ng can import layouts directly from yaml files or ergogen.xyz share URLs (e.g., `https://ergogen.xyz/#N4Igxg9gdg...`).
 These URLs contain compressed YAML configurations that kle-ng decodes, processes with the Ergogen library,
-and converts to KLE format for editing. This allows you to take Ergogen-generated layouts and refine them in kle-ng.
+and converts to KLE format for editing. This allows you to take Ergogen-generated layouts and use them in kle-ng.
 
 <table>
 <tr>
