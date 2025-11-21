@@ -1,5 +1,6 @@
 // Canvas rendering tests with proper waiting strategies
 import { test, expect } from '@playwright/test'
+import { KeyboardEditorPage } from './pages/KeyboardEditorPage'
 
 test.describe('Canvas Rendering - Layout Tests', () => {
   // Canvas rendering tests only run on Chromium since we've verified
@@ -27,25 +28,21 @@ test.describe('Canvas Rendering - Layout Tests', () => {
   })
 
   test('should render basic 5-key layout', async ({ page }) => {
-    // Add 5 keys individually
-    const addButton = page.locator('button[title="Add Standard Key"]')
+    const editor = new KeyboardEditorPage(page)
+
+    // Add 5 keys using the toolbar
     for (let i = 0; i < 5; i++) {
-      await addButton.click()
+      await editor.toolbar.addKey()
     }
 
-    // Add labels to the keys
-    // First, we need to deselect all keys and then select them one by one to label them
-    const canvas = page.locator('.keyboard-canvas')
-    await canvas.click({ position: { x: 50, y: 50 } }) // Click empty area to deselect
+    // Verify 5 keys were added
+    await editor.expectKeyCount(5)
 
-    // This is a basic test - we'll label them sequentially
-    // Note: In a real scenario, you'd want to click individual keys to select them
-    // For now, let's just take a screenshot of the 5 default keys
+    // Click empty area to deselect all keys
+    await editor.canvas.clickAt(50, 50)
 
-    // Wait for keys counter to show 5 keys are added
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 5')
-
-    await expect(canvas).toHaveScreenshot('layout-5-keys-default.png')
+    // Take screenshot of the canvas
+    await editor.canvas.expectScreenshot('layout-5-keys-default')
   })
 
   test('should render ANSI 104 layout', async ({ page }) => {

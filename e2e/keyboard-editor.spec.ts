@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { KeyboardEditorPage } from './pages/KeyboardEditorPage'
 
 test.describe('Keyboard Layout Editor', () => {
   test.beforeEach(async ({ page }) => {
@@ -44,15 +45,17 @@ test.describe('Keyboard Layout Editor', () => {
   })
 
   test('should add keys and update status', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Initially should show 0 keys
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 0')
+    await editor.expectKeyCount(0)
 
     // Add a key
-    await page.click('button[title="Add Standard Key"]')
+    await editor.toolbar.addKey()
 
     // Should now show 1 key and 1 selected
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
-    await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
+    await editor.expectKeyCount(1)
+    await editor.expectSelectedCount(1)
   })
 
   test('should add multiple keys', async ({ page }) => {
@@ -85,8 +88,10 @@ test.describe('Keyboard Layout Editor', () => {
   })
 
   test('should edit key properties', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Add a key
-    await page.click('button[title="Add Standard Key"]')
+    await editor.toolbar.addKey()
 
     // Edit the center label (main label) - it's the 5th input in the labels grid (index 4)
     const centerLabelInput = page.locator('.labels-grid .form-control').nth(4)

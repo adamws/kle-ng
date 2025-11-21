@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { ThemeComponent } from './pages/components/ThemeComponent'
 
 test.describe('Theme switching functionality', () => {
   test.beforeEach(async ({ page }) => {
@@ -34,22 +35,15 @@ test.describe('Theme switching functionality', () => {
   })
 
   test('should switch to dark theme', async ({ page }) => {
-    const themeToggle = page.locator('button[title*="Current theme"]')
-    await themeToggle.click()
+    const theme = new ThemeComponent(page)
 
-    // Click on Dark option in dropdown
-    await page.locator('button:has-text("Dark")').click()
+    // Switch to dark theme
+    await theme.switchTo('dark')
 
-    // Verify theme is applied to HTML element
-    const htmlElement = page.locator('html')
-    await expect(htmlElement).toHaveAttribute('data-bs-theme', 'dark')
-
-    // Verify button shows dark theme
-    await expect(themeToggle).toHaveAttribute('title', 'Current theme: dark')
-
-    // Verify the theme icon changed to moon
-    const themeIcon = themeToggle.locator('i.bi-moon-stars-fill')
-    await expect(themeIcon).toBeVisible()
+    // Verify theme is applied
+    await theme.expectCurrentTheme('dark')
+    await theme.expectButtonShowsTheme('dark')
+    await theme.expectThemeIcon('bi-moon-stars-fill')
   })
 
   test('should switch to light theme', async ({ page }) => {
