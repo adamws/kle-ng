@@ -1,25 +1,23 @@
 import { test, expect } from '@playwright/test'
+import { GitHubStarPopupHelper } from './helpers/github-star-popup-helpers'
+import { WaitHelpers } from './helpers/wait-helpers'
 
 test.describe('GitHub Star Popup', () => {
+  let popupHelper: GitHubStarPopupHelper
+  let waitHelpers: WaitHelpers
+
   test.beforeEach(async ({ page, context }) => {
     // Clear localStorage before each test to simulate new user
     await context.clearCookies()
     await page.goto('/')
-    await page.evaluate(() => {
-      localStorage.clear()
-      // Set flag to allow popup to show in E2E tests
-      ;(window as typeof window & { __ALLOW_POPUP_IN_E2E__?: boolean }).__ALLOW_POPUP_IN_E2E__ =
-        true
-    })
-  })
 
-  // Helper function to simulate time passed by manipulating localStorage
-  async function simulateFirstVisit(page, millisecondsAgo: number) {
-    const timeAgo = Date.now() - millisecondsAgo
-    await page.evaluate((time) => {
-      localStorage.setItem('kle-ng-first-visit-time', time.toString())
-    }, timeAgo)
-  }
+    // Initialize helpers
+    waitHelpers = new WaitHelpers(page)
+    popupHelper = new GitHubStarPopupHelper(page, waitHelpers)
+
+    // Initialize for testing
+    await popupHelper.initializeForTesting()
+  })
 
   test('should not show popup immediately on first visit', async ({ page }) => {
     await page.goto('/')
@@ -28,63 +26,48 @@ test.describe('GitHub Star Popup', () => {
     await page.waitForLoadState('networkidle')
 
     // Popup should not be visible immediately
-    await expect(page.locator('.github-star-popup')).not.toBeVisible()
+    await popupHelper.expectPopupNotVisible()
   })
 
   test('should show popup for user who has been on site > 1 minute', async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
-    // Simulate that user visited 2 minutes ago
-    await simulateFirstVisit(page, 120000)
-
-    // Reload page to trigger popup check
-    await page.reload()
-    await page.waitForLoadState('networkidle')
+    // Show popup after simulating 2 minutes delay
+    await popupHelper.showPopupAfterDelay(120000)
 
     // Popup should now be visible
-    await expect(page.locator('.github-star-popup')).toBeVisible({ timeout: 5000 })
+    await popupHelper.expectPopupVisible()
 
     // Check popup content
-    await expect(page.locator('.popup-title')).toContainText('Enjoying KLE-NG?')
-    await expect(page.locator('.popup-text')).toContainText('star')
-    await expect(page.locator('.star-button')).toContainText('Star on GitHub')
+    await popupHelper.expectPopupContent()
   })
 
   test('should have correct GitHub link', async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
-    // Simulate user who has been here > 1 minute
-    await simulateFirstVisit(page, 120000)
-    await page.reload()
-    await page.waitForLoadState('networkidle')
-
-    await expect(page.locator('.github-star-popup')).toBeVisible({ timeout: 5000 })
+    // Show popup
+    await popupHelper.showPopupAfterDelay(120000)
+    await popupHelper.expectPopupVisible()
 
     // Check link attributes
-    const starButton = page.locator('.star-button')
-    await expect(starButton).toHaveAttribute('href', 'https://github.com/adamws/kle-ng')
-    await expect(starButton).toHaveAttribute('target', '_blank')
-    await expect(starButton).toHaveAttribute('rel', 'noopener noreferrer')
+    await popupHelper.expectCorrectGitHubLink()
   })
 
   test('should close popup when close button is clicked', async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
-    // Show popup by simulating time passed
-    await simulateFirstVisit(page, 120000)
-    await page.reload()
-    await page.waitForLoadState('networkidle')
-
-    await expect(page.locator('.github-star-popup')).toBeVisible({ timeout: 5000 })
+    // Show popup
+    await popupHelper.showPopupAfterDelay(120000)
+    await popupHelper.expectPopupVisible()
 
     // Click close button
-    await page.locator('.close-btn').click()
+    await popupHelper.closePopup()
 
     // Popup should disappear
-    await expect(page.locator('.github-star-popup')).not.toBeVisible()
+    await popupHelper.expectPopupNotVisible()
   })
 
   test('should close popup when star button is clicked', async ({ page }) => {
@@ -92,24 +75,17 @@ test.describe('GitHub Star Popup', () => {
     await page.waitForLoadState('networkidle')
 
     // Show popup
-    await simulateFirstVisit(page, 120000)
-    await page.reload()
-    await page.waitForLoadState('networkidle')
-
-    await expect(page.locator('.github-star-popup')).toBeVisible({ timeout: 5000 })
+    await popupHelper.showPopupAfterDelay(120000)
+    await popupHelper.expectPopupVisible()
 
     // Click star button (will open new tab, but we're testing popup closes)
-    // Need to handle the new page that opens
-    const [newPage] = await Promise.all([
-      page.context().waitForEvent('page'),
-      page.locator('.star-button').click(),
-    ])
+    const newPage = await popupHelper.clickStarButton()
 
     // Close the new page
     await newPage.close()
 
     // Original popup should disappear
-    await expect(page.locator('.github-star-popup')).not.toBeVisible()
+    await popupHelper.expectPopupNotVisible()
   })
 
   test('should store dismissed state in localStorage', async ({ page }) => {
@@ -117,21 +93,14 @@ test.describe('GitHub Star Popup', () => {
     await page.waitForLoadState('networkidle')
 
     // Show popup
-    await simulateFirstVisit(page, 120000)
-    await page.reload()
-    await page.waitForLoadState('networkidle')
-
-    await expect(page.locator('.github-star-popup')).toBeVisible({ timeout: 5000 })
+    await popupHelper.showPopupAfterDelay(120000)
+    await popupHelper.expectPopupVisible()
 
     // Click close button
-    await page.locator('.close-btn').click()
+    await popupHelper.closePopup()
 
     // Check localStorage
-    const dismissedState = await page.evaluate(() => {
-      return localStorage.getItem('kle-ng-github-star-popup-dismissed')
-    })
-
-    expect(dismissedState).toBe('true')
+    await popupHelper.expectDismissedStateStored()
   })
 
   test('should not show popup again after being dismissed', async ({ page }) => {
@@ -139,22 +108,18 @@ test.describe('GitHub Star Popup', () => {
     await page.waitForLoadState('networkidle')
 
     // Show popup
-    await simulateFirstVisit(page, 120000)
-    await page.reload()
-    await page.waitForLoadState('networkidle')
+    await popupHelper.showPopupAfterDelay(120000)
+    await popupHelper.expectPopupVisible()
 
-    await expect(page.locator('.github-star-popup')).toBeVisible({ timeout: 5000 })
-
-    await page.locator('.close-btn').click()
-    await expect(page.locator('.github-star-popup')).not.toBeVisible()
+    await popupHelper.closePopup()
+    await popupHelper.expectPopupNotVisible()
 
     // Reload page (simulating returning user)
     await page.reload()
     await page.waitForLoadState('networkidle')
 
-    // Even after waiting, popup should not show
-    await page.waitForTimeout(1000)
-    await expect(page.locator('.github-star-popup')).not.toBeVisible()
+    // Even after waiting, popup should not show (use RAF wait instead of hard timeout)
+    await popupHelper.expectPopupNotVisibleAfterWait()
   })
 
   test('should show popup immediately for returning user who has been there > 1 minute', async ({
@@ -163,15 +128,11 @@ test.describe('GitHub Star Popup', () => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
-    // Simulate a user who visited 2 minutes ago
-    await simulateFirstVisit(page, 120000)
-
-    // Reload page
-    await page.reload()
-    await page.waitForLoadState('networkidle')
+    // Show popup
+    await popupHelper.showPopupAfterDelay(120000)
 
     // Popup should show immediately
-    await expect(page.locator('.github-star-popup')).toBeVisible({ timeout: 5000 })
+    await popupHelper.expectPopupVisible()
   })
 
   test('should not show popup if dismissed flag is set', async ({ page }) => {
@@ -179,22 +140,17 @@ test.describe('GitHub Star Popup', () => {
     await page.waitForLoadState('networkidle')
 
     // Pre-set dismissed flag
-    await page.evaluate(() => {
-      localStorage.setItem('kle-ng-github-star-popup-dismissed', 'true')
-    })
+    await popupHelper.setDismissedFlag()
 
     // Also simulate time passed (to make sure dismissed flag takes precedence)
-    await simulateFirstVisit(page, 120000)
+    await popupHelper.simulateFirstVisit(120000)
 
     // Reload page
     await page.reload()
     await page.waitForLoadState('networkidle')
 
-    // Wait to ensure popup doesn't show
-    await page.waitForTimeout(1000)
-
-    // Popup should never appear
-    await expect(page.locator('.github-star-popup')).not.toBeVisible()
+    // Wait to ensure popup doesn't show (use RAF wait instead of hard timeout)
+    await popupHelper.expectPopupNotVisibleAfterWait()
   })
 
   test('should have proper styling and positioning', async ({ page }) => {
@@ -202,14 +158,11 @@ test.describe('GitHub Star Popup', () => {
     await page.waitForLoadState('networkidle')
 
     // Show popup
-    await simulateFirstVisit(page, 120000)
-    await page.reload()
-    await page.waitForLoadState('networkidle')
-
-    await expect(page.locator('.github-star-popup')).toBeVisible({ timeout: 5000 })
+    await popupHelper.showPopupAfterDelay(120000)
+    await popupHelper.expectPopupVisible()
 
     // Check popup is positioned in bottom right
-    const popup = page.locator('.github-star-popup')
+    const popup = popupHelper.getPopup()
     const box = await popup.boundingBox()
 
     expect(box).not.toBeNull()
@@ -227,28 +180,24 @@ test.describe('GitHub Star Popup', () => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
-    await simulateFirstVisit(page, 120000)
-    await page.reload()
-    await page.waitForLoadState('networkidle')
-
-    await expect(page.locator('.github-star-popup')).toBeVisible({ timeout: 5000 })
+    // Show popup
+    await popupHelper.showPopupAfterDelay(120000)
+    await popupHelper.expectPopupVisible()
 
     // Check for close icon (bi-x)
-    await expect(page.locator('.close-btn i.bi-x')).toBeVisible()
+    await expect(popupHelper.getCloseIcon()).toBeVisible()
   })
 
   test('should have GitHub icon in star button', async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
-    await simulateFirstVisit(page, 120000)
-    await page.reload()
-    await page.waitForLoadState('networkidle')
-
-    await expect(page.locator('.github-star-popup')).toBeVisible({ timeout: 5000 })
+    // Show popup
+    await popupHelper.showPopupAfterDelay(120000)
+    await popupHelper.expectPopupVisible()
 
     // Check for GitHub icon (bi-github)
-    await expect(page.locator('.star-button i.bi-github')).toBeVisible()
+    await expect(popupHelper.getGitHubIcon()).toBeVisible()
   })
 
   test('should be responsive on mobile viewport', async ({ page }) => {
@@ -258,14 +207,12 @@ test.describe('GitHub Star Popup', () => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
-    await simulateFirstVisit(page, 120000)
-    await page.reload()
-    await page.waitForLoadState('networkidle')
-
-    await expect(page.locator('.github-star-popup')).toBeVisible({ timeout: 5000 })
+    // Show popup
+    await popupHelper.showPopupAfterDelay(120000)
+    await popupHelper.expectPopupVisible()
 
     // Popup should be visible and not overflow
-    const popup = page.locator('.github-star-popup')
+    const popup = popupHelper.getPopup()
     const box = await popup.boundingBox()
 
     expect(box).not.toBeNull()
