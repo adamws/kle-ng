@@ -1,117 +1,90 @@
-import { test, expect } from '@playwright/test'
+import { test } from '@playwright/test'
+import { AdvancedPositionPanelHelper } from './helpers/advanced-position-panel-helpers'
+import { WaitHelpers } from './helpers/wait-helpers'
 
 test.describe('Advanced Position & Rotation Panel', () => {
+  let helper: AdvancedPositionPanelHelper
+  let waitHelpers: WaitHelpers
+
   test.beforeEach(async ({ page }) => {
+    waitHelpers = new WaitHelpers(page)
+    helper = new AdvancedPositionPanelHelper(page, waitHelpers)
+
     await page.goto('/')
 
     // Add a key to work with
-    await page.click('button[title="Add Standard Key"]')
-
-    // Wait for key to be added and selected
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
-    await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
+    await helper.addStandardKey()
   })
 
-  test('should toggle between basic and advanced modes', async ({ page }) => {
-    // Should start in basic mode - use a more specific selector
-    await expect(page.locator('.position-rotation-container .property-group-title')).toContainText(
-      'Position & Rotation',
-    )
-    await expect(page.locator('.toggle-mode-btn')).toContainText('Advanced')
+  test('should toggle between basic and advanced modes', async () => {
+    // Should start in basic mode
+    await helper.expectBasicMode()
 
-    // Click to switch to advanced mode
-    await page.click('.toggle-mode-btn')
+    // Toggle to advanced mode
+    await helper.toggleMode()
+    await helper.expectAdvancedMode()
 
-    // Should now be in advanced mode
-    await expect(page.locator('.position-rotation-container .property-group-title')).toContainText(
-      'Advanced Position & Rotation',
-    )
-    await expect(page.locator('.toggle-mode-btn')).toContainText('Basic')
-
-    // Click to switch back to basic mode
-    await page.click('.toggle-mode-btn')
-
-    // Should be back in basic mode
-    await expect(page.locator('.position-rotation-container .property-group-title')).toContainText(
-      'Position & Rotation',
-    )
-    await expect(page.locator('.toggle-mode-btn')).toContainText('Advanced')
+    // Toggle back to basic mode
+    await helper.toggleMode()
+    await helper.expectBasicMode()
   })
 
-  test('should show additional controls in advanced mode', async ({ page }) => {
+  test('should show additional controls in advanced mode', async () => {
     // In basic mode, secondary controls should not be visible
-    await expect(page.locator('input[title="Secondary X Position"]')).toBeHidden()
-    await expect(page.locator('input[title="Secondary Y Position"]')).toBeHidden()
-    await expect(page.locator('input[title="Secondary Width"]')).toBeHidden()
-    await expect(page.locator('input[title="Secondary Height"]')).toBeHidden()
+    await helper.expectSecondaryControlsHidden()
 
     // Switch to advanced mode
-    await page.click('.toggle-mode-btn')
+    await helper.switchToAdvancedMode()
 
     // Secondary controls should now be visible
-    await expect(page.locator('input[title="Secondary X Position"]')).toBeVisible()
-    await expect(page.locator('input[title="Secondary Y Position"]')).toBeVisible()
-    await expect(page.locator('input[title="Secondary Width"]')).toBeVisible()
-    await expect(page.locator('input[title="Secondary Height"]')).toBeVisible()
+    await helper.expectSecondaryControlsVisible()
   })
 
   test('should persist mode preference on page reload', async ({ page }) => {
     // Switch to advanced mode
-    await page.click('.toggle-mode-btn')
-    await expect(page.locator('.position-rotation-container .property-group-title')).toContainText(
-      'Advanced Position & Rotation',
-    )
+    await helper.switchToAdvancedMode()
+    await helper.expectAdvancedMode()
 
     // Reload the page
     await page.reload()
 
     // Add a key again (since reload clears the layout)
-    await page.click('button[title="Add Standard Key"]')
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+    await helper.addStandardKey()
 
     // Should still be in advanced mode
-    await expect(page.locator('.position-rotation-container .property-group-title')).toContainText(
-      'Advanced Position & Rotation',
-    )
-    await expect(page.locator('.toggle-mode-btn')).toContainText('Basic')
+    await helper.expectAdvancedMode()
   })
 
-  test('should allow editing secondary properties in advanced mode', async ({ page }) => {
+  test('should allow editing secondary properties in advanced mode', async () => {
     // Switch to advanced mode
-    await page.click('.toggle-mode-btn')
+    await helper.switchToAdvancedMode()
 
-    // Fill in some secondary property values
-    await page.fill('input[title="Secondary X Position"]', '0.5')
-    await page.fill('input[title="Secondary Y Position"]', '0.25')
-    await page.fill('input[title="Secondary Width"]', '1.5')
-    await page.fill('input[title="Secondary Height"]', '0.75')
+    // Fill in secondary property values
+    await helper.setSecondaryProperties({
+      x: '0.5',
+      y: '0.25',
+      width: '1.5',
+      height: '0.75',
+    })
 
     // Verify the values are set
-    await expect(page.locator('input[title="Secondary X Position"]')).toHaveValue('0.5')
-    await expect(page.locator('input[title="Secondary Y Position"]')).toHaveValue('0.25')
-    await expect(page.locator('input[title="Secondary Width"]')).toHaveValue('1.5')
-    await expect(page.locator('input[title="Secondary Height"]')).toHaveValue('0.75')
+    await helper.expectSecondaryProperties({
+      x: '0.5',
+      y: '0.25',
+      width: '1.5',
+      height: '0.75',
+    })
   })
 
-  test('should maintain consistent panel height between modes', async ({ page }) => {
-    // Get initial height of the property group
-    const initialHeight = await page
-      .locator('.property-group.position-rotation-container')
-      .boundingBox()
-    expect(initialHeight).toBeTruthy()
+  test('should maintain consistent panel height between modes', async () => {
+    // Get initial height in basic mode
+    const basicHeight = await helper.getPanelHeight()
 
     // Switch to advanced mode
-    await page.click('.toggle-mode-btn')
+    await helper.switchToAdvancedMode()
 
-    // Get height after switching
-    const advancedHeight = await page
-      .locator('.property-group.position-rotation-container')
-      .boundingBox()
-    expect(advancedHeight).toBeTruthy()
-
-    // Heights should be similar (allowing for small differences due to content)
-    const heightDifference = Math.abs(advancedHeight!.height - initialHeight!.height)
-    expect(heightDifference).toBeLessThan(50) // Allow up to 50px difference
+    // Verify panel height is similar (allowing for small differences due to content)
+    await helper.expectPanelHeightSimilar(basicHeight, 50)
   })
 
   test('should work with special keys like ISO Enter', async ({ page }) => {
@@ -119,56 +92,33 @@ test.describe('Advanced Position & Rotation Panel', () => {
     await page.goto('/')
 
     // Add ISO Enter using the special keys dropdown
-    await page.click('button[title="Add Special Key"]')
+    await helper.addSpecialKey('ISO Enter')
 
-    await page.waitForTimeout(300)
-
-    // Click on ISO Enter in the dropdown
-    const isoEnterOption = page.locator('.dropdown-item').filter({ hasText: 'ISO Enter' })
-    await isoEnterOption.click()
-
-    await page.waitForTimeout(500)
-
-    // Should add the key and be selected by default
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
-    await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
-
-    // Now switch to advanced mode (after adding the key)
-    await page.click('.toggle-mode-btn')
-    // Wait for advanced mode to be active
-    await expect(page.locator('.toggle-mode-btn')).toContainText('Basic')
+    // Now switch to advanced mode
+    await helper.switchToAdvancedMode()
 
     // Verify we're in advanced mode
-    await expect(page.locator('.toggle-mode-btn')).toContainText('Basic')
+    await helper.expectAdvancedMode()
 
     // Verify the key properties panel is visible
-    await expect(page.locator('.key-properties-panel')).toBeVisible()
+    await helper.expectKeyPropertiesPanelVisible()
 
-    // In advanced mode with ISO Enter, the width input should be visible
-    const primaryWidth = page.locator('input[title="Width"]').first()
-    await expect(primaryWidth).toBeVisible()
-    await primaryWidth.fill('1.25')
+    // Set primary dimensions
+    await helper.setPrimaryWidth('1.25')
+    await helper.setPrimaryHeight('2')
 
-    const primaryHeight = page.locator('input[title="Height"]').first()
-    await expect(primaryHeight).toBeVisible()
-    await primaryHeight.fill('2')
+    // Set secondary dimensions
+    await helper.setSecondaryProperties({
+      width: '1.5',
+      height: '1',
+      x: '0.25',
+      y: '0',
+    })
 
-    // Then secondary dimensions
-    await page.locator('input[title="Secondary Width"]').first().fill('1.5')
-    await page.locator('input[title="Secondary Height"]').first().fill('1')
-    await page.locator('input[title="Secondary X Position"]').fill('0.25')
-    await page.locator('input[title="Secondary Y Position"]').fill('0')
-
-    // Secondary controls should be available and have values for ISO Enter
-    await expect(page.locator('input[title="Secondary X Position"]')).toBeVisible()
-    await expect(page.locator('input[title="Secondary Y Position"]')).toBeVisible()
-    await expect(page.locator('input[title="Secondary Width"]')).toBeVisible()
-    await expect(page.locator('input[title="Secondary Height"]')).toBeVisible()
+    // Secondary controls should be available and visible
+    await helper.expectSecondaryControlsVisible()
 
     // ISO Enter should have non-zero secondary dimensions
-    const width2Value = await page.locator('input[title="Secondary Width"]').inputValue()
-    const height2Value = await page.locator('input[title="Secondary Height"]').inputValue()
-    expect(parseFloat(width2Value)).toBeGreaterThan(0)
-    expect(parseFloat(height2Value)).toBeGreaterThan(0)
+    await helper.expectSecondaryDimensionsGreaterThanZero()
   })
 })
