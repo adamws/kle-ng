@@ -15,7 +15,7 @@ export default defineConfig({
   /* Maximum time one test can run for. */
   timeout: 30 * 1000,
   /* Use shared snapshot names for better cross-browser consistency */
-  snapshotPathTemplate: '{testDir}/{testFileDir}/{testFileName}-snapshots/{arg}{ext}',
+  snapshotPathTemplate: '{testDir}/snapshots/{testFileName}-snapshots/{arg}{ext}',
   expect: {
     /**
      * Maximum time expect() should wait for the condition to be met.
