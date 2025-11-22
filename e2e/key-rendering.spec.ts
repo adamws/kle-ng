@@ -2,23 +2,21 @@ import { test, expect } from '@playwright/test'
 import { CanvasTestHelper } from './helpers/canvas-test-helpers'
 import { WaitHelpers } from './helpers/wait-helpers'
 
-test.describe('Single Key Rendering Tests', () => {
+test.describe('Key Rendering Tests', () => {
   // Canvas rendering tests only run on Chromium since we've verified
   // pixel-perfect identical rendering across all browsers
-
   test.skip(
     ({ browserName }) => browserName !== 'chromium',
     'Canvas rendering tests only run on Chromium (verified identical across browsers)',
   )
+
   let helper: CanvasTestHelper
   let waitHelpers: WaitHelpers
 
   test.beforeEach(async ({ page }) => {
     helper = new CanvasTestHelper(page)
-    waitHelpers = new WaitHelpers(helper.page)
+    waitHelpers = new WaitHelpers(page)
     await page.goto('/')
-
-    // Ensure we start with a clean slate
     await helper.clearLayout()
   })
 
@@ -28,7 +26,7 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeyLabel('center', 'A')
       await helper.waitForRender()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('basic/1x1-key-A.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('basic-1x1-key-A.png')
     })
 
     test('1.25u key (Tab)', async () => {
@@ -37,7 +35,7 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeySize(1.25)
       await helper.waitForRender()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('basic/1-25u-key-tab.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('basic-1-25u-key-tab.png')
     })
 
     test('1.5u key (Backslash)', async () => {
@@ -46,7 +44,7 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeySize(1.5)
       await helper.waitForRender()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('basic/1-5u-key-backslash.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('basic-1-5u-key-backslash.png')
     })
 
     test('2u key (Backspace)', async () => {
@@ -55,7 +53,7 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeySize(2)
       await helper.waitForRender()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('basic/2u-key-backspace.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('basic-2u-key-backspace.png')
     })
 
     test('2.25u key (Left Shift)', async () => {
@@ -64,7 +62,7 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeySize(2.25)
       await helper.waitForRender()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('basic/2-25u-key-shift.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('basic-2-25u-key-shift.png')
     })
 
     test('6.25u spacebar', async () => {
@@ -73,7 +71,7 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeySize(6.25)
       await helper.waitForRender()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('basic/6-25u-spacebar.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('basic-6-25u-spacebar.png')
     })
 
     test('2u tall key (Enter)', async () => {
@@ -82,7 +80,7 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeySize(1.25, 2)
       await helper.waitForRender()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('basic/2u-tall-enter.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('basic-2u-tall-enter.png')
     })
 
     test('square 2x2 key', async () => {
@@ -91,39 +89,36 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeySize(2, 2)
       await helper.waitForRender()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('basic/2x2-square-key.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('basic-2x2-square-key.png')
     })
   })
 
   test.describe('Key Colors and Styling', () => {
     test('blue key with white text', async () => {
-      // Fixed: Color input selectors are working correctly
       await helper.addKey()
       await helper.setKeyLabel('center', 'Ctrl')
       await helper.setKeyColors('#0066cc', '#ffffff')
       await helper.waitForRender()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('colors/blue-key-white-text.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('colors-blue-key-white-text.png')
     })
 
     test('red key with yellow text', async () => {
-      // Fixed: Color input selectors are working correctly
       await helper.addKey()
       await helper.setKeyLabel('center', 'Esc')
       await helper.setKeyColors('#cc0000', '#ffff00')
       await helper.waitForRender()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('colors/red-key-yellow-text.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('colors-red-key-yellow-text.png')
     })
 
     test('dark theme key', async () => {
-      // Fixed: Color input selectors are working correctly
       await helper.addKey()
       await helper.setKeyLabel('center', 'Alt')
       await helper.setKeyColors('#333333', '#cccccc')
       await helper.waitForRender()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('colors/dark-theme-key.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('colors-dark-theme-key.png')
     })
   })
 
@@ -134,7 +129,7 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeyOptions({ ghost: true })
       await helper.waitForRender()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('options/ghost-key.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('options-ghost-key.png')
     })
 
     test('stepped key', async () => {
@@ -144,7 +139,7 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeyOptions({ stepped: true })
       await helper.waitForRender()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('options/stepped-caps.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('options-stepped-caps.png')
     })
 
     test('home key with nub', async () => {
@@ -153,7 +148,7 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeyOptions({ nub: true })
       await helper.waitForRender()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('options/home-key-nub.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('options-home-key-nub.png')
     })
 
     test('decal key', async () => {
@@ -162,7 +157,7 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeyOptions({ decal: true })
       await helper.waitForRender()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('options/decal-key.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('options-decal-key.png')
     })
 
     test('rotary encoder', async () => {
@@ -171,7 +166,7 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeyOptions({ rotaryEncoder: true })
       await helper.waitForRender()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('options/rotary-encoder.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('options-rotary-encoder.png')
     })
   })
 
@@ -182,7 +177,7 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeyRotation(15)
       await helper.waitForRender()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('rotations/15-degree-rotation.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('rotations-15-degree-rotation.png')
     })
 
     test('45 degree rotation', async () => {
@@ -191,7 +186,7 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeyRotation(45)
       await helper.waitForRender()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('rotations/45-degree-rotation.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('rotations-45-degree-rotation.png')
     })
 
     test('90 degree rotation', async () => {
@@ -200,7 +195,7 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeyRotation(90)
       await helper.waitForRender()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('rotations/90-degree-rotation.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('rotations-90-degree-rotation.png')
     })
 
     test('-45 degree rotation', async () => {
@@ -209,7 +204,7 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeyRotation(-45)
       await helper.waitForRender()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('rotations/minus-45-degree-rotation.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('rotations-minus-45-degree-rotation.png')
     })
   })
 
@@ -219,7 +214,7 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeyLabel('center', '<b>Bold</b>')
       await helper.waitForRender()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('labels/html-bold.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('labels-html-bold.png')
     })
 
     test('key with HTML italic tag', async () => {
@@ -227,7 +222,7 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeyLabel('center', '<i>Italic</i>')
       await helper.waitForRender()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('labels/html-italic.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('labels-html-italic.png')
     })
 
     test('key with HTML bold and italic tags', async () => {
@@ -235,7 +230,7 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeyLabel('center', '<b><i>Bold Italic</i></b>')
       await helper.waitForRender()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('labels/html-bold-italic.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('labels-html-bold-italic.png')
     })
 
     test('key with mixed HTML formatting', async () => {
@@ -243,7 +238,7 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeyLabel('center', 'Normal <b>Bold</b> <i>Italic</i>')
       await helper.waitForRender()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('labels/html-mixed.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('labels-html-mixed.png')
     })
 
     test('key with HTML in multiple label positions', async () => {
@@ -253,7 +248,7 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeyLabel('bottomCenter', '<b><i>F1</i></b>')
       await helper.waitForRender()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('labels/html-multiple-positions.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('labels-html-multiple-positions.png')
     })
 
     test('key with image in center label', async () => {
@@ -262,13 +257,10 @@ test.describe('Single Key Rendering Tests', () => {
         'https://raw.githubusercontent.com/adamws/kle-ng/refs/heads/master/public/data/icons/test.png'
       await helper.setKeyLabel('center', `<img src="${testImage}">`)
 
-      // Wait for network requests to complete
       await helper.page.waitForLoadState('networkidle')
-
-      // Wait for image to load and render using RAF waits
       await waitHelpers.waitForQuadAnimationFrame()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('labels/html-image-center.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('labels-html-image-center.png')
     })
 
     test('key with image in top-left label', async () => {
@@ -278,11 +270,9 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeyLabel('topLeft', `<img src="${testImage}">`)
 
       await helper.page.waitForLoadState('networkidle')
-
-      // Wait for image to load and render using RAF waits
       await waitHelpers.waitForQuadAnimationFrame()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('labels/html-image-top-left.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('labels-html-image-top-left.png')
     })
 
     test('key with image in bottom-right label', async () => {
@@ -292,11 +282,9 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeyLabel('bottomRight', `<img src="${testImage}">`)
 
       await helper.page.waitForLoadState('networkidle')
-
-      // Wait for image to load and render using RAF waits
       await waitHelpers.waitForQuadAnimationFrame()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('labels/html-image-bottom-right.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('labels-html-image-bottom-right.png')
     })
 
     test('key with images in multiple positions', async () => {
@@ -308,26 +296,20 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeyLabel('bottomRight', `<img src="${testImage}">`)
 
       await helper.page.waitForLoadState('networkidle')
-
-      // Wait for images to load and render using RAF waits
       await waitHelpers.waitForQuadAnimationFrame()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('labels/html-image-multiple.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('labels-html-image-multiple.png')
     })
 
     test('key with SVG image in center label', async () => {
       await helper.addKey()
-      // Use local SVG file with proper dimensions
       const testSvg = '/data/icons/test.svg'
       await helper.setKeyLabel('center', `<img src="${testSvg}">`)
 
-      // Wait for image to load
       await helper.page.waitForLoadState('networkidle')
-
-      // Wait for SVG to load and render using RAF waits
       await waitHelpers.waitForAnimationFrames(3)
 
-      await expect(helper.getCanvas()).toHaveScreenshot('labels/html-svg-center.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('labels-html-svg-center.png')
     })
 
     test('key with SVG image in top-left label', async () => {
@@ -336,11 +318,9 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeyLabel('topLeft', `<img src="${testSvg}">`)
 
       await helper.page.waitForLoadState('networkidle')
-
-      // Wait for SVG to load and render using RAF waits
       await waitHelpers.waitForAnimationFrames(3)
 
-      await expect(helper.getCanvas()).toHaveScreenshot('labels/html-svg-top-left.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('labels-html-svg-top-left.png')
     })
 
     test('key with SVG images in multiple positions', async () => {
@@ -351,11 +331,9 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeyLabel('bottomRight', `<img src="${testSvg}">`)
 
       await helper.page.waitForLoadState('networkidle')
-
-      // Wait for SVGs to load and render using RAF waits
       await waitHelpers.waitForAnimationFrames(3)
 
-      await expect(helper.getCanvas()).toHaveScreenshot('labels/html-svg-multiple.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('labels-html-svg-multiple.png')
     })
 
     test('key with inline SVG in center label', async () => {
@@ -364,11 +342,10 @@ test.describe('Single Key Rendering Tests', () => {
         '<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="12" fill="#FF5722"/><path d="M12 16 L15 19 L20 13" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>'
       await helper.setKeyLabel('center', inlineSvg)
 
-      // Wait for rendering with additional RAF waits
       await helper.waitForRender()
       await waitHelpers.waitForDoubleAnimationFrame()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('labels/html-inline-svg-center.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('labels-html-inline-svg-center.png')
     })
 
     test('key with inline SVG in top-left label', async () => {
@@ -377,11 +354,10 @@ test.describe('Single Key Rendering Tests', () => {
         '<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" fill="#2196F3"/><text x="12" y="16" text-anchor="middle" fill="white" font-size="14" font-weight="bold">A</text></svg>'
       await helper.setKeyLabel('topLeft', inlineSvg)
 
-      // Wait for rendering with additional RAF waits
       await helper.waitForRender()
       await waitHelpers.waitForDoubleAnimationFrame()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('labels/html-inline-svg-top-left.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('labels-html-inline-svg-top-left.png')
     })
 
     test('key with multiple inline SVGs', async () => {
@@ -397,17 +373,15 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeyLabel('center', svgGreen)
       await helper.setKeyLabel('bottomRight', svgBlue)
 
-      // Wait for rendering with additional RAF waits
       await helper.waitForRender()
       await waitHelpers.waitForDoubleAnimationFrame()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('labels/html-inline-svg-multiple.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('labels-html-inline-svg-multiple.png')
     })
 
     test('key with all 9 labels', async () => {
       await helper.addKey()
 
-      // Set all label positions
       await helper.setKeyLabel('topLeft', '!')
       await helper.setKeyLabel('topCenter', '@')
       await helper.setKeyLabel('topRight', '#')
@@ -420,13 +394,12 @@ test.describe('Single Key Rendering Tests', () => {
 
       await helper.waitForRender()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('labels/all-9-labels.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('labels-all-9-labels.png')
     })
 
     test('rotary encoder with all 9 labels', async () => {
       await helper.addKey()
 
-      // Set all label positions
       await helper.setKeyLabel('topLeft', 'A')
       await helper.setKeyLabel('topCenter', 'B')
       await helper.setKeyLabel('topRight', 'C')
@@ -441,7 +414,7 @@ test.describe('Single Key Rendering Tests', () => {
 
       await helper.waitForRender()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('labels/rotary-encoder-all-9-labels.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('labels-rotary-encoder-all-9-labels.png')
     })
 
     test('function key with dual labels', async () => {
@@ -450,7 +423,7 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeyLabel('center', '!')
       await helper.waitForRender()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('labels/f1-dual-label.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('labels-f1-dual-label.png')
     })
 
     test('modifier key', async () => {
@@ -459,13 +432,12 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeySize(1.25)
       await helper.waitForRender()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('labels/ctrl-modifier.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('labels-ctrl-modifier.png')
     })
 
     test('key with per-label text sizes and colors', async () => {
       await helper.addKey()
 
-      // Set labels for multiple positions including front labels
       await helper.setKeyLabel('topLeft', '!')
       await helper.setKeyLabel('topCenter', '@')
       await helper.setKeyLabel('centerLeft', '$')
@@ -474,41 +446,34 @@ test.describe('Single Key Rendering Tests', () => {
       await helper.setKeyLabel('bottomLeft', 'A')
       await helper.setKeyLabel('bottomRight', 'B')
 
-      // Add front labels to test that they maintain original positioning
-      // Front labels are at indices 9, 10, 11 in the main .labels-grid
       const frontLabelInputs = helper.page.locator('.labels-grid .form-control')
       const frontInputsCount = await frontLabelInputs.count()
 
-      // Add front labels if available (indices 9, 10, 11)
       if (frontInputsCount >= 12) {
-        await frontLabelInputs.nth(9).fill('F1') // Front left (index 9)
-        await frontLabelInputs.nth(10).fill('F2') // Front center (index 10)
-        await frontLabelInputs.nth(11).fill('F3') // Front right (index 11)
+        await frontLabelInputs.nth(9).fill('F1')
+        await frontLabelInputs.nth(10).fill('F2')
+        await frontLabelInputs.nth(11).fill('F3')
       }
 
-      // Set different text sizes for each position (non-default)
-      await helper.setDefaultTextSize(3) // Set default to 3 first
+      await helper.setDefaultTextSize(3)
       await helper.setLabelTextSize('topLeft', 2)
-      await helper.setLabelTextSize('topCenter', 5) // Large
-      await helper.setLabelTextSize('centerLeft', 4) // Larger than default
-      await helper.setLabelTextSize('center', 6) // Large
-      await helper.setLabelTextSize('centerRight', 8) // Larger
-      await helper.setLabelTextSize('bottomLeft', 3) // Default size for contrast
-      await helper.setLabelTextSize('bottomRight', 9) // Maximum size
+      await helper.setLabelTextSize('topCenter', 5)
+      await helper.setLabelTextSize('centerLeft', 4)
+      await helper.setLabelTextSize('center', 6)
+      await helper.setLabelTextSize('centerRight', 8)
+      await helper.setLabelTextSize('bottomLeft', 3)
+      await helper.setLabelTextSize('bottomRight', 9)
 
-      // Set different colors for some labels (including front labels)
-      await helper.setLabelColor('topLeft', '#ff0000') // Red
-      await helper.setLabelColor('topCenter', '#00ff00') // Green
-      await helper.setLabelColor('center', '#0000ff') // Blue
-      await helper.setLabelColor('centerRight', '#ff8800') // Orange
-      await helper.setLabelColor('bottomRight', '#8800ff') // Purple
+      await helper.setLabelColor('topLeft', '#ff0000')
+      await helper.setLabelColor('topCenter', '#00ff00')
+      await helper.setLabelColor('center', '#0000ff')
+      await helper.setLabelColor('centerRight', '#ff8800')
+      await helper.setLabelColor('bottomRight', '#8800ff')
 
-      // Set colors for front labels to verify they work correctly
       const frontColorPickers = helper.page.locator('.labels-grid .label-color-picker')
       const frontColorPickersCount = await frontColorPickers.count()
 
       if (frontColorPickersCount >= 12) {
-        // Set color for front left label (index 9)
         await frontColorPickers.nth(9).click()
         await helper.page.locator('.color-picker-popup').waitFor({ state: 'visible' })
         await helper.page
@@ -518,7 +483,6 @@ test.describe('Single Key Rendering Tests', () => {
         await helper.page.locator('.color-picker-popup .btn-primary').click()
         await helper.page.locator('.color-picker-popup').waitFor({ state: 'hidden' })
 
-        // Set color for front center label (index 10)
         await frontColorPickers.nth(10).click()
         await helper.page.locator('.color-picker-popup').waitFor({ state: 'visible' })
         await helper.page
@@ -531,7 +495,62 @@ test.describe('Single Key Rendering Tests', () => {
 
       await helper.waitForRender()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('labels/per-label-text-sizes-colors.png')
+      await expect(helper.getCanvas()).toHaveScreenshot('labels-per-label-text-sizes-colors.png')
+    })
+
+    test('Delete label on 1x1 key without wrapping', async () => {
+      await helper.addKey()
+      await helper.setKeyLabel('topLeft', 'Delete')
+      await waitHelpers.waitForDoubleAnimationFrame()
+
+      await expect(helper.getCanvas()).toHaveScreenshot('labels-delete-label-1x1-key.png')
+    })
+  })
+
+  test.describe('Non-Rectangular Keys', () => {
+    test('should render big-ass-enter key correctly', async () => {
+      await helper.loadBigAssEnterLayout()
+      await helper.expectKeysCount(1)
+      await expect(helper.getCanvas()).toHaveScreenshot('non-rectangular-big-ass-enter-key.png')
+    })
+
+    test('should render ISO enter key correctly', async () => {
+      await helper.loadISOEnterLayout()
+      await helper.expectKeysCount(1)
+      await expect(helper.getCanvas()).toHaveScreenshot('non-rectangular-iso-enter-key.png')
+    })
+
+    test('should render custom non-rectangular key', async () => {
+      await helper.loadCustomJLayout()
+      await helper.expectKeysCount(1)
+      await expect(helper.getCanvas()).toHaveScreenshot(
+        'non-rectangular-custom-non-rectangular-key.png',
+      )
+    })
+
+    test('should handle non-rectangular key selection properly', async () => {
+      await helper.loadBigAssEnterLayout()
+      await helper.expectKeysCount(1)
+
+      await helper.selectBigAssEnterKey()
+      await helper.expectPropertiesPanelVisible()
+
+      await expect(helper.getCanvas()).toHaveScreenshot(
+        'non-rectangular-big-ass-enter-selected.png',
+      )
+    })
+
+    test('should render multiple non-rectangular keys in same layout', async () => {
+      await helper.loadMixedNonRectangularLayout()
+      await expect(helper.getCanvas()).toHaveScreenshot(
+        'non-rectangular-mixed-non-rectangular-keys.png',
+      )
+    })
+
+    test('should render non-rectangular keys with custom colors', async () => {
+      await helper.loadColoredBigAssEnterLayout()
+      await helper.expectKeysCount(1)
+      await expect(helper.getCanvas()).toHaveScreenshot('non-rectangular-big-ass-enter-colored.png')
     })
   })
 })
