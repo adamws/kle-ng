@@ -1,7 +1,11 @@
 import { test, expect } from '@playwright/test'
 import { ThemeComponent } from './pages/components/ThemeComponent'
+import { WaitHelpers } from './helpers'
 
 test.describe('Theme switching functionality', () => {
+  let theme: ThemeComponent
+  let waitHelpers: WaitHelpers
+
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
 
@@ -12,31 +16,29 @@ test.describe('Theme switching functionality', () => {
 
     // Wait for the app to load
     await page.waitForSelector('h1:has-text("Keyboard Layout Editor NG")', { timeout: 10000 })
+
+    // Initialize helpers
+    waitHelpers = new WaitHelpers(page)
+    theme = new ThemeComponent(page, waitHelpers)
   })
 
-  test('theme toggle button should be visible in header', async ({ page }) => {
-    const themeToggle = page.locator('button[title*="Current theme"]')
-    await expect(themeToggle).toBeVisible()
+  test('theme toggle button should be visible in header', async () => {
+    await theme.expectToggleVisible()
 
     // Should show some theme icon
-    const themeIcon = themeToggle.locator('i')
+    const themeIcon = theme.getToggleButton().locator('i')
     await expect(themeIcon).toBeVisible()
   })
 
-  test('should default to auto theme', async ({ page }) => {
-    const themeToggle = page.locator('button[title*="Current theme"]')
-    const themeIcon = themeToggle.locator('i.bi-circle-half')
-    await expect(themeIcon).toBeVisible()
+  test('should default to auto theme', async () => {
+    await theme.expectThemeIcon('bi-circle-half')
 
     // HTML element should have data-bs-theme set to light or dark based on system preference when in auto mode
-    const htmlElement = page.locator('html')
-    const dataBsTheme = await htmlElement.getAttribute('data-bs-theme')
+    const dataBsTheme = await theme.getHtmlElement().getAttribute('data-bs-theme')
     expect(['light', 'dark'].includes(dataBsTheme)).toBeTruthy()
   })
 
-  test('should switch to dark theme', async ({ page }) => {
-    const theme = new ThemeComponent(page)
-
+  test('should switch to dark theme', async () => {
     // Switch to dark theme
     await theme.switchTo('dark')
 
@@ -46,94 +48,67 @@ test.describe('Theme switching functionality', () => {
     await theme.expectThemeIcon('bi-moon-stars-fill')
   })
 
-  test('should switch to light theme', async ({ page }) => {
-    const themeToggle = page.locator('button[title*="Current theme"]')
-    await themeToggle.click()
+  test('should switch to light theme', async () => {
+    // Switch to light theme
+    await theme.switchTo('light')
 
-    // Click on Light option in dropdown
-    await page.locator('button:has-text("Light")').click()
-
-    // Verify theme is applied to HTML element
-    const htmlElement = page.locator('html')
-    await expect(htmlElement).toHaveAttribute('data-bs-theme', 'light')
-
-    // Verify button shows light theme
-    await expect(themeToggle).toHaveAttribute('title', 'Current theme: light')
-
-    // Verify the theme icon changed to sun
-    const themeIcon = themeToggle.locator('i.bi-sun-fill')
-    await expect(themeIcon).toBeVisible()
+    // Verify theme is applied
+    await theme.expectCurrentTheme('light')
+    await theme.expectButtonShowsTheme('light')
+    await theme.expectThemeIcon('bi-sun-fill')
   })
 
   test('should persist theme preference after reload', async ({ page }) => {
-    const themeToggle = page.locator('button[title*="Current theme"]')
-
     // Switch to dark theme
-    await themeToggle.click()
-    await page.locator('button:has-text("Dark")').click()
+    await theme.switchTo('dark')
 
     // Verify dark theme is applied
-    const htmlElement = page.locator('html')
-    await expect(htmlElement).toHaveAttribute('data-bs-theme', 'dark')
+    await theme.expectCurrentTheme('dark')
 
     // Reload the page
     await page.reload()
-    await page.waitForSelector('button[title*="Current theme"]')
+    await theme.getToggleButton().waitFor({ state: 'visible' })
+
+    // Re-initialize helpers after reload
+    const newWaitHelpers = new WaitHelpers(page)
+    const newTheme = new ThemeComponent(page, newWaitHelpers)
 
     // Verify dark theme is still applied after reload
-    await expect(htmlElement).toHaveAttribute('data-bs-theme', 'dark')
-    await expect(themeToggle).toHaveAttribute('title', 'Current theme: dark')
+    await newTheme.expectCurrentTheme('dark')
+    await newTheme.expectButtonShowsTheme('dark')
   })
 
-  test('should show active state in dropdown menu', async ({ page }) => {
-    const themeToggle = page.locator('button[title*="Current theme"]')
-
+  test('should show active state in dropdown menu', async () => {
     // Switch to dark theme first
-    await themeToggle.click()
-    await page.locator('button:has-text("Dark")').click()
+    await theme.switchTo('dark')
 
     // Open dropdown again
-    await themeToggle.click()
+    await theme.openDropdown()
 
     // Verify Dark option is marked as active
-    const darkOption = page.locator('.dropdown-item:has-text("Dark")')
-    await expect(darkOption).toHaveClass(/active/)
+    await theme.expectDropdownOptionActive('dark')
 
     // Verify other options are not active
-    const lightOption = page.locator('.dropdown-item:has-text("Light")')
-    const autoOption = page.locator('.dropdown-item:has-text("Auto")')
-    await expect(lightOption).not.toHaveClass(/active/)
-    await expect(autoOption).not.toHaveClass(/active/)
+    await theme.expectDropdownOptionNotActive('light')
+    await theme.expectDropdownOptionNotActive('auto')
   })
 
-  test('should handle auto theme mode', async ({ page }) => {
-    const themeToggle = page.locator('button[title*="Current theme"]')
-
+  test('should handle auto theme mode', async () => {
     // Switch to light first, then to auto
-    await themeToggle.click()
-    await page.locator('button:has-text("Light")').click()
-
-    await themeToggle.click()
-    await page.locator('button:has-text("Auto")').click()
+    await theme.switchTo('light')
+    await theme.switchTo('auto')
 
     // Verify auto theme
-    await expect(themeToggle).toHaveAttribute('title', 'Current theme: auto')
+    await theme.expectButtonShowsTheme('auto')
 
     // For auto mode, HTML should have data-bs-theme set to light or dark based on system preference
-    const htmlElement = page.locator('html')
-    const dataBsTheme = await htmlElement.getAttribute('data-bs-theme')
+    const dataBsTheme = await theme.getHtmlElement().getAttribute('data-bs-theme')
     expect(['light', 'dark'].includes(dataBsTheme)).toBeTruthy()
   })
 
   test('auto theme mode should respond to system preference changes', async ({ page }) => {
-    const themeToggle = page.locator('button[title*="Current theme"]')
-
     // Switch to auto mode
-    await themeToggle.click()
-    await page.locator('button:has-text("Auto")').click()
-
-    // Get reference to html element
-    const htmlElement = page.locator('html')
+    await theme.switchTo('auto')
 
     // Simulate changing system preference by evaluating script
     // This simulates what would happen if user changed their OS theme preference
@@ -147,18 +122,15 @@ test.describe('Theme switching functionality', () => {
       mediaQuery.dispatchEvent(event)
     })
 
-    // Wait a bit for the change to be processed
-    await page.waitForTimeout(100)
+    // Wait for the change to be processed using RAF wait
+    await theme.waitForThemeChange()
 
     // Verify that the theme is still valid (light or dark)
-    const updatedTheme = await htmlElement.getAttribute('data-bs-theme')
+    const updatedTheme = await theme.getHtmlElement().getAttribute('data-bs-theme')
     expect(['light', 'dark'].includes(updatedTheme)).toBeTruthy()
   })
 
   test('theme switching should affect app appearance', async ({ page }) => {
-    const themeToggle = page.locator('button[title*="Current theme"]')
-    const htmlElement = page.locator('html')
-
     // Check that CSS variables are available before testing
     const cssVarsWorking = await page.evaluate(() => {
       const bodyStyles = window.getComputedStyle(document.body)
@@ -172,14 +144,11 @@ test.describe('Theme switching functionality', () => {
     }
 
     // Switch to dark theme
-    await themeToggle.click()
-    await page.locator('button:has-text("Dark")').click()
+    await theme.switchTo('dark')
 
-    // Wait for dark theme to be applied to HTML element
-    await expect(htmlElement).toHaveAttribute('data-bs-theme', 'dark')
-
-    // Verify theme toggle button reflects the change
-    await expect(themeToggle).toHaveAttribute('title', 'Current theme: dark')
+    // Verify dark theme is applied
+    await theme.expectCurrentTheme('dark')
+    await theme.expectButtonShowsTheme('dark')
 
     // Wait for background color to actually change by checking computed style
     await page
@@ -201,14 +170,11 @@ test.describe('Theme switching functionality', () => {
     })
 
     // Switch to light theme
-    await themeToggle.click()
-    await page.locator('button:has-text("Light")').click()
+    await theme.switchTo('light')
 
-    // Wait for light theme to be applied to HTML element
-    await expect(htmlElement).toHaveAttribute('data-bs-theme', 'light')
-
-    // Verify theme toggle button reflects the change
-    await expect(themeToggle).toHaveAttribute('title', 'Current theme: light')
+    // Verify light theme is applied
+    await theme.expectCurrentTheme('light')
+    await theme.expectButtonShowsTheme('light')
 
     // Wait for background color to change to something different than dark
     await page
