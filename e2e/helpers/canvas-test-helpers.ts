@@ -3,8 +3,10 @@ import { WaitHelpers } from './wait-helpers'
 
 export class CanvasTestHelper {
   private waitHelpers: WaitHelpers
+  public page: Page
 
-  constructor(private page: Page) {
+  constructor(page: Page) {
+    this.page = page
     this.waitHelpers = new WaitHelpers(page)
   }
 
