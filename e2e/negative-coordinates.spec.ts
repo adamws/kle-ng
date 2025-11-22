@@ -1,6 +1,9 @@
 import { test, expect } from '@playwright/test'
+import { WaitHelpers } from './helpers/wait-helpers'
 
 test.describe('Negative Coordinates Support', () => {
+  let waitHelpers: WaitHelpers
+
   // Canvas rendering tests only run on Chromium since we've verified
   // pixel-perfect identical rendering across all browsers
 
@@ -10,6 +13,7 @@ test.describe('Negative Coordinates Support', () => {
   )
 
   test.beforeEach(async ({ page }) => {
+    waitHelpers = new WaitHelpers(page)
     await page.goto('/')
 
     // Wait for app to load
@@ -42,7 +46,7 @@ test.describe('Negative Coordinates Support', () => {
     await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
 
     // Wait for canvas to adjust size for mirror mode
-    await page.waitForTimeout(100)
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Click on canvas at negative coordinate position (left of the key)
     await page.locator('.keyboard-canvas').click({ position: { x: 10, y: 47 }, force: true })
@@ -80,7 +84,7 @@ test.describe('Negative Coordinates Support', () => {
     await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
 
     // Wait for canvas to adjust size for mirror mode
-    await page.waitForTimeout(100)
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     await page.locator('.keyboard-canvas').click({ position: { x: 10, y: 47 }, force: true })
     // Wait for mirror operation to complete

@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { promises as fs } from 'fs'
 import { KeyboardEditorPage } from './pages/KeyboardEditorPage'
+import { WaitHelpers } from './helpers/wait-helpers'
 
 // Helper function to export and parse layout JSON
 async function exportLayoutJSON(page: import('@playwright/test').Page) {
@@ -28,7 +29,11 @@ async function exportLayoutJSON(page: import('@playwright/test').Page) {
 }
 
 // Helper function to import layout via JSON file
-async function importLayoutJSON(page: import('@playwright/test').Page, layoutData: unknown) {
+async function importLayoutJSON(
+  page: import('@playwright/test').Page,
+  layoutData: unknown,
+  waitHelpers: WaitHelpers,
+) {
   // Create temporary JSON file
   const tempFilePath = `e2e/test-output/temp-import-${Date.now()}.json`
   await fs.writeFile(tempFilePath, JSON.stringify(layoutData))
@@ -49,13 +54,15 @@ async function importLayoutJSON(page: import('@playwright/test').Page, layoutDat
   await fileChooser.setFiles(tempFilePath)
 
   // Wait for import to complete
-  await page.waitForTimeout(500)
+  await waitHelpers.waitForDoubleAnimationFrame()
 
   // Clean up temporary file
   await fs.unlink(tempFilePath)
 }
 
 test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
+  let waitHelpers: WaitHelpers
+
   // Matrix drawing tests only run on Chromium for visual consistency
   test.skip(
     ({ browserName }) => browserName !== 'chromium',
@@ -63,6 +70,7 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
   )
 
   test.beforeEach(async ({ page }) => {
+    waitHelpers = new WaitHelpers(page)
     await page.goto('/')
   })
 
@@ -79,7 +87,7 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     ]
 
     // Import layout via JSON
-    await importLayoutJSON(page, fixtureData)
+    await importLayoutJSON(page, fixtureData, waitHelpers)
 
     // Verify layout has 9 keys via UI
     await editor.expectKeyCount(9)
@@ -125,7 +133,7 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     ]
 
     // Import layout via JSON
-    await importLayoutJSON(page, fixtureData)
+    await importLayoutJSON(page, fixtureData, waitHelpers)
 
     // Verify layout has 9 keys via UI
     await editor.expectKeyCount(9)
@@ -186,7 +194,7 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     ]
 
     // Import layout via JSON
-    await importLayoutJSON(page, fixtureData)
+    await importLayoutJSON(page, fixtureData, waitHelpers)
 
     // Verify layout has 4 keys via UI
     await editor.expectKeyCount(4)
@@ -245,7 +253,7 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const fixtureData = [['', '', '']]
 
     // Import layout via JSON
-    await importLayoutJSON(page, fixtureData)
+    await importLayoutJSON(page, fixtureData, waitHelpers)
 
     // Open Matrix Coordinates Modal
     await editor.matrix.open()
@@ -324,7 +332,7 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const fixtureData = [[''], [''], ['']]
 
     // Import layout via JSON
-    await importLayoutJSON(page, fixtureData)
+    await importLayoutJSON(page, fixtureData, waitHelpers)
 
     // Open Matrix Coordinates Modal
     await editor.matrix.open()
@@ -409,7 +417,7 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const fixtureData = [['', '']]
 
     // Import layout via JSON
-    await importLayoutJSON(page, fixtureData)
+    await importLayoutJSON(page, fixtureData, waitHelpers)
 
     // Open Matrix Coordinates Modal
     await editor.matrix.open()
@@ -481,7 +489,7 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const fixtureData = [['', '', '', '']]
 
     // Import layout via JSON
-    await importLayoutJSON(page, fixtureData)
+    await importLayoutJSON(page, fixtureData, waitHelpers)
 
     // Open Matrix Coordinates Modal
     await editor.matrix.open()
@@ -561,7 +569,7 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const fixtureData = [[''], [''], [''], ['']]
 
     // Import layout via JSON
-    await importLayoutJSON(page, fixtureData)
+    await importLayoutJSON(page, fixtureData, waitHelpers)
 
     // Open Matrix Coordinates Modal
     await editor.matrix.open()
@@ -648,7 +656,7 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     ]
 
     // Import layout via JSON
-    await importLayoutJSON(page, fixtureData)
+    await importLayoutJSON(page, fixtureData, waitHelpers)
 
     // Verify layout has 9 keys
     await editor.expectKeyCount(9)
@@ -750,7 +758,7 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     ]
 
     // Import layout via JSON
-    await importLayoutJSON(page, fixtureData)
+    await importLayoutJSON(page, fixtureData, waitHelpers)
 
     // Verify layout has 9 keys
     await editor.expectKeyCount(9)
@@ -857,7 +865,7 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
       ['2,0', '2,1', '2,2', '2,3'],
     ]
 
-    await importLayoutJSON(page, fixtureData)
+    await importLayoutJSON(page, fixtureData, waitHelpers)
 
     // Verify layout has 12 keys
     await editor.expectKeyCount(12)
@@ -998,7 +1006,7 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
       ['2,0', '2,1', '2,2', '2,3'],
     ]
 
-    await importLayoutJSON(page, fixtureData)
+    await importLayoutJSON(page, fixtureData, waitHelpers)
 
     // Verify layout has 12 keys
     await editor.expectKeyCount(12)
@@ -1149,7 +1157,7 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
       ['2,0', '2,1', '2,2', '2,3'],
     ]
 
-    await importLayoutJSON(page, fixtureData)
+    await importLayoutJSON(page, fixtureData, waitHelpers)
 
     // Verify layout has 12 keys
     await editor.expectKeyCount(12)
@@ -1265,7 +1273,7 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     ]
 
     // Import layout via JSON
-    await importLayoutJSON(page, fixtureData)
+    await importLayoutJSON(page, fixtureData, waitHelpers)
 
     // Verify layout has 4 keys via UI
     await editor.expectKeyCount(4)
@@ -1342,7 +1350,7 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
       ['2,0', '2,1', '2,2'],
     ]
 
-    await importLayoutJSON(page, fixtureData)
+    await importLayoutJSON(page, fixtureData, waitHelpers)
 
     // Verify layout has 9 keys
     await editor.expectKeyCount(9)
@@ -1477,7 +1485,7 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
       ['2,0', '2,1', '2,2'],
     ]
 
-    await importLayoutJSON(page, fixtureData)
+    await importLayoutJSON(page, fixtureData, waitHelpers)
 
     // Verify layout has 9 keys
     await editor.expectKeyCount(9)
@@ -1569,7 +1577,7 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
       ['1,0', '1,1'],
     ]
 
-    await importLayoutJSON(page, fixtureData)
+    await importLayoutJSON(page, fixtureData, waitHelpers)
 
     // Verify layout has 4 keys
     await editor.expectKeyCount(4)
@@ -1654,7 +1662,7 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
       ['2,0', '2,1', '2,2'],
     ]
 
-    await importLayoutJSON(page, fixtureData)
+    await importLayoutJSON(page, fixtureData, waitHelpers)
 
     // Verify layout has 9 keys
     await editor.expectKeyCount(9)

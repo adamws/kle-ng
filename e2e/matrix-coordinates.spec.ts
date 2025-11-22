@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { promises as fs } from 'fs'
 import { KeyboardEditorPage } from './pages/KeyboardEditorPage'
+import { WaitHelpers } from './helpers/wait-helpers'
 
 // Helper function to export and parse layout JSON
 async function exportLayoutJSON(page: import('@playwright/test').Page) {
@@ -28,7 +29,11 @@ async function exportLayoutJSON(page: import('@playwright/test').Page) {
 }
 
 // Helper function to import layout via JSON file
-async function importLayoutJSON(page: import('@playwright/test').Page, layoutData: unknown) {
+async function importLayoutJSON(
+  page: import('@playwright/test').Page,
+  layoutData: unknown,
+  waitHelpers: WaitHelpers,
+) {
   // Create temporary JSON file
   const tempFilePath = `e2e/test-output/temp-import-${Date.now()}.json`
   await fs.writeFile(tempFilePath, JSON.stringify(layoutData))
@@ -49,18 +54,21 @@ async function importLayoutJSON(page: import('@playwright/test').Page, layoutDat
   await fileChooser.setFiles(tempFilePath)
 
   // Wait for import to complete
-  await page.waitForTimeout(500)
+  await waitHelpers.waitForDoubleAnimationFrame()
 
   // Clean up temporary file
   await fs.unlink(tempFilePath)
 }
 
 test.describe('Matrix Coordinates Tool', () => {
+  let waitHelpers: WaitHelpers
+
   // modal would overflow for default viewport size and we do not handle
   // modal resizing yet
   test.use({ viewport: { width: 1920, height: 1080 } })
 
   test.beforeEach(async ({ page }) => {
+    waitHelpers = new WaitHelpers(page)
     await page.goto('/')
     await page.waitForLoadState('networkidle')
   })
@@ -295,7 +303,7 @@ test.describe('Matrix Coordinates Tool', () => {
     ]
 
     // Load layout with labels via JSON import
-    await importLayoutJSON(page, fixtureWithLabels)
+    await importLayoutJSON(page, fixtureWithLabels, waitHelpers)
 
     // Wait for import using RAF
     await page.evaluate(() => {
@@ -361,7 +369,7 @@ test.describe('Matrix Coordinates Tool', () => {
     })
 
     // Load layout with labels via JSON import
-    await importLayoutJSON(page, fixtureWithLabels)
+    await importLayoutJSON(page, fixtureWithLabels, waitHelpers)
 
     // Wait for import using RAF
     await page.evaluate(() => {
@@ -420,7 +428,7 @@ test.describe('Matrix Coordinates Tool', () => {
     ]
 
     // Load layout with labels via JSON import
-    await importLayoutJSON(page, fixtureWithLabels)
+    await importLayoutJSON(page, fixtureWithLabels, waitHelpers)
 
     // Wait for import using RAF
     await page.evaluate(() => {
@@ -622,7 +630,7 @@ test.describe('Matrix Coordinates Tool', () => {
     ]
 
     // Load layout with labels via JSON import
-    await importLayoutJSON(page, fixtureData)
+    await importLayoutJSON(page, fixtureData, waitHelpers)
 
     // Wait for layout to render
     await page.evaluate(() => {
