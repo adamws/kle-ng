@@ -6,7 +6,11 @@
         <div v-if="hasJsonError" class="text-danger small">
           <i class="bi bi-exclamation-triangle"></i> Invalid JSON
         </div>
-        <div v-else-if="hasChanges" class="text-warning small">
+        <div
+          v-else-if="hasChanges"
+          class="text-warning small"
+          data-testid="unsaved-changes-indicator"
+        >
           <i class="bi bi-pencil"></i> Unsaved changes
         </div>
         <div v-else class="text-success small"><i class="bi bi-check"></i> Valid JSON</div>

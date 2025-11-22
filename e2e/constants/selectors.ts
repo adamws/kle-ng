@@ -3,8 +3,6 @@
  *
  * This file contains all selectors used in tests. When the UI changes,
  * update selectors here rather than in individual tests.
- *
- * TODO: Replace with data-testid selectors once added to application
  */
 
 export const SELECTORS = {
@@ -12,80 +10,80 @@ export const SELECTORS = {
    * Canvas toolbar buttons
    */
   TOOLBAR: {
-    ADD_KEY: 'button[title="Add Standard Key"]',
-    DELETE_KEYS: 'button[title="Delete Keys"]',
-    UNDO: 'button[title="Undo"]',
-    REDO: 'button[title="Redo"]',
-    ROTATE_SELECTION: 'button[title="Rotate Selection"]',
-    MIRROR_VERTICAL: 'button[title="Mirror Vertical"]',
-    MOVE_EXACTLY: 'button[title="Move Exactly"]',
+    ADD_KEY: '[data-testid="toolbar-add-key"]',
+    DELETE_KEYS: '[data-testid="toolbar-delete-keys"]',
+    UNDO: '[data-testid="toolbar-undo"]',
+    REDO: '[data-testid="toolbar-redo"]',
+    ROTATE_SELECTION: '[data-testid="toolbar-rotate-selection"]',
+    MIRROR_VERTICAL: '[data-testid="toolbar-mirror-vertical"]',
+    MOVE_EXACTLY: '[data-testid="toolbar-move-exactly"]',
   },
 
   /**
    * Status counters
    */
   COUNTERS: {
-    KEYS: '.keys-counter',
-    SELECTED: '.selected-counter',
+    KEYS: '[data-testid="counter-keys"]',
+    SELECTED: '[data-testid="counter-selected"]',
   },
 
   /**
    * Canvas and rendering
    */
   CANVAS: {
-    MAIN: '.keyboard-canvas',
-    TOOLBAR: '.canvas-toolbar',
+    MAIN: '[data-testid="canvas-main"]',
+    TOOLBAR: '[data-testid="canvas-toolbar"]',
   },
 
   /**
    * Panels and sidebars
    */
   PANELS: {
-    PROPERTIES: '.key-properties-panel',
-    TOOLBAR_CONTAINER: '.toolbar-container',
+    PROPERTIES: '[data-testid="panel-properties"]',
+    TOOLBAR_CONTAINER: '[data-testid="panel-toolbar-container"]',
   },
 
   /**
    * Key label inputs (9-grid layout)
    */
   LABELS: {
-    GRID: '.labels-grid',
-    INPUT: '.labels-grid .form-control',
+    GRID: '[data-testid="labels-grid"]',
+    INPUT: '[data-testid="labels-grid"] .form-control',
   },
 
   /**
    * Import/Export
    */
   IMPORT_EXPORT: {
-    IMPORT_BUTTON: 'button:has-text("Import")',
-    EXPORT_BUTTON: 'button:has-text("Export")',
-    FROM_FILE: 'a:has-text("From File")',
-    DOWNLOAD_JSON: 'a:has-text("Download JSON")',
-    DOWNLOAD_PNG: 'a:has-text("Download PNG")',
+    IMPORT_BUTTON: '[data-testid="button-import"]',
+    EXPORT_BUTTON: '[data-testid="button-export"]',
+    FROM_FILE: '[data-testid="import-from-file"]',
+    DOWNLOAD_JSON: '[data-testid="export-download-json"]',
+    DOWNLOAD_PNG: '[data-testid="export-download-png"]',
   },
 
   /**
    * Modals and dialogs
    */
   MODALS: {
-    ROTATION_PANEL: '.rotation-panel',
-    ROTATION_INFO: '.rotation-info',
-    MATRIX_MODAL: '.matrix-modal',
-    COLOR_PICKER_POPUP: '.color-picker-popup',
+    ROTATION_PANEL: '[data-testid="modal-rotation-panel"]',
+    ROTATION_INFO: '[data-testid="modal-rotation-info"]',
+    MATRIX_MODAL: '[data-testid="modal-matrix"]',
+    COLOR_PICKER_POPUP: '[data-testid="modal-color-picker"]',
   },
 
   /**
    * Theme switching
    */
   THEME: {
-    TOGGLE_BUTTON: 'button:has-text("Theme")',
-    DROPDOWN_MENU: '.dropdown-menu',
+    TOGGLE_BUTTON: '[data-testid="theme-toggle-button"]',
+    DROPDOWN_MENU: '[data-testid="theme-dropdown-menu"]',
   },
 
   /**
    * Miscellaneous
    */
   MISC: {
-    UNSAVED_INDICATOR: '.text-warning:has-text("Unsaved changes")',
+    UNSAVED_INDICATOR: '[data-testid="unsaved-changes-indicator"]',
   },
 } as const

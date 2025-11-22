@@ -320,7 +320,11 @@ const stopResize = () => {
               <!-- Regular title for other sections -->
               <span v-else class="section-title">{{ section.title }}</span>
               <!-- Unsaved indicator for canvas section only -->
-              <div v-if="section.id === 'canvas' && keyboardStore.dirty" class="small text-warning">
+              <div
+                v-if="section.id === 'canvas' && keyboardStore.dirty"
+                class="small text-warning"
+                data-testid="unsaved-changes-indicator"
+              >
                 • Unsaved changes
               </div>
             </div>

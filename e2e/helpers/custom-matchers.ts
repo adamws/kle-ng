@@ -1,4 +1,5 @@
 import { expect as baseExpect, Page } from '@playwright/test'
+import { SELECTORS } from '../constants/selectors'
 
 /**
  * Custom Playwright matchers for kle-ng e2e tests
@@ -25,7 +26,7 @@ export const expect = baseExpect.extend({
    * await expect(page).toHaveKeyCount(5)
    */
   async toHaveKeyCount(page: Page, expectedCount: number) {
-    const locator = page.locator('.keys-counter')
+    const locator = page.locator(SELECTORS.COUNTERS.KEYS)
     const text = await locator.textContent()
     const match = text?.match(/Keys: (\d+)/)
     const actualCount = match ? parseInt(match[1]) : 0
@@ -53,7 +54,7 @@ export const expect = baseExpect.extend({
    * await expect(page).toHaveSelectedCount(2)
    */
   async toHaveSelectedCount(page: Page, expectedCount: number) {
-    const locator = page.locator('.selected-counter')
+    const locator = page.locator(SELECTORS.COUNTERS.SELECTED)
     const text = await locator.textContent()
     const match = text?.match(/Selected: (\d+)/)
     const actualCount = match ? parseInt(match[1]) : 0
@@ -80,7 +81,7 @@ export const expect = baseExpect.extend({
    * await expect(page).toHaveUnsavedChanges()
    */
   async toHaveUnsavedChanges(page: Page) {
-    const locator = page.locator('.text-warning').filter({ hasText: 'Unsaved changes' })
+    const locator = page.locator(SELECTORS.MISC.UNSAVED_INDICATOR)
     const isVisible = await locator.isVisible().catch(() => false)
 
     return {
@@ -101,7 +102,7 @@ export const expect = baseExpect.extend({
    * await expect(page).toHaveNoUnsavedChanges()
    */
   async toHaveNoUnsavedChanges(page: Page) {
-    const locator = page.locator('.text-warning').filter({ hasText: 'Unsaved changes' })
+    const locator = page.locator(SELECTORS.MISC.UNSAVED_INDICATOR)
     const isHidden = await locator.isHidden().catch(() => true)
 
     return {

@@ -1,5 +1,10 @@
 <template>
-  <div ref="toolbarRef" class="canvas-toolbar" :style="{ width: toolbarColumns * 70 + 'px' }">
+  <div
+    ref="toolbarRef"
+    class="canvas-toolbar"
+    data-testid="canvas-toolbar"
+    :style="{ width: toolbarColumns * 70 + 'px' }"
+  >
     <div
       class="toolbar-content"
       :style="{ gridTemplateColumns: `repeat(${toolbarColumns}, 50px)` }"

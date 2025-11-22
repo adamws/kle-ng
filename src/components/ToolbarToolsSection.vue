@@ -13,6 +13,7 @@
       <button
         :class="{ 'tool-button': true, active: canvasMode === 'move-exactly' }"
         :disabled="!canUseMoveExactlyTool"
+        data-testid="toolbar-move-exactly"
         @click="$emit('set-mode', 'move-exactly')"
         title="Move Exactly - Move selected keys by exact X/Y values"
       >
@@ -22,6 +23,7 @@
       <button
         :class="{ 'tool-button': true, active: canvasMode === 'rotate' }"
         :disabled="!canUseRotateTool"
+        data-testid="toolbar-rotate-selection"
         @click="$emit('set-mode', 'rotate')"
         title="Rotate Selection"
       >
@@ -37,6 +39,7 @@
             active: canvasMode === 'mirror-v' || canvasMode === 'mirror-h',
           }"
           :disabled="!canUseMirrorTools"
+          data-testid="toolbar-mirror-vertical"
           @click="$emit('set-mode', 'mirror-v')"
           title="Mirror Vertical"
         >

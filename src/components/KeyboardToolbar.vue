@@ -1,5 +1,5 @@
 <template>
-  <div class="toolbar-container keyboard-toolbar">
+  <div class="toolbar-container keyboard-toolbar" data-testid="panel-toolbar-container">
     <!-- Right side: Presets, Import/Export -->
     <div
       class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2 gap-sm-3 justify-content-sm-end"
@@ -28,6 +28,7 @@
         <div class="dropdown">
           <button
             class="btn btn-outline-primary dropdown-toggle"
+            data-testid="button-import"
             data-bs-toggle="dropdown"
             aria-expanded="false"
             style="border-right-width: 0px"
@@ -37,7 +38,14 @@
           </button>
           <ul class="dropdown-menu">
             <li>
-              <a class="dropdown-item" href="#" @click.prevent="triggerFileUpload"> From File </a>
+              <a
+                class="dropdown-item"
+                data-testid="import-from-file"
+                href="#"
+                @click.prevent="triggerFileUpload"
+              >
+                From File
+              </a>
             </li>
             <li>
               <a class="dropdown-item" href="#" @click.prevent="openUrlImportModal"> From URL </a>
@@ -48,6 +56,7 @@
         <div class="dropdown">
           <button
             class="btn btn-outline-primary dropdown-toggle"
+            data-testid="button-export"
             data-bs-toggle="dropdown"
             aria-expanded="false"
             type="button"
@@ -56,7 +65,14 @@
           </button>
           <ul class="dropdown-menu">
             <li>
-              <a class="dropdown-item" href="#" @click.prevent="downloadJson"> Download JSON </a>
+              <a
+                class="dropdown-item"
+                data-testid="export-download-json"
+                href="#"
+                @click.prevent="downloadJson"
+              >
+                Download JSON
+              </a>
             </li>
             <li>
               <a class="dropdown-item" href="#" @click.prevent="downloadKleInternalJson">
@@ -69,7 +85,14 @@
               </a>
             </li>
             <li>
-              <a class="dropdown-item" href="#" @click.prevent="downloadPng"> Download PNG </a>
+              <a
+                class="dropdown-item"
+                data-testid="export-download-png"
+                href="#"
+                @click.prevent="downloadPng"
+              >
+                Download PNG
+              </a>
             </li>
           </ul>
         </div>

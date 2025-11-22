@@ -2,6 +2,7 @@
   <div
     v-if="visible"
     class="rotation-panel"
+    data-testid="modal-rotation-panel"
     ref="panelRef"
     :style="{ transform: `translate(${position.x}px, ${position.y}px)` }"
     @mousedown="handleMouseDown"
@@ -24,7 +25,7 @@
 
       <div class="panel-body">
         <!-- Rotation info - different content based on whether anchor is selected -->
-        <div class="rotation-info mb-3">
+        <div class="rotation-info mb-3" data-testid="modal-rotation-info">
           <div v-if="!rotationOrigin" class="text-center">
             <div class="mb-2">
               <i class="bi bi-crosshair2 text-warning" style="font-size: 1.5rem"></i>

@@ -2,6 +2,7 @@
   <div class="dropdown">
     <button
       class="btn btn-outline-secondary dropdown-toggle"
+      data-testid="theme-toggle-button"
       type="button"
       data-bs-toggle="dropdown"
       aria-expanded="false"
@@ -9,7 +10,7 @@
     >
       <i :class="themeIcon"></i>
     </button>
-    <ul class="dropdown-menu dropdown-menu-end">
+    <ul class="dropdown-menu dropdown-menu-end" data-testid="theme-dropdown-menu">
       <li>
         <button
           class="dropdown-item d-flex align-items-center"

@@ -19,10 +19,10 @@
           ></div>
           <span class="small">{{ canvasFocused ? 'Active' : 'Inactive' }}</span>
         </div>
-        <div class="keys-counter small">
+        <div class="keys-counter small" data-testid="counter-keys">
           Keys: <span class="fw-semibold">{{ keyboardStore.keys.length }}</span>
         </div>
-        <div class="selected-counter small">
+        <div class="selected-counter small" data-testid="counter-selected">
           Selected: <span class="fw-semibold">{{ keyboardStore.selectedKeys.length }}</span>
         </div>
         <!-- Move Step Control -->

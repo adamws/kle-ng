@@ -176,7 +176,7 @@ onUnmounted(() => {
     </div>
 
     <!-- Custom color picker popup -->
-    <div v-if="showPicker" class="color-picker-popup">
+    <div v-if="showPicker" class="color-picker-popup" data-testid="modal-color-picker">
       <CustomColorPicker
         ref="customColorPickerRef"
         :model-value="colorValue"

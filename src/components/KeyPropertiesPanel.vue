@@ -1,5 +1,5 @@
 <template>
-  <div class="key-properties-panel">
+  <div class="key-properties-panel" data-testid="panel-properties">
     <!-- Four-column layout for better space utilization -->
     <div>
       <fieldset :disabled="isDisabled" :class="{ 'opacity-50': isDisabled }">
@@ -381,7 +381,7 @@
                   </button>
                 </div>
                 <!-- Main Labels Grid with Color Pickers -->
-                <div class="labels-grid">
+                <div class="labels-grid" data-testid="labels-grid">
                   <!-- Row 1 -->
                   <div class="label-input-group">
                     <input

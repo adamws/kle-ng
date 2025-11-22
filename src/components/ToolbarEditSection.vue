@@ -6,6 +6,7 @@
       <div class="btn-group-vertical add-key-group">
         <button
           class="tool-button primary-add-btn"
+          data-testid="toolbar-add-key"
           @click="$emit('add-key')"
           title="Add Standard Key"
         >
@@ -42,6 +43,7 @@
 
       <button
         class="tool-button"
+        data-testid="toolbar-delete-keys"
         @click="$emit('delete-keys')"
         :disabled="!canDelete"
         title="Delete Keys"

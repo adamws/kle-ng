@@ -28,6 +28,7 @@
       @mouseleave="handleMouseLeave"
       @contextmenu="handleContextMenu"
       class="keyboard-canvas"
+      data-testid="canvas-main"
       tabindex="0"
       @keydown="handleKeyDown"
       @focus="handleCanvasFocus"

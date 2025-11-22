@@ -2,6 +2,7 @@
   <div
     v-if="visible"
     class="matrix-modal"
+    data-testid="modal-matrix"
     ref="panelRef"
     :style="{ transform: `translate(${position.x}px, ${position.y}px)` }"
     @mousedown="handleMouseDown"
