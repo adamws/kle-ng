@@ -276,4 +276,75 @@ test.describe('Selection Rotation Tool', () => {
     // Key should still be selected and functional
     await editor.expectSelectedCount(1)
   })
+
+  test('should resize canvas while entering rotation angle (issue #31)', async ({
+    page,
+  }) => {
+    const editor = new KeyboardEditorPage(page)
+
+    // REGRESSION TEST: This tests the fix for a bug where the canvas would NOT resize
+    // while the user was entering a rotation angle value in the rotation tool modal.
+    // This caused keys to render outside the canvas edges during rotation preview.
+
+    // BUG SCENARIO (#31):
+    // 1. Add keys and open rotation tool
+    // 2. Select an anchor point
+    // 3. Enter a rotation angle value
+    // 4. BUG: Canvas would NOT resize during step 3, causing keys to render outside canvas
+    // 5. FIX: Canvas SHOULD resize during angle input to accommodate rotated keys preview
+
+    // Step 1: Add keys and select them
+    await canvasHelper.addKey()
+    await canvasHelper.addKey()
+    await canvasHelper.addKey()
+    await editor.expectKeyCount(3)
+    await canvasHelper.selectAllKeys()
+    await editor.expectSelectedCount(3)
+
+    // Step 2: Open rotation tool
+    await editor.rotation.expectEnabled()
+    await editor.rotation.open()
+
+    // Step 3: Select anchor point at first key
+    const canvas = canvasHelper.getCanvas()
+    await editor.rotation.selectAnchor(0, 63)
+
+    // Wait for anchor selection to complete
+    await canvasHelper.waitForRender()
+
+    // Step 4: Capture canvas dimensions BEFORE entering rotation angle
+    const canvasBefore = await canvas.boundingBox()
+    expect(canvasBefore).not.toBeNull()
+    const widthBefore = canvasBefore!.width
+    const heightBefore = canvasBefore!.height
+
+    // Step 5: Enter rotation angle value in the input field
+    // This is the critical moment - canvas SHOULD resize here
+    await editor.rotation.setAngle(45)
+
+    // Wait for angle change to be processed
+    await canvasHelper.waitForRender()
+
+    // Step 6: Verify canvas dimensions HAVE CHANGED while modal is still open
+    // This is the key assertion - without the fix, canvas would not resize and keys would render out of bounds
+    const canvasDuring = await canvas.boundingBox()
+    expect(canvasDuring).not.toBeNull()
+    const widthDuring = canvasDuring!.width
+    const heightDuring = canvasDuring!.height
+
+    // CRITICAL ASSERTION: Canvas dimensions must have changed to accommodate rotation preview
+    // At least one dimension should be different (typically both will change for 45 degree rotation)
+    const hasResized = widthDuring !== widthBefore || heightDuring !== heightBefore
+    expect(hasResized).toBe(true)
+
+    // Step 7: Verify modal is still visible (we haven't applied or cancelled yet)
+    await editor.rotation.expectModalVisible()
+
+    // Step 8: Apply the rotation
+    await editor.rotation.apply()
+    await canvasHelper.waitForRender()
+
+    // Verify rotation was actually applied
+    await editor.expectSelectedCount(3)
+  })
 })
