@@ -17,18 +17,7 @@ test.describe('Selection Rotation Tool', () => {
   test.beforeEach(async ({ page }) => {
     canvasHelper = new CanvasTestHelper(page)
     await page.goto('/')
-
-    // Clear any existing layout
-    await page.evaluate(() => {
-      const store = (
-        window as {
-          __VUE_DEVTOOLS_GLOBAL_HOOK__?: { apps?: { store?: { clearKeys?: () => void } }[] }
-        }
-      ).__VUE_DEVTOOLS_GLOBAL_HOOK__?.apps?.[0]?.store
-      if (store) {
-        store.clearKeys()
-      }
-    })
+    await canvasHelper.clearLayout()
   })
 
   test('should successfully rotate multiple selected keys', async ({ page }) => {
@@ -221,9 +210,8 @@ test.describe('Selection Rotation Tool', () => {
     await editor.expectSelectedCount(1)
 
     // Move key to explicit position (x: 2, y: 1) and rotation (15)
-    await page.locator('input[title="X Position"]').first().fill('2')
-    await page.locator('input[title="Y Position"]').first().fill('1')
-    await page.locator('input[title="Rotation Angle in Degrees"]').first().fill('15')
+    await editor.properties.setPosition(2, 1)
+    await editor.properties.setRotation(15)
     await canvasHelper.waitForRender()
 
     // Step 2: Export current layout to capture key position before rotation attempt
