@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { CanvasTestHelper } from './helpers/canvas-test-helpers'
+import { PresetComponent } from './pages/components/PresetComponent'
+import { WaitHelpers } from './helpers/wait-helpers'
 
 test.describe('Canvas Rendering - Layout Tests', () => {
   test.skip(
@@ -31,19 +33,11 @@ test.describe('Canvas Rendering - Layout Tests', () => {
   })
 
   test('should render ANSI 104 layout', async ({ page }) => {
-    // Open the presets dropdown
-    const presetButton = page.locator('.preset-dropdown button.preset-select')
-    await presetButton.click()
+    const waitHelpers = new WaitHelpers(page)
+    const preset = new PresetComponent(page, waitHelpers)
 
-    // Wait for dropdown items to be in DOM
-    await page.waitForSelector('.preset-dropdown .dropdown-item', {
-      state: 'attached',
-      timeout: 5000,
-    })
-
-    // Click the ANSI 104 preset item (exact match to avoid "ANSI 104 (big-ass enter)")
-    const ansiItem = page.locator('.preset-dropdown .dropdown-item', { hasText: /^ANSI 104$/ })
-    await ansiItem.click()
+    // Select ANSI 104 preset
+    await preset.selectPreset('ANSI 104')
 
     // Wait for layout to load
     await helper.expectKeysCount(104)
