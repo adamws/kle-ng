@@ -116,4 +116,38 @@ export class KeyboardEditorPage extends BasePage {
     await expect(this.keysCounter).toBeVisible()
     await expect(this.selectedCounter).toBeVisible()
   }
+
+  /**
+   * Clear all keys from the keyboard layout
+   *
+   * This method encapsulates direct store access and should be used
+   * instead of manually accessing the Vue store via page.evaluate().
+   *
+   * @remarks
+   * This is a workaround for clearing the layout without using UI interactions.
+   * It directly accesses the Vue store to call clearKeys(). Use this sparingly
+   * and only when necessary for test setup.
+   *
+   * @example
+   * const editor = new KeyboardEditorPage(page)
+   * await editor.goto()
+   * await editor.clearLayout() // Clear any existing keys
+   */
+  async clearLayout(): Promise<void> {
+    await this.page.evaluate(() => {
+      interface VueDevtoolsWindow extends Window {
+        __VUE_DEVTOOLS_GLOBAL_HOOK__?: {
+          apps?: Array<{
+            store?: {
+              clearKeys: () => void
+            }
+          }>
+        }
+      }
+      const store = (window as VueDevtoolsWindow).__VUE_DEVTOOLS_GLOBAL_HOOK__?.apps?.[0]?.store
+      if (store) {
+        store.clearKeys()
+      }
+    })
+  }
 }

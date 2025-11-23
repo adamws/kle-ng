@@ -86,4 +86,58 @@ export const SELECTORS = {
   MISC: {
     UNSAVED_INDICATOR: '[data-testid="unsaved-changes-indicator"]',
   },
+
+  /**
+   * Preset dropdown
+   * ⚠️ TECH DEBT: These selectors use CSS classes instead of data-testid.
+   * Should be migrated to data-testid attributes in the future.
+   */
+  PRESET: {
+    DROPDOWN: '.preset-dropdown',
+    SELECT_BUTTON: '.preset-dropdown button.preset-select',
+    DROPDOWN_ITEM: '.preset-dropdown .dropdown-item',
+  },
+
+  /**
+   * Zoom control
+   * ⚠️ TECH DEBT: These selectors use CSS classes instead of data-testid.
+   * Should be migrated to data-testid attributes in the future.
+   */
+  ZOOM: {
+    CONTROL: '.zoom-control',
+    INPUT: '.zoom-control .custom-number-input input',
+  },
+
+  /**
+   * Toast notifications
+   * ⚠️ TECH DEBT: These selectors use CSS classes instead of data-testid.
+   * Should be migrated to data-testid attributes in the future.
+   */
+  TOAST: {
+    NOTIFICATION: '.toast-notification',
+    TITLE: '.toast-title',
+    TEXT: '.toast-text',
+    CLOSE: '.toast-close, button.btn-close',
+  },
+
+  /**
+   * Extra tools dropdown
+   * ⚠️ TECH DEBT: These selectors use CSS classes instead of data-testid.
+   * Should be migrated to data-testid attributes in the future.
+   */
+  EXTRA_TOOLS: {
+    BUTTON: '.extra-tools-group button',
+    DROPDOWN: '.extra-tools-dropdown',
+    DROPDOWN_ITEM: '.extra-tools-dropdown .dropdown-item',
+  },
+
+  /**
+   * Move step control
+   * ⚠️ TECH DEBT: These selectors use CSS classes instead of data-testid.
+   * Should be migrated to data-testid attributes in the future.
+   */
+  MOVE_STEP: {
+    CONTROL: '.move-step-control',
+    INPUT: '.move-step-control .custom-number-input input',
+  },
 } as const

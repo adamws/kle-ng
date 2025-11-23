@@ -277,9 +277,7 @@ test.describe('Selection Rotation Tool', () => {
     await editor.expectSelectedCount(1)
   })
 
-  test('should resize canvas while entering rotation angle (issue #31)', async ({
-    page,
-  }) => {
+  test('should resize canvas while entering rotation angle (issue #31)', async ({ page }) => {
     const editor = new KeyboardEditorPage(page)
 
     // REGRESSION TEST: This tests the fix for a bug where the canvas would NOT resize
