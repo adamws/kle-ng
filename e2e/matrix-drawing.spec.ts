@@ -229,14 +229,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const overlay = editor.matrix.getOverlay()
     await overlay.click({ position: { x: lastKeyX, y: lastKeyY }, force: true })
 
-    // Wait for drawing to complete using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for drawing to complete
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Verify that exactly 1 row was created with exactly 2 keys
     // We verify this through UI state and visual confirmation since we can't access store directly
@@ -275,14 +269,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const overlay = editor.matrix.getOverlay()
     await overlay.click({ position: { x: key2X, y: key2Y }, force: true })
 
-    // Wait for row to complete using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for row to complete
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Verify first row completed with 2 keys through UI state
     // We can't access store directly, so we rely on visual/UI verification
@@ -291,11 +279,7 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     await overlay.click({ position: { x: key1X, y: key1Y }, force: true })
 
     // Wait for click to register
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => resolve())
-      })
-    })
+    await waitHelpers.waitForAnimationFrames(1)
 
     // Current sequence should have 1 key (key1, starting continuation of row 0)
     // We can't access store directly, so we rely on the UI behavior
@@ -305,14 +289,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const key3Y = offset
     await overlay.click({ position: { x: key3X, y: key3Y }, force: true })
 
-    // Wait for sequence to complete using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for sequence to complete
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Sequence should be completed (second click finishes it)
     // We can't access store directly, so we rely on UI behavior and JSON export
@@ -357,14 +335,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const overlay = editor.matrix.getOverlay()
     await overlay.click({ position: { x: key2X, y: key2Y }, force: true })
 
-    // Wait for column to complete using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for column to complete
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Verify first column completed with 2 keys through UI state
     // We can't access store directly, so we rely on visual/UI verification
@@ -373,11 +345,7 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     await overlay.click({ position: { x: key1X, y: key1Y }, force: true })
 
     // Wait for click to register
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => resolve())
-      })
-    })
+    await waitHelpers.waitForAnimationFrames(1)
 
     // Current sequence should have 1 key (key1, starting continuation of column 0)
     // We can't access store directly, so we rely on the UI behavior
@@ -387,14 +355,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const key3Y = offset + 2 * unit
     await overlay.click({ position: { x: key3X, y: key3Y }, force: true })
 
-    // Wait for sequence to complete using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for sequence to complete
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Sequence should be completed (second click finishes it)
     // We can't access store directly, so we rely on UI behavior and JSON export
@@ -438,14 +400,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     await editor.matrix.clickAt(key1X, key1Y)
     await overlay.click({ position: { x: key2X, y: key2Y }, force: true })
 
-    // Wait for row assignment using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for row assignment
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Now assign both keys to column 0
     // Switch to column mode
@@ -454,14 +410,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     await editor.matrix.clickAt(key1X, key1Y)
     await overlay.click({ position: { x: key2X, y: key2Y }, force: true })
 
-    // Wait for column assignment attempt using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for column assignment attempt
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Check final matrix labels - both keys should have same row but different columns would create duplicate
     // Since both keys already have row 0, and we're trying to assign them same column,
@@ -510,14 +460,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     await editor.matrix.clickAt(key1X, key1Y)
     await overlay.click({ position: { x: key2X, y: key2Y }, force: true })
 
-    // Wait for row to complete using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for row to complete
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Verify first row has 2 keys through UI state
     // We can't access store directly, so we rely on visual/UI verification
@@ -529,22 +473,12 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     await overlay.click({ position: { x: key2X, y: key2Y }, force: true })
 
     // Wait for click to register
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => resolve())
-      })
-    })
+    await waitHelpers.waitForAnimationFrames(1)
 
     await overlay.click({ position: { x: key3X, y: key3Y }, force: true })
 
-    // Wait for row continuation to complete using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for row continuation to complete
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Verify we still have only 1 row, but now with 3 keys
     // We can't access store directly, so we rely on UI behavior and JSON export
@@ -593,14 +527,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     await editor.matrix.clickAt(key1X, key1Y)
     await overlay.click({ position: { x: key2X, y: key2Y }, force: true })
 
-    // Wait for column to complete using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for column to complete
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Verify first column has 2 keys through UI state
     // We can't access store directly, so we rely on visual/UI verification
@@ -612,22 +540,12 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     await overlay.click({ position: { x: key2X, y: key2Y }, force: true })
 
     // Wait for click to register
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => resolve())
-      })
-    })
+    await waitHelpers.waitForAnimationFrames(1)
 
     await overlay.click({ position: { x: key3X, y: key3Y }, force: true })
 
-    // Wait for column continuation to complete using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for column continuation to complete
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Verify we still have only 1 column, but now with 3 keys
     // We can't access store directly, so we rely on UI behavior and JSON export
@@ -675,14 +593,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     await expect(matrixModal).toContainText('3 defined')
     await expect(matrixModal).toContainText('Columns:')
 
-    // Wait for modal to be ready using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for modal to be ready
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     const overlay = editor.matrix.getOverlay()
     await expect(overlay).toBeVisible()
@@ -691,14 +603,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const removeButton = page.locator('.matrix-modal button').filter({ hasText: 'Remove' })
     await removeButton.click()
 
-    // Wait for mode switch using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for mode switch
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Verify remove button is active (has danger styling)
     await expect(removeButton).toHaveClass(/btn-danger/)
@@ -718,16 +624,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     // Left-click on the first key to remove the node
     await page.mouse.click(key1X, key1Y, { button: 'left' })
 
-    // Wait for removal using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => resolve())
-          })
-        })
-      })
-    })
+    // Wait for removal
+    await waitHelpers.waitForAnimationFrames(3)
 
     // The first key should no longer have a label
     // Export to verify
@@ -769,27 +667,15 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const matrixModal = page.locator('.matrix-modal')
     await expect(matrixModal).toBeVisible()
 
-    // Wait for modal to be ready using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for modal to be ready
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Switch to remove mode
     const removeButton = page.locator('.matrix-modal button').filter({ hasText: 'Remove' })
     await removeButton.click()
 
-    // Wait for mode switch using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for mode switch
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Verify remove button is active
     await expect(removeButton).toHaveClass(/btn-danger/)
@@ -814,30 +700,16 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     // First move mouse to trigger hover detection
     await page.mouse.move(lineX, lineY)
 
-    // Wait for hover to register using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for hover to register
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Hold Ctrl and left-click on the row line to remove the entire row
     await page.keyboard.down('Control')
     await page.mouse.click(lineX, lineY, { button: 'left' })
     await page.keyboard.up('Control')
 
-    // Wait for removal using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => resolve())
-          })
-        })
-      })
-    })
+    // Wait for removal
+    await waitHelpers.waitForAnimationFrames(3)
 
     // Export to verify row was removed
     const exportedLayout = await exportLayoutJSON(page)
@@ -907,14 +779,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const removeButton = page.locator('button', { hasText: 'Remove' })
     await removeButton.click()
 
-    // Wait for mode switch using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for mode switch
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Verify remove button is active
     await expect(removeButton).toHaveClass(/btn-danger/)
@@ -922,29 +788,15 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     // Move mouse to row line and Ctrl+left-click to remove entire row
     await page.mouse.move(lineX, lineY)
 
-    // Wait for hover to register using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for hover to register
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     await page.keyboard.down('Control')
     await page.mouse.click(lineX, lineY, { button: 'left' })
     await page.keyboard.up('Control')
 
-    // Wait for removal using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => resolve())
-          })
-        })
-      })
-    })
+    // Wait for removal
+    await waitHelpers.waitForAnimationFrames(3)
 
     // Verify row count decreased from 3 to 2
     await expect(rowsProgress).toContainText('2 defined')
@@ -959,14 +811,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     // Draw the new row
     await overlay.click({ position: { x: offset, y: row1Y }, force: true })
 
-    // Wait for first click using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for first click
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     await overlay.click({ position: { x: offset + 3 * unit, y: row1Y }, force: true })
 
@@ -1048,14 +894,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const removeButton = page.locator('button', { hasText: 'Remove' })
     await removeButton.click()
 
-    // Wait for mode switch using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for mode switch
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Verify remove button is active
     await expect(removeButton).toHaveClass(/btn-danger/)
@@ -1063,29 +903,15 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     // Move mouse to column line and Ctrl+left-click to remove entire column
     await page.mouse.move(lineX, lineY)
 
-    // Wait for hover to register using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for hover to register
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     await page.keyboard.down('Control')
     await page.mouse.click(lineX, lineY, { button: 'left' })
     await page.keyboard.up('Control')
 
-    // Wait for removal using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => resolve())
-          })
-        })
-      })
-    })
+    // Wait for removal
+    await waitHelpers.waitForAnimationFrames(3)
 
     // Verify column count decreased from 4 to 3 and row count remain at 3
     await expect(rowsProgress).toContainText('3 defined')
@@ -1095,14 +921,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const columnButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Columns' })
     await columnButton.click()
 
-    // Wait for mode switch using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for mode switch
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Verify column button is active
     await expect(columnButton).toHaveClass(/btn-draw-columns/)
@@ -1111,14 +931,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     // Draw the new column
     await overlay.click({ position: { x: col1X, y: offset }, force: true })
 
-    // Wait for first click using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for first click
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     await overlay.click({ position: { x: col1X, y: offset + 2 * unit }, force: true })
 
@@ -1184,14 +998,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const removeButton = page.locator('button', { hasText: 'Remove' })
     await removeButton.click()
 
-    // Wait for mode switch using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for mode switch
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     await expect(removeButton).toHaveClass(/btn-danger/)
 
@@ -1210,27 +1018,13 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     // Move mouse to segment and click WITHOUT Ctrl (segment removal)
     await page.mouse.move(segmentX, segmentY)
 
-    // Wait for hover to register using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for hover to register
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     await page.mouse.click(segmentX, segmentY, { button: 'left' })
 
-    // Wait for segment removal using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => resolve())
-          })
-        })
-      })
-    })
+    // Wait for segment removal
+    await waitHelpers.waitForAnimationFrames(3)
 
     // After segment removal, we should have 4 rows instead of 3
     // (original row 1 was split into two separate rows: one with keys 0-1, another with keys 2-3)
@@ -1306,14 +1100,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     // Second click automatically finishes the sequence
     await overlay.click({ position: { x: 171, y: 27 } })
 
-    // Wait for first click using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for first click
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     await overlay.click({ position: { x: 171, y: 135 } })
 
@@ -1365,14 +1153,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const rowButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Rows' })
     await rowButton.click()
 
-    // Wait for mode switch using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for mode switch
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     const overlay = editor.matrix.getOverlay()
     await expect(overlay).toBeVisible()
@@ -1393,14 +1175,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     // Move mouse to hover over row 0
     await page.mouse.move(lineX, lineY)
 
-    // Wait for hover to register using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for hover to register
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Type '5' to renumber row 0 to row 5
     await page.keyboard.press('5')
@@ -1408,16 +1184,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     await page.keyboard.press('a')
     await page.keyboard.press('Enter')
 
-    // Wait for renumbering using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => resolve())
-          })
-        })
-      })
-    })
+    // Wait for renumbering
+    await waitHelpers.waitForAnimationFrames(3)
 
     // Export and verify row 0 became row 5
     let exportedLayout = await exportLayoutJSON(page)
@@ -1437,28 +1205,14 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const row1LineY = canvasBox.y + offset + unit
     await page.mouse.move(lineX, row1LineY)
 
-    // Wait for hover to register using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for hover to register
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     await page.keyboard.press('5')
     await page.keyboard.press('Enter')
 
-    // Wait for renumbering using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => resolve())
-          })
-        })
-      })
-    })
+    // Wait for renumbering
+    await waitHelpers.waitForAnimationFrames(3)
 
     // Export and verify swap occurred
     exportedLayout = await exportLayoutJSON(page)
@@ -1500,14 +1254,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const columnButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Columns' })
     await columnButton.click()
 
-    // Wait for mode switch using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for mode switch
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     const overlay = editor.matrix.getOverlay()
     await expect(overlay).toBeVisible()
@@ -1528,29 +1276,15 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     // Move mouse to hover over column 0
     await page.mouse.move(lineX, lineY)
 
-    // Wait for hover to register using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for hover to register
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Type '7' to renumber column 0 to column 7
     await page.keyboard.press('7')
     await page.keyboard.press('Enter')
 
-    // Wait for renumbering using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => resolve())
-          })
-        })
-      })
-    })
+    // Wait for renumbering
+    await waitHelpers.waitForAnimationFrames(3)
 
     // Export and verify column 0 became column 7
     const exportedLayout = await exportLayoutJSON(page)
@@ -1592,14 +1326,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const rowButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Rows' })
     await rowButton.click()
 
-    // Wait for mode switch using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for mode switch
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     const overlay = editor.matrix.getOverlay()
     await expect(overlay).toBeVisible()
@@ -1619,30 +1347,16 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
 
     await page.mouse.move(lineX, lineY)
 
-    // Wait for hover to register using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for hover to register
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Type '1' then '0' to renumber to row 10
     await page.keyboard.press('1')
     await page.keyboard.press('0')
     await page.keyboard.press('Enter')
 
-    // Wait for renumbering using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => resolve())
-          })
-        })
-      })
-    })
+    // Wait for renumbering
+    await waitHelpers.waitForAnimationFrames(3)
 
     // Export and verify row became row 10
     const exportedLayout = await exportLayoutJSON(page)
@@ -1677,14 +1391,8 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     const rowButton = page.locator('.matrix-modal button').filter({ hasText: 'Draw Rows' })
     await rowButton.click()
 
-    // Wait for mode switch using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for mode switch
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     const overlay = editor.matrix.getOverlay()
     await expect(overlay).toBeVisible()
@@ -1704,40 +1412,20 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
 
     await page.mouse.move(lineX, lineY)
 
-    // Wait for hover to register using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for hover to register
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Type '5' to start renumbering
     await page.keyboard.press('5')
 
-    // Wait for input to register using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    // Wait for input to register
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Press Escape to cancel
     await page.keyboard.press('Escape')
 
-    // Wait for cancellation using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => resolve())
-          })
-        })
-      })
-    })
+    // Wait for cancellation
+    await waitHelpers.waitForAnimationFrames(3)
 
     // Export and verify row 0 is still row 0 (not renumbered to 5)
     const exportedLayout = await exportLayoutJSON(page)
