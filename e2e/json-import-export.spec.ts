@@ -30,7 +30,7 @@ test.describe('JSON Import/Export Functionality', () => {
   test.describe('JSON Import Tests', () => {
     test('should import a simple JSON layout', async ({ page }) => {
       // Initially should show 0 keys
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 0')
+      await expect(page.getByTestId('counter-keys')).toContainText('Keys: 0')
 
       // Import simple layout (2 rows x 4 keys = 8 keys total)
       await helper.importFromFile('e2e/fixtures/simple-layout.json', 8)
@@ -65,7 +65,7 @@ test.describe('JSON Import/Export Functionality', () => {
       await expect(page.locator('.toast-title')).toContainText('Error loading file')
 
       // Should remain at 0 keys after error
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 0')
+      await expect(page.getByTestId('counter-keys')).toContainText('Keys: 0')
     })
 
     test('should import layout with rotated keys', async ({ page }) => {
@@ -94,7 +94,7 @@ test.describe('JSON Import/Export Functionality', () => {
       // Add some keys first
       await page.locator('button[title="Add Standard Key"]').click()
       await page.locator('button[title="Add Standard Key"]').click()
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 2')
+      await expect(page.getByTestId('counter-keys')).toContainText('Keys: 2')
 
       // Export as PNG
       const pngPath = await helper.exportToPNG('simple-export.png')
@@ -124,7 +124,7 @@ test.describe('JSON Import/Export Functionality', () => {
       // Reload the page to get a clean state
       await page.reload()
       await expect(page.locator('.canvas-toolbar')).toBeVisible()
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 0')
+      await expect(page.getByTestId('counter-keys')).toContainText('Keys: 0')
 
       // Re-import the exported PNG (should restore 6 keys)
       await helper.importFromFile(pngPath, 6)
@@ -139,7 +139,7 @@ test.describe('JSON Import/Export Functionality', () => {
       // Add some keys first
       await page.locator('button[title="Add Standard Key"]').click()
       await page.locator('button[title="Add Standard Key"]').click()
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 2')
+      await expect(page.getByTestId('counter-keys')).toContainText('Keys: 2')
 
       // Export as JSON
       const jsonPath = await helper.exportToJSON('simple-export.json')
@@ -171,7 +171,7 @@ test.describe('JSON Import/Export Functionality', () => {
 
     test('should export empty layout', async ({ page }) => {
       // Ensure layout is empty
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 0')
+      await expect(page.getByTestId('counter-keys')).toContainText('Keys: 0')
 
       // Export empty layout as JSON
       const jsonPath = await helper.exportToJSON('empty-export.json')
@@ -250,7 +250,7 @@ test.describe('JSON Import/Export Functionality', () => {
 
       // Add one more key
       await page.locator('button[title="Add Standard Key"]').click()
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 9')
+      await expect(page.getByTestId('counter-keys')).toContainText('Keys: 9')
 
       // Export modified layout
       const exportPath = await helper.exportToJSON('modified-layout.json')
@@ -278,7 +278,7 @@ test.describe('JSON Import/Export Functionality', () => {
 
       // Add a key to make changes
       await page.locator('button[title="Add Standard Key"]').click()
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 9')
+      await expect(page.getByTestId('counter-keys')).toContainText('Keys: 9')
 
       // Now should show unsaved changes after modification
       await expect(

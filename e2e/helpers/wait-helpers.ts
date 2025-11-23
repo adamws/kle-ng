@@ -196,7 +196,7 @@ export class WaitHelpers {
    * @example
    * await helper.addKey()
    * await waitHelpers.waitForTextChange(
-   *   page.locator('.keys-counter'),
+   *   page.getByTestId('counter-keys'),
    *   'Keys: 1'
    * )
    */

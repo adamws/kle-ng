@@ -142,7 +142,7 @@ test.describe('Keyboard Layout Editor', () => {
 
     // Wait for the preset to load - ANSI 104 should have exactly 104 keys
     await page.waitForFunction(() => {
-      const keysCounter = document.querySelector('.keys-counter')?.textContent
+      const keysCounter = document.querySelector('[data-testid="counter-keys"]')?.textContent
       if (!keysCounter) return false
 
       const match = keysCounter.match(/Keys: (\d+)/)

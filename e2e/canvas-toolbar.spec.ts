@@ -128,7 +128,7 @@ test.describe('Canvas Toolbar', () => {
       await toolbarHelper.selectSelectionMode()
 
       // Keys should be added successfully first
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 5')
+      await expect(canvasHelper.getKeysCounter()).toContainText('Keys: 5')
 
       // Try rectangle selection by using Ctrl+A as a more reliable alternative
       const canvas = canvasHelper.getCanvas()
@@ -184,7 +184,7 @@ test.describe('Canvas Toolbar', () => {
       await toolbarHelper.expectSelectionModeActive()
 
       // The key should exist and be selected
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+      await expect(canvasHelper.getKeysCounter()).toContainText('Keys: 1')
       await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
 
       // Verify canvas is interactive in Selection Mode (drag functionality is available)
@@ -192,7 +192,7 @@ test.describe('Canvas Toolbar', () => {
       await expect(canvas).toBeVisible()
 
       // Key should exist and selection mode allows dragging
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+      await expect(canvasHelper.getKeysCounter()).toContainText('Keys: 1')
       await toolbarHelper.expectSelectionModeActive()
     })
 
@@ -201,7 +201,7 @@ test.describe('Canvas Toolbar', () => {
       await canvasHelper.addMultipleKeys(3) // Use fewer keys for faster test
 
       // Verify keys were added
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 3')
+      await expect(canvasHelper.getKeysCounter()).toContainText('Keys: 3')
 
       // Ensure Selection Mode is active
       await toolbarHelper.selectSelectionMode()
@@ -222,7 +222,7 @@ test.describe('Canvas Toolbar', () => {
       await toolbarHelper.expectSelectionModeActive()
 
       // All keys should exist and be ready for multi-key operations
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 3')
+      await expect(canvasHelper.getKeysCounter()).toContainText('Keys: 3')
     })
 
     test('should support rectangular selection in selection mode', async ({ page }) => {
@@ -230,7 +230,7 @@ test.describe('Canvas Toolbar', () => {
       await canvasHelper.addMultipleKeys(3)
 
       // Verify keys were added
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 3')
+      await expect(canvasHelper.getKeysCounter()).toContainText('Keys: 3')
 
       // Ensure Selection Mode is active
       await toolbarHelper.selectSelectionMode()
@@ -285,7 +285,7 @@ test.describe('Canvas Toolbar', () => {
       await page.locator('input[title="Y Position"]').first().fill('1')
 
       // Verify keys were added
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 3')
+      await expect(canvasHelper.getKeysCounter()).toContainText('Keys: 3')
 
       // Ensure Selection Mode is active
       await toolbarHelper.selectSelectionMode()
@@ -304,7 +304,7 @@ test.describe('Canvas Toolbar', () => {
       // Get initial positions of all keys (this would be implementation-dependent)
       // For now, we just verify the multi-key selection works
       await toolbarHelper.expectSelectionModeActive()
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 3')
+      await expect(canvasHelper.getKeysCounter()).toContainText('Keys: 3')
     })
 
     test('should support synchronized snapping during multi-key drag', async ({ page }) => {
@@ -358,7 +358,7 @@ test.describe('Canvas Toolbar', () => {
       // (This is behavioral testing - the actual drag detection would require more complex canvas interaction)
 
       await toolbarHelper.expectSelectionModeActive()
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 3')
+      await expect(canvasHelper.getKeysCounter()).toContainText('Keys: 3')
     })
   })
 
@@ -411,13 +411,13 @@ test.describe('Canvas Toolbar', () => {
       await expect(canvas).toBeVisible()
     })
 
-    test('should create mirrored keys when clicking mirror axis', async ({ page }) => {
+    test('should create mirrored keys when clicking mirror axis', async () => {
       // Add a key to mirror
       await canvasHelper.addKey()
       await canvasHelper.setKeyLabel('center', 'D')
 
       // Verify key was added
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+      await expect(canvasHelper.getKeysCounter()).toContainText('Keys: 1')
 
       // Switch to horizontal mirror mode
       await toolbarHelper.selectMirrorHorizontal()
@@ -430,10 +430,10 @@ test.describe('Canvas Toolbar', () => {
       await canvas.click({ position: { x: 200, y: 100 }, force: true })
 
       // Wait for mirror operation to complete - should add at least one more key or keep original
-      await expect(page.locator('.keys-counter')).toContainText(/Keys: [1-9]/)
+      await expect(canvasHelper.getKeysCounter()).toContainText(/Keys: [1-9]/)
 
       // Should now have more keys (original + mirrored) OR at least the original key still
-      const statusText = await page.locator('.keys-counter').textContent()
+      const statusText = await canvasHelper.getKeysCounter().textContent()
       expect(statusText).toMatch(/Keys: [1-9]/) // Should have at least 1 key still
     })
   })
@@ -562,7 +562,7 @@ test.describe('Canvas Toolbar', () => {
       await expect(stepInput).toHaveValue('0.25')
     })
 
-    test('should handle drag operations with no keys selected', async ({ page }) => {
+    test('should handle drag operations with no keys selected', async () => {
       // Ensure Selection Mode is active (drag & drop integrated)
       await toolbarHelper.selectSelectionMode()
 
@@ -572,17 +572,17 @@ test.describe('Canvas Toolbar', () => {
       await toolbarHelper.expectSelectionModeActive()
 
       // Should not cause any errors - no keys to drag
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 0')
+      await expect(canvasHelper.getKeysCounter()).toContainText('Keys: 0')
     })
 
-    test('should handle mirror operations with no keys selected', async ({ page }) => {
+    test('should handle mirror operations with no keys selected', async () => {
       // Mirror buttons should be disabled when no keys are selected
       await expect(toolbarHelper.getMirrorButton()).toBeDisabled()
 
       // Canvas should still be functional
       const canvas = canvasHelper.getCanvas()
       await expect(canvas).toBeVisible()
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 0')
+      await expect(canvasHelper.getKeysCounter()).toContainText('Keys: 0')
     })
 
     test('should show mirror axis position tooltip when hovering', async () => {

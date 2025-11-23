@@ -147,7 +147,7 @@ test.describe('Move Exactly Tool', () => {
     test('should move single key using internal units', async ({ page }) => {
       // Add a single key
       await canvasHelper.addKey()
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+      await expect(page.getByTestId('counter-keys')).toContainText('Keys: 1')
       await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
 
       // Move Exactly tool should be enabled
@@ -181,7 +181,7 @@ test.describe('Move Exactly Tool', () => {
     test('should move single key using millimeters', async ({ page }) => {
       // Add a single key
       await canvasHelper.addKey()
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+      await expect(page.getByTestId('counter-keys')).toContainText('Keys: 1')
 
       // Open Move Exactly tool
       await moveExactlyHelper.openModal()
@@ -212,7 +212,7 @@ test.describe('Move Exactly Tool', () => {
     test('should handle custom mm spacing', async ({ page }) => {
       // Add a single key
       await canvasHelper.addKey()
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+      await expect(page.getByTestId('counter-keys')).toContainText('Keys: 1')
       await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
 
       // Open Move Exactly tool and configure custom spacing
@@ -235,7 +235,7 @@ test.describe('Move Exactly Tool', () => {
       await canvasHelper.addKey()
       await canvasHelper.addKey()
       await canvasHelper.addKey()
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 3')
+      await expect(page.getByTestId('counter-keys')).toContainText('Keys: 3')
 
       // Select all keys
       await canvasHelper.selectAllKeys()
@@ -277,7 +277,7 @@ test.describe('Move Exactly Tool', () => {
       await canvasHelper.addKey()
       await canvasHelper.addKey()
       await canvasHelper.addKey()
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 3')
+      await expect(page.getByTestId('counter-keys')).toContainText('Keys: 3')
 
       // Select all keys
       await canvasHelper.selectAllKeys()
@@ -319,7 +319,7 @@ test.describe('Move Exactly Tool', () => {
     test('should handle tool activation and cancellation correctly', async ({ page }) => {
       // Add a key
       await canvasHelper.addKey()
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+      await expect(page.getByTestId('counter-keys')).toContainText('Keys: 1')
       await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
 
       // Move Exactly tool should be enabled
@@ -341,7 +341,7 @@ test.describe('Move Exactly Tool', () => {
     test('should disable tool when no keys selected', async ({ page }) => {
       // Add a key
       await canvasHelper.addKey()
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+      await expect(page.getByTestId('counter-keys')).toContainText('Keys: 1')
 
       // Deselect all keys
       await canvasHelper.deselectAllKeys()
@@ -370,7 +370,7 @@ test.describe('Move Exactly Tool', () => {
     test('should move keys regardless of rotation state', async ({ page }) => {
       // Add a key
       await canvasHelper.addKey()
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+      await expect(page.getByTestId('counter-keys')).toContainText('Keys: 1')
       await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
 
       // Move key using the helper
@@ -391,7 +391,7 @@ test.describe('Move Exactly Tool', () => {
     test('should handle zero movement values', async ({ page }) => {
       // Add a key
       await canvasHelper.addKey()
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+      await expect(page.getByTestId('counter-keys')).toContainText('Keys: 1')
       await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
 
       // Move key with zero values
@@ -410,7 +410,7 @@ test.describe('Move Exactly Tool', () => {
     test('should handle negative movement values', async ({ page }) => {
       // Add a key
       await canvasHelper.addKey()
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+      await expect(page.getByTestId('counter-keys')).toContainText('Keys: 1')
       await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
 
       // Move key with negative values
@@ -429,7 +429,7 @@ test.describe('Move Exactly Tool', () => {
     test('should handle decimal precision', async ({ page }) => {
       // Add a key
       await canvasHelper.addKey()
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+      await expect(page.getByTestId('counter-keys')).toContainText('Keys: 1')
       await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
 
       // Move key with precise decimal values
@@ -450,7 +450,7 @@ test.describe('Move Exactly Tool', () => {
     test('should auto-focus X input when modal opens', async ({ page }) => {
       // Add a key
       await canvasHelper.addKey()
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+      await expect(page.getByTestId('counter-keys')).toContainText('Keys: 1')
 
       // Open Move Exactly modal
       await moveExactlyHelper.expectToolEnabled()
@@ -466,7 +466,7 @@ test.describe('Move Exactly Tool', () => {
     test('should persist values after successful apply and prefill on reopen', async ({ page }) => {
       // Add a key
       await canvasHelper.addKey()
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+      await expect(page.getByTestId('counter-keys')).toContainText('Keys: 1')
 
       // Open Move Exactly modal first time and apply values
       await moveExactlyHelper.moveKeys(1.5, 2.0)
@@ -491,7 +491,7 @@ test.describe('Move Exactly Tool', () => {
     test('should not persist cancelled values (only applied values)', async ({ page }) => {
       // Add a key
       await canvasHelper.addKey()
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+      await expect(page.getByTestId('counter-keys')).toContainText('Keys: 1')
 
       // Apply initial values
       await moveExactlyHelper.moveKeys(1.0, 1.0)
@@ -518,7 +518,7 @@ test.describe('Move Exactly Tool', () => {
     test('should persist unit selection and conversion values', async ({ page }) => {
       // Add a key
       await canvasHelper.addKey()
-      await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+      await expect(page.getByTestId('counter-keys')).toContainText('Keys: 1')
 
       // Open Move Exactly modal
       await moveExactlyHelper.openModal()

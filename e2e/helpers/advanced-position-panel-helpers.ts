@@ -61,7 +61,7 @@ export class AdvancedPositionPanelHelper {
   }
 
   getKeysCounter(): Locator {
-    return this.page.locator('.keys-counter')
+    return this.page.getByTestId('counter-keys')
   }
 
   getSelectedCounter(): Locator {

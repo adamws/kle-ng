@@ -32,7 +32,7 @@ test.describe('Canvas Zoom Regression Tests', () => {
   test('should not crop keyboard at high zoom levels (500%+)', async ({ page }) => {
     // Add a single key with a label for better visibility
     await canvasHelper.addKey()
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+    await expect(canvasHelper.getKeysCounter()).toContainText('Keys: 1')
 
     // Set a label to make the key more visible in screenshots
     await canvasHelper.setKeyLabel('center', 'A')
@@ -59,7 +59,7 @@ test.describe('Canvas Zoom Regression Tests', () => {
     await canvasHelper.expectCanvasScreenshot('zoom-regression-02-high-zoom-500percent-plus')
 
     // Verify key is still visible and properly positioned
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+    await expect(canvasHelper.getKeysCounter()).toContainText('Keys: 1')
 
     // Verify zoom controls are still functional
     const zoomInput = page.locator('.zoom-control .custom-number-input input')
@@ -69,7 +69,7 @@ test.describe('Canvas Zoom Regression Tests', () => {
   test('should maintain proper borders at low zoom levels (<100%)', async ({ page }) => {
     // Add a single key with a label
     await canvasHelper.addKey()
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+    await expect(canvasHelper.getKeysCounter()).toContainText('Keys: 1')
 
     // Set a label to make the key more visible in screenshots
     await canvasHelper.setKeyLabel('center', 'B')
@@ -90,7 +90,7 @@ test.describe('Canvas Zoom Regression Tests', () => {
     await canvasHelper.expectCanvasScreenshot('zoom-regression-03-low-zoom-small-image')
 
     // Verify key is still visible and properly positioned
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+    await expect(canvasHelper.getKeysCounter()).toContainText('Keys: 1')
 
     // Verify zoom controls are still functional
     const zoomInput = page.locator('.zoom-control .custom-number-input input')
@@ -105,12 +105,12 @@ test.describe('Canvas Zoom Regression Tests', () => {
     await canvasHelper.expectCanvasScreenshot('zoom-regression-04-reset-to-100percent')
   })
 
-  test('should handle multiple zoom operations without breaking canvas', async ({ page }) => {
+  test('should handle multiple zoom operations without breaking canvas', async () => {
     // Add a few keys to create a more complex layout
     await canvasHelper.addKey()
     await canvasHelper.addKey()
     await canvasHelper.addKey()
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 3')
+    await expect(canvasHelper.getKeysCounter()).toContainText('Keys: 3')
 
     // Set different labels on keys
     await canvasHelper.setKeyLabel('center', '1')
@@ -145,7 +145,7 @@ test.describe('Canvas Zoom Regression Tests', () => {
     expect(finalZoom).toBe(100)
 
     // Verify all keys are still present and properly positioned
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 5')
+    await expect(canvasHelper.getKeysCounter()).toContainText('Keys: 5')
     await canvasHelper.expectCanvasScreenshot('zoom-regression-07-final-reset')
   })
 })

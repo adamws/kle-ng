@@ -348,7 +348,7 @@ export class CanvasTestHelper {
     // Wait for layout to load with increased timeout for CI environments
     await this.page.waitForFunction(
       () => {
-        const keysCounter = document.querySelector('.keys-counter')?.textContent
+        const keysCounter = document.querySelector('[data-testid="counter-keys"]')?.textContent
         if (!keysCounter) return false
         const match = keysCounter.match(/Keys: (\d+)/)
         return match && parseInt(match[1]) >= 10 // At least 10 keys for most presets
@@ -543,7 +543,7 @@ export class CanvasTestHelper {
    * Get keys counter locator
    */
   getKeysCounter() {
-    return this.page.locator('.keys-counter')
+    return this.page.getByTestId('counter-keys')
   }
 
   /**

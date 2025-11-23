@@ -25,7 +25,7 @@ test.describe('Negative Coordinates Support', () => {
     // Add a key
     await page.locator('button[title="Add Standard Key"]').click()
     // Wait for key counter to update to ensure key is added
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+    await expect(page.getByTestId('counter-keys')).toContainText('Keys: 1')
 
     // Set key label for identification
     const centerLabelInput = page.locator('.labels-grid .form-control').nth(4)
@@ -51,7 +51,7 @@ test.describe('Negative Coordinates Support', () => {
     // Click on canvas at negative coordinate position (left of the key)
     await page.locator('.keyboard-canvas').click({ position: { x: 10, y: 47 }, force: true })
     // Wait for mirror operation to complete - should add mirrored key
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 2')
+    await expect(page.getByTestId('counter-keys')).toContainText('Keys: 2')
 
     // Take screenshot to verify negative coordinate functionality
     await expect(page.locator('.keyboard-canvas')).toHaveScreenshot(
@@ -69,7 +69,7 @@ test.describe('Negative Coordinates Support', () => {
     // Add a key and move it to create negative space
     await page.locator('button[title="Add Standard Key"]').click()
     // Wait for key to be added
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+    await expect(page.getByTestId('counter-keys')).toContainText('Keys: 1')
 
     // Mirror key to create negative coordinate key
     await page.locator('.keyboard-canvas').click({ position: { x: 47, y: 47 } })
@@ -88,7 +88,7 @@ test.describe('Negative Coordinates Support', () => {
 
     await page.locator('.keyboard-canvas').click({ position: { x: 10, y: 47 }, force: true })
     // Wait for mirror operation to complete
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 2')
+    await expect(page.getByTestId('counter-keys')).toContainText('Keys: 2')
 
     // Move mouse to negative coordinate area and check position display
     await page.locator('.keyboard-canvas').hover({ position: { x: 5, y: 47 } })
@@ -108,7 +108,7 @@ test.describe('Negative Coordinates Support', () => {
     // Add a key
     await page.locator('button[title="Add Standard Key"]').click()
     // Wait for key to be added
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+    await expect(page.getByTestId('counter-keys')).toContainText('Keys: 1')
 
     // Set key label
     const centerLabelInput = page.locator('.labels-grid .form-control').nth(4)

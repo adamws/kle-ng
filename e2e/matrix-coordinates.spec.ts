@@ -570,7 +570,7 @@ test.describe('Matrix Coordinates Tool', () => {
     // Wait for layout to load - Default 60% has 61 keys
     await page.waitForFunction(
       () => {
-        const keysCounter = document.querySelector('.keys-counter')?.textContent
+        const keysCounter = document.querySelector('[data-testid="counter-keys"]')?.textContent
         if (!keysCounter) return false
         const match = keysCounter.match(/Keys: (\d+)/)
         return match ? parseInt(match[1]) === 61 : false

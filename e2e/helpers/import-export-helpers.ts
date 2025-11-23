@@ -58,7 +58,7 @@ export class ImportExportHelper {
 
     // If expectedKeyCount is provided, wait for it
     if (expectedKeyCount !== undefined) {
-      await expect(this.page.locator('.keys-counter')).toContainText(`Keys: ${expectedKeyCount}`)
+      await expect(this.page.getByTestId('counter-keys')).toContainText(`Keys: ${expectedKeyCount}`)
     }
   }
 

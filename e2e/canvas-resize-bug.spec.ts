@@ -37,7 +37,7 @@ test.describe('Canvas Resize Bug - Different rendering between UI and keyboard s
 
     // Wait for key to be added and canvas to render
     await helper.waitForRender()
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+    await expect(helper.getKeysCounter()).toContainText('Keys: 1')
 
     // Verify the key is selected (newly added keys should be selected by default)
     await expect(page.locator('.selected-counter')).toContainText('Selected: 1')

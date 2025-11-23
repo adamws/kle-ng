@@ -22,7 +22,7 @@ test.describe('Mirror Functionality', () => {
     // Add a key
     await page.locator('button[title="Add Standard Key"]').click()
     // Wait for key counter to update to ensure key is added
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+    await expect(page.getByTestId('counter-keys')).toContainText('Keys: 1')
 
     // Set key label for identification
     const centerLabelInput = page.locator('.labels-grid .form-control').nth(4)
@@ -55,7 +55,7 @@ test.describe('Mirror Functionality', () => {
     // Mirror operation should complete synchronously
 
     // Verify that mirror operation worked - should have 2 keys now
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 2')
+    await expect(page.getByTestId('counter-keys')).toContainText('Keys: 2')
 
     // Take baseline screenshot (the mirror operation should be visible in the screenshot)
     await expect(page.locator('.keyboard-canvas')).toHaveScreenshot(
@@ -68,7 +68,7 @@ test.describe('Mirror Functionality', () => {
     // Add a key
     await page.locator('button[title="Add Standard Key"]').click()
     // Wait for key counter to update to ensure key is added
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+    await expect(page.getByTestId('counter-keys')).toContainText('Keys: 1')
 
     // Set key label for identification
     const centerLabelInput = page.locator('.labels-grid .form-control').nth(4)
@@ -97,7 +97,7 @@ test.describe('Mirror Functionality', () => {
     // Mirror operation should complete synchronously
 
     // Verify that mirror operation worked - should have 2 keys now
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 2')
+    await expect(page.getByTestId('counter-keys')).toContainText('Keys: 2')
 
     // Take baseline screenshot (the mirror operation should be visible in the screenshot)
     await expect(page.locator('.keyboard-canvas')).toHaveScreenshot(
@@ -110,7 +110,7 @@ test.describe('Mirror Functionality', () => {
     // Add a key
     await page.locator('button[title="Add Standard Key"]').click()
     // Wait for key counter to update to ensure key is added
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+    await expect(page.getByTestId('counter-keys')).toContainText('Keys: 1')
 
     // Set key label
     const centerLabelInput = page.locator('.labels-grid .form-control').nth(4)
@@ -150,7 +150,7 @@ test.describe('Mirror Functionality', () => {
     // Mirror operation should complete synchronously
 
     // Verify that mirror operation worked - should have 2 keys now
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 2')
+    await expect(page.getByTestId('counter-keys')).toContainText('Keys: 2')
 
     // Take baseline screenshot (the mirror operation should be visible in the screenshot)
     await expect(page.locator('.keyboard-canvas')).toHaveScreenshot(
@@ -163,7 +163,7 @@ test.describe('Mirror Functionality', () => {
     // Add a key
     await page.locator('button[title="Add Standard Key"]').click()
     // Wait for key counter to update to ensure key is added
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+    await expect(page.getByTestId('counter-keys')).toContainText('Keys: 1')
 
     // Set key label
     const centerLabelInput = page.locator('.labels-grid .form-control').nth(4)
@@ -199,7 +199,7 @@ test.describe('Mirror Functionality', () => {
     // Mirror operation should complete synchronously
 
     // Verify that mirror operation worked - should have 2 keys now
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 2')
+    await expect(page.getByTestId('counter-keys')).toContainText('Keys: 2')
 
     // Take baseline screenshot (the mirror operation should be visible in the screenshot)
     await expect(page.locator('.keyboard-canvas')).toHaveScreenshot(
@@ -212,7 +212,7 @@ test.describe('Mirror Functionality', () => {
     // Add first key
     await page.locator('button[title="Add Standard Key"]').click()
     // Wait for key counter to update
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+    await expect(page.getByTestId('counter-keys')).toContainText('Keys: 1')
 
     // Set label for first key
     const centerLabelInput1 = page.locator('.labels-grid .form-control').nth(4)
@@ -222,7 +222,7 @@ test.describe('Mirror Functionality', () => {
     // Add second key
     await page.locator('button[title="Add Standard Key"]').click()
     // Wait for key counter to update
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 2')
+    await expect(page.getByTestId('counter-keys')).toContainText('Keys: 2')
 
     // Set label for second key
     const centerLabelInput2 = page.locator('.labels-grid .form-control').nth(4)
@@ -232,7 +232,7 @@ test.describe('Mirror Functionality', () => {
     // Add third key
     await page.locator('button[title="Add Standard Key"]').click()
     // Wait for key counter to update
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 3')
+    await expect(page.getByTestId('counter-keys')).toContainText('Keys: 3')
 
     // Set label for third key
     const centerLabelInput3 = page.locator('.labels-grid .form-control').nth(4)
@@ -283,7 +283,7 @@ test.describe('Mirror Functionality', () => {
     // Mirror operation should complete synchronously
 
     // Verify that mirror operation worked - should have more keys than before
-    const finalKeysText = await page.locator('.keys-counter').textContent()
+    const finalKeysText = await page.getByTestId('counter-keys').textContent()
     const finalKeysCount = parseInt(finalKeysText?.match(/Keys: (\d+)/)?.[1] || '0')
     // We should have at least the original 3 keys plus the selected mirrored keys
     expect(finalKeysCount).toBeGreaterThan(3) // Should have more than 3 keys
@@ -299,7 +299,7 @@ test.describe('Mirror Functionality', () => {
     // Add first key
     await page.locator('button[title="Add Standard Key"]').click()
     // Wait for key counter to update
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 1')
+    await expect(page.getByTestId('counter-keys')).toContainText('Keys: 1')
 
     // Set label for first key
     const centerLabelInput1 = page.locator('.labels-grid .form-control').nth(4)
@@ -309,7 +309,7 @@ test.describe('Mirror Functionality', () => {
     // Add second key
     await page.locator('button[title="Add Standard Key"]').click()
     // Wait for key counter to update
-    await expect(page.locator('.keys-counter')).toContainText('Keys: 2')
+    await expect(page.getByTestId('counter-keys')).toContainText('Keys: 2')
 
     // Set label for second key
     const centerLabelInput2 = page.locator('.labels-grid .form-control').nth(4)
@@ -353,7 +353,7 @@ test.describe('Mirror Functionality', () => {
     // Mirror operation should complete synchronously
 
     // Verify that mirror operation worked - should have more keys than before
-    const finalKeysText = await page.locator('.keys-counter').textContent()
+    const finalKeysText = await page.getByTestId('counter-keys').textContent()
     const finalKeysCount = parseInt(finalKeysText?.match(/Keys: (\d+)/)?.[1] || '0')
     // We should have at least the original keys plus the selected mirrored keys
     expect(finalKeysCount).toBeGreaterThan(2) // Should have more than 2 keys
