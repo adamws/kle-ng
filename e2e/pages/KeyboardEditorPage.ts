@@ -4,6 +4,7 @@ import { ToolbarComponent } from './components/ToolbarComponent'
 import { CanvasComponent } from './components/CanvasComponent'
 import { RotationToolComponent } from './components/RotationToolComponent'
 import { MatrixModalComponent } from './components/MatrixModalComponent'
+import { PropertiesPanelComponent } from './components/PropertiesPanelComponent'
 import { SELECTORS } from '../constants/selectors'
 
 /**
@@ -26,6 +27,7 @@ export class KeyboardEditorPage extends BasePage {
   readonly canvas: CanvasComponent
   readonly rotation: RotationToolComponent
   readonly matrix: MatrixModalComponent
+  readonly properties: PropertiesPanelComponent
 
   private readonly keysCounter: Locator
   private readonly selectedCounter: Locator
@@ -37,6 +39,7 @@ export class KeyboardEditorPage extends BasePage {
     this.canvas = new CanvasComponent(page)
     this.rotation = new RotationToolComponent(page)
     this.matrix = new MatrixModalComponent(page)
+    this.properties = new PropertiesPanelComponent(page)
 
     // Initialize locators for counters and indicators
     this.keysCounter = page.locator(SELECTORS.COUNTERS.KEYS)

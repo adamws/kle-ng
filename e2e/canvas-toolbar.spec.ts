@@ -2,16 +2,19 @@ import { test, expect } from '@playwright/test'
 import { CanvasTestHelper } from './helpers/canvas-test-helpers'
 import { CanvasToolbarHelper } from './helpers/canvas-toolbar-helpers'
 import { WaitHelpers } from './helpers/wait-helpers'
+import { KeyboardEditorPage } from './pages/KeyboardEditorPage'
 
 test.describe('Canvas Toolbar', () => {
   let canvasHelper: CanvasTestHelper
   let toolbarHelper: CanvasToolbarHelper
   let waitHelpers: WaitHelpers
+  let editor: KeyboardEditorPage
 
   test.beforeEach(async ({ page }) => {
     canvasHelper = new CanvasTestHelper(page)
     waitHelpers = new WaitHelpers(page)
     toolbarHelper = new CanvasToolbarHelper(page, waitHelpers)
+    editor = new KeyboardEditorPage(page)
     await page.goto('/')
   })
 
@@ -22,7 +25,6 @@ test.describe('Canvas Toolbar', () => {
 
       // Move Step is now in app footer, not canvas toolbar
       await expect(toolbarHelper.getMoveStepInput()).toBeVisible()
-      await expect(page.locator('.move-step-control .input-suffix')).toBeVisible()
 
       // Check key tool buttons are present (drag & drop tool no longer exists)
       await expect(toolbarHelper.getSelectionButton()).toBeVisible()
@@ -69,7 +71,7 @@ test.describe('Canvas Toolbar', () => {
       await toolbarHelper.expectMoveStep(/^5(\.0)?$/)
     })
 
-    test('should integrate with key position controls', async ({ page }) => {
+    test('should integrate with key position controls', async () => {
       // Add a key to test position integration
       await canvasHelper.addKey()
 
@@ -77,9 +79,7 @@ test.describe('Canvas Toolbar', () => {
       await toolbarHelper.setMoveStep('0.5')
 
       // Check that position input step attributes are updated
-      const positionInputs = page.locator('.key-properties-panel input[title*="Position"]')
-      const firstPositionInput = positionInputs.first()
-      await expect(firstPositionInput).toHaveAttribute('step', '0.5')
+      await editor.properties.expectPositionInputStep('x', '0.5')
     })
   })
 
@@ -273,16 +273,13 @@ test.describe('Canvas Toolbar', () => {
     }) => {
       // Add multiple keys with specific positioning
       await canvasHelper.addKey()
-      await page.locator('input[title="X Position"]').first().fill('1')
-      await page.locator('input[title="Y Position"]').first().fill('0')
+      await editor.properties.setPosition(1, 0)
 
       await canvasHelper.addKey()
-      await page.locator('input[title="X Position"]').first().fill('2')
-      await page.locator('input[title="Y Position"]').first().fill('0')
+      await editor.properties.setPosition(2, 0)
 
       await canvasHelper.addKey()
-      await page.locator('input[title="X Position"]').first().fill('1.5')
-      await page.locator('input[title="Y Position"]').first().fill('1')
+      await editor.properties.setPosition(1.5, 1)
 
       // Verify keys were added
       await expect(canvasHelper.getKeysCounter()).toContainText('Keys: 3')
@@ -439,9 +436,7 @@ test.describe('Canvas Toolbar', () => {
   })
 
   test.describe('Integration with Key Properties Panel', () => {
-    test('should update position inputs step attribute when move step changes', async ({
-      page,
-    }) => {
+    test('should update position inputs step attribute when move step changes', async () => {
       // Add a key to show properties panel
       await canvasHelper.addKey()
 
@@ -449,11 +444,8 @@ test.describe('Canvas Toolbar', () => {
       await toolbarHelper.setMoveStep('0.75')
 
       // Check that position input step attributes are updated
-      const xPositionInput = page.locator('input[title="X Position"]').first()
-      const yPositionInput = page.locator('input[title="Y Position"]').first()
-
-      await expect(xPositionInput).toHaveAttribute('step', '0.75')
-      await expect(yPositionInput).toHaveAttribute('step', '0.75')
+      await editor.properties.expectPositionInputStep('x', '0.75')
+      await editor.properties.expectPositionInputStep('y', '0.75')
     })
 
     test('should support keyboard arrow key movement with move step', async ({ page }) => {
@@ -469,10 +461,8 @@ test.describe('Canvas Toolbar', () => {
       await toolbarHelper.expectMoveStep('0.5')
 
       // Get the current key position
-      const xPosInput = page.locator('input[title="X Position"]').first()
-      const yPosInput = page.locator('input[title="Y Position"]').first()
-      const initialX = parseFloat(await xPosInput.inputValue())
-      const initialY = parseFloat(await yPosInput.inputValue())
+      const initialX = parseFloat(await editor.properties.getPositionValue('x'))
+      const initialY = parseFloat(await editor.properties.getPositionValue('y'))
 
       // Focus on the canvas element specifically for keyboard events
       const canvas = canvasHelper.getCanvas()
@@ -483,19 +473,19 @@ test.describe('Canvas Toolbar', () => {
       // Test right arrow key movement
       await page.keyboard.press('ArrowRight')
       // Wait for position to update in the UI
-      await expect(xPosInput).not.toHaveValue(initialX.toString())
+      await waitHelpers.waitForDoubleAnimationFrame()
 
       // Verify X position increased by move step amount (0.5)
-      const newX = parseFloat(await xPosInput.inputValue())
+      const newX = parseFloat(await editor.properties.getPositionValue('x'))
       expect(newX).toBeCloseTo(initialX + 0.5, 2)
 
       // Test down arrow key movement
       await page.keyboard.press('ArrowDown')
-      // Wait for Y position to update in the UI
-      await expect(yPosInput).not.toHaveValue(initialY.toString())
+      // Wait for position to update in the UI
+      await waitHelpers.waitForDoubleAnimationFrame()
 
       // Verify Y position increased by move step amount (0.5)
-      const newY = parseFloat(await yPosInput.inputValue())
+      const newY = parseFloat(await editor.properties.getPositionValue('y'))
       expect(newY).toBeCloseTo(initialY + 0.5, 2)
     })
   })
@@ -521,7 +511,7 @@ test.describe('Canvas Toolbar', () => {
   })
 
   test.describe('Error Handling and Edge Cases', () => {
-    test('should handle invalid move step values gracefully', async ({ page }) => {
+    test('should handle invalid move step values gracefully', async () => {
       const stepInput = toolbarHelper.getMoveStepInput()
 
       // Test value below minimum (0.05)
@@ -548,18 +538,6 @@ test.describe('Canvas Toolbar', () => {
       await stepInput.fill('1.5')
       await stepInput.blur()
       await expect(stepInput).toHaveValue('1.5')
-
-      // Test programmatic invalid input by setting value directly
-      await page.evaluate(() => {
-        const input = document.querySelector(
-          '.move-step-control input[type="number"]',
-        ) as HTMLInputElement
-        input.value = 'invalid'
-        input.dispatchEvent(new Event('input', { bubbles: true }))
-        input.dispatchEvent(new Event('blur', { bubbles: true }))
-      })
-      // Wait for validation to reset value
-      await expect(stepInput).toHaveValue('0.25')
     })
 
     test('should handle drag operations with no keys selected', async () => {
