@@ -11,8 +11,7 @@ export class CanvasTestHelper {
   }
 
   async addKey() {
-    // The Add Key button has the correct title "Add Standard Key"
-    await this.page.click('button[title="Add Standard Key"]')
+    await this.page.getByTestId('toolbar-add-key').click()
     await this.waitForRender() // Wait for key to be added
   }
 
@@ -319,7 +318,7 @@ export class CanvasTestHelper {
   }
 
   getCanvas(): Locator {
-    return this.page.locator('.keyboard-canvas')
+    return this.page.getByTestId('canvas-main')
   }
 
   async expectCanvasScreenshot(name: string) {

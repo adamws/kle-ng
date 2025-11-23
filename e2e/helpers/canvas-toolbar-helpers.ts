@@ -39,7 +39,7 @@ export class CanvasToolbarHelper {
    * Get the Mirror Vertical button locator (main mirror button).
    */
   getMirrorButton(): Locator {
-    return this.page.locator('button[title="Mirror Vertical"]')
+    return this.page.getByTestId('toolbar-mirror-vertical')
   }
 
   /**

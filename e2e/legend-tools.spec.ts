@@ -69,7 +69,7 @@ test.describe('Legend Tools Panel', () => {
       await expect(page.getByText('Keys: 1')).toBeVisible()
 
       // Select the key
-      await page.locator('.keyboard-canvas').click({ position: { x: 47, y: 47 }, force: true })
+      await page.getByTestId('canvas-main').click({ position: { x: 47, y: 47 }, force: true })
       await expect(page.getByText('Selected: 1')).toBeVisible()
 
       // Click extra tools again (dropdown closes when a key is added/selected)

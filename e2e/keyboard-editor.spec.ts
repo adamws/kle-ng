@@ -38,7 +38,7 @@ test.describe('Keyboard Layout Editor', () => {
 
     // Check toolbar is present
     await expect(page.locator('.keyboard-toolbar')).toBeVisible()
-    await expect(page.locator('button[title="Add Standard Key"]')).toBeVisible()
+    await expect(page.getByTestId('toolbar-add-key')).toBeVisible()
 
     // Check canvas is present
     await editor.canvas.expectVisible()

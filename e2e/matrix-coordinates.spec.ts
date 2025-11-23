@@ -522,7 +522,7 @@ test.describe('Matrix Coordinates Tool', () => {
 
     // Regression test: Verify that keys can be selected after closing modal
     // (Previously, the overlay was blocking clicks after automatic annotation)
-    const canvas = page.locator('canvas.keyboard-canvas')
+    const canvas = page.getByTestId('canvas-main')
     await expect(canvas).toBeVisible()
 
     // Click on a key (approximate center of first key at position 0,0)
@@ -539,7 +539,7 @@ test.describe('Matrix Coordinates Tool', () => {
     })
 
     // Verify that the key was selected by checking the Selected counter
-    await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
+    await expect(page.getByTestId('counter-selected')).toContainText('Selected: 1')
   })
 
   test('should show matrix preview for already annotated Default 60% (VIA) preset', async ({

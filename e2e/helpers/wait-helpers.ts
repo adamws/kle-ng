@@ -49,7 +49,7 @@ export class WaitHelpers {
    * @param canvasLocator - The canvas element locator
    *
    * @example
-   * const canvas = page.locator('.keyboard-canvas')
+   * const canvas = page.getByTestId('canvas-main')
    * await waitHelpers.waitForCanvasReady(canvas)
    */
   async waitForCanvasReady(canvasLocator: Locator) {

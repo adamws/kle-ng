@@ -22,7 +22,7 @@ export class RotationToolComponent {
   private readonly rotationInfo: Locator
 
   constructor(private readonly page: Page) {
-    this.toolButton = page.locator('button[title="Rotate Selection"]')
+    this.toolButton = page.getByTestId('toolbar-rotate-selection')
     this.modal = page.locator('.rotation-panel')
     this.angleInput = page.locator('.rotation-panel input[type="number"]')
     this.applyButton = page.locator('.rotation-panel .btn-primary')
@@ -55,7 +55,7 @@ export class RotationToolComponent {
   async selectAnchor(x: number, y: number) {
     await expect(this.rotationInfo).toContainText('Select rotation anchor point')
 
-    const canvas = this.page.locator('.keyboard-canvas')
+    const canvas = this.page.getByTestId('canvas-main')
     await canvas.click({ position: { x, y }, force: true })
 
     await expect(this.rotationInfo).toContainText('Origin:')

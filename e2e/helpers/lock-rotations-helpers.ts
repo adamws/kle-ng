@@ -74,7 +74,7 @@ export class LockRotationsHelper {
   }
 
   getCanvas(): Locator {
-    return this.page.locator('.keyboard-canvas')
+    return this.page.getByTestId('canvas-main')
   }
 
   getCanvasToolbar(): Locator {
@@ -86,11 +86,11 @@ export class LockRotationsHelper {
   }
 
   getSelectedCounter(): Locator {
-    return this.page.locator('.selected-counter')
+    return this.page.getByTestId('counter-selected')
   }
 
   getAddStandardKeyButton(): Locator {
-    return this.page.locator('button[title="Add Standard Key"]')
+    return this.page.getByTestId('toolbar-add-key')
   }
 
   // =============================================================================

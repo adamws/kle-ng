@@ -36,10 +36,10 @@ test.describe('JSON Import/Export Functionality', () => {
       await helper.importFromFile('e2e/fixtures/simple-layout.json', 8)
 
       // Verify some of the imported keys are visible
-      await expect(page.locator('.selected-counter')).toContainText('Selected: 0')
+      await expect(page.getByTestId('counter-selected')).toContainText('Selected: 0')
 
       // Take screenshot to verify layout was imported
-      await expect(page.locator('.keyboard-canvas')).toHaveScreenshot('simple-layout-imported.png')
+      await expect(page.getByTestId('canvas-main')).toHaveScreenshot('simple-layout-imported.png')
     })
 
     test('should import complex layout with colors and rotation', async ({ page }) => {
@@ -47,7 +47,7 @@ test.describe('JSON Import/Export Functionality', () => {
       await helper.importFromFile('e2e/fixtures/complex-layout.json', 6)
 
       // Take screenshot to verify complex layout with colors and rotation
-      await expect(page.locator('.keyboard-canvas')).toHaveScreenshot('complex-layout-imported.png')
+      await expect(page.getByTestId('canvas-main')).toHaveScreenshot('complex-layout-imported.png')
     })
 
     test('should import empty layout', async () => {
@@ -73,7 +73,7 @@ test.describe('JSON Import/Export Functionality', () => {
       await helper.importFromFile('e2e/fixtures/rotated-keys.json', 3)
 
       // Take screenshot to verify rotated keys
-      await expect(page.locator('.keyboard-canvas')).toHaveScreenshot('rotated-keys-imported.png')
+      await expect(page.getByTestId('canvas-main')).toHaveScreenshot('rotated-keys-imported.png')
     })
 
     test('should import VIA format layout', async ({ page }) => {
@@ -85,15 +85,15 @@ test.describe('JSON Import/Export Functionality', () => {
       await expect(page.locator('.toast-title')).toContainText('Import successful')
 
       // Take screenshot to verify VIA layout was imported
-      await expect(page.locator('.keyboard-canvas')).toHaveScreenshot('via-layout-imported.png')
+      await expect(page.getByTestId('canvas-main')).toHaveScreenshot('via-layout-imported.png')
     })
   })
 
   test.describe('PNG Export Tests', () => {
     test('should export layout as PNG without errors', async ({ page }) => {
       // Add some keys first
-      await page.locator('button[title="Add Standard Key"]').click()
-      await page.locator('button[title="Add Standard Key"]').click()
+      await page.getByTestId('toolbar-add-key').click()
+      await page.getByTestId('toolbar-add-key').click()
       await expect(page.getByTestId('counter-keys')).toContainText('Keys: 2')
 
       // Export as PNG
@@ -130,15 +130,15 @@ test.describe('JSON Import/Export Functionality', () => {
       await helper.importFromFile(pngPath, 6)
 
       // Verify it's the same layout by visual comparison
-      await expect(page.locator('.keyboard-canvas')).toHaveScreenshot('png-roundtrip-result.png')
+      await expect(page.getByTestId('canvas-main')).toHaveScreenshot('png-roundtrip-result.png')
     })
   })
 
   test.describe('JSON Export Tests', () => {
     test('should export simple layout as JSON', async ({ page }) => {
       // Add some keys first
-      await page.locator('button[title="Add Standard Key"]').click()
-      await page.locator('button[title="Add Standard Key"]').click()
+      await page.getByTestId('toolbar-add-key').click()
+      await page.getByTestId('toolbar-add-key').click()
       await expect(page.getByTestId('counter-keys')).toContainText('Keys: 2')
 
       // Export as JSON
@@ -249,7 +249,7 @@ test.describe('JSON Import/Export Functionality', () => {
       await helper.importFromFile('e2e/fixtures/simple-layout.json', 8)
 
       // Add one more key
-      await page.locator('button[title="Add Standard Key"]').click()
+      await page.getByTestId('toolbar-add-key').click()
       await expect(page.getByTestId('counter-keys')).toContainText('Keys: 9')
 
       // Export modified layout
@@ -277,7 +277,7 @@ test.describe('JSON Import/Export Functionality', () => {
       ).toBeHidden()
 
       // Add a key to make changes
-      await page.locator('button[title="Add Standard Key"]').click()
+      await page.getByTestId('toolbar-add-key').click()
       await expect(page.getByTestId('counter-keys')).toContainText('Keys: 9')
 
       // Now should show unsaved changes after modification

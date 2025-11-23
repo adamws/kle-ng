@@ -40,7 +40,7 @@ test.describe('Canvas Resize Bug - Different rendering between UI and keyboard s
     await expect(helper.getKeysCounter()).toContainText('Keys: 1')
 
     // Verify the key is selected (newly added keys should be selected by default)
-    await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
+    await expect(page.getByTestId('counter-selected')).toContainText('Selected: 1')
 
     // STEP 1: Resize key to width 1.25 using Key Properties panel
     await helper.setKeySize(1.25)
@@ -81,7 +81,7 @@ test.describe('Canvas Resize Bug - Different rendering between UI and keyboard s
     await helper.waitForRender()
 
     // Verify the key is selected (newly added keys should be selected by default)
-    await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
+    await expect(page.getByTestId('counter-selected')).toContainText('Selected: 1')
 
     // Test multiple resize operations to see if the issue compounds
 

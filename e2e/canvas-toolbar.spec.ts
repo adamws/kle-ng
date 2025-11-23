@@ -26,7 +26,7 @@ test.describe('Canvas Toolbar', () => {
 
       // Check key tool buttons are present (drag & drop tool no longer exists)
       await expect(toolbarHelper.getSelectionButton()).toBeVisible()
-      await expect(page.locator('button[title="Add Standard Key"]')).toBeVisible()
+      await expect(page.getByTestId('toolbar-add-key')).toBeVisible()
       await expect(toolbarHelper.getMirrorButton()).toBeVisible()
       await expect(toolbarHelper.getMirrorDropdownButton()).toBeVisible()
     })
@@ -117,7 +117,7 @@ test.describe('Canvas Toolbar', () => {
       await toolbarHelper.selectSelectionMode()
 
       // The key should be selected by default after adding
-      await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
+      await expect(page.getByTestId('counter-selected')).toContainText('Selected: 1')
     })
 
     test('should support rectangle selection in select mode', async ({ page }) => {
@@ -136,23 +136,23 @@ test.describe('Canvas Toolbar', () => {
       await page.keyboard.press('Control+a')
 
       // Wait for selection to process
-      await expect(page.locator('.selected-counter')).toContainText(/Selected: [1-5]/)
+      await expect(page.getByTestId('counter-selected')).toContainText(/Selected: [1-5]/)
 
       // Check that multiple keys are selected
-      const statusText = await page.locator('.selected-counter').textContent()
+      const statusText = await page.getByTestId('counter-selected').textContent()
       expect(statusText).toMatch(/Selected: [1-5]/) // Should select at least 1 key
     })
 
     test('should deselect keys when pressing Escape', async ({ page }) => {
       // Add a key and ensure it's selected
       await canvasHelper.addKey()
-      await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
+      await expect(page.getByTestId('counter-selected')).toContainText('Selected: 1')
 
       // Use the helper's deselect method which is more reliable
       await canvasHelper.deselectAllKeys()
 
       // Verify keys are deselected
-      await expect(page.locator('.selected-counter')).toContainText('Selected: 0')
+      await expect(page.getByTestId('counter-selected')).toContainText('Selected: 0')
     })
   })
 
@@ -185,7 +185,7 @@ test.describe('Canvas Toolbar', () => {
 
       // The key should exist and be selected
       await expect(canvasHelper.getKeysCounter()).toContainText('Keys: 1')
-      await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
+      await expect(page.getByTestId('counter-selected')).toContainText('Selected: 1')
 
       // Verify canvas is interactive in Selection Mode (drag functionality is available)
       const canvas = canvasHelper.getCanvas()
@@ -212,10 +212,10 @@ test.describe('Canvas Toolbar', () => {
       await page.keyboard.press('Control+a')
 
       // Wait for keys to be selected
-      await expect(page.locator('.selected-counter')).toContainText(/Selected: [2-3]/)
+      await expect(page.getByTestId('counter-selected')).toContainText(/Selected: [2-3]/)
 
       // Check that multiple keys are selected
-      const statusTextBefore = await page.locator('.selected-counter').textContent()
+      const statusTextBefore = await page.getByTestId('counter-selected').textContent()
       expect(statusTextBefore).toMatch(/Selected: [1-3]/)
 
       // Verify multi-key selection works in Selection Mode (drag functionality available)
@@ -258,10 +258,10 @@ test.describe('Canvas Toolbar', () => {
       await page.mouse.up()
 
       // Wait for selection to update
-      await expect(page.locator('.selected-counter')).toContainText(/Selected: [1-3]/)
+      await expect(page.getByTestId('counter-selected')).toContainText(/Selected: [1-3]/)
 
       // Check that keys were selected via rectangle selection
-      const selectedStatus = await page.locator('.selected-counter').textContent()
+      const selectedStatus = await page.getByTestId('counter-selected').textContent()
       expect(selectedStatus).toMatch(/Selected: [1-3]/)
 
       // Verify we're still in Selection Mode
@@ -295,10 +295,10 @@ test.describe('Canvas Toolbar', () => {
       await canvas.click()
       await page.keyboard.press('Control+a')
       // Wait for all keys to be selected
-      await expect(page.locator('.selected-counter')).toContainText(/Selected: [1-3]/)
+      await expect(page.getByTestId('counter-selected')).toContainText(/Selected: [1-3]/)
 
       // Verify multiple keys are selected
-      const statusText = await page.locator('.selected-counter').textContent()
+      const statusText = await page.getByTestId('counter-selected').textContent()
       expect(statusText).toMatch(/Selected: [2-3]/)
 
       // Get initial positions of all keys (this would be implementation-dependent)
@@ -324,10 +324,10 @@ test.describe('Canvas Toolbar', () => {
       await canvas.click()
       await page.keyboard.press('Control+a')
       // Wait for keys to be selected
-      await expect(page.locator('.selected-counter')).toContainText(/Selected: [1-3]/)
+      await expect(page.getByTestId('counter-selected')).toContainText(/Selected: [1-3]/)
 
       // Verify multiple keys are selected
-      const statusText = await page.locator('.selected-counter').textContent()
+      const statusText = await page.getByTestId('counter-selected').textContent()
       expect(statusText).toMatch(/Selected: [1-3]/)
 
       // Verify we're in Selection Mode which supports multi-key dragging with snapping
@@ -346,10 +346,10 @@ test.describe('Canvas Toolbar', () => {
       await canvas.click()
       await page.keyboard.press('Control+a')
       // Wait for keys to be selected
-      await expect(page.locator('.selected-counter')).toContainText(/Selected: [1-3]/)
+      await expect(page.getByTestId('counter-selected')).toContainText(/Selected: [1-3]/)
 
       // Verify keys are selected
-      const statusText = await page.locator('.selected-counter').textContent()
+      const statusText = await page.getByTestId('counter-selected').textContent()
       expect(statusText).toMatch(/Selected: [1-3]/)
 
       // Test that Selection Mode properly handles both:
@@ -461,7 +461,7 @@ test.describe('Canvas Toolbar', () => {
       await canvasHelper.addKey()
 
       // Ensure key is selected (newly added keys should be selected by default)
-      await expect(page.locator('.selected-counter')).toContainText('Selected: 1')
+      await expect(page.getByTestId('counter-selected')).toContainText('Selected: 1')
 
       // Set a specific move step (0.5U)
       await toolbarHelper.setMoveStep('0.5')
