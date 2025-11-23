@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { KeyboardEditorPage } from './pages/KeyboardEditorPage'
+import { PresetComponent } from './pages/components/PresetComponent'
+import { WaitHelpers } from './helpers/wait-helpers'
 
 test.describe('Keyboard Layout Editor', () => {
   test.beforeEach(async ({ page }) => {
@@ -37,14 +39,13 @@ test.describe('Keyboard Layout Editor', () => {
     const editor = new KeyboardEditorPage(page)
 
     // Check toolbar is present
-    await expect(page.locator('.keyboard-toolbar')).toBeVisible()
     await expect(page.getByTestId('toolbar-add-key')).toBeVisible()
 
     // Check canvas is present
     await editor.canvas.expectVisible()
 
     // Check properties panel is present
-    await expect(page.locator('.key-properties-panel')).toBeVisible()
+    await editor.properties.expectVisible()
   })
 
   test('should add keys and update status', async ({ page }) => {
@@ -82,15 +83,10 @@ test.describe('Keyboard Layout Editor', () => {
     // Key should be selected after adding
     await editor.expectSelectedCount(1)
 
-    // Should show property inputs - check for center label input (main label)
-    await expect(page.locator('.labels-grid input[type="text"]').nth(4)).toBeVisible()
-    await expect(
-      page.locator('div').filter({ hasText: 'Width' }).locator('input[type="number"]').first(),
-    ).toBeVisible()
-    // Check for key color picker (in the Labels and Colors section)
-    await expect(page.locator('.key-color-input')).toBeVisible()
-    // Check for per-label color pickers
-    await expect(page.locator('.label-color-picker').first()).toBeVisible()
+    // Should show property inputs
+    await editor.properties.expectLabelInputVisible('center')
+    await editor.properties.expectWidthInputVisible()
+    await editor.properties.expectVisible()
   })
 
   test('should edit key properties', async ({ page }) => {
@@ -99,59 +95,34 @@ test.describe('Keyboard Layout Editor', () => {
     // Add a key
     await editor.toolbar.addKey()
 
-    // Edit the center label (main label) - it's the 5th input in the labels grid (index 4)
-    const centerLabelInput = page.locator('.labels-grid .form-control').nth(4)
-    await centerLabelInput.fill('Space')
+    // Edit the center label (main label)
+    await editor.properties.setLabel('center', 'Space')
 
-    // Edit the width - use more specific selector to target the key properties panel
-    await page
-      .locator('.key-properties-panel')
-      .locator('div')
-      .filter({ hasText: 'Width' })
-      .locator('input[type="number"]')
-      .first()
-      .fill('6.25')
+    // Edit the width
+    await editor.properties.setWidth(6.25)
 
     // Properties should persist (basic check)
-    await expect(centerLabelInput).toHaveValue('Space')
-    await expect(
-      page
-        .locator('.key-properties-panel')
-        .locator('div')
-        .filter({ hasText: 'Width' })
-        .locator('input[type="number"]')
-        .first(),
-    ).toHaveValue('6.25')
+    expect(await editor.properties.getLabel('center')).toBe('Space')
+    await editor.properties.expectWidth(6.25)
   })
 
   test('should load presets', async ({ page }) => {
     const editor = new KeyboardEditorPage(page)
+    const waitHelpers = new WaitHelpers(page)
+    const preset = new PresetComponent(page, waitHelpers)
 
-    // Select ANSI 104 preset by dispatching click event directly
-    await page.waitForSelector('.dropdown-item', { state: 'attached', timeout: 5000 })
+    // Select ANSI 104 preset
+    await preset.selectPreset('ANSI 104')
 
-    // Dispatch click event to ANSI 104 preset
-    await page.evaluate(() => {
-      const ansiItem = Array.from(document.querySelectorAll('.dropdown-item')).find((item) =>
-        item.textContent?.includes('ANSI 104'),
-      )
-      if (ansiItem) {
-        ansiItem.click()
-      }
-    })
-
-    // Wait for the preset to load - ANSI 104 should have exactly 104 keys
-    await page.waitForFunction(() => {
-      const keysCounter = document.querySelector('[data-testid="counter-keys"]')?.textContent
-      if (!keysCounter) return false
-
-      const match = keysCounter.match(/Keys: (\d+)/)
-      if (!match) return false
-
-      const keyCount = parseInt(match[1])
-      // ANSI 104 should have exactly 104 keys
-      return keyCount === 104
-    })
+    // Wait for the preset to load using expect.poll
+    await expect
+      .poll(async () => {
+        const keysCounter = await page.getByTestId('counter-keys').textContent()
+        if (!keysCounter) return 0
+        const match = keysCounter.match(/Keys: (\d+)/)
+        return match ? parseInt(match[1]) : 0
+      })
+      .toBe(104)
 
     // Verify the final key count
     await editor.expectKeyCount(104)
@@ -221,8 +192,10 @@ test.describe('Keyboard Layout Editor', () => {
   })
 
   test('should collapse properties panel', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Properties panel should be visible initially
-    await expect(page.locator('.key-properties-panel')).toBeVisible()
+    await editor.properties.expectVisible()
 
     // Find the collapse button for the properties section specifically - use section title to locate
     const propertiesSection = page
@@ -234,18 +207,18 @@ test.describe('Keyboard Layout Editor', () => {
     // Click to collapse
     await collapseButton.click()
     // Wait for panel to be hidden
-    await expect(page.locator('.key-properties-panel')).toBeHidden()
+    await editor.properties.expectHidden()
 
     // Properties panel should now be hidden (collapsed)
-    await expect(page.locator('.key-properties-panel')).toBeHidden()
+    await editor.properties.expectHidden()
 
     // Click to expand again
     await collapseButton.click()
     // Wait for panel to be visible again
-    await expect(page.locator('.key-properties-panel')).toBeVisible()
+    await editor.properties.expectVisible()
 
     // Properties panel should be visible again
-    await expect(page.locator('.key-properties-panel')).toBeVisible()
+    await editor.properties.expectVisible()
   })
 
   test('should show dirty state indicator', async ({ page }) => {
