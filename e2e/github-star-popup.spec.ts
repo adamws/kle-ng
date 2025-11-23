@@ -21,7 +21,7 @@ test.describe('GitHub Star Popup', () => {
 
   test('should handle popup timing correctly', async ({ page }) => {
     await page.goto('/')
-    await page.waitForLoadState('networkidle')
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Popup should not be visible immediately on first visit
     await popupHelper.expectPopupNotVisible()
@@ -35,7 +35,7 @@ test.describe('GitHub Star Popup', () => {
 
   test('should display popup with correct content and properties', async ({ page }) => {
     await page.goto('/')
-    await page.waitForLoadState('networkidle')
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Show popup
     await popupHelper.showPopupAfterDelay(120000)
@@ -71,7 +71,7 @@ test.describe('GitHub Star Popup', () => {
 
   test('should persist dismiss state and not show again', async ({ page }) => {
     await page.goto('/')
-    await page.waitForLoadState('networkidle')
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Show popup
     await popupHelper.showPopupAfterDelay(120000)
@@ -86,7 +86,7 @@ test.describe('GitHub Star Popup', () => {
 
     // Reload page (simulating returning user)
     await page.reload()
-    await page.waitForLoadState('networkidle')
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Popup should not show again
     await popupHelper.expectPopupNotVisibleAfterWait()
@@ -95,13 +95,13 @@ test.describe('GitHub Star Popup', () => {
     await popupHelper.setDismissedFlag()
     await popupHelper.simulateFirstVisit(120000)
     await page.reload()
-    await page.waitForLoadState('networkidle')
+    await waitHelpers.waitForDoubleAnimationFrame()
     await popupHelper.expectPopupNotVisibleAfterWait()
   })
 
   test('should close popup and open new tab when star button is clicked', async ({ page }) => {
     await page.goto('/')
-    await page.waitForLoadState('networkidle')
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Show popup
     await popupHelper.showPopupAfterDelay(120000)
@@ -122,7 +122,7 @@ test.describe('GitHub Star Popup', () => {
     await page.setViewportSize({ width: 375, height: 667 })
 
     await page.goto('/')
-    await page.waitForLoadState('networkidle')
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Show popup
     await popupHelper.showPopupAfterDelay(120000)

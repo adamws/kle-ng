@@ -1,5 +1,6 @@
-import { test, expect } from '@playwright/test'
+import { test } from '@playwright/test'
 import { CanvasTestHelper } from './helpers/canvas-test-helpers'
+import { KeyboardEditorPage } from './pages/KeyboardEditorPage'
 
 test.describe('Canvas Resize Bug - Different rendering between UI and keyboard shortcuts', () => {
   // This test reproduces a bug where keys resized using keyboard shortcuts
@@ -11,20 +12,13 @@ test.describe('Canvas Resize Bug - Different rendering between UI and keyboard s
     'Canvas rendering tests only run on Chromium (verified identical across browsers)',
   )
 
+  let editor: KeyboardEditorPage
+
   test.beforeEach(async ({ page }) => {
-    await page.goto('/')
+    editor = new KeyboardEditorPage(page)
+    await editor.goto()
     // Clear any existing layout
-    await page.evaluate(() => {
-      // Access the keyboard store and clear it
-      const store = (
-        window as {
-          __VUE_DEVTOOLS_GLOBAL_HOOK__?: { apps?: { store?: { clearKeys?: () => void } }[] }
-        }
-      ).__VUE_DEVTOOLS_GLOBAL_HOOK__?.apps?.[0]?.store
-      if (store) {
-        store.clearKeys()
-      }
-    })
+    await editor.clearLayout()
   })
 
   test('should render identical keys when resized via properties panel vs keyboard shortcuts', async ({
@@ -37,10 +31,10 @@ test.describe('Canvas Resize Bug - Different rendering between UI and keyboard s
 
     // Wait for key to be added and canvas to render
     await helper.waitForRender()
-    await expect(helper.getKeysCounter()).toContainText('Keys: 1')
+    await editor.expectKeyCount(1)
 
     // Verify the key is selected (newly added keys should be selected by default)
-    await expect(page.getByTestId('counter-selected')).toContainText('Selected: 1')
+    await editor.expectSelectedCount(1)
 
     // STEP 1: Resize key to width 1.25 using Key Properties panel
     await helper.setKeySize(1.25)
@@ -81,7 +75,7 @@ test.describe('Canvas Resize Bug - Different rendering between UI and keyboard s
     await helper.waitForRender()
 
     // Verify the key is selected (newly added keys should be selected by default)
-    await expect(page.getByTestId('counter-selected')).toContainText('Selected: 1')
+    await editor.expectSelectedCount(1)
 
     // Test multiple resize operations to see if the issue compounds
 

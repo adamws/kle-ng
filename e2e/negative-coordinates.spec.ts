@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { WaitHelpers } from './helpers/wait-helpers'
+import { KeyboardEditorPage } from './pages/KeyboardEditorPage'
+import { CanvasToolbarHelper } from './helpers/canvas-toolbar-helpers'
 
 test.describe('Negative Coordinates Support', () => {
   let waitHelpers: WaitHelpers
@@ -14,44 +16,39 @@ test.describe('Negative Coordinates Support', () => {
 
   test.beforeEach(async ({ page }) => {
     waitHelpers = new WaitHelpers(page)
-    await page.goto('/')
-
-    // Wait for app to load
-    await expect(page.locator('.canvas-toolbar')).toBeVisible()
+    const editor = new KeyboardEditorPage(page)
+    await editor.goto()
   })
 
   test('should allow moving keys to negative coordinates via mirror', async ({ page }) => {
     // Fixed: Use force clicks to bypass container pointer event interception
+    const editor = new KeyboardEditorPage(page)
+    const toolbarHelper = new CanvasToolbarHelper(page, waitHelpers)
+
     // Add a key
-    await page.getByTestId('toolbar-add-key').click()
-    // Wait for key counter to update to ensure key is added
-    await expect(page.getByTestId('counter-keys')).toContainText('Keys: 1')
+    await editor.toolbar.addKey()
+    await editor.expectKeyCount(1)
 
     // Set key label for identification
-    const centerLabelInput = page.locator('.labels-grid .form-control').nth(4)
-    await centerLabelInput.fill('NEG')
-    await centerLabelInput.press('Enter')
+    await editor.properties.setLabel('center', 'NEG')
 
     // Click on the key to select it
-    await page.getByTestId('canvas-main').click({ position: { x: 47, y: 47 }, force: true })
-    // Verify key is selected
-    await expect(page.getByTestId('counter-selected')).toContainText('Selected: 1')
+    await editor.canvas.clickAt(47, 47, { force: true })
+    await editor.expectSelectedCount(1)
 
     // Switch to vertical mirror mode
-    await page.getByTestId('toolbar-mirror-vertical').click()
-    // Wait for button to become active
-    await expect(page.getByTestId('toolbar-mirror-vertical')).toHaveClass(/active/)
+    await toolbarHelper.selectMirrorVertical()
 
     // Verify key is still selected after switching to mirror mode
-    await expect(page.getByTestId('counter-selected')).toContainText('Selected: 1')
+    await editor.expectSelectedCount(1)
 
     // Wait for canvas to adjust size for mirror mode
     await waitHelpers.waitForDoubleAnimationFrame()
 
     // Click on canvas at negative coordinate position (left of the key)
-    await page.getByTestId('canvas-main').click({ position: { x: 10, y: 47 }, force: true })
+    await editor.canvas.clickAt(10, 47, { force: true })
     // Wait for mirror operation to complete - should add mirrored key
-    await expect(page.getByTestId('counter-keys')).toContainText('Keys: 2')
+    await editor.expectKeyCount(2)
 
     // Take screenshot to verify negative coordinate functionality
     await expect(page.getByTestId('canvas-main')).toHaveScreenshot(
@@ -66,29 +63,28 @@ test.describe('Negative Coordinates Support', () => {
   })
 
   test('should display correct mouse coordinates for negative positions', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+    const toolbarHelper = new CanvasToolbarHelper(page, waitHelpers)
+
     // Add a key and move it to create negative space
-    await page.getByTestId('toolbar-add-key').click()
-    // Wait for key to be added
-    await expect(page.getByTestId('counter-keys')).toContainText('Keys: 1')
+    await editor.toolbar.addKey()
+    await editor.expectKeyCount(1)
 
     // Mirror key to create negative coordinate key
-    await page.getByTestId('canvas-main').click({ position: { x: 47, y: 47 } })
-    // Verify key is selected
-    await expect(page.getByTestId('counter-selected')).toContainText('Selected: 1')
+    await editor.canvas.clickAt(47, 47)
+    await editor.expectSelectedCount(1)
 
-    await page.getByTestId('toolbar-mirror-vertical').click()
-    // Wait for button to become active
-    await expect(page.getByTestId('toolbar-mirror-vertical')).toHaveClass(/active/)
+    await toolbarHelper.selectMirrorVertical()
 
     // Verify key is still selected after switching to mirror mode
-    await expect(page.getByTestId('counter-selected')).toContainText('Selected: 1')
+    await editor.expectSelectedCount(1)
 
     // Wait for canvas to adjust size for mirror mode
     await waitHelpers.waitForDoubleAnimationFrame()
 
-    await page.getByTestId('canvas-main').click({ position: { x: 10, y: 47 }, force: true })
+    await editor.canvas.clickAt(10, 47, { force: true })
     // Wait for mirror operation to complete
-    await expect(page.getByTestId('counter-keys')).toContainText('Keys: 2')
+    await editor.expectKeyCount(2)
 
     // Move mouse to negative coordinate area and check position display
     await page.getByTestId('canvas-main').hover({ position: { x: 5, y: 47 } })
@@ -105,15 +101,14 @@ test.describe('Negative Coordinates Support', () => {
   })
 
   test('should allow dragging keys to negative coordinates', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
     // Add a key
-    await page.getByTestId('toolbar-add-key').click()
-    // Wait for key to be added
-    await expect(page.getByTestId('counter-keys')).toContainText('Keys: 1')
+    await editor.toolbar.addKey()
+    await editor.expectKeyCount(1)
 
     // Set key label
-    const centerLabelInput = page.locator('.labels-grid .form-control').nth(4)
-    await centerLabelInput.fill('DRAG')
-    await centerLabelInput.press('Enter')
+    await editor.properties.setLabel('center', 'DRAG')
 
     // Drag key to negative coordinates using middle mouse button
     const canvas = page.getByTestId('canvas-main')

@@ -33,18 +33,21 @@ e2e/
 ## Core Principles
 
 ### 1. Page Object Model (POM) Architecture
+
 - **ALL tests MUST use page objects** - never use raw selectors in test files
 - Page objects encapsulate UI interactions and selectors
 - Component classes represent reusable UI elements
 - Methods represent user actions, not implementation details
 
 ### 2. Selector Strategy
+
 - **ALWAYS use data-testid attributes** via `SELECTORS` constant
 - Import selectors from `e2e/constants/selectors.ts`
 - Update `selectors.ts` when adding new UI elements
 - Use semantic selector names: `TOOLBAR.ADD_KEY`, `COUNTERS.KEYS`
 
 ### 3. Wait Strategy - CRITICAL
+
 - **NEVER use `page.waitForTimeout()` with arbitrary delays**
 - **ALWAYS use deterministic waits** via `WaitHelpers`
 - Use `waitForRender()` after canvas operations
@@ -53,6 +56,7 @@ e2e/
 - Use `expect.poll()` for state changes
 
 ### 4. Visual Regression Testing
+
 - Screenshot tests run **ONLY on Chromium** (use `test.skip()` for other browsers)
 - Always call `waitForRender()` before screenshots
 - Always `deselectAllKeys()` before layout screenshots
@@ -124,11 +128,10 @@ await waitHelpers.waitForCanvasReady(canvas)
 await waitHelpers.waitForDoubleAnimationFrame()
 
 // State changes
-await waitHelpers.waitForStateChange(
-  async () => await editor.getKeyCount(),
-  5,
-  { timeout: 5000, message: 'Key count did not reach 5' }
-)
+await waitHelpers.waitForStateChange(async () => await editor.getKeyCount(), 5, {
+  timeout: 5000,
+  message: 'Key count did not reach 5',
+})
 
 // Modal interactions
 await waitHelpers.waitForModalReady(modal, content)
@@ -144,7 +147,7 @@ test.describe('Canvas Rendering', () => {
   // Skip non-Chromium browsers for visual tests
   test.skip(
     ({ browserName }) => browserName !== 'chromium',
-    'Canvas rendering tests only run on Chromium'
+    'Canvas rendering tests only run on Chromium',
   )
 
   let helper: CanvasTestHelper
@@ -247,7 +250,7 @@ await helper.loadJsonLayout(JSON.stringify(simpleLayout))
 // Programmatic layout
 const layout = JSON.stringify([
   [{ w: 1.5 }, 'Tab', 'Q', 'W'],
-  [{ w: 1.75 }, 'Caps', 'A', 'S']
+  [{ w: 1.75 }, 'Caps', 'A', 'S'],
 ])
 await helper.loadJsonLayout(layout)
 ```
@@ -332,7 +335,7 @@ await expect.soft(element2).toBeVisible()
 
 // WRONG - Never use non-async assertions
 const text = await locator.textContent()
-expect(text).toBe('Expected')  // Not web-first
+expect(text).toBe('Expected') // Not web-first
 ```
 
 ### Locators
@@ -362,8 +365,12 @@ test.beforeEach(async ({ page }) => {
 
 // WRONG - Tests depend on each other
 let keyCount = 0
-test('add key', () => { keyCount++ })
-test('verify count', () => { /* depends on previous */ })
+test('add key', () => {
+  keyCount++
+})
+test('verify count', () => {
+  /* depends on previous */
+})
 ```
 
 ## Before Writing Tests - Checklist

@@ -14,9 +14,12 @@ declare global {
 }
 
 test.describe('Toast Stacking System', () => {
+  let waitHelpers: WaitHelpers
+
   test.beforeEach(async ({ page }) => {
+    waitHelpers = new WaitHelpers(page)
     await page.goto('/')
-    await page.waitForLoadState('networkidle')
+    await waitHelpers.waitForDoubleAnimationFrame()
   })
 
   test('should display single toast correctly positioned below navbar', async ({ page }) => {
@@ -48,7 +51,6 @@ test.describe('Toast Stacking System', () => {
   })
 
   test('should stack multiple toasts vertically without overlapping', async ({ page }) => {
-    const waitHelpers = new WaitHelpers(page)
     // Trigger multiple toasts with delays
     await page.evaluate(() => {
       const showToast = (message: string, title: string, delay: number) => {
@@ -96,7 +98,6 @@ test.describe('Toast Stacking System', () => {
   })
 
   test('should handle toast removal and remaining toasts should move up', async ({ page }) => {
-    const waitHelpers = new WaitHelpers(page)
     // Show multiple toasts with long duration
     await page.evaluate(() => {
       window.__kleToast.showSuccess('First toast', 'Toast 1', { duration: 10000 })
@@ -142,7 +143,6 @@ test.describe('Toast Stacking System', () => {
   })
 
   test('should display different toast types with correct styling', async ({ page }) => {
-    const waitHelpers = new WaitHelpers(page)
     // Show different types of toasts
     await page.evaluate(() => {
       window.__kleToast.showSuccess('Success message', 'Success', { duration: 10000 })
@@ -185,20 +185,8 @@ test.describe('Toast Stacking System', () => {
     const toast = page.locator('.toast-notification').first()
     await expect(toast).toBeVisible()
 
-    // Wait for auto-dismiss (1000ms + buffer) using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        // Wait ~1200ms using multiple RAF frames
-        const waitFrames = (count: number) => {
-          if (count === 0) {
-            resolve()
-            return
-          }
-          requestAnimationFrame(() => waitFrames(count - 1))
-        }
-        waitFrames(12) // ~1200ms at 60fps
-      })
-    })
+    // Wait for auto-dismiss (1000ms + buffer)
+    await waitHelpers.waitForAnimationFrames(12) // ~1200ms at 60fps
     await expect(toast).not.toBeVisible()
   })
 
@@ -225,7 +213,6 @@ test.describe('Toast Stacking System', () => {
   })
 
   test('should handle rapid toast creation without breaking layout', async ({ page }) => {
-    const waitHelpers = new WaitHelpers(page)
     // Rapidly create multiple toasts
     await page.evaluate(() => {
       for (let i = 0; i < 6; i++) {
