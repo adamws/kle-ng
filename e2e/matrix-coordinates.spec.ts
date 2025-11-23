@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test'
 import { promises as fs } from 'fs'
 import { KeyboardEditorPage } from './pages/KeyboardEditorPage'
 import { WaitHelpers } from './helpers/wait-helpers'
+import { ExtraToolsComponent } from './pages/components/ExtraToolsComponent'
 
 // Helper function to export and parse layout JSON
 async function exportLayoutJSON(page: import('@playwright/test').Page) {
@@ -70,22 +71,23 @@ test.describe('Matrix Coordinates Tool', () => {
   test.beforeEach(async ({ page }) => {
     waitHelpers = new WaitHelpers(page)
     await page.goto('/')
-    await page.waitForLoadState('networkidle')
+    await waitHelpers.waitForDoubleAnimationFrame()
   })
 
   test('should be accessible in Extra Tools dropdown', async ({ page }) => {
-    // Click the Extra Tools button
-    const extraToolsButton = page.locator('.extra-tools-group button')
-    await extraToolsButton.click()
+    const extraTools = new ExtraToolsComponent(page, waitHelpers)
 
-    // Wait for dropdown to appear
-    await page.waitForSelector('.extra-tools-dropdown', { state: 'visible' })
+    // Open the Extra Tools dropdown
+    await extraTools.openDropdown()
 
     // Check that "Add Switch Matrix Coordinates" tool exists
-    const matrixTool = page.locator('.extra-tools-dropdown .dropdown-item').filter({
-      hasText: 'Add Switch Matrix Coordinates',
-    })
-    await expect(matrixTool).toBeVisible()
+    await extraTools.expectToolOptionVisible('Add Switch Matrix Coordinates')
+
+    // Check the title attribute
+    const matrixTool = extraTools
+      .getDropdown()
+      .locator('.dropdown-item')
+      .filter({ hasText: 'Add Switch Matrix Coordinates' })
     await expect(matrixTool).toHaveAttribute(
       'title',
       'Assign matrix coordinates for VIA - automatic or manual drawing',
@@ -194,13 +196,7 @@ test.describe('Matrix Coordinates Tool', () => {
       await jsonToggle.click()
 
       // Wait for JSON panel using RAF
-      await page.evaluate(() => {
-        return new Promise<void>((resolve) => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => resolve())
-          })
-        })
-      })
+      await waitHelpers.waitForDoubleAnimationFrame()
 
       // Check that the JSON contains matrix coordinates
       const jsonContent = page.locator('.json-editor, textarea, .monaco-editor')
@@ -306,13 +302,7 @@ test.describe('Matrix Coordinates Tool', () => {
     await importLayoutJSON(page, fixtureWithLabels, waitHelpers)
 
     // Wait for import using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Get initial layout via JSON export
     const initialLayout = await exportLayoutJSON(page)
@@ -355,30 +345,16 @@ test.describe('Matrix Coordinates Tool', () => {
     ]
 
     // Ensure the app is fully loaded by waiting for a visible element
-    await page.waitForSelector('.keyboard-canvas-container', { state: 'visible', timeout: 15000 })
+    await expect(page.locator('.keyboard-canvas-container')).toBeVisible({ timeout: 15000 })
 
     // Wait for app initialization using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => resolve())
-          })
-        })
-      })
-    })
+    await waitHelpers.waitForAnimationFrames(3)
 
     // Load layout with labels via JSON import
     await importLayoutJSON(page, fixtureWithLabels, waitHelpers)
 
     // Wait for import using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Get initial layout via JSON export
     const initialLayout = await exportLayoutJSON(page)
@@ -431,13 +407,7 @@ test.describe('Matrix Coordinates Tool', () => {
     await importLayoutJSON(page, fixtureWithLabels, waitHelpers)
 
     // Wait for import using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Verify initial labels exist via JSON export
     const initialLayout = await exportLayoutJSON(page)
@@ -464,13 +434,7 @@ test.describe('Matrix Coordinates Tool', () => {
     await okButton.click()
 
     // Wait for transition using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Should now be in draw step
     await expect(page.locator('.draw-section')).toBeVisible()
@@ -530,13 +494,7 @@ test.describe('Matrix Coordinates Tool', () => {
     await canvas.click({ position: { x: 36, y: 36 } })
 
     // Wait for selection using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Verify that the key was selected by checking the Selected counter
     await expect(page.getByTestId('counter-selected')).toContainText('Selected: 1')
@@ -556,8 +514,7 @@ test.describe('Matrix Coordinates Tool', () => {
     await presetButton.click()
 
     // Wait for dropdown items to be in DOM
-    await page.waitForSelector('.preset-dropdown .dropdown-item', {
-      state: 'attached',
+    await expect(page.locator('.preset-dropdown .dropdown-item').first()).toBeAttached({
       timeout: 5000,
     })
 
@@ -568,24 +525,20 @@ test.describe('Matrix Coordinates Tool', () => {
     await viaItem.click()
 
     // Wait for layout to load - Default 60% has 61 keys
-    await page.waitForFunction(
-      () => {
-        const keysCounter = document.querySelector('[data-testid="counter-keys"]')?.textContent
-        if (!keysCounter) return false
-        const match = keysCounter.match(/Keys: (\d+)/)
-        return match ? parseInt(match[1]) === 61 : false
-      },
-      { timeout: 10000 },
-    )
+    await expect
+      .poll(
+        async () => {
+          const keysCounter = await page.getByTestId('counter-keys').textContent()
+          if (!keysCounter) return false
+          const match = keysCounter.match(/Keys: (\d+)/)
+          return match ? parseInt(match[1]) === 61 : false
+        },
+        { timeout: 10000 },
+      )
+      .toBe(true)
 
     // Wait for layout rendering using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Open matrix coordinates modal
     await editor.matrix.open()
@@ -602,15 +555,7 @@ test.describe('Matrix Coordinates Tool', () => {
     await expect(completionAlert).toContainText('valid "row,column" annotations')
 
     // Wait for matrix overlay to be rendered on canvas using RAF
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => resolve())
-          })
-        })
-      })
-    })
+    await waitHelpers.waitForAnimationFrames(3)
 
     // Take a screenshot of the keyboard canvas to verify matrix preview is rendered
     const canvas = page.locator('.keyboard-canvas-container')
@@ -633,26 +578,14 @@ test.describe('Matrix Coordinates Tool', () => {
     await importLayoutJSON(page, fixtureData, waitHelpers)
 
     // Wait for layout to render
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Open modal
     await editor.matrix.open()
     await editor.matrix.expectVisible()
 
     // Wait for modal content to stabilize
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => resolve())
-        })
-      })
-    })
+    await waitHelpers.waitForDoubleAnimationFrame()
 
     // Should show warning
     const warningAlert = page.locator('.alert-warning')
