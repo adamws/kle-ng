@@ -405,6 +405,12 @@ points:
 
 The kle-ng **does not** support export to ergogen format.
 
+> [!IMPORTANT]
+> kle-ng aims to preserve **exact** key positions when importing ergogen layouts
+> but it is very important to double check the alignment
+> when mixing outputs from different tools, for example when using ergogen to generate PCB
+> and [ai03 Plate Generator](https://kbplate.ai03.com/) to generate plate.
+
 ### Importing
 
 kle-ng supports multiple ways to import keyboard layouts:
