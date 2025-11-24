@@ -1,0 +1,4 @@
+# Invalid YAML - missing required structure
+invalid: yaml
+  structure: [
+    this is not valid YAML syntax

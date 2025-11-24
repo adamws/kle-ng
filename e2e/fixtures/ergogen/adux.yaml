@@ -1,0 +1,260 @@
+meta:
+  engine: 4.1.0
+points:
+  zones:
+    matrix:
+      anchor.shift: [50,-100] # Fix KiCad placement
+      columns:
+        pinky:
+          key:
+            spread: 18
+            splay: 15
+            origin: [0, -17]
+          rows:
+            bottom:
+              bind: [5, 0, 0, 0]
+              column_net: P7
+            home:
+              bind: [0, 12, 0, 0]
+              column_net: P6
+            top:
+              bind: [0, 8, 5, 0]
+              column_net: P5
+        ring:
+          key:
+            spread: 18
+            stagger: 17
+            splay: -10
+            origin: [0, -17]
+          rows:
+            bottom:
+              bind: [0, 0, 2, 10]
+              column_net: P4
+            home:
+              bind: [5, 0, 5, 0]
+              column_net: P3
+            top:
+              bind: [0, 6, 0, 0]
+              column_net: P0
+        middle:
+          key:
+            shift: [0.2, 0]
+            spread: 18
+            stagger: 17/3
+            splay: -5
+            origin: [0, -17]
+          rows:
+            bottom:
+              bind: [0, 10, 0, 5]
+              column_net: P1
+            home:
+              bind: 5
+              column_net: P19
+            top:
+              bind: [0, 0, 0, 0]
+              column_net: P18
+        index:
+          key:
+            spread: 18
+            stagger: -17/3
+            splay: -5
+            origin: [0, -17]
+          rows:
+            bottom:
+              bind: [0, 5, 0, 0]
+              column_net: P15
+            home:
+              bind: [5, 0, 5, 0]
+              column_net: P14
+            top:
+              bind: [0, 0, 0, 6]
+              column_net: P16
+        inner:
+          key:
+            spread: 18
+            stagger: -17/6
+            origin: [0, -17]
+          rows:
+            bottom:
+              bind: [5, 19, 20, 2]
+              column_net: P10
+            home:
+              bind: [0, 27, 0, 5]
+              column_net: P20
+            top:
+              bind: [0, 0, 5, 5]
+              column_net: P21
+      rows:
+        bottom:
+          padding: 17
+        home:
+          padding: 17
+        top:
+    thumb:
+      anchor:
+        ref: matrix_inner_bottom
+        shift: [0,-24]
+      columns:
+        first:
+          key:
+            splay: -15
+          rows:
+            only:
+              column_net: P8
+              bind: [10, 1, 0, 70]
+        second:
+          key:
+            spread: 18
+            splay: -10
+            origin: [-9, -9.5]
+          rows:
+            only:
+              column_net: P9
+              bind: [0, 0, 0, 5]
+      rows:
+        only:
+          padding: 17
+      key:
+        footprints:
+outlines:
+  _raw:
+    - what: rectangle
+      where: true
+      bound: true
+      asym: left
+      size: [18,17]
+      corner: 1
+  _first:
+    - what: outline
+      name: _raw
+      fillet: 3
+  _second:
+    - what: outline
+      name: _first
+      fillet: 2
+  _third:
+    - what: outline
+      name: _second
+      fillet: 1
+  bottom:
+    - what: outline
+      name: _third
+      fillet: 0.5
+  _key_slot_negative:
+    - what: rectangle
+      where: true
+      size: 13.8
+  _key_snap:
+    - what: outline
+      name: _key_slot_negative
+      expand: 1.2
+    - what: outline
+      name: _key_slot_negative
+      operation: subtract
+  _prototype_plate:
+    - what: outline
+      name: bottom
+    - what: outline
+      name: _key_slot_negative
+      operation: subtract
+  _mounting_plate:
+    - what: hull
+      points:
+        - matrix_pinky_bottom
+        - matrix_pinky_home
+        - matrix_pinky_top
+        - matrix_ring_bottom
+        - matrix_ring_home
+        - matrix_ring_top
+        - matrix_middle_bottom
+        - matrix_middle_home
+        - matrix_middle_top
+        - matrix_index_bottom
+        - matrix_index_home
+        - matrix_index_top
+        - matrix_inner_bottom
+        - matrix_inner_home
+        - matrix_inner_top
+        - thumb_first_only
+        - thumb_second_only
+      concavity: 50
+      expand: -0.5
+    - what: outline
+      name: bottom
+      operation: intersect
+      fillet: 5
+    - what: outline
+      name: _key_slot_negative
+      operation: subtract
+pcbs:
+  architeuthis_dux:
+    template: kicad8
+    outlines:
+      main:
+        outline: bottom
+    footprints:
+      choc_hotswap:
+        what: ceoloide/switch_choc_v1_v2
+        where: true
+        params:
+          from: =column_net
+          to: GND
+          include_corner_marks: true
+          include_keycap: true
+          keycap_height: 16.5
+          keycap_width: 17.5
+          reversible: true
+          solder: true
+          hotswap: true
+          choc_v2_support: false
+          outer_pad_width_front: 2.0
+          outer_pad_width_back: 2.0
+      mcu:
+        what: ceoloide/mcu_nice_nano
+        where:
+          ref: matrix_inner_home
+        params:
+          reverse_mount: true
+          reversible: true
+          only_required_jumpers: true
+        adjust:
+          shift: [19, -8.5]
+      trrs:
+        what: ceoloide/trrs_pj320a
+        where:
+          ref: matrix_inner_home
+          shift: [32, 6.5]
+        params:
+          SL: GND
+          R2: P2
+          TP: VCC # Tip and Ring 1 are joined together
+          reversible: true
+          symmetric: true
+      jlcpcb_order_number_text:
+        what: ceoloide/utility_text
+        where: matrix_inner_bottom
+        params:
+          text: JLCJLCJLCJLC
+          reversible: true
+        adjust:
+          shift: [0,-u/2 - 1.5]
+      ergogen_logo:
+        what: ceoloide/utility_ergogen_logo
+        where: matrix_middle_bottom
+        params:
+          scale: 2.5
+          reversible: true
+        adjust:
+          shift: [0,-1u]
+cases:
+  prototype:
+    - what: outline
+      name: _prototype_plate
+      extrude: 1.6
+    - what: outline
+      name: _key_snap
+      extrude: 1.6 + 5
+  mounting_plate:
+    - what: outline
+      name: _mounting_plate
+      extrude: 1.2

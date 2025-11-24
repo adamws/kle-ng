@@ -1,0 +1,13 @@
+# Simple 2x2 grid layout - no rotation, no special features
+# This is a minimal test case for basic ergogen processing
+meta:
+  engine: 4.1.0
+points:
+  zones:
+    matrix:
+      columns:
+        outer:
+        inner:
+      rows:
+        bottom:
+        top:
