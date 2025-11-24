@@ -17,9 +17,10 @@
       "rx": 0.5,
       "ry": 2.651843,
       "x": -0.5,
-      "y": -0.5
+      "y": -0.5,
+      "a": 0
     },
-    "matrix_pinky_bottom"
+    ""
   ],
   [
     {
@@ -28,7 +29,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "matrix_pinky_home"
+    ""
   ],
   [
     {
@@ -37,7 +38,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "matrix_pinky_top"
+    ""
   ],
   [
     {
@@ -47,7 +48,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "matrix_ring_bottom"
+    ""
   ],
   [
     {
@@ -56,7 +57,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "matrix_ring_home"
+    ""
   ],
   [
     {
@@ -65,7 +66,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "matrix_ring_top"
+    ""
   ],
   [
     {
@@ -74,7 +75,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "matrix_middle_bottom"
+    ""
   ],
   [
     {
@@ -83,7 +84,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "matrix_middle_home"
+    ""
   ],
   [
     {
@@ -92,7 +93,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "matrix_middle_top"
+    ""
   ],
   [
     {
@@ -101,7 +102,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "matrix_index_bottom"
+    ""
   ],
   [
     {
@@ -110,7 +111,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "thumbfan_near_thumb"
+    ""
   ],
   [
     {
@@ -119,7 +120,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "matrix_index_home"
+    ""
   ],
   [
     {
@@ -128,7 +129,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "matrix_index_top"
+    ""
   ],
   [
     {
@@ -137,7 +138,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "matrix_inner_bottom"
+    ""
   ],
   [
     {
@@ -146,7 +147,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "matrix_inner_home"
+    ""
   ],
   [
     {
@@ -155,7 +156,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "matrix_inner_top"
+    ""
   ],
   [
     {
@@ -165,7 +166,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "thumbfan_home_thumb"
+    ""
   ],
   [
     {
@@ -175,7 +176,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "thumbfan_far_thumb"
+    ""
   ],
   [
     {
@@ -184,7 +185,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "mirror_thumbfan_far_thumb"
+    ""
   ],
   [
     {
@@ -194,7 +195,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "mirror_thumbfan_home_thumb"
+    ""
   ],
   [
     {
@@ -204,7 +205,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "mirror_matrix_inner_top"
+    ""
   ],
   [
     {
@@ -213,7 +214,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "mirror_matrix_inner_home"
+    ""
   ],
   [
     {
@@ -222,7 +223,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "mirror_matrix_inner_bottom"
+    ""
   ],
   [
     {
@@ -231,7 +232,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "mirror_matrix_index_top"
+    ""
   ],
   [
     {
@@ -240,7 +241,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "mirror_matrix_index_home"
+    ""
   ],
   [
     {
@@ -249,7 +250,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "mirror_thumbfan_near_thumb"
+    ""
   ],
   [
     {
@@ -258,7 +259,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "mirror_matrix_index_bottom"
+    ""
   ],
   [
     {
@@ -267,7 +268,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "mirror_matrix_middle_top"
+    ""
   ],
   [
     {
@@ -276,7 +277,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "mirror_matrix_middle_home"
+    ""
   ],
   [
     {
@@ -285,7 +286,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "mirror_matrix_middle_bottom"
+    ""
   ],
   [
     {
@@ -294,7 +295,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "mirror_matrix_ring_top"
+    ""
   ],
   [
     {
@@ -303,7 +304,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "mirror_matrix_ring_home"
+    ""
   ],
   [
     {
@@ -312,7 +313,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "mirror_matrix_ring_bottom"
+    ""
   ],
   [
     {
@@ -322,7 +323,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "mirror_matrix_pinky_top"
+    ""
   ],
   [
     {
@@ -331,7 +332,7 @@
       "x": -0.5,
       "y": -0.5
     },
-    "mirror_matrix_pinky_home"
+    ""
   ],
   [
     {
@@ -340,6 +341,6 @@
       "x": -0.5,
       "y": -0.5
     },
-    "mirror_matrix_pinky_bottom"
+    ""
   ]
 ]
