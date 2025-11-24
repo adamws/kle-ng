@@ -140,4 +140,18 @@ export const SELECTORS = {
     CONTROL: '.move-step-control',
     INPUT: '.move-step-control .custom-number-input input',
   },
+
+  /**
+   * Summary tab and Key Center Positions
+   * ⚠️ TECH DEBT: These selectors use CSS classes instead of data-testid.
+   * Should be migrated to data-testid attributes in the future.
+   */
+  SUMMARY_TAB: {
+    TAB_BUTTON: 'button.tab-btn:has-text("Summary")',
+    KEY_CENTERS_TABLE: '.key-centers-table-container table',
+    TABLE_ROW: '.key-centers-table-container table tbody tr',
+    TABLE_CELL: '.key-centers-table-container table tbody td',
+    UNITS_TOGGLE_U: 'label[for="centers-units-u"]',
+    UNITS_TOGGLE_MM: 'label[for="centers-units-mm"]',
+  },
 } as const
