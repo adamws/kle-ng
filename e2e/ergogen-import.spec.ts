@@ -60,7 +60,7 @@ test.describe('Ergogen Import Tests', () => {
       expect(uiPositions.length).toBe(expectedData.keyCount)
 
       // Extract just x,y coordinates from UI positions
-      const uiCenters = uiPositions.map(pos => ({ x: pos.x, y: pos.y }))
+      const uiCenters = uiPositions.map((pos) => ({ x: pos.x, y: pos.y }))
 
       // Apply Y-axis flip to expected positions (ergogen Y-up vs KLE Y-down)
       const flippedExpectedCenters = ergogenHelper.flipYAxis(expectedData.centers)
@@ -101,7 +101,7 @@ test.describe('Ergogen Import Tests', () => {
       expect(uiPositions.length).toBe(expectedData.keyCount)
 
       // Extract just x,y coordinates from UI positions
-      const uiCenters = uiPositions.map(pos => ({ x: pos.x, y: pos.y }))
+      const uiCenters = uiPositions.map((pos) => ({ x: pos.x, y: pos.y }))
 
       // Apply Y-axis flip to expected positions (ergogen Y-up vs KLE Y-down)
       const flippedExpectedCenters = ergogenHelper.flipYAxis(expectedData.centers)
@@ -142,7 +142,7 @@ test.describe('Ergogen Import Tests', () => {
       expect(uiPositions.length).toBe(expectedData.keyCount)
 
       // Extract just x,y coordinates from UI positions
-      const uiCenters = uiPositions.map(pos => ({ x: pos.x, y: pos.y }))
+      const uiCenters = uiPositions.map((pos) => ({ x: pos.x, y: pos.y }))
 
       // Apply Y-axis flip to expected positions (ergogen Y-up vs KLE Y-down)
       const flippedExpectedCenters = ergogenHelper.flipYAxis(expectedData.centers)

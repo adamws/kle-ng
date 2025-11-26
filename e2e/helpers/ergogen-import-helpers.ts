@@ -205,7 +205,9 @@ export class ErgogenImportHelper {
    * const expectedData = await helper.loadExpectedCenters('simple.json')
    * ```
    */
-  async loadExpectedCenters(fileName: string): Promise<{ keyCount: number; centers: Array<{ x: number; y: number }> }> {
+  async loadExpectedCenters(
+    fileName: string,
+  ): Promise<{ keyCount: number; centers: Array<{ x: number; y: number }> }> {
     // Use process.cwd() to get the project root directory
     const filePath = path.join(process.cwd(), 'e2e/fixtures/ergogen/expected-centers', fileName)
     const fileContent = fs.readFileSync(filePath, 'utf8')
@@ -226,10 +228,10 @@ export class ErgogenImportHelper {
   normalizePositions(positions: Array<{ x: number; y: number }>): Array<{ x: number; y: number }> {
     if (positions.length === 0) return []
 
-    const minX = Math.min(...positions.map(pos => pos.x))
-    const minY = Math.min(...positions.map(pos => pos.y))
+    const minX = Math.min(...positions.map((pos) => pos.x))
+    const minY = Math.min(...positions.map((pos) => pos.y))
 
-    return positions.map(pos => ({
+    return positions.map((pos) => ({
       x: pos.x - minX,
       y: pos.y - minY,
     }))
@@ -249,12 +251,12 @@ export class ErgogenImportHelper {
   flipYAxis(positions: Array<{ x: number; y: number }>): Array<{ x: number; y: number }> {
     if (positions.length === 0) return []
 
-    const minY = Math.min(...positions.map(pos => pos.y))
-    const maxY = Math.max(...positions.map(pos => pos.y))
+    const minY = Math.min(...positions.map((pos) => pos.y))
+    const maxY = Math.max(...positions.map((pos) => pos.y))
 
-    return positions.map(pos => ({
+    return positions.map((pos) => ({
       x: pos.x,
-      y: (maxY - minY) - (pos.y - minY),
+      y: maxY - minY - (pos.y - minY),
     }))
   }
 
@@ -271,14 +273,17 @@ export class ErgogenImportHelper {
    */
   async comparePositions(
     uiPositions: Array<{ x: number; y: number }>,
-    expectedPositions: Array<{ x: number; y: number }>
+    expectedPositions: Array<{ x: number; y: number }>,
   ): Promise<void> {
     // Normalize both sets
     const normalizedUi = this.normalizePositions(uiPositions)
     const normalizedExpected = this.normalizePositions(expectedPositions)
 
     // For each UI position, find the closest expected position
-    const matchedPositions: Array<{ ui: { x: number; y: number }, expected: { x: number; y: number } }> = []
+    const matchedPositions: Array<{
+      ui: { x: number; y: number }
+      expected: { x: number; y: number }
+    }> = []
     const usedExpectedIndices = new Set<number>()
 
     for (const uiPos of normalizedUi) {
@@ -290,7 +295,7 @@ export class ErgogenImportHelper {
 
         const expectedPos = normalizedExpected[i]
         const distance = Math.sqrt(
-          Math.pow(uiPos.x - expectedPos.x, 2) + Math.pow(uiPos.y - expectedPos.y, 2)
+          Math.pow(uiPos.x - expectedPos.x, 2) + Math.pow(uiPos.y - expectedPos.y, 2),
         )
 
         if (distance < closestDistance) {
@@ -302,7 +307,7 @@ export class ErgogenImportHelper {
       if (closestIndex !== -1) {
         matchedPositions.push({
           ui: uiPos,
-          expected: normalizedExpected[closestIndex]
+          expected: normalizedExpected[closestIndex],
         })
         usedExpectedIndices.add(closestIndex)
       }
