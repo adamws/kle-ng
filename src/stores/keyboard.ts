@@ -21,6 +21,10 @@ import {
   createEmptyTextSizes,
 } from '../utils/array-helpers'
 import { getSerializedData as getSerializedDataUtil } from '../utils/serialization'
+import {
+  transformRotationOrigin as transformRotationOriginUtil,
+  moveRotationOriginsToPosition as moveRotationOriginsToPositionUtil,
+} from '../utils/keyboard-transformations'
 import { useFontStore } from './font'
 import { svgCache } from '../utils/caches/SVGCache'
 import { parseCache } from '../utils/caches/ParseCache'
@@ -961,50 +965,10 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     canvasMode.value = 'select'
   }
 
-  // Generalized function: Transform rotation origin from current to target point without changing visual appearance
+  // Wrapper: Transform rotation origin from current to target point without changing visual appearance
+  // Implementation moved to src/utils/keyboard-transformations.ts
   const transformRotationOrigin = (key: Key, targetOriginX: number, targetOriginY: number) => {
-    // Only process keys that have rotation properties
-    if (
-      !key.rotation_angle ||
-      key.rotation_angle === 0 ||
-      key.rotation_x === undefined ||
-      key.rotation_y === undefined
-    ) {
-      // For non-rotated keys, just set the new origin
-      key.rotation_x = targetOriginX
-      key.rotation_y = targetOriginY
-      return
-    }
-
-    const currentOriginX = key.rotation_x
-    const currentOriginY = key.rotation_y
-    const angle = key.rotation_angle
-
-    const angleRad = D.degreesToRadians(angle)
-    const cos = Math.cos(angleRad)
-    const sin = Math.sin(angleRad)
-
-    // Step 1: Calculate current rendered position of key's top-left corner
-    const dx_key = D.sub(key.x, currentOriginX)
-    const dy_key = D.sub(key.y, currentOriginY)
-
-    const renderedKeyX = D.add(currentOriginX, D.sub(D.mul(dx_key, cos), D.mul(dy_key, sin)))
-    const renderedKeyY = D.add(currentOriginY, D.add(D.mul(dx_key, sin), D.mul(dy_key, cos)))
-
-    // Step 2: Calculate new key position so that when rotated around target origin,
-    // it produces the same rendered position
-    const dx_rendered = D.sub(renderedKeyX, targetOriginX)
-    const dy_rendered = D.sub(renderedKeyY, targetOriginY)
-
-    // Apply inverse rotation to get new key position
-    const newX = D.add(targetOriginX, D.add(D.mul(dx_rendered, cos), D.mul(dy_rendered, sin)))
-    const newY = D.add(targetOriginY, D.sub(D.mul(dy_rendered, cos), D.mul(dx_rendered, sin)))
-
-    // Update key properties
-    key.x = newX
-    key.y = newY
-    key.rotation_x = targetOriginX
-    key.rotation_y = targetOriginY
+    transformRotationOriginUtil(key, targetOriginX, targetOriginY)
   }
 
   // Move selected keys by exact delta X and Y values (in internal units)
@@ -1024,72 +988,19 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     })
   }
 
-  // Move rotation origins to a specific position or key centers without changing visual appearance
-  // If position is null, moves to key centers (each key gets its own center)
-  // If position is provided, all keys use that shared position
-  // If targetKeys is provided, only those keys are affected; otherwise uses selectedKeys
+  // Wrapper: Move rotation origins to a specific position or key centers
+  // Implementation moved to src/utils/keyboard-transformations.ts
+  // Store wrapper adds state management (saveState) after modifications
   const moveRotationOriginsToPosition = (
     position: { x: number; y: number } | null,
     targetKeys?: Key[],
   ) => {
     const keysToModify = targetKeys || selectedKeys.value
-    let modifiedCount = 0
-
-    keysToModify.forEach((key) => {
-      if (position === null) {
-        // Mode 1: Move to key centers (each key uses its own center)
-        if (key.rotation_angle && key.rotation_angle !== 0) {
-          // Calculate visual center of the rotated key
-          const currentOriginX = key.rotation_x!
-          const currentOriginY = key.rotation_y!
-          const angle = key.rotation_angle
-
-          const angleRad = D.degreesToRadians(angle)
-          const cos = Math.cos(angleRad)
-          const sin = Math.sin(angleRad)
-
-          // Get unrotated center and transform it to visual center
-          const unrotatedCenterX = D.add(key.x, D.div(key.width || 1, 2))
-          const unrotatedCenterY = D.add(key.y, D.div(key.height || 1, 2))
-
-          const dx_center = D.sub(unrotatedCenterX, currentOriginX)
-          const dy_center = D.sub(unrotatedCenterY, currentOriginY)
-
-          const visualCenterX = D.add(
-            currentOriginX,
-            D.sub(D.mul(dx_center, cos), D.mul(dy_center, sin)),
-          )
-          const visualCenterY = D.add(
-            currentOriginY,
-            D.add(D.mul(dx_center, sin), D.mul(dy_center, cos)),
-          )
-
-          // Use generalized function to transform rotation origin
-          transformRotationOrigin(key, visualCenterX, visualCenterY)
-          modifiedCount++
-        } else {
-          // For non-rotated keys, set rotation origin to their center
-          const centerX = D.add(key.x, D.div(key.width || 1, 2))
-          const centerY = D.add(key.y, D.div(key.height || 1, 2))
-          key.rotation_x = centerX
-          key.rotation_y = centerY
-          modifiedCount++
-        }
-      } else {
-        // Mode 2: Move to specified position (all keys share this origin)
-        transformRotationOrigin(key, position.x, position.y)
-        modifiedCount++
-      }
-    })
+    const modifiedCount = moveRotationOriginsToPositionUtil(keys.value, position, keysToModify)
 
     if (modifiedCount > 0) {
       saveState()
     }
-  }
-
-  // Legacy method for backward compatibility
-  const moveRotationsToKeyCenters = () => {
-    moveRotationOriginsToPosition(null, selectedKeys.value)
   }
 
   // URL Sharing functionality
@@ -1604,7 +1515,6 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     applyRotation,
     cancelRotation,
     transformRotationOrigin,
-    moveRotationsToKeyCenters,
     moveRotationOriginsToPosition,
 
     // Movement functions
