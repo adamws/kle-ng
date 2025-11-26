@@ -3,12 +3,13 @@
  *
  * Pure functions for geometric transformations of keyboard keys.
  * These functions modify Key objects to change their rotation origins and positions
- * while preserving their visual appearance on screen.
+ * while preserving their visual appearance on screen, or create mirrored copies of keys.
  *
  * Key concepts:
  * - Rotation origin: The point around which a key rotates
  * - Visual position: Where the key appears on screen after rotation transformation
  * - Coordinate transformation: Converting between rotated and screen coordinate systems
+ * - Mirroring: Creating copies of keys reflected across horizontal/vertical axes
  *
  * @module keyboard-transformations
  */
@@ -187,4 +188,155 @@ export function moveRotationOriginsToPosition(
   })
 
   return modifiedCount
+}
+
+/**
+ * Mirror axis configuration for key mirroring operations.
+ *
+ * Defines a line across which keys will be mirrored:
+ * - Horizontal axis (direction='horizontal'): Line parallel to X-axis at specified Y coordinate
+ * - Vertical axis (direction='vertical'): Line parallel to Y-axis at specified X coordinate
+ */
+export type MirrorAxis = {
+  /** X coordinate of the mirror line (used for vertical mirroring) */
+  x: number
+  /** Y coordinate of the mirror line (used for horizontal mirroring) */
+  y: number
+  /** Direction of the mirror axis */
+  direction: 'horizontal' | 'vertical'
+}
+
+/**
+ * Mirror keys across an axis, creating new mirrored copies.
+ *
+ * This function creates deep clones of the input keys and mirrors them across
+ * the specified axis. The mirroring handles both position and rotation:
+ *
+ * **Horizontal Mirror (across Y-axis)**:
+ * - Mirrors Y position: `new_y = 2 * lineY - keyY - keyHeight`
+ * - Negates rotation angle: `new_angle = -angle`
+ * - Mirrors rotation_y origin
+ * - Preserves rotation_x origin
+ *
+ * **Vertical Mirror (across X-axis)**:
+ * - Mirrors X position: `new_x = 2 * lineX - keyX - keyWidth`
+ * - Negates rotation angle: `new_angle = -angle`
+ * - Mirrors rotation_x origin
+ * - Preserves rotation_y origin
+ *
+ * @param keys - Keys to mirror (originals are not modified)
+ * @param axis - Mirror axis configuration
+ * @returns Array of new mirrored key copies
+ *
+ * @example
+ * ```typescript
+ * const originalKeys = [key1, key2, key3]
+ * const axis: MirrorAxis = {
+ *   x: 7,
+ *   y: 4,
+ *   direction: 'horizontal'
+ * }
+ *
+ * const mirroredKeys = mirrorKeys(originalKeys, axis)
+ * console.log(mirroredKeys.length) // 3 new keys
+ * console.log(originalKeys[0] === mirroredKeys[0]) // false (deep clones)
+ * ```
+ */
+export function mirrorKeys(keys: Key[], axis: MirrorAxis): Key[] {
+  return keys.map((key) => {
+    // Deep clone to avoid mutations of originals
+    const newKey = JSON.parse(JSON.stringify(key)) as Key
+
+    if (axis.direction === 'horizontal') {
+      // Horizontal line mirrors keys vertically (across Y-axis)
+      const keyY = key.y
+      const lineY = axis.y
+      newKey.y = D.mirrorPoint(keyY, lineY, key.height)
+
+      // Handle rotation for horizontal mirror
+      if (key.rotation_angle !== undefined && key.rotation_angle !== 0) {
+        // Mirror the rotation angle - for horizontal mirror, negate the angle
+        newKey.rotation_angle = -key.rotation_angle
+
+        // Mirror the rotation origin Y coordinate
+        if (key.rotation_y !== undefined) {
+          newKey.rotation_y = D.mirrorPoint(key.rotation_y, lineY)
+        }
+
+        // Keep rotation origin X coordinate unchanged for horizontal mirror
+        if (key.rotation_x !== undefined) {
+          newKey.rotation_x = key.rotation_x
+        }
+      }
+    } else {
+      // Vertical line mirrors keys horizontally (across X-axis)
+      const keyX = key.x
+      const lineX = axis.x
+      newKey.x = D.mirrorPoint(keyX, lineX, key.width)
+
+      // Handle rotation for vertical mirror
+      if (key.rotation_angle !== undefined && key.rotation_angle !== 0) {
+        // Mirror the rotation angle - for vertical mirror, negate the angle
+        newKey.rotation_angle = -key.rotation_angle
+
+        // Mirror the rotation origin X coordinate
+        if (key.rotation_x !== undefined) {
+          newKey.rotation_x = D.mirrorPoint(key.rotation_x, lineX)
+        }
+
+        // Keep rotation origin Y coordinate unchanged for vertical mirror
+        if (key.rotation_y !== undefined) {
+          newKey.rotation_y = key.rotation_y
+        }
+      }
+    }
+
+    return newKey
+  })
+}
+
+/**
+ * Calculate mirror axis position from canvas coordinates.
+ *
+ * Converts canvas pixel coordinates to key unit coordinates and snaps to grid.
+ * This is typically called when the user clicks on the canvas to set the mirror axis.
+ *
+ * @param canvasPos - Position in canvas pixels (from mouse event)
+ * @param direction - Mirror direction (horizontal or vertical)
+ * @param renderUnit - Canvas rendering unit (pixels per key unit, typically 54)
+ * @param snapStep - Grid snapping step size in key units (e.g., 0.25)
+ * @returns Mirror axis configuration with snapped coordinates
+ *
+ * @example
+ * ```typescript
+ * // User clicks at canvas position (270, 162) pixels
+ * const axis = calculateMirrorAxis(
+ *   { x: 270, y: 162 },
+ *   'horizontal',
+ *   54,  // renderUnit
+ *   0.25 // snapStep
+ * )
+ * // Returns: { x: 5, y: 3, direction: 'horizontal' }
+ * // (270/54 = 5.0, 162/54 = 3.0, both snap to themselves)
+ * ```
+ */
+export function calculateMirrorAxis(
+  canvasPos: { x: number; y: number },
+  direction: 'horizontal' | 'vertical',
+  renderUnit: number,
+  snapStep: number,
+): MirrorAxis {
+  // Convert canvas pixels to key units
+  const rawX = D.div(canvasPos.x, renderUnit)
+  const rawY = D.div(canvasPos.y, renderUnit)
+
+  // Snap to grid
+  const snapX = D.roundToStep(rawX, snapStep)
+  const snapY = D.roundToStep(rawY, snapStep)
+
+  return {
+    x: snapX,
+    y: snapY,
+    direction,
+  }
 }

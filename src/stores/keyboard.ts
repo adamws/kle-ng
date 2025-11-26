@@ -24,6 +24,9 @@ import { getSerializedData as getSerializedDataUtil } from '../utils/serializati
 import {
   transformRotationOrigin as transformRotationOriginUtil,
   moveRotationOriginsToPosition as moveRotationOriginsToPositionUtil,
+  mirrorKeys as mirrorKeysUtil,
+  calculateMirrorAxis as calculateMirrorAxisUtil,
+  type MirrorAxis,
 } from '../utils/keyboard-transformations'
 import { useFontStore } from './font'
 import { svgCache } from '../utils/caches/SVGCache'
@@ -108,8 +111,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
   const rectSelectEnd = ref({ x: 0, y: 0 })
   const tempSelectedKeys: Ref<Key[]> = ref([])
 
-  const mirrorAxis: Ref<{ x: number; y: number; direction: 'horizontal' | 'vertical' } | null> =
-    ref(null)
+  const mirrorAxis: Ref<MirrorAxis | null> = ref(null)
   const showMirrorPreview = ref(false)
 
   // Rotation state
@@ -797,81 +799,21 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     }
   }
 
+  // Wrapper: Calculate mirror axis position from canvas coordinates
+  // Implementation moved to src/utils/keyboard-transformations.ts
   const setMirrorAxis = (pos: { x: number; y: number }, direction: 'horizontal' | 'vertical') => {
-    // Convert canvas coordinates to key units (same logic as updateMousePosition)
-    // pos already comes from getCanvasPosition() which accounts for zoom, pan, and coordinate offset
     const RENDER_UNIT = 54 // Should match renderOptions.unit
-
-    // Convert to key units
-    const rawX = D.div(pos.x, RENDER_UNIT)
-    const rawY = D.div(pos.y, RENDER_UNIT)
-
-    // Snap to move step grid
-    const snapX = D.roundToStep(rawX, moveStep.value)
-    const snapY = D.roundToStep(rawY, moveStep.value)
-
-    mirrorAxis.value = {
-      x: snapX,
-      y: snapY,
-      direction,
-    }
+    mirrorAxis.value = calculateMirrorAxisUtil(pos, direction, RENDER_UNIT, moveStep.value)
     showMirrorPreview.value = true
   }
 
   const performMirror = () => {
     if (!mirrorAxis.value || selectedKeys.value.length === 0) return
 
-    const mirrored = selectedKeys.value.map((key) => {
-      const newKey = JSON.parse(JSON.stringify(key)) as Key
+    // Utility returns NEW mirrored keys
+    const mirrored = mirrorKeysUtil(selectedKeys.value, mirrorAxis.value)
 
-      if (mirrorAxis.value!.direction === 'horizontal') {
-        // Horizontal line mirrors keys vertically (across Y-axis)
-        const keyY = key.y
-        const lineY = mirrorAxis.value!.y
-        newKey.y = D.mirrorPoint(keyY, lineY, key.height) // Mirror across horizontal line, allow negative
-
-        // Handle rotation for horizontal mirror
-        if (key.rotation_angle !== undefined && key.rotation_angle !== 0) {
-          // Mirror the rotation angle - for horizontal mirror, negate the angle
-          newKey.rotation_angle = -key.rotation_angle
-
-          // Mirror the rotation origin Y coordinate
-          if (key.rotation_y !== undefined) {
-            newKey.rotation_y = D.mirrorPoint(key.rotation_y, lineY)
-          }
-
-          // Keep rotation origin X coordinate unchanged for horizontal mirror
-          if (key.rotation_x !== undefined) {
-            newKey.rotation_x = key.rotation_x
-          }
-        }
-      } else {
-        // Vertical line mirrors keys horizontally (across X-axis)
-        const keyX = key.x
-        const lineX = mirrorAxis.value!.x
-        const mirroredX = D.mirrorPoint(keyX, lineX, key.width)
-        newKey.x = mirroredX // Mirror across vertical line, allow negative
-
-        // Handle rotation for vertical mirror
-        if (key.rotation_angle !== undefined && key.rotation_angle !== 0) {
-          // Mirror the rotation angle - for vertical mirror, negate the angle
-          newKey.rotation_angle = -key.rotation_angle
-
-          // Mirror the rotation origin X coordinate
-          if (key.rotation_x !== undefined) {
-            newKey.rotation_x = D.mirrorPoint(key.rotation_x, lineX)
-          }
-
-          // Keep rotation origin Y coordinate unchanged for vertical mirror
-          if (key.rotation_y !== undefined) {
-            newKey.rotation_y = key.rotation_y
-          }
-        }
-      }
-
-      return newKey
-    })
-
+    // Store adds them to layout
     keys.value.push(...mirrored)
     selectedKeys.value = mirrored
     saveState()
