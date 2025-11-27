@@ -1,9 +1,10 @@
-import { Key, Keyboard } from '@adamws/kle-serial'
+import { Key, Keyboard, Serial } from '@adamws/kle-serial'
 import Decimal from 'decimal.js'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore - ergogen is a JavaScript library without type definitions
 import ergogen from 'ergogen'
 import yaml from 'js-yaml'
+import LZString from 'lz-string'
 
 /**
  * TypeScript interfaces for Ergogen data structures
@@ -385,5 +386,35 @@ export async function parseErgogenConfig(config: string): Promise<Keyboard> {
   } catch (error) {
     console.error('Error parsing Ergogen config:', error)
     throw error instanceof Error ? error : new Error('Failed to parse Ergogen config')
+  }
+}
+
+/**
+ * Encodes a keyboard layout to an ergogen.xyz URL
+ * Similar to encodeConfig from ergogen-gui, but without injections
+ * Uses KLE JSON format in the config property
+ * @param keyboard - The keyboard layout to encode
+ * @returns URL string for ergogen.xyz
+ */
+export function encodeKeyboardToErgogenUrl(keyboard: Keyboard): string {
+  try {
+    // Get KLE JSON format (array-based serialization)
+    const kleData = Serial.serialize(keyboard)
+    const kleJson = JSON.stringify(kleData)
+
+    // Create ShareableConfig object (without injections)
+    const shareableConfig = {
+      config: kleJson,
+    }
+
+    // JSON stringify and compress
+    const jsonString = JSON.stringify(shareableConfig)
+    const compressed = LZString.compressToEncodedURIComponent(jsonString)
+
+    // Create ergogen.xyz URL
+    return `https://ergogen.xyz#${compressed}`
+  } catch (error) {
+    console.error('Error encoding keyboard to ergogen URL:', error)
+    throw error instanceof Error ? error : new Error('Failed to encode keyboard to ergogen URL')
   }
 }
