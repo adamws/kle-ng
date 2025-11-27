@@ -395,7 +395,7 @@ const downloadViaJson = () => {
   URL.revokeObjectURL(url)
 }
 
-const exportToErgogenWebGui = async () => {
+const exportToErgogenWebGui = () => {
   try {
     if (keyboardStore.keys.length === 0) {
       toast.showError('Cannot export empty keyboard layout', 'Export Failed')
@@ -410,24 +410,8 @@ const exportToErgogenWebGui = async () => {
     // Encode to ergogen.xyz URL
     const ergogenUrl = encodeKeyboardToErgogenUrl(keyboard)
 
-    // Copy to clipboard if available
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      await navigator.clipboard.writeText(ergogenUrl)
-      toast.showSuccess(
-        'Ergogen Web GUI link copied to clipboard. Open it in ergogen.xyz to edit your layout!',
-        'Link copied successfully!',
-      )
-    } else {
-      // Fallback: show the URL in a custom toast with longer duration
-      toast.showInfo(
-        'Copy this link to open in Ergogen Web GUI: ' + ergogenUrl,
-        'Ergogen Web GUI Link Generated',
-        {
-          duration: 10000, // 10 seconds for manual copying
-          showCloseButton: true,
-        },
-      )
-    }
+    // Open the URL in a new tab
+    window.open(ergogenUrl, '_blank', 'noopener,noreferrer')
 
     console.log('Ergogen Web GUI URL generated:', ergogenUrl)
   } catch (error) {
