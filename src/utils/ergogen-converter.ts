@@ -1,4 +1,4 @@
-import { Key, Keyboard } from '@adamws/kle-serial'
+import { Key, Keyboard, Serial } from '@adamws/kle-serial'
 import Decimal from 'decimal.js'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore - ergogen is a JavaScript library without type definitions
@@ -553,17 +553,19 @@ export function keyboardToErgogenConfig(keyboard: Keyboard): string {
 /**
  * Encodes a keyboard layout to an ergogen.xyz URL
  * Similar to encodeConfig from ergogen-gui, but without injections
+ * Uses KLE JSON format in the config property
  * @param keyboard - The keyboard layout to encode
  * @returns URL string for ergogen.xyz
  */
 export function encodeKeyboardToErgogenUrl(keyboard: Keyboard): string {
   try {
-    // Convert keyboard to ergogen config YAML
-    const configYaml = keyboardToErgogenConfig(keyboard)
+    // Get KLE JSON format (array-based serialization)
+    const kleData = Serial.serialize(keyboard)
+    const kleJson = JSON.stringify(kleData)
 
     // Create ShareableConfig object (without injections)
     const shareableConfig = {
-      config: configYaml,
+      config: kleJson,
     }
 
     // JSON stringify and compress
