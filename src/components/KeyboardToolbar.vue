@@ -94,6 +94,16 @@
                 Download PNG
               </a>
             </li>
+            <li>
+              <a
+                class="dropdown-item"
+                data-testid="export-ergogen-web-gui"
+                href="#"
+                @click.prevent="exportToErgogenWebGui"
+              >
+                Edit in Ergogen Web GUI
+              </a>
+            </li>
           </ul>
         </div>
 
@@ -169,7 +179,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, nextTick, watch } from 'vue'
-import { useKeyboardStore } from '@/stores/keyboard'
+import { useKeyboardStore, Keyboard } from '@/stores/keyboard'
 import { useMatrixDrawingStore } from '@/stores/matrix-drawing'
 import presetsMetadata from '@/data/presets.json'
 import { parseJsonString } from '@/utils/serialization'
@@ -179,7 +189,7 @@ import { createPngWithKleLayout, extractKleLayout, hasKleMetadata } from '@/util
 import { isViaFormat, convertViaToKle, convertKleToVia } from '@/utils/via-import'
 import { stringifyWithRounding } from '@/utils/serialization'
 import { decodeLayoutFromUrl, fetchGistLayout, loadErgogenKeyboard } from '@/utils/url-sharing'
-import { parseErgogenConfig } from '@/utils/ergogen-converter'
+import { parseErgogenConfig, encodeKeyboardToErgogenUrl } from '@/utils/ergogen-converter'
 import LZString from 'lz-string'
 
 // Store
@@ -383,6 +393,48 @@ const downloadViaJson = () => {
   a.download = `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}-via.json`
   a.click()
   URL.revokeObjectURL(url)
+}
+
+const exportToErgogenWebGui = async () => {
+  try {
+    if (keyboardStore.keys.length === 0) {
+      toast.showError('Cannot export empty keyboard layout', 'Export Failed')
+      return
+    }
+
+    // Get the current keyboard state
+    const keyboard = new Keyboard()
+    keyboard.keys = JSON.parse(JSON.stringify(keyboardStore.keys))
+    keyboard.meta = JSON.parse(JSON.stringify(keyboardStore.metadata))
+
+    // Encode to ergogen.xyz URL
+    const ergogenUrl = encodeKeyboardToErgogenUrl(keyboard)
+
+    // Copy to clipboard if available
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(ergogenUrl)
+      toast.showSuccess(
+        'Ergogen Web GUI link copied to clipboard. Open it in ergogen.xyz to edit your layout!',
+        'Link copied successfully!',
+      )
+    } else {
+      // Fallback: show the URL in a custom toast with longer duration
+      toast.showInfo(
+        'Copy this link to open in Ergogen Web GUI: ' + ergogenUrl,
+        'Ergogen Web GUI Link Generated',
+        {
+          duration: 10000, // 10 seconds for manual copying
+          showCloseButton: true,
+        },
+      )
+    }
+
+    console.log('Ergogen Web GUI URL generated:', ergogenUrl)
+  } catch (error) {
+    console.error('Error exporting to Ergogen Web GUI:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Failed to export to Ergogen Web GUI'
+    toast.showError(errorMessage, 'Export Failed')
+  }
 }
 
 const downloadPng = async () => {
