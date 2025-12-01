@@ -1441,4 +1441,335 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     expect(layoutString).not.toContain('"5,1"')
     expect(layoutString).not.toContain('"5,2"')
   })
+
+  test('should support T-junction when drawing on existing row segment', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
+    // Layout: A B C D (horizontal row)
+    //         E (below B)
+    // Create a row A-B-C, then click on segment B-C and draw to D
+    // Result should be A-B-D-C (D inserted between B and C, not appended)
+    const fixtureData = [
+      ['', '', '', ''],
+      [{ x: 1 }, ''], // E is below B (offset by 1 unit)
+    ]
+
+    // Import layout via JSON
+    await importLayoutJSON(page, fixtureData, waitHelpers)
+
+    // Open Matrix Coordinates Modal
+    await editor.matrix.open()
+    await editor.matrix.expectVisible()
+    await editor.matrix.expectRowModeActive()
+
+    const overlay = editor.matrix.getOverlay()
+    const unit = 54
+    const border = 9
+    const offset = unit / 2 + border
+
+    // Step 1: Draw initial row A-B-C (keys 0, 1, 2)
+    const keyAX = offset
+    const keyAY = offset
+    const keyCX = offset + 2 * unit
+    const keyCY = offset
+
+    await editor.matrix.clickAt(keyAX, keyAY)
+    await overlay.click({ position: { x: keyCX, y: keyCY }, force: true })
+
+    // Wait for row to complete
+    await waitHelpers.waitForDoubleAnimationFrame()
+
+    // Step 2: Click on segment between B and C (middle of B-C segment)
+    const segmentBCX = offset + 1.5 * unit
+    const segmentBCY = offset
+
+    await overlay.click({ position: { x: segmentBCX, y: segmentBCY }, force: true })
+    await waitHelpers.waitForAnimationFrames(1)
+
+    // Step 3: Draw to E (key below B) to create T-junction
+    const keyEX = offset + unit
+    const keyEY = offset + unit
+
+    await overlay.click({ position: { x: keyEX, y: keyEY }, force: true })
+
+    // Wait for T-junction to complete
+    await waitHelpers.waitForDoubleAnimationFrame()
+
+    // Take screenshot for visual verification of T-junction wire path
+    // Should show A-B-E path going down, then continuing to C
+    await editor.matrix.expectOverlayScreenshot('t-junction-row-segment.png')
+
+    // Export layout to verify matrix coordinates
+    const exportedLayout = await exportLayoutJSON(page)
+    const layoutString = JSON.stringify(exportedLayout)
+
+    // Verify the order: We should have A(0,?), B(0,?), E(0,?), C(0,?)
+    // All 4 keys should have row 0
+    const row0Assignments = (layoutString.match(/"0,/g) || []).length
+    expect(row0Assignments).toBe(4)
+
+    // Parse the layout to verify all keys got assigned
+    // Extract only string elements (skip positioning objects like {a:0})
+    const allKeys: string[] = []
+    for (const row of exportedLayout as unknown[][]) {
+      for (const item of row) {
+        if (typeof item === 'string' && item.includes(',')) {
+          allKeys.push(item)
+        }
+      }
+    }
+
+    // All 4 keys should have row 0
+    const keysWithRow0 = allKeys.filter((key) => key.startsWith('0,'))
+    expect(keysWithRow0.length).toBe(4)
+  })
+
+  test('should support T-junction when clicking on a node (circle)', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
+    // Layout: A B C
+    //           D (below B)
+    // Create a row A-B-C, then click on node B and draw to D
+    // Result should be A-B-D-C (D inserted after B)
+    const fixtureData = [
+      ['', '', ''],
+      [{ x: 1 }, ''], // D is below B (offset by 1 unit)
+    ]
+
+    await importLayoutJSON(page, fixtureData, waitHelpers)
+
+    await editor.matrix.open()
+    await editor.matrix.expectVisible()
+    await editor.matrix.expectRowModeActive()
+
+    const overlay = editor.matrix.getOverlay()
+    const unit = 54
+    const border = 9
+    const offset = unit / 2 + border
+
+    // Step 1: Draw initial row A-B-C
+    await editor.matrix.clickAt(offset, offset)
+    await overlay.click({ position: { x: offset + 2 * unit, y: offset }, force: true })
+    await waitHelpers.waitForDoubleAnimationFrame()
+
+    // Step 2: Click on node B (the circle at B's position)
+    const nodeBX = offset + unit
+    const nodeBY = offset
+
+    await overlay.click({ position: { x: nodeBX, y: nodeBY }, force: true })
+    await waitHelpers.waitForAnimationFrames(1)
+
+    // Step 3: Draw to D to create T-junction
+    const keyDX = offset + unit
+    const keyDY = offset + unit
+
+    await overlay.click({ position: { x: keyDX, y: keyDY }, force: true })
+    await waitHelpers.waitForDoubleAnimationFrame()
+
+    // Take screenshot for visual verification of T-junction at node
+    // Should show A-B-D path going down from node B, then continuing to C
+    await editor.matrix.expectOverlayScreenshot('t-junction-node.png')
+
+    // Export and verify
+    const exportedLayout = await exportLayoutJSON(page)
+
+    // Extract all keys with matrix coordinates
+    const allKeys: string[] = []
+    for (const row of exportedLayout as unknown[][]) {
+      for (const item of row) {
+        if (typeof item === 'string' && item.includes(',')) {
+          allKeys.push(item)
+        }
+      }
+    }
+
+    // All 4 keys (A, B, D, C) should have row 0
+    const keysWithRow0 = allKeys.filter((key) => key.startsWith('0,'))
+    expect(keysWithRow0.length).toBe(4)
+  })
+
+  test('should prepend when clicking first node and drawing outward', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
+    // Layout: D A B C (all in a row)
+    // Create row A-B-C first (keys 1,2,3), then click on first node A and draw to D (key 0 to the left)
+    // Result should be D-A-B-C (D prepended to the start)
+    const fixtureData = [['', '', '', '']] // Four keys in a row
+
+    await importLayoutJSON(page, fixtureData, waitHelpers)
+
+    await editor.matrix.open()
+    await editor.matrix.expectVisible()
+    await editor.matrix.expectRowModeActive()
+
+    const overlay = editor.matrix.getOverlay()
+    const unit = 54
+    const border = 9
+    const offset = unit / 2 + border
+
+    // Step 1: Draw initial row A-B-C (keys 1, 2, 3 - starting from second key)
+    const keyAX = offset + unit
+    const keyAY = offset
+    const keyCX = offset + 3 * unit
+    const keyCY = offset
+
+    await editor.matrix.clickAt(keyAX, keyAY)
+    await overlay.click({ position: { x: keyCX, y: keyCY }, force: true })
+    await waitHelpers.waitForDoubleAnimationFrame()
+
+    // Step 2: Click on first node A
+    await overlay.click({ position: { x: keyAX, y: keyAY }, force: true })
+    await waitHelpers.waitForAnimationFrames(1)
+
+    // Step 3: Draw to D (key 0, to the left of A)
+    const keyDX = offset
+    const keyDY = offset
+
+    await overlay.click({ position: { x: keyDX, y: keyDY }, force: true })
+    await waitHelpers.waitForDoubleAnimationFrame()
+
+    // Take screenshot for visual verification of prepend operation
+    // Should show D-A-B-C wire with D prepended to the left
+    await editor.matrix.expectOverlayScreenshot('prepend-node.png')
+
+    // Export and verify
+    const exportedLayout = await exportLayoutJSON(page)
+
+    // Extract all keys with matrix coordinates
+    const allKeys: string[] = []
+    for (const row of exportedLayout as unknown[][]) {
+      for (const item of row) {
+        if (typeof item === 'string' && item.includes(',')) {
+          allKeys.push(item)
+        }
+      }
+    }
+
+    // All 4 keys (D, A, B, C) should have row 0
+    const keysWithRow0 = allKeys.filter((key) => key.startsWith('0,'))
+    expect(keysWithRow0.length).toBe(4)
+  })
+
+  test('should append when clicking last node and drawing outward', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
+    // Layout: A B C D
+    // Create row A-B-C, then click on last node C and draw to D (to the right)
+    // Result should be A-B-C-D (D appended to the end)
+    const fixtureData = [['', '', '', '']]
+
+    await importLayoutJSON(page, fixtureData, waitHelpers)
+
+    await editor.matrix.open()
+    await editor.matrix.expectVisible()
+    await editor.matrix.expectRowModeActive()
+
+    const overlay = editor.matrix.getOverlay()
+    const unit = 54
+    const border = 9
+    const offset = unit / 2 + border
+
+    // Step 1: Draw initial row A-B-C
+    const keyAX = offset
+    const keyAY = offset
+    const keyCX = offset + 2 * unit
+    const keyCY = offset
+
+    await editor.matrix.clickAt(keyAX, keyAY)
+    await overlay.click({ position: { x: keyCX, y: keyCY }, force: true })
+    await waitHelpers.waitForDoubleAnimationFrame()
+
+    // Step 2: Click on last node C
+    await overlay.click({ position: { x: keyCX, y: keyCY }, force: true })
+    await waitHelpers.waitForAnimationFrames(1)
+
+    // Step 3: Draw to D (to the right of C)
+    const keyDX = offset + 3 * unit
+    const keyDY = offset
+
+    await overlay.click({ position: { x: keyDX, y: keyDY }, force: true })
+    await waitHelpers.waitForDoubleAnimationFrame()
+
+    // Take screenshot for visual verification of append operation
+    // Should show A-B-C-D wire with D appended to the right
+    await editor.matrix.expectOverlayScreenshot('append-node.png')
+
+    // Export and verify
+    const exportedLayout = await exportLayoutJSON(page)
+
+    // Extract all keys with matrix coordinates
+    const allKeys: string[] = []
+    for (const row of exportedLayout as unknown[][]) {
+      for (const item of row) {
+        if (typeof item === 'string' && item.includes(',')) {
+          allKeys.push(item)
+        }
+      }
+    }
+
+    // All 4 keys (A, B, C, D) should have row 0
+    const keysWithRow0 = allKeys.filter((key) => key.startsWith('0,'))
+    expect(keysWithRow0.length).toBe(4)
+  })
+
+  test('should support multiple T-junctions on the same row', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
+    // Layout: A B C D
+    //           E F (E below B, F below C)
+    // 1. Create row A-B-C-D
+    // 2. Create T-junction at B-C to E
+    // 3. Create T-junction at C-D to F
+    const fixtureData = [
+      ['', '', '', ''],
+      [{ x: 1 }, '', ''],
+    ]
+
+    await importLayoutJSON(page, fixtureData, waitHelpers)
+
+    await editor.matrix.open()
+    await editor.matrix.expectVisible()
+    await editor.matrix.expectRowModeActive()
+
+    const overlay = editor.matrix.getOverlay()
+    const unit = 54
+    const border = 9
+    const offset = unit / 2 + border
+
+    // Step 1: Draw initial row A-B-C-D
+    await editor.matrix.clickAt(offset, offset)
+    await overlay.click({ position: { x: offset + 3 * unit, y: offset }, force: true })
+    await waitHelpers.waitForDoubleAnimationFrame()
+
+    // Step 2: Create first T-junction at B-C to E
+    const segmentBCX = offset + 1.5 * unit
+    await overlay.click({ position: { x: segmentBCX, y: offset }, force: true })
+    await waitHelpers.waitForAnimationFrames(1)
+
+    const keyEX = offset + unit
+    const keyEY = offset + unit
+    await overlay.click({ position: { x: keyEX, y: keyEY }, force: true })
+    await waitHelpers.waitForDoubleAnimationFrame()
+
+    // Step 3: Create second T-junction at C-D to F
+    const segmentCDX = offset + 2.5 * unit
+    await overlay.click({ position: { x: segmentCDX, y: offset }, force: true })
+    await waitHelpers.waitForAnimationFrames(1)
+
+    const keyFX = offset + 2 * unit
+    const keyFY = offset + unit
+    await overlay.click({ position: { x: keyFX, y: keyFY }, force: true })
+    await waitHelpers.waitForDoubleAnimationFrame()
+
+    // Take screenshot for visual verification of multiple T-junctions
+    // Should show A-B-E path going down, continuing to C, then C-F path going down, continuing to D
+    await editor.matrix.expectOverlayScreenshot('multiple-t-junctions.png')
+
+    // Verify all 6 keys have the same row
+    const exportedLayout = await exportLayoutJSON(page)
+    const layoutString = JSON.stringify(exportedLayout)
+
+    const row0Assignments = (layoutString.match(/"0,/g) || []).length
+    expect(row0Assignments).toBe(6)
+  })
 })

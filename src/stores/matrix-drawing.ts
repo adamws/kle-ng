@@ -8,6 +8,7 @@ import {
   getKeysWithColumnAssignments,
   parseMatrixCoordinates,
 } from '@/utils/matrix-validation'
+import { getKeyDistance } from '@/utils/keyboard-geometry'
 
 export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
   // Modal state - tracks if the matrix coordinates modal is open
@@ -22,6 +23,13 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
   // Track if we're continuing an existing row/column (index of the row/column being continued)
   const continuingRowIndex = ref<number | null>(null)
   const continuingColumnIndex = ref<number | null>(null)
+
+  // Track the index at which to insert new keys when drawing on an existing wire segment
+  // This enables T-junction support - null means append to end (default behavior)
+  const insertAfterIndex = ref<number | null>(null)
+
+  // Track the key that was clicked to start the T-junction (for proximity calculation)
+  const insertionAnchorKey = ref<Key | null>(null)
 
   // Sensitivity for line intersection (0.0 = most permissive, 1.0 = strictest)
   // Default 0.3 provides good balance between catching intended keys and avoiding "barely touched" keys
@@ -73,6 +81,8 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
     currentSequence.value = []
     continuingRowIndex.value = null
     continuingColumnIndex.value = null
+    insertAfterIndex.value = null
+    insertionAnchorKey.value = null
   }
 
   const addKeyToSequence = (key: Key) => {
@@ -88,9 +98,22 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
         const existingRow = completedRows.value.get(continuingRowIndex.value)
         if (existingRow) {
           const newKeys = currentSequence.value.filter((key) => !existingRow.includes(key))
-          completedRows.value.set(continuingRowIndex.value, [...existingRow, ...newKeys])
+
+          // If insertAfterIndex is set, find optimal insertion using path cost calculation
+          // Otherwise, append to the end (default behavior)
+          let mergedRow: Key[]
+          if (insertAfterIndex.value !== null && newKeys.length > 0) {
+            mergedRow = findOptimalInsertion(existingRow, insertAfterIndex.value, newKeys)
+          } else {
+            // Append to end (original behavior)
+            mergedRow = [...existingRow, ...newKeys]
+          }
+
+          completedRows.value.set(continuingRowIndex.value, mergedRow)
         }
         continuingRowIndex.value = null // Reset continuation state
+        insertAfterIndex.value = null // Reset insertion point
+        insertionAnchorKey.value = null // Reset anchor key
       } else {
         // Create new row with next free number (fills gaps from removed rows)
         completedRows.value.set(findNextFreeRowNumber(), [...currentSequence.value])
@@ -101,9 +124,22 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
         const existingCol = completedColumns.value.get(continuingColumnIndex.value)
         if (existingCol) {
           const newKeys = currentSequence.value.filter((key) => !existingCol.includes(key))
-          completedColumns.value.set(continuingColumnIndex.value, [...existingCol, ...newKeys])
+
+          // If insertAfterIndex is set, find optimal insertion using path cost calculation
+          // Otherwise, append to the end (default behavior)
+          let mergedCol: Key[]
+          if (insertAfterIndex.value !== null && newKeys.length > 0) {
+            mergedCol = findOptimalInsertion(existingCol, insertAfterIndex.value, newKeys)
+          } else {
+            // Append to end (original behavior)
+            mergedCol = [...existingCol, ...newKeys]
+          }
+
+          completedColumns.value.set(continuingColumnIndex.value, mergedCol)
         }
         continuingColumnIndex.value = null // Reset continuation state
+        insertAfterIndex.value = null // Reset insertion point
+        insertionAnchorKey.value = null // Reset anchor key
       } else {
         // Create new column with next free number (fills gaps from removed columns)
         completedColumns.value.set(findNextFreeColumnNumber(), [...currentSequence.value])
@@ -113,10 +149,121 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
     currentSequence.value = []
   }
 
+  /**
+   * Calculate total geometric path cost for a sequence of keys
+   * Cost = sum of Euclidean distances between consecutive keys
+   * Uses getKeyDistance from keyboard-geometry.ts which handles rotation correctly
+   * @param keys - Array of keys in traversal order
+   * @returns Total path cost (in layout units)
+   */
+  const calculatePathCost = (keys: Key[]): number => {
+    if (keys.length < 2) return 0
+
+    let totalCost = 0
+    for (let i = 0; i < keys.length - 1; i++) {
+      const curr = keys[i]
+      const next = keys[i + 1]
+      if (!curr || !next) continue // Type guard
+
+      totalCost += getKeyDistance(curr, next)
+    }
+    return totalCost
+  }
+
+  /**
+   * Find optimal ordering for inserting new keys into existing wire
+   * Evaluates 4 orderings and returns the one with minimum path cost
+   * @param existingWire - Current wire array
+   * @param insertIndex - Index after which to insert (or before, depending on cost)
+   * @param newKeys - Keys to insert
+   * @returns Optimally ordered merged wire
+   */
+  const findOptimalInsertion = (
+    existingWire: Key[],
+    insertIndex: number,
+    newKeys: Key[],
+  ): Key[] => {
+    if (newKeys.length === 0) return existingWire
+
+    const THRESHOLD = 0.01 // Treat costs within 0.01 units as equal
+
+    // Generate 4 candidate orderings
+    const candidates: { ordering: Key[]; cost: number; type: string }[] = []
+
+    // 1. Forward after anchor: [...before, anchor, newKeys, ...after]
+    const forwardAfter = [
+      ...existingWire.slice(0, insertIndex + 1),
+      ...newKeys,
+      ...existingWire.slice(insertIndex + 1),
+    ]
+    candidates.push({
+      ordering: forwardAfter,
+      cost: calculatePathCost(forwardAfter),
+      type: 'forward-after',
+    })
+
+    // 2. Forward before anchor: [...before, newKeys, anchor, ...after]
+    const forwardBefore = [
+      ...existingWire.slice(0, insertIndex),
+      ...newKeys,
+      ...existingWire.slice(insertIndex),
+    ]
+    candidates.push({
+      ordering: forwardBefore,
+      cost: calculatePathCost(forwardBefore),
+      type: 'forward-before',
+    })
+
+    // 3. Reversed after anchor: [...before, anchor, ...reversed(newKeys), ...after]
+    const reversedAfter = [
+      ...existingWire.slice(0, insertIndex + 1),
+      ...newKeys.slice().reverse(),
+      ...existingWire.slice(insertIndex + 1),
+    ]
+    candidates.push({
+      ordering: reversedAfter,
+      cost: calculatePathCost(reversedAfter),
+      type: 'reversed-after',
+    })
+
+    // 4. Reversed before anchor: [...before, ...reversed(newKeys), anchor, ...after]
+    const reversedBefore = [
+      ...existingWire.slice(0, insertIndex),
+      ...newKeys.slice().reverse(),
+      ...existingWire.slice(insertIndex),
+    ]
+    candidates.push({
+      ordering: reversedBefore,
+      cost: calculatePathCost(reversedBefore),
+      type: 'reversed-before',
+    })
+
+    // Find minimum cost
+    const minCost = Math.min(...candidates.map((c) => c.cost))
+
+    // Filter candidates within threshold of minimum
+    const nearOptimal = candidates.filter((c) => c.cost - minCost < THRESHOLD)
+
+    // Preference order for tie-breaking: forward-after > forward-before > reversed-after > reversed-before
+    const preferenceOrder = ['forward-after', 'forward-before', 'reversed-after', 'reversed-before']
+
+    for (const preferredType of preferenceOrder) {
+      const candidate = nearOptimal.find((c) => c.type === preferredType)
+      if (candidate) {
+        return candidate.ordering
+      }
+    }
+
+    // Fallback (should never reach here)
+    return forwardAfter
+  }
+
   const clearCurrentSequence = () => {
     currentSequence.value = []
     continuingRowIndex.value = null
     continuingColumnIndex.value = null
+    insertAfterIndex.value = null
+    insertionAnchorKey.value = null
   }
 
   const clearDrawings = () => {
@@ -125,6 +272,8 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
     currentSequence.value = []
     continuingRowIndex.value = null
     continuingColumnIndex.value = null
+    insertAfterIndex.value = null
+    insertionAnchorKey.value = null
   }
 
   const getCompletedDrawings = () => {
@@ -616,6 +765,17 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
     }
   }
 
+  /**
+   * Set the insertion index for T-junction support
+   * This determines where new keys will be inserted in an existing wire
+   * @param index - The array index after which to insert (null to append to end)
+   * @param anchorKey - The key that was clicked (for proximity calculation)
+   */
+  const setInsertAfterIndex = (index: number | null, anchorKey: Key | null = null) => {
+    insertAfterIndex.value = index
+    insertionAnchorKey.value = anchorKey
+  }
+
   return {
     // State
     isModalOpen,
@@ -640,6 +800,7 @@ export const useMatrixDrawingStore = defineStore('matrix-drawing', () => {
     clearDrawings,
     getCompletedDrawings,
     setSensitivity,
+    setInsertAfterIndex,
     canAddKeyToSequence,
     getUnavailableKeys,
     removeKeyFromRow,

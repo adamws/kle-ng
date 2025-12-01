@@ -567,6 +567,45 @@ const handleClick = (event: MouseEvent) => {
   } else {
     // First key - just add it and wait for second click
     matrixDrawingStore.addKeyToSequence(closestKey)
+
+    // T-junction support: If user clicked on an existing segment or node, store the insertion point
+    // This allows new segments to be inserted at the clicked position rather than appended
+    // Pass the clicked key as anchor for proximity-based insertion direction
+    if (hoveredSegment.value !== null) {
+      // Clicking on a segment - set the insertion point to be after the segment's start key
+      // Use the segment's start key as the anchor for proximity calculation
+      matrixDrawingStore.setInsertAfterIndex(
+        hoveredSegment.value.segmentStartIndex,
+        hoveredSegment.value.startKey,
+      )
+    } else if (hoveredAnchor.value !== null) {
+      // Clicking on a node (circle) - find the position of this key in its wire
+      const anchor = hoveredAnchor.value
+      let wire: Key[] | undefined
+
+      if (matrixDrawingStore.drawingType === 'row' && anchor.type === 'row') {
+        wire = matrixDrawingStore.completedRows.get(anchor.index)
+      } else if (matrixDrawingStore.drawingType === 'column' && anchor.type === 'column') {
+        wire = matrixDrawingStore.completedColumns.get(anchor.index)
+      }
+
+      if (wire) {
+        // Find the index of the clicked key in the wire
+        const keyIndex = wire.indexOf(anchor.key)
+        if (keyIndex !== -1) {
+          // Set insertion point with the clicked key as anchor for proximity calculation
+          matrixDrawingStore.setInsertAfterIndex(keyIndex, anchor.key)
+        } else {
+          matrixDrawingStore.setInsertAfterIndex(null, null)
+        }
+      } else {
+        matrixDrawingStore.setInsertAfterIndex(null, null)
+      }
+    } else {
+      // Not clicking on a segment or node - ensure insertion point is null (append to end)
+      matrixDrawingStore.setInsertAfterIndex(null, null)
+    }
+
     // Clear hover states now that we're actively drawing
     hoveredRow.value = null
     hoveredColumn.value = null
