@@ -1509,10 +1509,7 @@ const moveSelectedKeys = (deltaX: number, deltaY: number) => {
     key.y = D.add(key.y, deltaY)
 
     // Update rotation origins to maintain relative offset when lock rotations is enabled
-    if (
-      keyboardStore.lockRotations &&
-      (key.rotation_x !== undefined || key.rotation_y !== undefined)
-    ) {
+    if (keyboardStore.lockRotations && key.rotation_angle && key.rotation_angle !== 0) {
       if (key.rotation_x !== undefined) {
         key.rotation_x = D.add(key.rotation_x, deltaX)
       }

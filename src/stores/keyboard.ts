@@ -750,7 +750,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
           key.y = D.add(originalPos.y, snappedDeltaY)
 
           // Update rotation origins to maintain relative offset when lock rotations is enabled
-          if (lockRotations.value) {
+          if (lockRotations.value && key.rotation_angle && key.rotation_angle !== 0) {
             const originalRotation = keysOriginalRotations.value.get(key)
             if (originalRotation) {
               if (originalRotation.rotation_x !== undefined) {
@@ -920,12 +920,14 @@ export const useKeyboardStore = defineStore('keyboard', () => {
       key.x = D.add(key.x, deltaX)
       key.y = D.add(key.y, deltaY)
 
-      // If the key has rotation origins, move them too to maintain rotation behavior
-      if (key.rotation_x !== undefined) {
-        key.rotation_x = D.add(key.rotation_x, deltaX)
-      }
-      if (key.rotation_y !== undefined) {
-        key.rotation_y = D.add(key.rotation_y, deltaY)
+      // Update rotation origins when lock rotations is enabled and key has non-zero rotation
+      if (lockRotations.value && key.rotation_angle && key.rotation_angle !== 0) {
+        if (key.rotation_x !== undefined) {
+          key.rotation_x = D.add(key.rotation_x, deltaX)
+        }
+        if (key.rotation_y !== undefined) {
+          key.rotation_y = D.add(key.rotation_y, deltaY)
+        }
       }
     })
   }

@@ -416,7 +416,8 @@ const exportToErgogenWebGui = () => {
     console.log('Ergogen Web GUI URL generated:', ergogenUrl)
   } catch (error) {
     console.error('Error exporting to Ergogen Web GUI:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Failed to export to Ergogen Web GUI'
+    const errorMessage =
+      error instanceof Error ? error.message : 'Failed to export to Ergogen Web GUI'
     toast.showError(errorMessage, 'Export Failed')
   }
 }
