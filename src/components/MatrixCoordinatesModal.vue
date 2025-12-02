@@ -536,8 +536,10 @@ const acceptWarning = () => {
   // Hide the existing matrix overlay since we're about to remove all legends
   exitPreviewMode()
 
-  // Remove all legends from all keys (all 12 positions)
+  // Remove all legends from regular keys only (skip decal/ghost keys)
   keyboardStore.keys.forEach((key) => {
+    // Preserve labels on decal and ghost keys since they don't participate in wiring
+    if (key.ghost || key.decal) return
     key.labels = createEmptyLabels()
   })
 

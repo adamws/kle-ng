@@ -113,29 +113,16 @@ describe('MatrixCoordinatesModal', () => {
         expect(key!.labels[i]).toBe('')
       }
     })
+  })
 
-    it('should clear labels from ghost and decal keys too', async () => {
-      // Setup: Create regular, ghost, and decal keys with labels
+  describe('Decal and Ghost Key Label Preservation', () => {
+    it('should preserve labels on ghost keys while clearing regular key labels', async () => {
       store.addKey({ x: 0, y: 0 }) // regular
       store.addKey({ x: 1, y: 0, ghost: true }) // ghost
-      store.addKey({ x: 2, y: 0, decal: true }) // decal
 
-      const regularKey = store.keys[0]
-      expect(regularKey).toBeDefined()
-      const ghostKey = store.keys[1]
-      expect(ghostKey).toBeDefined()
-      const decalKey = store.keys[2]
-      expect(decalKey).toBeDefined()
+      store.keys[0]!.labels[0] = 'A'
+      store.keys[1]!.labels[0] = 'GhostLabel'
 
-      // Set labels at various positions
-      regularKey!.labels[0] = 'R0'
-      regularKey!.labels[4] = 'R4'
-      ghostKey!.labels[0] = 'G0'
-      ghostKey!.labels[5] = 'G5'
-      decalKey!.labels[0] = 'D0'
-      decalKey!.labels[6] = 'D6'
-
-      // Mount the modal
       const wrapper = mount(MatrixCoordinatesModal, {
         props: {
           visible: true,
@@ -149,12 +136,71 @@ describe('MatrixCoordinatesModal', () => {
       await okButton.trigger('click')
       await wrapper.vm.$nextTick()
 
-      // Verify all keys (including ghost and decal) have cleared labels
-      store.keys.forEach((key) => {
-        for (let i = 0; i < 12; i++) {
-          expect(key.labels[i]).toBe('')
-        }
+      expect(store.keys[0]!.labels[0]).toBe('') // cleared
+      expect(store.keys[1]!.labels[0]).toBe('GhostLabel') // preserved
+    })
+
+    it('should preserve labels on decal keys while clearing regular key labels', async () => {
+      store.addKey({ x: 0, y: 0 }) // regular
+      store.addKey({ x: 1, y: 0, decal: true }) // decal
+
+      store.keys[0]!.labels[0] = 'B'
+      store.keys[1]!.labels[0] = 'DecalLabel'
+
+      const wrapper = mount(MatrixCoordinatesModal, {
+        props: {
+          visible: true,
+        },
       })
+
+      await wrapper.vm.$nextTick()
+
+      // Click the OK button
+      const okButton = wrapper.find('button[aria-label="Ok"]')
+      await okButton.trigger('click')
+      await wrapper.vm.$nextTick()
+
+      expect(store.keys[0]!.labels[0]).toBe('') // cleared
+      expect(store.keys[1]!.labels[0]).toBe('DecalLabel') // preserved
+    })
+
+    it('should handle mixed key types correctly preserving all 12 label positions', async () => {
+      store.addKey({ x: 0, y: 0 }) // regular
+      store.addKey({ x: 1, y: 0, ghost: true }) // ghost
+      store.addKey({ x: 2, y: 0, decal: true }) // decal
+      store.addKey({ x: 3, y: 0 }) // regular
+
+      // Set labels on multiple positions
+      for (let i = 0; i < 4; i++) {
+        store.keys[i]!.labels[0] = `Label${i}`
+        store.keys[i]!.labels[2] = `Label${i}-pos2`
+        store.keys[i]!.labels[5] = `Label${i}-pos5`
+      }
+
+      const wrapper = mount(MatrixCoordinatesModal, {
+        props: {
+          visible: true,
+        },
+      })
+
+      await wrapper.vm.$nextTick()
+
+      // Click the OK button
+      const okButton = wrapper.find('button[aria-label="Ok"]')
+      await okButton.trigger('click')
+      await wrapper.vm.$nextTick()
+
+      // Verify regular keys completely cleared (all 12 positions)
+      for (let i = 0; i < 12; i++) {
+        expect(store.keys[0]!.labels[i]).toBe('')
+        expect(store.keys[3]!.labels[i]).toBe('')
+      }
+
+      // Verify ghost/decal keys preserved
+      expect(store.keys[1]!.labels[0]).toBe('Label1')
+      expect(store.keys[1]!.labels[2]).toBe('Label1-pos2')
+      expect(store.keys[2]!.labels[0]).toBe('Label2')
+      expect(store.keys[2]!.labels[5]).toBe('Label2-pos5')
     })
   })
 
