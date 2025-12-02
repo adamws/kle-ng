@@ -135,18 +135,35 @@ describe('rotation-points', () => {
       const points = calculateRotationPoints(keys, 0.25)
 
       // Points should be sorted by y first, then x
+      expect(points.length).toBeGreaterThan(1) // Ensure we have points to compare
+
+      // Check that all consecutive pairs are properly ordered
+      const violations: string[] = []
       for (let i = 1; i < points.length; i++) {
         const prev = points[i - 1]
         const curr = points[i]
         expect(prev).toBeDefined()
         expect(curr).toBeDefined()
 
-        if (Math.abs(prev!.y - curr!.y) > 0.0001) {
-          expect(prev!.y).toBeLessThan(curr!.y)
+        // Check sort order: y first, then x
+        const yDiff = Math.abs(prev!.y - curr!.y)
+        const EPSILON = 0.0001
+
+        if (yDiff > EPSILON) {
+          // Different y values: check ordering
+          if (prev!.y >= curr!.y) {
+            violations.push(`Y ordering violation at index ${i}: ${prev!.y} >= ${curr!.y}`)
+          }
         } else {
-          expect(prev!.x).toBeLessThanOrEqual(curr!.x)
+          // Same y values: check x ordering
+          if (prev!.x > curr!.x) {
+            violations.push(`X ordering violation at index ${i}: ${prev!.x} > ${curr!.x}`)
+          }
         }
       }
+
+      // Assert no violations occurred
+      expect(violations).toEqual([])
     })
   })
 

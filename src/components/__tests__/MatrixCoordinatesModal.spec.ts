@@ -232,14 +232,14 @@ describe('MatrixCoordinatesModal', () => {
       const continueButton = wrapper.find('button[aria-label="Continue"]')
 
       // Button should exist because we have partial annotation
-      if (continueButton.exists()) {
-        await continueButton.trigger('click')
-        await wrapper.vm.$nextTick()
+      expect(continueButton.exists()).toBe(true)
 
-        // Verify labels are NOT cleared
-        expect(key0!.labels[0]).toBe('0,')
-        expect(key1!.labels[0]).toBe('1,')
-      }
+      await continueButton.trigger('click')
+      await wrapper.vm.$nextTick()
+
+      // Verify labels are NOT cleared
+      expect(key0!.labels[0]).toBe('0,')
+      expect(key1!.labels[0]).toBe('1,')
     })
   })
 })

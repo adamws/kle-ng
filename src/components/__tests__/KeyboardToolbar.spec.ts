@@ -245,11 +245,9 @@ describe('KeyboardToolbar', () => {
       // Check that numeric values are rounded to 6 decimal places
       const key = (data as { keys: Key[] }).keys.find((k: Key) => k.labels && k.labels[4] === 'B')
       expect(key).toBeDefined()
-      if (key) {
-        expect(key.x).toBe(1.123457) // Rounded to 6 decimal places
-        expect(key.y).toBe(2.987654) // Rounded to 6 decimal places
-        expect(key.width).toBe(1.555556) // Rounded to 6 decimal places
-      }
+      expect(key!.x).toBe(1.123457) // Rounded to 6 decimal places
+      expect(key!.y).toBe(2.987654) // Rounded to 6 decimal places
+      expect(key!.width).toBe(1.555556) // Rounded to 6 decimal places
     })
 
     it('should use correct filename for KLE internal export', async () => {

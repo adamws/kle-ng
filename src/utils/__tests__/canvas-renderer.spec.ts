@@ -231,12 +231,15 @@ describe('CanvasRenderer', () => {
       expect(calls.length).toBeGreaterThanOrEqual(3) // At least 3 labels rendered
 
       // Check that positions don't overlap - left should be < right
-      const leftX = calls.find((call) => call[0] === 'Q')?.[1] || 0
-      const rightX = calls.find((call) => call[0] === 'W')?.[1] || 0
+      const leftCall = calls.find((call) => call[0] === 'Q')
+      const rightCall = calls.find((call) => call[0] === 'W')
 
-      if (leftX && rightX) {
-        expect(leftX).toBeLessThan(rightX) // Left should be to the left of right
-      }
+      expect(leftCall).toBeDefined()
+      expect(rightCall).toBeDefined()
+
+      const leftX = leftCall![1]
+      const rightX = rightCall![1]
+      expect(leftX).toBeLessThan(rightX) // Left should be to the left of right
     })
 
     it('should use larger margins for large keys', () => {

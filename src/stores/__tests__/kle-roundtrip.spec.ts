@@ -96,16 +96,30 @@ describe('KLE Round-trip Compatibility Tests', () => {
       const exported = store.getSerializedData('kle-internal')
 
       // Check that keys with only default values have empty arrays
-      exported.keys.forEach((key: Record<string, unknown>) => {
-        // If textColor array is empty, all values were default
-        if (Array.isArray(key.textColor) && key.textColor.length === 0) {
-          expect(key.textColor).toEqual([])
-        }
-        // If textSize array is empty, all values were default
-        if (Array.isArray(key.textSize) && key.textSize.length === 0) {
-          expect(key.textSize).toEqual([])
-        }
+      const emptyTextColorKeys = exported.keys.filter(
+        (key: Record<string, unknown>) =>
+          Array.isArray(key.textColor) && key.textColor.length === 0,
+      )
+      const emptyTextSizeKeys = exported.keys.filter(
+        (key: Record<string, unknown>) => Array.isArray(key.textSize) && key.textSize.length === 0,
+      )
+
+      // All empty arrays should be properly empty
+      emptyTextColorKeys.forEach((key: Record<string, unknown>) => {
+        expect(key.textColor).toEqual([])
       })
+      emptyTextSizeKeys.forEach((key: Record<string, unknown>) => {
+        expect(key.textSize).toEqual([])
+      })
+
+      // Verify at least some keys have these arrays (test data validation)
+      const hasTextColorArray = exported.keys.some((key: Record<string, unknown>) =>
+        Array.isArray(key.textColor),
+      )
+      const hasTextSizeArray = exported.keys.some((key: Record<string, unknown>) =>
+        Array.isArray(key.textSize),
+      )
+      expect(hasTextColorArray || hasTextSizeArray).toBe(true)
     })
 
     it('should truncate arrays at last meaningful value', () => {
@@ -138,12 +152,17 @@ describe('KLE Round-trip Compatibility Tests', () => {
       const exported = store.getSerializedData('kle-internal')
 
       // Check all textSize values are numbers
+      const allTextSizeValues: unknown[] = []
       exported.keys.forEach((key: Record<string, unknown>) => {
         if (Array.isArray(key.textSize)) {
-          key.textSize.forEach((value: unknown) => {
-            expect(typeof value).toBe('number')
-          })
+          allTextSizeValues.push(...key.textSize)
         }
+      })
+      // Verify we have some textSize values to test
+      expect(allTextSizeValues.length).toBeGreaterThan(0)
+      // Verify all values are numbers
+      allTextSizeValues.forEach((value: unknown) => {
+        expect(typeof value).toBe('number')
       })
     })
   })
@@ -216,13 +235,17 @@ describe('KLE Round-trip Compatibility Tests', () => {
       expect(exported.keys).toHaveLength(modernFixture.keys.length)
 
       // Verify no null values in exported labels
+      const allLabels: unknown[] = []
       exported.keys.forEach((key: Record<string, unknown>) => {
         if (Array.isArray(key.labels)) {
-          key.labels.forEach((label: unknown) => {
-            // Should be string, never null in modern export
-            expect(typeof label).toBe('string')
-          })
+          allLabels.push(...key.labels)
         }
+      })
+      // Verify we have labels to test
+      expect(allLabels.length).toBeGreaterThan(0)
+      // All labels should be strings, never null in modern export
+      allLabels.forEach((label: unknown) => {
+        expect(typeof label).toBe('string')
       })
 
       // The legacy fixture demonstrates the old format with null

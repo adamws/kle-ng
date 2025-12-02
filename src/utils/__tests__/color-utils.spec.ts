@@ -218,22 +218,32 @@ describe('Color Utils', () => {
         { original: '#8040C0', tolerance: 1 }, // This color may have minor rounding differences
       ]
 
-      testColors.forEach(({ original, tolerance }) => {
+      // Split colors into exact and tolerant groups
+      const exactColors = testColors.filter((t) => t.tolerance === 0)
+      const tolerantColors = testColors.filter((t) => t.tolerance > 0)
+
+      // Test exact conversions (should round-trip perfectly)
+      exactColors.forEach(({ original }) => {
         const hsv = hexToHsv(original)
         const converted = hsvToHex(hsv.h, hsv.s, hsv.v)
-
-        if (tolerance === 0) {
-          expect(converted.toLowerCase()).toBe(original.toLowerCase())
-        } else {
-          // For colors with potential rounding issues, check that conversion is close
-          const originalRgb = hexToRgb(original)
-          const convertedRgb = hexToRgb(converted)
-
-          expect(Math.abs(convertedRgb.r - originalRgb.r)).toBeLessThanOrEqual(tolerance)
-          expect(Math.abs(convertedRgb.g - originalRgb.g)).toBeLessThanOrEqual(tolerance)
-          expect(Math.abs(convertedRgb.b - originalRgb.b)).toBeLessThanOrEqual(tolerance)
-        }
+        expect(converted.toLowerCase()).toBe(original.toLowerCase())
       })
+
+      // Test tolerant conversions (allow small rounding differences)
+      tolerantColors.forEach(({ original, tolerance }) => {
+        const hsv = hexToHsv(original)
+        const converted = hsvToHex(hsv.h, hsv.s, hsv.v)
+        const originalRgb = hexToRgb(original)
+        const convertedRgb = hexToRgb(converted)
+
+        expect(Math.abs(convertedRgb.r - originalRgb.r)).toBeLessThanOrEqual(tolerance)
+        expect(Math.abs(convertedRgb.g - originalRgb.g)).toBeLessThanOrEqual(tolerance)
+        expect(Math.abs(convertedRgb.b - originalRgb.b)).toBeLessThanOrEqual(tolerance)
+      })
+
+      // Verify we tested both types
+      expect(exactColors.length).toBeGreaterThan(0)
+      expect(tolerantColors.length).toBeGreaterThan(0)
     })
   })
 })

@@ -45,12 +45,12 @@ describe('JsonEditorPanel', () => {
 
       // Simulate the formatJsonCompact function behavior
       const component = wrapper.vm as { formatJsonCompact?: (data: unknown[]) => string }
-      if (component.formatJsonCompact) {
-        const result = component.formatJsonCompact(mockData)
-        expect(result.startsWith('[')).toBe(true)
-        expect(result.endsWith(']')).toBe(true)
-        expect(result).toContain('"name":"test"')
-      }
+      expect(component.formatJsonCompact).toBeDefined()
+
+      const result = component.formatJsonCompact!(mockData)
+      expect(result.startsWith('[')).toBe(true)
+      expect(result.endsWith(']')).toBe(true)
+      expect(result).toContain('"name":"test"')
     })
 
     it('should validate JSON and show errors for invalid JSON', async () => {
@@ -137,22 +137,22 @@ describe('JsonEditorPanel', () => {
       const component = wrapper.vm as { toJsonCompactLine?: (obj: unknown) => string }
 
       // This tests the actual formatting behavior implemented in the component
-      if (component.toJsonCompactLine) {
-        const result = component.toJsonCompactLine(testObj)
+      expect(component.toJsonCompactLine).toBeDefined()
 
-        // Should include defined properties
-        expect(result).toContain('"width":1.25')
-        expect(result).toContain('"height":2')
-        expect(result).toContain('"x2":-0.25')
-        expect(result).toContain('"y2":0')
-        expect(result).toContain('"labels":["Q"]')
+      const result = component.toJsonCompactLine!(testObj)
 
-        // Should NOT include undefined properties
-        expect(result).not.toContain('width2')
-        expect(result).not.toContain('height2')
-        expect(result).not.toContain('stepped')
-        expect(result).not.toContain('undefined')
-      }
+      // Should include defined properties
+      expect(result).toContain('"width":1.25')
+      expect(result).toContain('"height":2')
+      expect(result).toContain('"x2":-0.25')
+      expect(result).toContain('"y2":0')
+      expect(result).toContain('"labels":["Q"]')
+
+      // Should NOT include undefined properties
+      expect(result).not.toContain('width2')
+      expect(result).not.toContain('height2')
+      expect(result).not.toContain('stepped')
+      expect(result).not.toContain('undefined')
     })
   })
 })

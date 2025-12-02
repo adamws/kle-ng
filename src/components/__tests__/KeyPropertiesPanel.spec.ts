@@ -430,11 +430,14 @@ describe('KeyPropertiesPanel', () => {
         expect(input.attributes('disabled')).toBeDefined()
       })
 
-      // Also check secondary height if in advanced mode
-      const secondaryHeightInput = wrapper.find('input[title="Secondary Height"]')
-      if (secondaryHeightInput.exists()) {
-        expect(secondaryHeightInput.attributes('disabled')).toBeDefined()
-      }
+      // Find all height-related inputs (primary and secondary)
+      const allHeightInputs = wrapper.findAll(
+        'input[title="Height"], input[title="Secondary Height"]',
+      )
+      // All height inputs should be disabled for rotary encoders
+      allHeightInputs.forEach((input) => {
+        expect(input.attributes('disabled')).toBeDefined()
+      })
     })
 
     it('should synchronize height with width when width changes on rotary encoder', async () => {
