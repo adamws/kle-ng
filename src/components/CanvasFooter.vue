@@ -184,20 +184,27 @@ window.addEventListener('canvas-focus-change', (event: Event) => {
   flex-shrink: 0;
 }
 
+/* Position indicator: hide by default (e.g. touch devices), show only for precise pointer */
 .position-indicator {
-  background-color: var(--bs-body-bg);
-  border: 1px solid var(--bs-border-color);
-  border-radius: 4px;
-  padding: 3px 6px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  font-family: monospace;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-  min-width: 150px;
-  justify-content: space-between;
+  display: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .position-indicator {
+    background-color: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 4px;
+    padding: 3px 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    font-family: monospace;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    min-width: 150px;
+    justify-content: space-between;
+  }
 }
 
 .position-label {
