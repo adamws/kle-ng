@@ -29,6 +29,16 @@
             <input
               type="radio"
               class="btn-check"
+              id="tab-edit"
+              value="edit"
+              v-model="activeTab"
+              autocomplete="off"
+            />
+            <label class="btn btn-outline-primary btn-sm" for="tab-edit">Edit</label>
+
+            <input
+              type="radio"
+              class="btn-check"
               id="tab-remove"
               value="remove"
               v-model="activeTab"
@@ -55,6 +65,112 @@
               autocomplete="off"
             />
             <label class="btn btn-outline-primary btn-sm" for="tab-move">Move</label>
+          </div>
+        </div>
+
+        <!-- Edit Tab Content -->
+        <div v-if="activeTab === 'edit'" class="tool-content">
+          <h6
+            class="fw-bold text-center mb-2"
+            style="font-size: 0.9rem; color: var(--bs-text-primary)"
+          >
+            Select Label Position to Edit
+          </h6>
+
+          <!-- Position Selector Grid -->
+          <div class="keycap-selector mb-3">
+            <div class="keyborder"></div>
+            <div class="keylabels">
+              <!-- Top Row -->
+              <div
+                v-for="pos in [0, 1, 2]"
+                :key="`edit-${pos}`"
+                :class="['keylabel', `keylabel${pos}`]"
+              >
+                <input
+                  type="radio"
+                  :id="`edit-pos-${pos}`"
+                  :value="pos"
+                  v-model="activePosition"
+                  class="position-radio"
+                />
+                <label :for="`edit-pos-${pos}`" class="position-label">
+                  {{ labelPositions[pos]?.label }}
+                </label>
+              </div>
+              <!-- Center Row -->
+              <div
+                v-for="pos in [3, 4, 5]"
+                :key="`edit-${pos}`"
+                :class="['keylabel', `keylabel${pos}`]"
+              >
+                <input
+                  type="radio"
+                  :id="`edit-pos-${pos}`"
+                  :value="pos"
+                  v-model="activePosition"
+                  class="position-radio"
+                />
+                <label :for="`edit-pos-${pos}`" class="position-label">
+                  {{ labelPositions[pos]?.label }}
+                </label>
+              </div>
+              <!-- Bottom Row -->
+              <div
+                v-for="pos in [6, 7, 8]"
+                :key="`edit-${pos}`"
+                :class="['keylabel', `keylabel${pos}`]"
+              >
+                <input
+                  type="radio"
+                  :id="`edit-pos-${pos}`"
+                  :value="pos"
+                  v-model="activePosition"
+                  class="position-radio"
+                />
+                <label :for="`edit-pos-${pos}`" class="position-label">
+                  {{ labelPositions[pos]?.label }}
+                </label>
+              </div>
+              <!-- Front Row -->
+              <div
+                v-for="pos in [9, 10, 11]"
+                :key="`edit-${pos}`"
+                :class="['keylabel', `keylabel${pos}`]"
+              >
+                <input
+                  type="radio"
+                  :id="`edit-pos-${pos}`"
+                  :value="pos"
+                  v-model="activePosition"
+                  class="position-radio"
+                />
+                <label :for="`edit-pos-${pos}`" class="position-label">
+                  {{ labelPositions[pos]?.label }}
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Typing Preview - Always Visible -->
+          <div class="info-section mb-3">
+            <div v-if="isEditing" class="status-label">
+              <strong>Editing:</strong> <code>{{ typedBuffer }}</code>
+            </div>
+            <div v-else-if="selectedKeysCount !== 0" class="status-label">
+              <strong>Waiting for edit</strong>
+            </div>
+            <div v-else class="status-label">
+              <strong>Waiting for selection</strong>
+            </div>
+            <div>
+              <ul class="status-hint">
+                <li>Select key(s) and start typing to edit</li>
+
+                <li>Press <kbd>Enter</kbd> or select next key(s) to confirm label</li>
+                <li>Press <kbd>Esc</kbd> to cancel</li>
+              </ul>
+            </div>
           </div>
         </div>
 
@@ -192,7 +308,7 @@
         </div>
 
         <!-- Status Info -->
-        <div class="status-info mt-3">
+        <div v-if="activeTab !== 'edit'" class="status-info mt-3">
           <div class="d-flex align-items-center gap-2">
             <small class="text-muted mb-0"> {{ selectedKeysCount }} key(s) will be affected </small>
           </div>
@@ -226,9 +342,15 @@ const emit = defineEmits<Emits>()
 const keyboardStore = useKeyboardStore()
 
 // Local state
-const activeTab = ref<'remove' | 'align' | 'move'>('remove')
+const activeTab = ref<'edit' | 'remove' | 'align' | 'move'>('edit')
 const fromPosition = ref<number | null>(null)
 const toPosition = ref<number | null>(null)
+
+// Edit mode state
+const activePosition = ref<number>(0) // Pre-select TL
+const typedBuffer = ref<string>('')
+const originalLabels = ref<Map<Key, string>>(new Map())
+const isEditing = ref<boolean>(false)
 
 // Dragging functionality with viewport bounds checking
 const { position, panelRef, handleMouseDown, handleHeaderMouseDown, initializePosition } =
@@ -354,7 +476,10 @@ const labelPositions: LabelPosition[] = [
 
 // Computed properties
 const selectedKeysCount = computed(() => {
-  if (activeTab.value === 'remove') {
+  if (activeTab.value === 'edit') {
+    // Edit mode: Only show count of actually selected keys
+    return keyboardStore.selectedKeys.length
+  } else if (activeTab.value === 'remove') {
     return keyboardStore.selectedKeys.length > 0
       ? keyboardStore.selectedKeys.length
       : keyboardStore.keys.length
@@ -372,17 +497,6 @@ const canMove = computed(() => {
     fromPosition.value !== toPosition.value
   )
 })
-
-// Watch for modal visibility
-watch(
-  () => props.visible,
-  async (isVisible) => {
-    if (isVisible) {
-      initializePosition({ x: window.innerWidth - 420, y: 100 })
-      await nextTick()
-    }
-  },
-)
 
 // Methods
 const removeLegends = (category: LegendCategory) => {
@@ -530,6 +644,138 @@ const moveLegends = () => {
   keyboardStore.markDirty()
 }
 
+// Edit mode methods
+const startEditing = () => {
+  if (keyboardStore.selectedKeys.length === 0) return
+
+  // Store original labels for ALL selected keys
+  originalLabels.value.clear()
+  keyboardStore.selectedKeys.forEach((key) => {
+    const original = key.labels[activePosition.value] || ''
+    originalLabels.value.set(key, original)
+  })
+
+  typedBuffer.value = ''
+  isEditing.value = true
+}
+
+const updateAllLabelsLive = () => {
+  if (!isEditing.value) return
+
+  // Update ALL selected keys with current buffer
+  keyboardStore.selectedKeys.forEach((key) => {
+    key.labels[activePosition.value] = typedBuffer.value
+  })
+
+  // Trigger re-render
+  keyboardStore.markDirty()
+}
+
+const commitEdit = () => {
+  if (!isEditing.value) return
+
+  // Save to history AFTER edits are done (enables undo)
+  keyboardStore.saveToHistory()
+
+  // Auto-select next key feature
+  if (keyboardStore.selectedKeys.length === 1) {
+    const currentKey = keyboardStore.selectedKeys[0]
+    if (currentKey) {
+      const currentIndex = keyboardStore.keys.indexOf(currentKey)
+
+      // Select next key, wrap around to first if at end
+      if (currentIndex >= 0 && keyboardStore.keys.length > 0) {
+        const nextIndex = (currentIndex + 1) % keyboardStore.keys.length
+        const nextKey = keyboardStore.keys[nextIndex]
+        if (nextKey) {
+          keyboardStore.selectKey(nextKey, false) // false = replace selection
+        }
+      }
+    }
+  }
+  // If multiple keys selected, don't auto-advance (ambiguous which is "next")
+
+  // Clear editing state
+  isEditing.value = false
+  originalLabels.value.clear()
+  typedBuffer.value = ''
+
+  // Keep activePosition selected for batch editing
+}
+
+const cancelEdit = () => {
+  if (!isEditing.value) return
+
+  // Restore ALL original labels
+  originalLabels.value.forEach((originalLabel, key) => {
+    key.labels[activePosition.value] = originalLabel
+  })
+
+  // Trigger re-render to show restored labels
+  keyboardStore.markDirty()
+
+  // Clear editing state
+  isEditing.value = false
+  originalLabels.value.clear()
+  typedBuffer.value = ''
+}
+
+const handleEditKeyDown = (event: KeyboardEvent) => {
+  // Only handle when Edit tab active
+  if (activeTab.value !== 'edit') return
+
+  // Must have keys selected
+  if (keyboardStore.selectedKeys.length === 0) return
+
+  // Start editing on first printable keystroke (auto-start)
+  if (
+    !isEditing.value &&
+    event.key.length === 1 &&
+    !event.ctrlKey &&
+    !event.metaKey &&
+    !event.altKey
+  ) {
+    startEditing()
+  }
+
+  // Only process if editing active
+  if (!isEditing.value) return
+
+  // Enter: Commit changes
+  if (event.key === 'Enter') {
+    commitEdit()
+    event.preventDefault()
+    event.stopPropagation()
+    return
+  }
+
+  // Escape: Cancel and restore
+  if (event.key === 'Escape') {
+    cancelEdit()
+    event.preventDefault()
+    event.stopPropagation()
+    return
+  }
+
+  // Backspace: Remove last character
+  if (event.key === 'Backspace') {
+    typedBuffer.value = typedBuffer.value.slice(0, -1)
+    updateAllLabelsLive()
+    event.preventDefault()
+    event.stopPropagation()
+    return
+  }
+
+  // Printable characters: Append to buffer and update
+  if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+    typedBuffer.value += event.key
+    updateAllLabelsLive()
+    event.preventDefault()
+    event.stopPropagation()
+    return
+  }
+}
+
 const handleClose = () => {
   emit('close')
 }
@@ -543,12 +789,63 @@ const handleKeydown = (event: KeyboardEvent) => {
   }
 }
 
+// Watch for modal visibility
+watch(
+  () => props.visible,
+  async (isVisible) => {
+    if (isVisible) {
+      initializePosition({ x: window.innerWidth - 420, y: 100 })
+      await nextTick()
+    }
+  },
+)
+
+// Watch activeTab to manage event listeners
+watch(
+  activeTab,
+  (newTab, oldTab) => {
+    // Add listener when switching TO Edit
+    if (newTab === 'edit' && oldTab !== 'edit') {
+      document.addEventListener('keydown', handleEditKeyDown, true)
+    }
+
+    // Remove listener and cancel editing when switching FROM Edit
+    if (oldTab === 'edit' && newTab !== 'edit') {
+      document.removeEventListener('keydown', handleEditKeyDown, true)
+      if (isEditing.value) {
+        cancelEdit()
+      }
+    }
+  },
+  { immediate: true },
+)
+
+// Watch for selection changes
+watch(
+  () => keyboardStore.selectedKeys,
+  (newSelection, oldSelection) => {
+    // If selection changes while editing, auto-commit current edit
+    if (isEditing.value) {
+      // Check if selection actually changed (not just array reference)
+      const selectionChanged =
+        newSelection.length !== oldSelection.length ||
+        !newSelection.every((key) => oldSelection.includes(key))
+
+      if (selectionChanged) {
+        commitEdit()
+      }
+    }
+  },
+  { deep: true },
+)
+
 onMounted(() => {
   document.addEventListener('keydown', handleKeydown)
 })
 
 onUnmounted(() => {
   document.removeEventListener('keydown', handleKeydown)
+  document.removeEventListener('keydown', handleEditKeyDown, true)
 })
 </script>
 
@@ -634,7 +931,6 @@ onUnmounted(() => {
 
 .panel-body {
   padding: 12px;
-  max-height: 500px;
   overflow-y: auto;
 }
 
@@ -644,7 +940,26 @@ onUnmounted(() => {
 }
 
 .tool-content {
-  min-height: 180px;
+  min-height: 150px;
+}
+
+/* Info sections styling */
+.info-section {
+  background: var(--bs-tertiary-bg);
+  padding: 12px;
+  color: var(--bs-text-primary);
+  border-radius: 6px;
+  border-left: 4px solid var(--bs-primary);
+}
+
+.status-label {
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+}
+
+.status-hint {
+  font-size: 12px;
 }
 
 /* Remove Legends Styles */

@@ -31,19 +31,25 @@ describe('LegendToolsPanel', () => {
 
   it('displays tab navigation', () => {
     const tabs = wrapper.findAll('.btn-check')
-    expect(tabs).toHaveLength(3)
+    expect(tabs).toHaveLength(4)
 
+    expect(wrapper.find('label[for="tab-edit"]').text()).toBe('Edit')
     expect(wrapper.find('label[for="tab-remove"]').text()).toBe('Remove')
     expect(wrapper.find('label[for="tab-align"]').text()).toBe('Align')
     expect(wrapper.find('label[for="tab-move"]').text()).toBe('Move')
   })
 
-  it('defaults to remove tab', () => {
-    const removeTab = wrapper.find('#tab-remove')
-    expect((removeTab.element as HTMLInputElement).checked).toBe(true)
+  it('defaults to edit tab', () => {
+    const editTab = wrapper.find('#tab-edit')
+    expect((editTab.element as HTMLInputElement).checked).toBe(true)
   })
 
   describe('Remove Tab', () => {
+    beforeEach(async () => {
+      // Switch to Remove tab for these tests
+      await wrapper.find('#tab-remove').setValue(true)
+    })
+
     it('displays all legend categories', () => {
       const buttons = wrapper.findAll('.btn-outline-danger')
       expect(buttons).toHaveLength(8) // All, Alphas, Numbers, Punctuation, Function, Specials, Others, Decals
@@ -103,6 +109,9 @@ describe('LegendToolsPanel', () => {
           visible: true,
         },
       })
+
+      // Switch to Remove tab
+      await wrapper.find('#tab-remove').setValue(true)
 
       expect(wrapper.text()).toContain('3 key(s) will be affected')
     })
@@ -316,6 +325,9 @@ describe('LegendToolsPanel', () => {
       store.keys = [key]
       store.selectedKeys = [key]
 
+      // Switch to Remove tab
+      await wrapper.find('#tab-remove').setValue(true)
+
       // First operation - remove all legends
       const allButton = wrapper.findAll('.btn-outline-danger')[0]
       expect(allButton).toBeDefined()
@@ -355,6 +367,9 @@ describe('LegendToolsPanel', () => {
           visible: true,
         },
       })
+
+      // Switch to Remove tab
+      await wrapper.find('#tab-remove').setValue(true)
 
       // Remove tab should count all keys
       expect(wrapper.text()).toContain('2 key(s) will be affected')

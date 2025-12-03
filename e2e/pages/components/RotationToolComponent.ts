@@ -53,10 +53,15 @@ export class RotationToolComponent {
    * @param y - Y coordinate on canvas
    */
   async selectAnchor(x: number, y: number) {
+    // Wait for rotation info to be visible first
+    await expect(this.rotationInfo).toBeVisible()
     await expect(this.rotationInfo).toContainText('Select rotation anchor point')
 
     const canvas = this.page.getByTestId('canvas-main')
     await canvas.click({ position: { x, y }, force: true })
+
+    // Wait a moment for the click to register
+    await this.page.waitForTimeout(100)
 
     await expect(this.rotationInfo).toContainText('Origin:')
   }

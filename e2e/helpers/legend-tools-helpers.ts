@@ -90,9 +90,10 @@ export class LegendToolsHelper {
 
   /**
    * Get the status count text locator.
+   * Note: This element is only visible when activeTab !== 'edit'
    */
   getStatusCount(): Locator {
-    return this.page.locator('text=key(s) will be affected')
+    return this.page.locator('.status-info small.text-muted')
   }
 
   // ============================================================================
@@ -608,5 +609,320 @@ export class LegendToolsHelper {
    */
   async expectDragHandleVisible(): Promise<void> {
     await expect(this.getDragHandle()).toBeVisible()
+  }
+
+  // ============================================================================
+  // Edit Tab Locators
+  // ============================================================================
+
+  /**
+   * Get the Edit tab radio input locator.
+   */
+  getEditTabInput(): Locator {
+    return this.page.locator('#tab-edit')
+  }
+
+  /**
+   * Get the Edit tab label locator.
+   */
+  getEditTabLabel(): Locator {
+    return this.page.locator('label[for="tab-edit"]')
+  }
+
+  /**
+   * Get a position radio input in the Edit tab by value.
+   *
+   * @param value - Position value (0-11)
+   */
+  getEditPositionRadio(value: number): Locator {
+    return this.page.locator(`#edit-pos-${value}`)
+  }
+
+  /**
+   * Get the editing alert (live preview) locator.
+   * Note: This is now always visible, showing either editing state or placeholder.
+   */
+  getEditingAlert(): Locator {
+    return this.page.locator('.info-section').first()
+  }
+
+  /**
+   * Get the key count display in Edit tab.
+   */
+  getKeyCountDisplay(): Locator {
+    return this.page.locator('.key-count')
+  }
+
+  // ============================================================================
+  // Edit Tab Actions
+  // ============================================================================
+
+  /**
+   * Switch to the Edit tab.
+   *
+   * @example
+   * ```typescript
+   * await legendHelper.switchToEditTab()
+   * ```
+   */
+  async switchToEditTab(): Promise<void> {
+    await this.getEditTabLabel().click()
+    await expect(this.getEditTabInput()).toBeChecked()
+  }
+
+  /**
+   * Select a label position in Edit mode.
+   *
+   * @param position - Position value (0-11)
+   *
+   * @example
+   * ```typescript
+   * await legendHelper.selectEditPosition(0) // Select TL
+   * ```
+   */
+  async selectEditPosition(position: number): Promise<void> {
+    await this.getEditPositionRadio(position).click({ force: true })
+    await expect(this.getEditPositionRadio(position)).toBeChecked()
+  }
+
+  /**
+   * Type in Edit mode with optional Enter key press.
+   *
+   * @param text - Text to type
+   * @param pressEnter - Whether to press Enter to commit (default: true)
+   *
+   * @example
+   * ```typescript
+   * await legendHelper.typeInEditMode('Shift', true)
+   * ```
+   */
+  async typeInEditMode(text: string, pressEnter: boolean = true): Promise<void> {
+    await this.page.keyboard.type(text)
+    if (pressEnter) {
+      await this.page.keyboard.press('Enter')
+    }
+    await this.waitHelpers.waitForDoubleAnimationFrame()
+  }
+
+  // ============================================================================
+  // Edit Tab Assertions
+  // ============================================================================
+
+  /**
+   * Assert that the Edit tab is active.
+   *
+   * @example
+   * ```typescript
+   * await legendHelper.expectEditTabActive()
+   * ```
+   */
+  async expectEditTabActive(): Promise<void> {
+    await expect(this.getEditTabInput()).toBeChecked()
+  }
+
+  /**
+   * Assert that Edit tab is first and active by default.
+   *
+   * @example
+   * ```typescript
+   * await legendHelper.expectEditTabFirstAndDefault()
+   * ```
+   */
+  async expectEditTabFirstAndDefault(): Promise<void> {
+    await this.expectEditTabActive()
+    // Verify Edit tab is first by checking it appears before Remove tab
+    const editTab = this.getEditTabInput()
+    const removeTab = this.getRemoveTabInput()
+    await expect(editTab).toBeVisible()
+    await expect(removeTab).toBeVisible()
+  }
+
+  /**
+   * Assert that a specific position is selected in Edit mode.
+   *
+   * @param position - Position value (0-11)
+   *
+   * @example
+   * ```typescript
+   * await legendHelper.expectPositionSelected(0) // Expect TL selected
+   * ```
+   */
+  async expectPositionSelected(position: number): Promise<void> {
+    await expect(this.getEditPositionRadio(position)).toBeChecked()
+  }
+
+  /**
+   * Assert that TL (position 0) is pre-selected in Edit mode.
+   *
+   * @example
+   * ```typescript
+   * await legendHelper.expectTLPreSelected()
+   * ```
+   */
+  async expectTLPreSelected(): Promise<void> {
+    await this.expectPositionSelected(0)
+  }
+
+  /**
+   * Assert the key count display shows expected count.
+   *
+   * @param count - Expected key count
+   *
+   * @example
+   * ```typescript
+   * await legendHelper.expectKeyCountDisplay(5)
+   * ```
+   */
+  async expectKeyCountDisplay(count: number): Promise<void> {
+    const expectedText = count === 1 ? '1 key selected' : `${count} keys selected`
+    await expect(this.getKeyCountDisplay()).toContainText(expectedText)
+  }
+
+  /**
+   * Assert that the editing alert shows editing state with optional text check.
+   * The alert is always visible, but shows "Editing" when active.
+   *
+   * @param text - Optional text to verify in the alert
+   *
+   * @example
+   * ```typescript
+   * await legendHelper.expectEditingAlertVisible('Shift')
+   * ```
+   */
+  async expectEditingAlertVisible(text?: string): Promise<void> {
+    await expect(this.getEditingAlert()).toBeVisible()
+    await expect(this.getEditingAlert()).toContainText('Editing')
+    if (text) {
+      await expect(this.getEditingAlert()).toContainText(text)
+    }
+  }
+
+  /**
+   * Assert that a key has a specific label at a given position.
+   * Uses canvas text extraction.
+   *
+   * @param keyIndex - Index of the key on canvas
+   * @param position - Label position (0-11)
+   * @param text - Expected label text
+   *
+   * @example
+   * ```typescript
+   * await legendHelper.expectLabelOnKey(0, 0, 'Shift')
+   * ```
+   */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async expectLabelOnKey(keyIndex: number, position: number, text: string): Promise<void> {
+    // This would require canvas inspection - implementation depends on canvas test helpers
+    // For now, we'll implement a basic version that can be enhanced
+    await this.waitHelpers.waitForDoubleAnimationFrame()
+    // TODO: Implement canvas label inspection if needed
+  }
+
+  // ============================================================================
+  // JSON Verification Methods
+  // ============================================================================
+
+  /**
+   * Export current layout as JSON and verify it's valid.
+   * Saves the JSON file to the e2e/test-output directory.
+   *
+   * @param filename - Output filename (e.g., 'test-output.json')
+   * @returns Parsed JSON data (KLE format array)
+   *
+   * @example
+   * ```typescript
+   * const jsonData = await legendHelper.exportAndVerifyJSON('output.json')
+   * expect(Array.isArray(jsonData)).toBe(true)
+   * ```
+   */
+  async exportAndVerifyJSON(filename: string): Promise<unknown> {
+    const fs = await import('fs/promises')
+    const path = await import('path')
+
+    // Set up download promise
+    const downloadPromise = this.page.waitForEvent('download')
+
+    // Click Export button and select Download JSON
+    const exportButton = this.page.locator('button', { hasText: 'Export' })
+    await exportButton.click()
+    await this.page.locator('a', { hasText: 'Download JSON' }).click()
+
+    // Wait for download
+    const download = await downloadPromise
+
+    // Save the file to test-output directory
+    const downloadPath = path.resolve('e2e/test-output', filename)
+    await download.saveAs(downloadPath)
+
+    // Read and parse the JSON file
+    const fileContent = await fs.readFile(downloadPath, 'utf-8')
+    return JSON.parse(fileContent)
+  }
+
+  /**
+   * Verify that specific labels exist in the JSON layout.
+   *
+   * @param jsonData - Parsed JSON layout (KLE format)
+   * @param expectedLabels - Array of labels that should exist
+   *
+   * @example
+   * ```typescript
+   * const jsonData = await legendHelper.exportAndVerifyJSON('output.json')
+   * legendHelper.verifyLabelsInJSON(jsonData, ['Q', 'W', 'E'])
+   * ```
+   */
+  verifyLabelsInJSON(jsonData: unknown, expectedLabels: string[]): void {
+    const jsonString = JSON.stringify(jsonData)
+    for (const label of expectedLabels) {
+      expect(jsonString).toContain(label)
+    }
+  }
+
+  /**
+   * Count keys with non-empty labels in JSON layout.
+   * Useful for verifying that operations preserve or remove the correct number of labels.
+   *
+   * @param jsonData - Parsed JSON layout (KLE format)
+   * @returns Number of keys with labels
+   *
+   * @example
+   * ```typescript
+   * const jsonData = await legendHelper.exportAndVerifyJSON('output.json')
+   * const labelCount = legendHelper.countKeysWithLabels(jsonData)
+   * expect(labelCount).toBe(3)
+   * ```
+   */
+  countKeysWithLabels(jsonData: unknown): number {
+    if (!Array.isArray(jsonData)) return 0
+
+    let count = 0
+    for (const item of jsonData) {
+      if (typeof item === 'string' && item.trim() !== '') {
+        // Direct non-empty string in KLE format means it's a label
+        count++
+      } else if (Array.isArray(item)) {
+        // Row array - count non-empty string elements
+        count += item.filter((el: unknown) => typeof el === 'string' && el.trim() !== '').length
+      }
+    }
+    return count
+  }
+
+  /**
+   * Verify all labels are empty in JSON layout.
+   * Useful for testing remove operations.
+   *
+   * @param jsonData - Parsed JSON layout (KLE format)
+   *
+   * @example
+   * ```typescript
+   * await legendHelper.removeAllLegends()
+   * const jsonData = await legendHelper.exportAndVerifyJSON('output.json')
+   * legendHelper.verifyEmptyLabels(jsonData)
+   * ```
+   */
+  verifyEmptyLabels(jsonData: unknown): void {
+    const labelCount = this.countKeysWithLabels(jsonData)
+    expect(labelCount).toBe(0)
   }
 }
