@@ -170,10 +170,10 @@ export class LegendToolsHelper {
   // ============================================================================
 
   /**
-   * Get the keycap preview element in Align tab.
+   * Get the alignment picker element in Align tab.
    */
   getKeycapPreview(): Locator {
-    return this.page.locator('.keycap-preview')
+    return this.page.locator('.alignment-picker')
   }
 
   /**

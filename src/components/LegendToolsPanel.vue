@@ -81,7 +81,7 @@
           <LabelPositionPicker
             v-model="activePosition"
             id-prefix="edit"
-            size="medium"
+            size="small"
             class="mb-3"
           />
 
@@ -128,25 +128,14 @@
 
         <!-- Align Legends Tab -->
         <div v-if="activeTab === 'align'" class="tool-content">
+          <h6
+            class="fw-bold text-center mb-2"
+            style="font-size: 0.9rem; color: var(--bs-text-primary)"
+          >
+            Select Alignment Direction
+          </h6>
           <div class="text-center mb-3">
-            <div class="keycap-preview">
-              <div class="keyborder"></div>
-              <div class="keylabels">
-                <div
-                  v-for="(button, index) in alignmentButtons"
-                  :key="index"
-                  :class="['keylabel', `keylabel${index}`]"
-                >
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-outline-primary align-btn"
-                    @click="alignLegends(button.flags)"
-                    :title="button.tooltip"
-                    v-html="button.label"
-                  ></button>
-                </div>
-              </div>
-            </div>
+            <AlignmentPicker @align="alignLegends" size="small" />
           </div>
           <div class="small text-muted">
             <ul class="mb-0">
@@ -216,6 +205,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useKeyboardStore, type Key } from '@/stores/keyboard'
 import { useDraggablePanel } from '@/composables/useDraggablePanel'
 import LabelPositionPicker from './LabelPositionPicker.vue'
+import AlignmentPicker from './AlignmentPicker.vue'
 
 // Props
 interface Props {
@@ -327,24 +317,6 @@ const align = {
   bottom: 0x20,
   center: 0x00,
 }
-
-interface AlignmentButton {
-  label: string
-  flags: number
-  tooltip: string
-}
-
-const alignmentButtons: AlignmentButton[] = [
-  { label: '↖', flags: align.left | align.top, tooltip: 'Align to top-left' },
-  { label: '↑', flags: align.hcenter | align.top, tooltip: 'Align to top-center' },
-  { label: '↗', flags: align.right | align.top, tooltip: 'Align to top-right' },
-  { label: '←', flags: align.left | align.vcenter, tooltip: 'Align to center-left' },
-  { label: '●', flags: align.hcenter | align.vcenter, tooltip: 'Align to center' },
-  { label: '→', flags: align.right | align.vcenter, tooltip: 'Align to center-right' },
-  { label: '↙', flags: align.left | align.bottom, tooltip: 'Align to bottom-left' },
-  { label: '↓', flags: align.hcenter | align.bottom, tooltip: 'Align to bottom-center' },
-  { label: '↘', flags: align.right | align.bottom, tooltip: 'Align to bottom-right' },
-]
 
 // Computed properties
 const selectedKeysCount = computed(() => {
@@ -838,58 +810,6 @@ onUnmounted(() => {
   box-shadow: 0 2px 4px rgba(220, 53, 69, 0.2);
 }
 
-/* Align Legends Styles */
-.keycap-preview {
-  position: relative;
-  width: 180px;
-  height: 120px;
-  margin: 0 auto;
-  border-radius: 6px;
-  background: var(--bs-secondary-bg);
-  border: 2px solid var(--bs-border-color);
-  box-shadow: 0 1px 3px var(--bs-box-shadow-sm);
-}
-
-.keyborder {
-  position: absolute;
-  inset: 4px;
-  border-radius: 4px;
-  background: var(--bs-body-bg);
-  border: 1px solid var(--bs-border-color-translucent);
-}
-
-.keylabels {
-  position: absolute;
-  inset: 8px;
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  grid-template-rows: 1fr 1fr 1fr;
-  gap: 2px;
-}
-
-.keylabel {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.align-btn {
-  width: 28px;
-  height: 28px;
-  font-size: 12px;
-  font-weight: bold;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.align-btn:hover {
-  transform: scale(1.1);
-  box-shadow: 0 2px 4px rgba(13, 110, 253, 0.3);
-}
-
 /* Status Info */
 .status-info {
   background: var(--bs-tertiary-bg);
@@ -906,11 +826,6 @@ onUnmounted(() => {
 
   .panel-body {
     padding: 10px;
-  }
-
-  .keycap-preview {
-    width: 160px;
-    height: 100px;
   }
 }
 
