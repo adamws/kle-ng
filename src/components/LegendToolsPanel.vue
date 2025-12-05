@@ -78,79 +78,12 @@
           </h6>
 
           <!-- Position Selector Grid -->
-          <div class="keycap-selector mb-3">
-            <div class="keyborder"></div>
-            <div class="keylabels">
-              <!-- Top Row -->
-              <div
-                v-for="pos in [0, 1, 2]"
-                :key="`edit-${pos}`"
-                :class="['keylabel', `keylabel${pos}`]"
-              >
-                <input
-                  type="radio"
-                  :id="`edit-pos-${pos}`"
-                  :value="pos"
-                  v-model="activePosition"
-                  class="position-radio"
-                />
-                <label :for="`edit-pos-${pos}`" class="position-label">
-                  {{ labelPositions[pos]?.label }}
-                </label>
-              </div>
-              <!-- Center Row -->
-              <div
-                v-for="pos in [3, 4, 5]"
-                :key="`edit-${pos}`"
-                :class="['keylabel', `keylabel${pos}`]"
-              >
-                <input
-                  type="radio"
-                  :id="`edit-pos-${pos}`"
-                  :value="pos"
-                  v-model="activePosition"
-                  class="position-radio"
-                />
-                <label :for="`edit-pos-${pos}`" class="position-label">
-                  {{ labelPositions[pos]?.label }}
-                </label>
-              </div>
-              <!-- Bottom Row -->
-              <div
-                v-for="pos in [6, 7, 8]"
-                :key="`edit-${pos}`"
-                :class="['keylabel', `keylabel${pos}`]"
-              >
-                <input
-                  type="radio"
-                  :id="`edit-pos-${pos}`"
-                  :value="pos"
-                  v-model="activePosition"
-                  class="position-radio"
-                />
-                <label :for="`edit-pos-${pos}`" class="position-label">
-                  {{ labelPositions[pos]?.label }}
-                </label>
-              </div>
-              <!-- Front Row -->
-              <div
-                v-for="pos in [9, 10, 11]"
-                :key="`edit-${pos}`"
-                :class="['keylabel', `keylabel${pos}`]"
-              >
-                <input
-                  type="radio"
-                  :id="`edit-pos-${pos}`"
-                  :value="pos"
-                  v-model="activePosition"
-                  class="position-radio"
-                />
-                <label :for="`edit-pos-${pos}`" class="position-label">
-                  {{ labelPositions[pos]?.label }}
-                </label>
-              </div>
-            </div>
-          </div>
+          <LabelPositionPicker
+            v-model="activePosition"
+            id-prefix="edit"
+            size="medium"
+            class="mb-3"
+          />
 
           <!-- Live Typing Preview - Always Visible -->
           <div class="info-section mb-3">
@@ -233,27 +166,7 @@
               >
                 From
               </h6>
-              <div class="keycap-selector">
-                <div class="keyborder"></div>
-                <div class="keylabels">
-                  <div
-                    v-for="position in labelPositions"
-                    :key="`from-${position.index}`"
-                    :class="['keylabel', `keylabel${position.index}`]"
-                  >
-                    <input
-                      type="radio"
-                      :id="`from-${position.index}`"
-                      :value="position.index"
-                      v-model="fromPosition"
-                      class="position-radio"
-                    />
-                    <label :for="`from-${position.index}`" class="position-label">
-                      {{ position.label }}
-                    </label>
-                  </div>
-                </div>
-              </div>
+              <LabelPositionPicker v-model="fromPosition" id-prefix="from" size="small" />
             </div>
 
             <div class="col-2 d-flex align-items-center justify-content-center">
@@ -276,27 +189,7 @@
               >
                 To
               </h6>
-              <div class="keycap-selector">
-                <div class="keyborder"></div>
-                <div class="keylabels">
-                  <div
-                    v-for="position in labelPositions"
-                    :key="`to-${position.index}`"
-                    :class="['keylabel', `keylabel${position.index}`]"
-                  >
-                    <input
-                      type="radio"
-                      :id="`to-${position.index}`"
-                      :value="position.index"
-                      v-model="toPosition"
-                      class="position-radio"
-                    />
-                    <label :for="`to-${position.index}`" class="position-label">
-                      {{ position.label }}
-                    </label>
-                  </div>
-                </div>
-              </div>
+              <LabelPositionPicker v-model="toPosition" id-prefix="to" size="small" />
             </div>
           </div>
           <div class="small text-muted mt-2">
@@ -322,6 +215,7 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useKeyboardStore, type Key } from '@/stores/keyboard'
 import { useDraggablePanel } from '@/composables/useDraggablePanel'
+import LabelPositionPicker from './LabelPositionPicker.vue'
 
 // Props
 interface Props {
@@ -450,28 +344,6 @@ const alignmentButtons: AlignmentButton[] = [
   { label: '↙', flags: align.left | align.bottom, tooltip: 'Align to bottom-left' },
   { label: '↓', flags: align.hcenter | align.bottom, tooltip: 'Align to bottom-center' },
   { label: '↘', flags: align.right | align.bottom, tooltip: 'Align to bottom-right' },
-]
-
-// Label positions for move tool
-interface LabelPosition {
-  index: number
-  label: string
-  description: string
-}
-
-const labelPositions: LabelPosition[] = [
-  { index: 0, label: 'TL', description: 'Top Left' },
-  { index: 1, label: 'TC', description: 'Top Center' },
-  { index: 2, label: 'TR', description: 'Top Right' },
-  { index: 3, label: 'CL', description: 'Center Left' },
-  { index: 4, label: 'CC', description: 'Center Center' },
-  { index: 5, label: 'CR', description: 'Center Right' },
-  { index: 6, label: 'BL', description: 'Bottom Left' },
-  { index: 7, label: 'BC', description: 'Bottom Center' },
-  { index: 8, label: 'BR', description: 'Bottom Right' },
-  { index: 9, label: 'FL', description: 'Front Left' },
-  { index: 10, label: 'FC', description: 'Front Center' },
-  { index: 11, label: 'FR', description: 'Front Right' },
 ]
 
 // Computed properties
@@ -1020,131 +892,6 @@ onUnmounted(() => {
   box-shadow: 0 2px 4px rgba(13, 110, 253, 0.3);
 }
 
-/* Move Legends Styles */
-.keycap-selector {
-  position: relative;
-  width: 140px;
-  height: 105px;
-  margin: 0 auto;
-  border-radius: 6px;
-  background: var(--bs-secondary-bg);
-  border: 2px solid var(--bs-border-color);
-  box-shadow: 0 1px 3px var(--bs-box-shadow-sm);
-}
-
-.keycap-selector .keyborder {
-  inset: 3px;
-}
-
-.keycap-selector .keylabels {
-  position: absolute;
-  inset: 6px;
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  grid-template-rows: 1fr 1fr 1fr 0.5fr;
-  gap: 1px;
-}
-
-/* Explicit grid positioning for each label */
-/* Top row */
-.keylabel0 {
-  grid-row: 1;
-  grid-column: 1;
-} /* Top Left */
-.keylabel1 {
-  grid-row: 1;
-  grid-column: 2;
-} /* Top Center */
-.keylabel2 {
-  grid-row: 1;
-  grid-column: 3;
-} /* Top Right */
-
-/* Middle row */
-.keylabel3 {
-  grid-row: 2;
-  grid-column: 1;
-} /* Center Left */
-.keylabel4 {
-  grid-row: 2;
-  grid-column: 2;
-} /* Center Center */
-.keylabel5 {
-  grid-row: 2;
-  grid-column: 3;
-} /* Center Right */
-
-/* Bottom row */
-.keylabel6 {
-  grid-row: 3;
-  grid-column: 1;
-} /* Bottom Left */
-.keylabel7 {
-  grid-row: 3;
-  grid-column: 2;
-} /* Bottom Center */
-.keylabel8 {
-  grid-row: 3;
-  grid-column: 3;
-} /* Bottom Right */
-
-/* Front row */
-.keylabel9 {
-  grid-row: 4;
-  grid-column: 1;
-} /* Front Left */
-.keylabel10 {
-  grid-row: 4;
-  grid-column: 2;
-} /* Front Center */
-.keylabel11 {
-  grid-row: 4;
-  grid-column: 3;
-} /* Front Right */
-
-.position-radio {
-  position: absolute;
-  top: 0;
-  left: 0;
-  opacity: 0;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  cursor: pointer;
-  z-index: 1;
-}
-
-.position-label {
-  font-size: 10px;
-  font-weight: bold;
-  color: var(--bs-text-primary);
-  pointer-events: none;
-  text-align: center;
-  line-height: 1;
-  position: relative;
-  z-index: 2;
-  padding: 2px 3px;
-  border-radius: 3px;
-  transition: all 0.15s ease;
-}
-
-.position-radio:checked + .position-label {
-  color: white;
-  background: var(--bs-primary);
-  border-radius: 3px;
-  padding: 2px 3px;
-  box-shadow: 0 1px 3px rgba(13, 110, 253, 0.4);
-  transform: scale(1.05);
-}
-
-.position-radio:hover + .position-label {
-  color: var(--bs-primary);
-  background: rgba(13, 110, 253, 0.15);
-  border-radius: 3px;
-  box-shadow: 0 1px 2px rgba(13, 110, 253, 0.2);
-  transform: scale(1.02);
-}
-
 /* Status Info */
 .status-info {
   background: var(--bs-tertiary-bg);
@@ -1166,11 +913,6 @@ onUnmounted(() => {
   .keycap-preview {
     width: 160px;
     height: 100px;
-  }
-
-  .keycap-selector {
-    width: 120px;
-    height: 90px;
   }
 }
 

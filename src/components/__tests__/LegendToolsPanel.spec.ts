@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import LegendToolsPanel from '../LegendToolsPanel.vue'
+import LabelPositionPicker from '../LabelPositionPicker.vue'
 import { useKeyboardStore } from '@/stores/keyboard'
 import { Key } from '@adamws/kle-serial'
 
@@ -15,6 +16,11 @@ describe('LegendToolsPanel', () => {
     wrapper = mount(LegendToolsPanel, {
       props: {
         visible: true,
+      },
+      global: {
+        components: {
+          LabelPositionPicker,
+        },
       },
     })
   })
@@ -108,6 +114,11 @@ describe('LegendToolsPanel', () => {
         props: {
           visible: true,
         },
+        global: {
+          components: {
+            LabelPositionPicker,
+          },
+        },
       })
 
       // Switch to Remove tab
@@ -169,6 +180,11 @@ describe('LegendToolsPanel', () => {
         props: {
           visible: true,
         },
+        global: {
+          components: {
+            LabelPositionPicker,
+          },
+        },
       })
 
       const alignTab = wrapper.find('#tab-align')
@@ -185,13 +201,13 @@ describe('LegendToolsPanel', () => {
     })
 
     it('displays from and to position selectors', () => {
-      const keycapSelectors = wrapper.findAll('.keycap-selector')
-      expect(keycapSelectors).toHaveLength(2) // From and To
+      const positionPickers = wrapper.findAllComponents(LabelPositionPicker)
+      expect(positionPickers).toHaveLength(2) // From and To
 
-      const fromSelector = keycapSelectors[0]
+      const fromSelector = positionPickers[0]
       expect(fromSelector).toBeDefined()
       const fromLabels = fromSelector!.findAll('.position-label')
-      const toSelector = keycapSelectors[1]
+      const toSelector = positionPickers[1]
       expect(toSelector).toBeDefined()
       const toLabels = toSelector!.findAll('.position-label')
       expect(fromLabels).toHaveLength(12)
@@ -365,6 +381,11 @@ describe('LegendToolsPanel', () => {
       wrapper = mount(LegendToolsPanel, {
         props: {
           visible: true,
+        },
+        global: {
+          components: {
+            LabelPositionPicker,
+          },
         },
       })
 

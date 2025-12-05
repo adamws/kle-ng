@@ -200,7 +200,7 @@ export class LegendToolsHelper {
    * Get all keycap selector elements in Move tab.
    */
   getKeycapSelectors(): Locator {
-    return this.page.locator('.keycap-selector')
+    return this.page.locator('.label-position-picker')
   }
 
   /**
@@ -635,7 +635,7 @@ export class LegendToolsHelper {
    * @param value - Position value (0-11)
    */
   getEditPositionRadio(value: number): Locator {
-    return this.page.locator(`#edit-pos-${value}`)
+    return this.page.locator(`#edit-${value}`)
   }
 
   /**
