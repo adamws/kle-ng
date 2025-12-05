@@ -1084,7 +1084,7 @@ test.describe('Legend Tools Panel', () => {
       // Labels modified but structure intact
     })
 
-    test('should handle sequential operations correctly', async ({ page }) => {
+    test('should handle sequential operations correctly', async () => {
       // Start with empty layout
       await canvasHelper.addKey()
       await waitHelpers.waitForDoubleAnimationFrame()
@@ -1093,17 +1093,14 @@ test.describe('Legend Tools Panel', () => {
       await canvasHelper.addKey()
       await waitHelpers.waitForDoubleAnimationFrame()
 
-      // Add labels
-      await page.getByTestId('canvas-main').click({ position: { x: 47, y: 47 }, force: true })
-      await expect(page.getByText('Selected: 1')).toBeVisible()
+      // Add labels using the new selectKeyAt helper for robust selection
+      await canvasHelper.selectKeyAt(47, 47)
       await canvasHelper.setKeyLabel('topLeft', 'Q')
 
-      await page.getByTestId('canvas-main').click({ position: { x: 47 + 54, y: 47 }, force: true })
-      await expect(page.getByText('Selected: 1')).toBeVisible()
+      await canvasHelper.selectKeyAt(47 + 54, 47)
       await canvasHelper.setKeyLabel('topLeft', 'W')
 
-      await page.getByTestId('canvas-main').click({ position: { x: 47 + 108, y: 47 }, force: true })
-      await expect(page.getByText('Selected: 1')).toBeVisible()
+      await canvasHelper.selectKeyAt(47 + 108, 47)
       await canvasHelper.setKeyLabel('topLeft', 'E')
 
       // Verify initial export
@@ -1111,8 +1108,7 @@ test.describe('Legend Tools Panel', () => {
       legendHelper.verifyLabelsInJSON(jsonData1, ['Q', 'W', 'E'])
 
       // Remove middle label
-      await page.getByTestId('canvas-main').click({ position: { x: 47 + 54, y: 47 }, force: true })
-      await expect(page.getByText('Selected: 1')).toBeVisible()
+      await canvasHelper.selectKeyAt(47 + 54, 47)
       await legendHelper.openPanel()
       await legendHelper.removeAllLegends()
 

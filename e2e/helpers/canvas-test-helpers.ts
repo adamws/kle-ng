@@ -531,6 +531,27 @@ export class CanvasTestHelper {
   }
 
   /**
+   * Select a key at specific canvas position and wait for selection to be confirmed
+   * This is more robust than clickCanvasAt for key selection as it waits for the UI to update
+   */
+  async selectKeyAt(x: number, y: number) {
+    // First, wait for canvas to be ready
+    await this.waitForCanvasStability()
+
+    // Click to select the key
+    await this.getCanvas().click({ position: { x, y }, force: true })
+
+    // Wait for RAF to process the click
+    await this.waitHelpers.waitForDoubleAnimationFrame()
+
+    // Wait for selection indicator to appear with increased timeout for Firefox
+    await expect(this.page.getByText('Selected: 1')).toBeVisible({ timeout: 10000 })
+
+    // Additional wait for any UI updates to stabilize
+    await this.waitHelpers.waitForDoubleAnimationFrame()
+  }
+
+  /**
    * Click on the big-ass-enter key to select it
    * Uses known position for reliable selection
    */
