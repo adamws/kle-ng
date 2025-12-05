@@ -30,9 +30,24 @@ export class ThemeComponent {
   async switchTo(theme: 'light' | 'dark' | 'auto') {
     await this.themeToggleButton.click()
 
+    // Wait for theme dropdown specifically (using data-testid)
+    const dropdown = this.page.getByTestId('theme-dropdown-menu')
+    await expect(dropdown).toBeVisible()
+
     // Capitalize first letter for button text
     const buttonText = theme.charAt(0).toUpperCase() + theme.slice(1)
-    await this.page.locator(`button:has-text("${buttonText}")`).click()
+    // Find option within the theme dropdown only
+    const option = dropdown.locator(`.dropdown-item:has-text("${buttonText}")`)
+
+    // Wait for option to be visible and clickable
+    await expect(option).toBeVisible()
+    await option.click()
+
+    // Wait for dropdown to close after selection
+    await expect(dropdown).toBeHidden()
+
+    // Wait for theme change to be applied (Vue reactivity + CSS)
+    await this.waitForThemeChange()
   }
 
   /**
@@ -94,6 +109,10 @@ export class ThemeComponent {
    */
   async openDropdown(): Promise<void> {
     await this.themeToggleButton.click()
+
+    // Wait for theme dropdown specifically (using data-testid)
+    const dropdown = this.page.getByTestId('theme-dropdown-menu')
+    await expect(dropdown).toBeVisible()
   }
 
   /**
@@ -122,5 +141,34 @@ export class ThemeComponent {
    */
   async waitForThemeChange(): Promise<void> {
     await this.waitHelpers.waitForDoubleAnimationFrame()
+  }
+
+  /**
+   * Wait for theme attribute to reach expected value
+   * More deterministic than just waiting for RAF
+   * @param expectedTheme - The expected theme value
+   */
+  async waitForThemeAttribute(expectedTheme: 'light' | 'dark'): Promise<void> {
+    await this.page.waitForFunction(
+      (expected) => {
+        return document.documentElement.getAttribute('data-bs-theme') === expected
+      },
+      expectedTheme,
+      { timeout: 5000 },
+    )
+  }
+
+  /**
+   * Wait for computed styles to be applied after theme change
+   * Ensures CSS variables are updated
+   */
+  async waitForComputedStyles(): Promise<void> {
+    await this.page.waitForFunction(
+      () => {
+        const bgColor = window.getComputedStyle(document.body).backgroundColor
+        return bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent'
+      },
+      { timeout: 5000 },
+    )
   }
 }
