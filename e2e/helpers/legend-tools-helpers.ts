@@ -233,7 +233,7 @@ export class LegendToolsHelper {
    * Get the move button (arrow button between selectors).
    */
   getMoveButton(): Locator {
-    return this.page.locator('.btn-outline-secondary i.bi-arrow-right')
+    return this.page.locator('.btn-outline-primary i.bi-arrow-right')
   }
 
   // ============================================================================

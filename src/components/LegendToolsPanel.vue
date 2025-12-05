@@ -88,13 +88,13 @@
           <!-- Live Typing Preview - Always Visible -->
           <div class="info-section mb-3">
             <div v-if="isEditing" class="status-label">
-              <strong>Editing:</strong> <code>{{ typedBuffer }}</code>
+              <strong>Editing label:</strong> <code>{{ typedBuffer }}</code>
             </div>
             <div v-else-if="selectedKeysCount !== 0" class="status-label">
-              <strong>Waiting for edit</strong>
+              <strong>Waiting for edit (start typing)</strong>
             </div>
             <div v-else class="status-label">
-              <strong>Waiting for selection</strong>
+              <strong>Waiting for key selection</strong>
             </div>
             <div>
               <ul class="status-hint">
@@ -172,7 +172,7 @@
             <div class="col-2 d-flex align-items-center justify-content-center">
               <button
                 type="button"
-                class="btn btn-outline-secondary btn-sm"
+                class="btn btn-outline-primary btn-sm"
                 @click="moveLegends"
                 :disabled="!canMove"
                 title="Move legends"
@@ -807,7 +807,6 @@ onUnmounted(() => {
 }
 
 .tool-tabs {
-  border-bottom: 1px solid var(--bs-border-color);
   padding-bottom: 8px;
 }
 
@@ -836,7 +835,6 @@ onUnmounted(() => {
 
 /* Remove Legends Styles */
 .btn-outline-danger:hover {
-  transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(220, 53, 69, 0.2);
 }
 
@@ -919,10 +917,5 @@ onUnmounted(() => {
 ul {
   margin-bottom: 0;
   padding-left: 1rem;
-}
-
-/* Animation for button press feedback */
-.btn:active {
-  transform: translateY(1px);
 }
 </style>

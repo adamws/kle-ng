@@ -163,7 +163,9 @@ describe('LabelPositionPicker', () => {
       },
     })
 
-    expect(wrapper.find('.keyborder').exists()).toBe(true)
+    expect(wrapper.find('.key-outer').exists()).toBe(true)
+    expect(wrapper.find('.key-bevel').exists()).toBe(true)
+    expect(wrapper.find('.key-inner').exists()).toBe(true)
     expect(wrapper.find('.keylabels').exists()).toBe(true)
 
     // Check that positions have correct grid classes
