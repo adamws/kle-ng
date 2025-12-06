@@ -254,6 +254,8 @@ export class LegendToolsHelper {
     await this.getExtraToolsButton().click()
     await this.getLegendToolsMenuItem().click()
     await this.expectPanelVisible()
+    // Wait for panel body to be fully rendered (contains all tabs)
+    await expect(this.page.locator('.panel-body')).toBeVisible()
   }
 
   /**
@@ -297,6 +299,8 @@ export class LegendToolsHelper {
   async switchToRemoveTab(): Promise<void> {
     await this.getRemoveTabLabel().click()
     await expect(this.getRemoveTabInput()).toBeChecked()
+    // Wait for tab content to be fully rendered and interactive
+    await expect(this.getCategoryButton('All')).toBeVisible()
   }
 
   /**
@@ -310,6 +314,8 @@ export class LegendToolsHelper {
   async switchToAlignTab(): Promise<void> {
     await this.getAlignTabLabel().click()
     await expect(this.getAlignTabInput()).toBeChecked()
+    // Wait for tab content to be fully rendered and interactive
+    await expect(this.getKeycapPreview()).toBeVisible()
   }
 
   /**
@@ -323,6 +329,8 @@ export class LegendToolsHelper {
   async switchToMoveTab(): Promise<void> {
     await this.getMoveTabLabel().click()
     await expect(this.getMoveTabInput()).toBeChecked()
+    // Wait for tab content to be fully rendered and interactive
+    await expect(this.getMoveButton()).toBeVisible()
   }
 
   // ============================================================================
@@ -670,6 +678,8 @@ export class LegendToolsHelper {
   async switchToEditTab(): Promise<void> {
     await this.getEditTabLabel().click()
     await expect(this.getEditTabInput()).toBeChecked()
+    // Wait for tab content to be fully rendered and interactive
+    await expect(this.page.getByTestId('edit-tab-content')).toBeVisible()
   }
 
   /**
