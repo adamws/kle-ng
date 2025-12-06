@@ -3,19 +3,21 @@
     v-if="visible"
     class="legend-tools-panel"
     ref="panelRef"
+    data-testid="legend-tools-panel"
     :style="{ transform: `translate(${position.x}px, ${position.y}px)` }"
     @mousedown="handleMouseDown"
   >
     <div class="panel-content">
       <div class="panel-header" @mousedown="handleHeaderMouseDown">
-        <div class="panel-title">
-          <i class="bi bi-grip-vertical me-2 drag-handle"></i>
+        <div class="panel-title" data-testid="panel-title">
+          <i class="bi bi-grip-vertical me-2 drag-handle" data-testid="drag-handle"></i>
           <i class="bi bi-wrench me-2"></i>
           Legend Tools
         </div>
         <button
           type="button"
           class="btn-close"
+          data-testid="panel-close-button"
           @click="handleClose"
           @mousedown.stop
           aria-label="Close"
@@ -30,46 +32,70 @@
               type="radio"
               class="btn-check"
               id="tab-edit"
+              data-testid="tab-edit-input"
               value="edit"
               v-model="activeTab"
               autocomplete="off"
             />
-            <label class="btn btn-outline-primary btn-sm" for="tab-edit">Edit</label>
+            <label
+              class="btn btn-outline-primary btn-sm"
+              for="tab-edit"
+              data-testid="tab-edit-label"
+              >Edit</label
+            >
 
             <input
               type="radio"
               class="btn-check"
               id="tab-remove"
+              data-testid="tab-remove-input"
               value="remove"
               v-model="activeTab"
               autocomplete="off"
             />
-            <label class="btn btn-outline-primary btn-sm" for="tab-remove">Remove</label>
+            <label
+              class="btn btn-outline-primary btn-sm"
+              for="tab-remove"
+              data-testid="tab-remove-label"
+              >Remove</label
+            >
 
             <input
               type="radio"
               class="btn-check"
               id="tab-align"
+              data-testid="tab-align-input"
               value="align"
               v-model="activeTab"
               autocomplete="off"
             />
-            <label class="btn btn-outline-primary btn-sm" for="tab-align">Align</label>
+            <label
+              class="btn btn-outline-primary btn-sm"
+              for="tab-align"
+              data-testid="tab-align-label"
+              >Align</label
+            >
 
             <input
               type="radio"
               class="btn-check"
               id="tab-move"
+              data-testid="tab-move-input"
               value="move"
               v-model="activeTab"
               autocomplete="off"
             />
-            <label class="btn btn-outline-primary btn-sm" for="tab-move">Move</label>
+            <label
+              class="btn btn-outline-primary btn-sm"
+              for="tab-move"
+              data-testid="tab-move-label"
+              >Move</label
+            >
           </div>
         </div>
 
         <!-- Edit Tab Content -->
-        <div v-if="activeTab === 'edit'" class="tool-content">
+        <div v-if="activeTab === 'edit'" class="tool-content" data-testid="edit-tab-content">
           <h6
             class="fw-bold text-center mb-2"
             style="font-size: 0.9rem; color: var(--bs-text-primary)"
@@ -86,7 +112,7 @@
           />
 
           <!-- Live Typing Preview - Always Visible -->
-          <div class="info-section mb-3">
+          <div class="info-section mb-3" data-testid="editing-alert">
             <div v-if="isEditing" class="status-label">
               <strong>Editing label:</strong> <code>{{ typedBuffer }}</code>
             </div>
@@ -108,7 +134,7 @@
         </div>
 
         <!-- Remove Legends Tab -->
-        <div v-if="activeTab === 'remove'" class="tool-content">
+        <div v-if="activeTab === 'remove'" class="tool-content" data-testid="remove-tab-content">
           <div class="mb-3">
             <div class="row g-2">
               <div v-for="category in legendCategories" :key="category.id" class="col-6">
@@ -117,6 +143,7 @@
                   class="btn btn-outline-danger btn-sm w-100 d-flex align-items-center justify-content-between"
                   @click="removeLegends(category)"
                   :title="category.tooltip"
+                  :data-testid="`category-button-${category.id}`"
                 >
                   <span>{{ category.label }}</span>
                   <i class="bi bi-trash"></i>
@@ -127,7 +154,7 @@
         </div>
 
         <!-- Align Legends Tab -->
-        <div v-if="activeTab === 'align'" class="tool-content">
+        <div v-if="activeTab === 'align'" class="tool-content" data-testid="align-tab-content">
           <h6
             class="fw-bold text-center mb-2"
             style="font-size: 0.9rem; color: var(--bs-text-primary)"
@@ -146,7 +173,7 @@
         </div>
 
         <!-- Move Legends Tab -->
-        <div v-if="activeTab === 'move'" class="tool-content">
+        <div v-if="activeTab === 'move'" class="tool-content" data-testid="move-tab-content">
           <div class="row">
             <div class="col-5">
               <h6
@@ -162,6 +189,7 @@
               <button
                 type="button"
                 class="btn btn-outline-primary btn-sm"
+                data-testid="move-button"
                 @click="moveLegends"
                 :disabled="!canMove"
                 title="Move legends"
@@ -192,7 +220,9 @@
         <!-- Status Info -->
         <div v-if="activeTab !== 'edit'" class="status-info mt-3">
           <div class="d-flex align-items-center gap-2">
-            <small class="text-muted mb-0"> {{ selectedKeysCount }} key(s) will be affected </small>
+            <small class="text-muted mb-0" data-testid="status-count">
+              {{ selectedKeysCount }} key(s) will be affected
+            </small>
           </div>
         </div>
       </div>

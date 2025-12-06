@@ -1,18 +1,23 @@
 <template>
-  <div :class="['label-position-picker', sizeClass]">
+  <div :class="['label-position-picker', sizeClass]" data-testid="label-position-picker">
     <!-- Layer 1: Outer border -->
-    <div class="key-outer"></div>
+    <div class="key-outer" data-testid="key-outer"></div>
 
     <!-- Layer 2: Bevel/base color -->
-    <div class="key-bevel"></div>
+    <div class="key-bevel" data-testid="key-bevel"></div>
 
     <!-- Layer 3: Inner surface (lightened) -->
-    <div class="key-inner"></div>
+    <div class="key-inner" data-testid="key-inner"></div>
 
     <!-- Layer 4: Labels grid -->
-    <div class="keylabels">
+    <div class="keylabels" data-testid="keylabels">
       <!-- Top Row: positions 0-2 -->
-      <div v-for="pos in [0, 1, 2]" :key="pos" :class="['keylabel', `keylabel${pos}`]">
+      <div
+        v-for="pos in [0, 1, 2]"
+        :key="pos"
+        :class="['keylabel', `keylabel${pos}`]"
+        :data-testid="`keylabel-${pos}`"
+      >
         <input
           type="radio"
           :id="`${idPrefix}-${pos}`"
@@ -21,14 +26,24 @@
           @change="handleChange(pos)"
           :disabled="disabled"
           class="position-radio"
+          :data-testid="`position-radio-${idPrefix}-${pos}`"
         />
-        <label :for="`${idPrefix}-${pos}`" class="position-label">
+        <label
+          :for="`${idPrefix}-${pos}`"
+          class="position-label"
+          :data-testid="`position-label-${pos}`"
+        >
           {{ labelPositions[pos]?.label }}
         </label>
       </div>
 
       <!-- Center Row: positions 3-5 -->
-      <div v-for="pos in [3, 4, 5]" :key="pos" :class="['keylabel', `keylabel${pos}`]">
+      <div
+        v-for="pos in [3, 4, 5]"
+        :key="pos"
+        :class="['keylabel', `keylabel${pos}`]"
+        :data-testid="`keylabel-${pos}`"
+      >
         <input
           type="radio"
           :id="`${idPrefix}-${pos}`"
@@ -37,14 +52,24 @@
           @change="handleChange(pos)"
           :disabled="disabled"
           class="position-radio"
+          :data-testid="`position-radio-${idPrefix}-${pos}`"
         />
-        <label :for="`${idPrefix}-${pos}`" class="position-label">
+        <label
+          :for="`${idPrefix}-${pos}`"
+          class="position-label"
+          :data-testid="`position-label-${pos}`"
+        >
           {{ labelPositions[pos]?.label }}
         </label>
       </div>
 
       <!-- Bottom Row: positions 6-8 -->
-      <div v-for="pos in [6, 7, 8]" :key="pos" :class="['keylabel', `keylabel${pos}`]">
+      <div
+        v-for="pos in [6, 7, 8]"
+        :key="pos"
+        :class="['keylabel', `keylabel${pos}`]"
+        :data-testid="`keylabel-${pos}`"
+      >
         <input
           type="radio"
           :id="`${idPrefix}-${pos}`"
@@ -53,14 +78,24 @@
           @change="handleChange(pos)"
           :disabled="disabled"
           class="position-radio"
+          :data-testid="`position-radio-${idPrefix}-${pos}`"
         />
-        <label :for="`${idPrefix}-${pos}`" class="position-label">
+        <label
+          :for="`${idPrefix}-${pos}`"
+          class="position-label"
+          :data-testid="`position-label-${pos}`"
+        >
           {{ labelPositions[pos]?.label }}
         </label>
       </div>
 
       <!-- Front Row: positions 9-11 -->
-      <div v-for="pos in [9, 10, 11]" :key="pos" :class="['keylabel', `keylabel${pos}`]">
+      <div
+        v-for="pos in [9, 10, 11]"
+        :key="pos"
+        :class="['keylabel', `keylabel${pos}`]"
+        :data-testid="`keylabel-${pos}`"
+      >
         <input
           type="radio"
           :id="`${idPrefix}-${pos}`"
@@ -69,8 +104,13 @@
           @change="handleChange(pos)"
           :disabled="disabled"
           class="position-radio"
+          :data-testid="`position-radio-${idPrefix}-${pos}`"
         />
-        <label :for="`${idPrefix}-${pos}`" class="position-label">
+        <label
+          :for="`${idPrefix}-${pos}`"
+          class="position-label"
+          :data-testid="`position-label-${pos}`"
+        >
           {{ labelPositions[pos]?.label }}
         </label>
       </div>

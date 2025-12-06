@@ -135,9 +135,9 @@ describe('LegendToolsPanel', () => {
     })
 
     it('displays keycap preview with alignment buttons', () => {
-      expect(wrapper.find('.keycap-preview').exists()).toBe(true)
+      expect(wrapper.find('[data-testid="alignment-picker"]').exists()).toBe(true)
 
-      const alignButtons = wrapper.findAll('.align-btn')
+      const alignButtons = wrapper.findAll('[data-testid^="align-btn-"]')
       expect(alignButtons).toHaveLength(9)
     })
 
@@ -247,7 +247,7 @@ describe('LegendToolsPanel', () => {
     })
 
     it('disables move button when no positions selected', () => {
-      const moveButton = wrapper.find('.btn-outline-secondary')
+      const moveButton = wrapper.find('[data-testid="move-button"]')
       expect(moveButton.attributes('disabled')).toBeDefined()
     })
 
@@ -261,7 +261,7 @@ describe('LegendToolsPanel', () => {
       await toRadio!.setValue(true)
       await wrapper.vm.$nextTick()
 
-      const moveButton = wrapper.find('.btn-outline-secondary')
+      const moveButton = wrapper.find('[data-testid="move-button"]')
       expect(moveButton.attributes('disabled')).toBeUndefined()
     })
 
@@ -288,7 +288,7 @@ describe('LegendToolsPanel', () => {
       await toRadio!.setValue(true)
       await wrapper.vm.$nextTick()
 
-      const moveButton = wrapper.find('.btn-outline-secondary')
+      const moveButton = wrapper.find('[data-testid="move-button"]')
       await moveButton.trigger('click')
 
       expect(saveToHistorySpy).toHaveBeenCalled()

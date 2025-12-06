@@ -1,21 +1,22 @@
 <template>
-  <div :class="['alignment-picker', sizeClass]">
+  <div :class="['alignment-picker', sizeClass]" data-testid="alignment-picker">
     <!-- Layer 1: Outer border -->
-    <div class="key-outer"></div>
+    <div class="key-outer" data-testid="alignment-key-outer"></div>
 
     <!-- Layer 2: Bevel/base color -->
-    <div class="key-bevel"></div>
+    <div class="key-bevel" data-testid="alignment-key-bevel"></div>
 
     <!-- Layer 3: Inner surface (lightened) -->
-    <div class="key-inner"></div>
+    <div class="key-inner" data-testid="alignment-key-inner"></div>
 
     <!-- Layer 4: Alignment buttons grid -->
-    <div class="alignment-buttons">
+    <div class="alignment-buttons" data-testid="alignment-buttons">
       <button
         v-for="(button, index) in alignmentButtons"
         :key="index"
         type="button"
         :class="['align-btn', `align-btn${index}`]"
+        :data-testid="`align-btn-${index}`"
         @click="handleAlign(button.flags)"
         :title="button.tooltip"
         v-html="button.label"

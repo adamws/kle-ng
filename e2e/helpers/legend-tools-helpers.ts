@@ -64,28 +64,28 @@ export class LegendToolsHelper {
    * Get the Legend Tools panel container locator.
    */
   getPanel(): Locator {
-    return this.page.locator('.legend-tools-panel')
+    return this.page.getByTestId('legend-tools-panel')
   }
 
   /**
    * Get the panel title locator.
    */
   getPanelTitle(): Locator {
-    return this.page.locator('.panel-title', { hasText: 'Legend Tools' })
+    return this.page.getByTestId('panel-title')
   }
 
   /**
    * Get the panel close button locator.
    */
   getCloseButton(): Locator {
-    return this.page.locator('.legend-tools-panel .btn-close')
+    return this.page.getByTestId('panel-close-button')
   }
 
   /**
    * Get the drag handle locator.
    */
   getDragHandle(): Locator {
-    return this.page.locator('.legend-tools-panel .drag-handle')
+    return this.page.getByTestId('drag-handle')
   }
 
   /**
@@ -93,7 +93,7 @@ export class LegendToolsHelper {
    * Note: This element is only visible when activeTab !== 'edit'
    */
   getStatusCount(): Locator {
-    return this.page.locator('.status-info small.text-muted')
+    return this.page.getByTestId('status-count')
   }
 
   // ============================================================================
@@ -104,42 +104,42 @@ export class LegendToolsHelper {
    * Get the Remove tab radio input locator.
    */
   getRemoveTabInput(): Locator {
-    return this.page.locator('#tab-remove')
+    return this.page.getByTestId('tab-remove-input')
   }
 
   /**
    * Get the Remove tab label locator.
    */
   getRemoveTabLabel(): Locator {
-    return this.page.locator('label[for="tab-remove"]')
+    return this.page.getByTestId('tab-remove-label')
   }
 
   /**
    * Get the Align tab radio input locator.
    */
   getAlignTabInput(): Locator {
-    return this.page.locator('#tab-align')
+    return this.page.getByTestId('tab-align-input')
   }
 
   /**
    * Get the Align tab label locator.
    */
   getAlignTabLabel(): Locator {
-    return this.page.locator('label[for="tab-align"]')
+    return this.page.getByTestId('tab-align-label')
   }
 
   /**
    * Get the Move tab radio input locator.
    */
   getMoveTabInput(): Locator {
-    return this.page.locator('#tab-move')
+    return this.page.getByTestId('tab-move-input')
   }
 
   /**
    * Get the Move tab label locator.
    */
   getMoveTabLabel(): Locator {
-    return this.page.locator('label[for="tab-move"]')
+    return this.page.getByTestId('tab-move-label')
   }
 
   // ============================================================================
@@ -162,7 +162,8 @@ export class LegendToolsHelper {
       | 'Others'
       | 'Decals',
   ): Locator {
-    return this.page.getByRole('button', { name: category }).first()
+    const categoryId = category.toLowerCase()
+    return this.page.getByTestId(`category-button-${categoryId}`)
   }
 
   // ============================================================================
@@ -173,14 +174,14 @@ export class LegendToolsHelper {
    * Get the alignment picker element in Align tab.
    */
   getKeycapPreview(): Locator {
-    return this.page.locator('.alignment-picker')
+    return this.page.getByTestId('alignment-picker')
   }
 
   /**
    * Get all alignment buttons in the Align tab.
    */
   getAlignmentButtons(): Locator {
-    return this.page.locator('.align-btn')
+    return this.page.locator('[data-testid^="align-btn-"]')
   }
 
   /**
@@ -189,7 +190,7 @@ export class LegendToolsHelper {
    * @param index - Button index (0 = top-left, 4 = center, 8 = bottom-right)
    */
   getAlignmentButton(index: number): Locator {
-    return this.page.locator('.align-btn').nth(index)
+    return this.page.getByTestId(`align-btn-${index}`)
   }
 
   // ============================================================================
@@ -200,14 +201,14 @@ export class LegendToolsHelper {
    * Get all keycap selector elements in Move tab.
    */
   getKeycapSelectors(): Locator {
-    return this.page.locator('.label-position-picker')
+    return this.page.getByTestId('label-position-picker')
   }
 
   /**
    * Get all position label elements in Move tab.
    */
   getPositionLabels(): Locator {
-    return this.page.locator('.position-label')
+    return this.page.locator('[data-testid^="position-label-"]')
   }
 
   /**
@@ -216,7 +217,7 @@ export class LegendToolsHelper {
    * @param abbr - Position abbreviation (e.g., 'TL', 'CC', 'BR')
    */
   getPositionLabel(abbr: string): Locator {
-    return this.page.locator(`label:has-text("${abbr}")`).first()
+    return this.page.locator(`[data-testid^="position-label-"]:has-text("${abbr}")`).first()
   }
 
   /**
@@ -226,14 +227,15 @@ export class LegendToolsHelper {
    * @param selector - Which selector (0 for source, 1 for destination)
    */
   getPositionRadio(value: number, selector: 0 | 1): Locator {
-    return this.page.locator(`input[value="${value}"]`).nth(selector)
+    const prefix = selector === 0 ? 'from' : 'to'
+    return this.page.getByTestId(`position-radio-${prefix}-${value}`)
   }
 
   /**
    * Get the move button (arrow button between selectors).
    */
   getMoveButton(): Locator {
-    return this.page.locator('.btn-outline-primary i.bi-arrow-right')
+    return this.page.getByTestId('move-button')
   }
 
   // ============================================================================
@@ -619,14 +621,14 @@ export class LegendToolsHelper {
    * Get the Edit tab radio input locator.
    */
   getEditTabInput(): Locator {
-    return this.page.locator('#tab-edit')
+    return this.page.getByTestId('tab-edit-input')
   }
 
   /**
    * Get the Edit tab label locator.
    */
   getEditTabLabel(): Locator {
-    return this.page.locator('label[for="tab-edit"]')
+    return this.page.getByTestId('tab-edit-label')
   }
 
   /**
@@ -635,7 +637,7 @@ export class LegendToolsHelper {
    * @param value - Position value (0-11)
    */
   getEditPositionRadio(value: number): Locator {
-    return this.page.locator(`#edit-${value}`)
+    return this.page.getByTestId(`position-radio-edit-${value}`)
   }
 
   /**
@@ -643,7 +645,7 @@ export class LegendToolsHelper {
    * Note: This is now always visible, showing either editing state or placeholder.
    */
   getEditingAlert(): Locator {
-    return this.page.locator('.info-section').first()
+    return this.page.getByTestId('editing-alert')
   }
 
   /**
