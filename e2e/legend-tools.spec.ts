@@ -149,7 +149,10 @@ test.describe('Legend Tools Panel', () => {
       // Open legend tools panel
       await legendHelper.openPanel()
 
-      // Click "All" to remove all legends (should be in remove tab by default)
+      // Switch to Remove tab (Edit is default)
+      await legendHelper.switchToRemoveTab()
+
+      // Click "All" to remove all legends
       await legendHelper.removeAllLegends()
 
       // Panel should remain open (multiple operations allowed)
@@ -576,6 +579,7 @@ test.describe('Legend Tools Panel', () => {
 
       // Open legend tools and remove all
       await legendHelper.openPanel()
+      await legendHelper.switchToRemoveTab()
       await legendHelper.removeAllLegends()
 
       // Export and verify JSON
@@ -606,6 +610,7 @@ test.describe('Legend Tools Panel', () => {
       await expect(page.getByText('Selected: 1')).toBeVisible()
 
       await legendHelper.openPanel()
+      await legendHelper.switchToRemoveTab()
       await legendHelper.removeAllLegends()
 
       // Export and verify
@@ -626,6 +631,7 @@ test.describe('Legend Tools Panel', () => {
 
       // Remove legends
       await legendHelper.openPanel()
+      await legendHelper.switchToRemoveTab()
       await legendHelper.removeAllLegends()
 
       // Export and verify structure
@@ -650,6 +656,7 @@ test.describe('Legend Tools Panel', () => {
 
       // Remove all legends
       await legendHelper.openPanel()
+      await legendHelper.switchToRemoveTab()
       await legendHelper.removeAllLegends()
 
       // Export and verify
@@ -1061,7 +1068,8 @@ test.describe('Legend Tools Panel', () => {
       // Perform multiple legend operations
       await legendHelper.openPanel()
 
-      // Remove all legends (simpler than category-specific)
+      // Switch to Remove tab and remove all legends (simpler than category-specific)
+      await legendHelper.switchToRemoveTab()
       await legendHelper.removeAllLegends()
 
       // Switch to align and align remaining (add new label first)
@@ -1110,6 +1118,7 @@ test.describe('Legend Tools Panel', () => {
       // Remove middle label
       await canvasHelper.selectKeyAt(47 + 54, 47)
       await legendHelper.openPanel()
+      await legendHelper.switchToRemoveTab()
       await legendHelper.removeAllLegends()
 
       // Export and verify after remove
@@ -1166,7 +1175,8 @@ test.describe('Legend Tools Panel', () => {
       // Perform various operations
       await legendHelper.openPanel()
 
-      // Remove all legends
+      // Switch to Remove tab and remove all legends
+      await legendHelper.switchToRemoveTab()
       await legendHelper.removeAllLegends()
 
       // Switch to align tab and align (even though labels are empty, test the operation)
