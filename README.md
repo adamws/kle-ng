@@ -166,6 +166,38 @@ Extra tools are grouped under single button in the left side toolbar. Currently 
 2. **Add Switch Matrix Coordinates** - assign [VIA style](https://www.caniusevia.com/docs/layouts/) row/column labels
 3. **Move Rotation Origins** - recalculate positions according to new rotation references
 
+#### Legend Tools
+
+Legend tools are used for quick canvas oriented label editing. There are four modes:
+1. **Edit** - direct label assigning with auto advancement
+2. **Remove** - removal of selected label category
+3. **Align** - label alignment
+4. **Move** - label movement
+
+<table>
+  <tr>
+    <td align="center" width="50%"><b>Edit</b></td>
+    <td align="center"><b>Move</b></td>
+  </tr>
+  <tr>
+    <td><img src="resources/gifs/legend-tools-edit.gif"></td>
+    <td><img src="resources/gifs/legend-tools-move.gif"></td>
+  </tr>
+  <tr>
+    <td>
+      Quick edit label at selected label position. Captures keystrokes after key selection.
+      Auto advances to next key after <code>Enter</code> or restore old value after <code>Escape</code>.
+      Supports editing multiple keys at once (after selection with mouse).</td>
+    <td>
+      Moves all labels from selected position to selected position.
+      Uses all keys if none selected, otherwise applies to selected keys only.
+    </td>
+  </tr>
+</table>
+
+> [!TIP]
+> **Legend Tools** are designed for easier label editing than direct **Key Properties** modification
+
 #### Add Switch Matrix Coordinates Tool
 
 This tool helps to map physical layout to the electrical switch matrix, enabling proper key mapping in
