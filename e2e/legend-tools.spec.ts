@@ -566,6 +566,102 @@ test.describe('Legend Tools Panel', () => {
         // Commit
         await legendHelper.typeInEditMode('', true) // Just press Enter
       })
+
+      test('should commit edit when changing label position mid-edit', async ({ page }) => {
+        // Setup: Add a second key (beforeEach already added one)
+        await canvasHelper.addKey()
+        await expect(page.getByText('Keys: 2')).toBeVisible()
+
+        // Select only the first key
+        await page.getByTestId('canvas-main').click({ position: { x: 47, y: 47 }, force: true })
+        await expect(page.getByText('Selected: 1')).toBeVisible()
+
+        // Select position 0 (TL) and start typing
+        await legendHelper.selectEditPosition(0)
+        await page.keyboard.type('Shift')
+
+        // Verify label is being edited (not yet committed)
+        await legendHelper.expectEditingAlertVisible('Shift')
+
+        // Change to position 1 (TC) without pressing Enter
+        // This should commit but NOT select next key
+        await legendHelper.selectEditPosition(1)
+
+        // Wait for the editing state to be cleared
+        await expect
+          .poll(async () => {
+            const text = await legendHelper.getEditingAlert().textContent()
+            return text?.includes('Editing') ?? true
+          })
+          .toBe(false)
+
+        // Verify we're still on the first key (not auto-selected to second)
+        await expect(page.getByText('Selected: 1')).toBeVisible()
+
+        // Type new content at position 1 (should still be on first key)
+        await page.keyboard.type('Ctrl')
+
+        // Verify new content is being edited at position 1
+        await legendHelper.expectEditingAlertVisible('Ctrl')
+
+        // Commit final edit
+        await page.keyboard.press('Enter')
+
+        // Wait for final editing state to clear
+        await expect
+          .poll(async () => {
+            const text = await legendHelper.getEditingAlert().textContent()
+            return text?.includes('Editing') ?? true
+          })
+          .toBe(false)
+
+        // Final verification: should still have 2 keys and first key selected
+        await expect(page.getByText('Keys: 2')).toBeVisible()
+        await expect(page.getByText('Selected: 1')).toBeVisible()
+
+        // Close the panel
+        await legendHelper.closePanel()
+
+        // Verify first key has both labels at correct positions
+        // Click on first key
+        await page.getByTestId('canvas-main').click({ position: { x: 47, y: 47 }, force: true })
+        await expect(page.getByText('Selected: 1')).toBeVisible()
+
+        // Wait for properties panel to be visible
+        const propertiesPanel = page.locator('.key-properties-panel')
+        await expect(propertiesPanel).toBeVisible()
+
+        // Wait for labels grid to be rendered
+        await expect(page.getByTestId('labels-grid')).toBeVisible()
+
+        // Check label at position 0 (TL) - should be "Shift"
+        const topLeftInput = page.locator('.labels-grid .form-control').nth(0)
+        await expect(topLeftInput).toHaveValue('Shift')
+
+        // Check label at position 1 (TC) - should be "Ctrl"
+        const topCenterInput = page.locator('.labels-grid .form-control').nth(1)
+        await expect(topCenterInput).toHaveValue('Ctrl')
+
+        // Click on second key to verify it has no labels
+        // UNIT_SIZE is 54px, so second key is 54px to the right of first key
+        await page.getByTestId('canvas-main').click({ position: { x: 101, y: 47 }, force: true })
+
+        // Verify we selected the second key
+        await expect(page.getByText('Selected: 1')).toBeVisible()
+
+        // Wait for properties panel to update with second key's data
+        await waitHelpers.waitForDoubleAnimationFrame()
+
+        // Verify all label positions are empty on the second key
+        const labelInputs = page.locator('.labels-grid .form-control')
+        const count = await labelInputs.count()
+
+        // Check first 9 positions (main grid) - all should be empty
+        for (let i = 0; i < Math.min(count, 9); i++) {
+          const input = labelInputs.nth(i)
+          await expect(input).toHaveValue('')
+        }
+      })
     })
   })
 

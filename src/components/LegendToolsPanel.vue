@@ -545,14 +545,14 @@ const updateAllLabelsLive = () => {
   keyboardStore.markDirty()
 }
 
-const commitEdit = () => {
+const finishEdit = (autoSelectNext: boolean = true) => {
   if (!isEditing.value) return
 
   // Save to history AFTER edits are done (enables undo)
   keyboardStore.saveToHistory()
 
-  // Auto-select next key feature
-  if (keyboardStore.selectedKeys.length === 1) {
+  // Auto-select next key feature (only if requested)
+  if (autoSelectNext && keyboardStore.selectedKeys.length === 1) {
     const currentKey = keyboardStore.selectedKeys[0]
     if (currentKey) {
       const currentIndex = keyboardStore.keys.indexOf(currentKey)
@@ -575,6 +575,10 @@ const commitEdit = () => {
   typedBuffer.value = ''
 
   // Keep activePosition selected for batch editing
+}
+
+const commitEdit = () => {
+  finishEdit(true) // Commit with auto-select next
 }
 
 const cancelEdit = () => {
@@ -712,6 +716,14 @@ watch(
   },
   { deep: true },
 )
+
+// Watch for position changes during editing
+watch(activePosition, (newPosition, oldPosition) => {
+  // If user changes position while editing, commit without auto-selecting next key
+  if (isEditing.value && newPosition !== oldPosition) {
+    finishEdit(false) // Commit but stay on same key(s)
+  }
+})
 
 onMounted(() => {
   document.addEventListener('keydown', handleKeydown)
