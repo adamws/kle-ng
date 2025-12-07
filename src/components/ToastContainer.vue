@@ -69,6 +69,11 @@ const { toasts, removeToast } = toast
   .toast-container {
     left: 20px;
     right: 20px;
+    max-width: calc(100vw - 40px);
+  }
+
+  .toast-container > div {
+    width: 100%;
   }
 
   .toast-stack-enter-from,

@@ -103,6 +103,7 @@ onUnmounted(() => {
   align-items: flex-start;
   padding: 16px;
   gap: 12px;
+  overflow: hidden;
 }
 
 .toast-icon {
@@ -114,6 +115,8 @@ onUnmounted(() => {
 .toast-message {
   flex: 1;
   min-width: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .toast-title {
@@ -136,13 +139,13 @@ onUnmounted(() => {
   font-size: 16px;
   color: var(--bs-secondary-color);
   cursor: pointer;
-  padding: 2px;
+  padding: 4px;
   border-radius: 2px;
   transition:
     color 0.15s ease,
     background-color 0.15s ease;
   margin-top: -2px;
-  margin-right: -4px;
+  margin-left: 4px;
 }
 
 .toast-close:hover {
@@ -203,7 +206,13 @@ onUnmounted(() => {
 @media (max-width: 640px) {
   .toast-notification {
     min-width: auto;
-    max-width: none;
+    max-width: calc(100vw - 40px);
+    width: 100%;
+  }
+
+  .toast-content {
+    padding: 12px;
+    gap: 8px;
   }
 }
 </style>
