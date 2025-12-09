@@ -21,6 +21,7 @@
         <input
           type="radio"
           :id="`${idPrefix}-${pos}`"
+          :name="`${idPrefix}-position`"
           :value="pos"
           :checked="modelValue === pos"
           @change="handleChange(pos)"
@@ -47,6 +48,7 @@
         <input
           type="radio"
           :id="`${idPrefix}-${pos}`"
+          :name="`${idPrefix}-position`"
           :value="pos"
           :checked="modelValue === pos"
           @change="handleChange(pos)"
@@ -73,6 +75,7 @@
         <input
           type="radio"
           :id="`${idPrefix}-${pos}`"
+          :name="`${idPrefix}-position`"
           :value="pos"
           :checked="modelValue === pos"
           @change="handleChange(pos)"
@@ -99,6 +102,7 @@
         <input
           type="radio"
           :id="`${idPrefix}-${pos}`"
+          :name="`${idPrefix}-position`"
           :value="pos"
           :checked="modelValue === pos"
           @change="handleChange(pos)"

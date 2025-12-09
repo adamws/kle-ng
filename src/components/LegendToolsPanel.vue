@@ -599,6 +599,9 @@ const cancelEdit = () => {
 }
 
 const handleEditKeyDown = (event: KeyboardEvent) => {
+  // Only handle when panel is visible
+  if (!props.visible) return
+
   // Only handle when Edit tab active
   if (activeTab.value !== 'edit') return
 
@@ -678,16 +681,39 @@ watch(
   },
 )
 
-// Watch activeTab to manage event listeners
+// Watch for panel visibility to manage keyboard listener
+watch(
+  () => props.visible,
+  (isVisible, wasVisible) => {
+    // Add listener when panel becomes visible AND Edit tab is active
+    if (isVisible && !wasVisible && activeTab.value === 'edit') {
+      document.addEventListener('keydown', handleEditKeyDown, true)
+    }
+
+    // Remove listener when panel becomes hidden
+    if (!isVisible && wasVisible) {
+      document.removeEventListener('keydown', handleEditKeyDown, true)
+      if (isEditing.value) {
+        cancelEdit()
+      }
+    }
+  },
+  { immediate: false },
+)
+
+// Watch for tab changes to manage listener when panel is visible
 watch(
   activeTab,
   (newTab, oldTab) => {
+    // Only manage listener if panel is visible
+    if (!props.visible) return
+
     // Add listener when switching TO Edit
     if (newTab === 'edit' && oldTab !== 'edit') {
       document.addEventListener('keydown', handleEditKeyDown, true)
     }
 
-    // Remove listener and cancel editing when switching FROM Edit
+    // Remove listener when switching FROM Edit
     if (oldTab === 'edit' && newTab !== 'edit') {
       document.removeEventListener('keydown', handleEditKeyDown, true)
       if (isEditing.value) {
@@ -695,7 +721,7 @@ watch(
       }
     }
   },
-  { immediate: true },
+  { immediate: false },
 )
 
 // Watch for selection changes
