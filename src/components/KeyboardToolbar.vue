@@ -97,6 +97,16 @@
             <li>
               <a
                 class="dropdown-item"
+                data-testid="export-embed"
+                href="#"
+                @click.prevent="copyEmbedCode"
+              >
+                Embed
+              </a>
+            </li>
+            <li>
+              <a
+                class="dropdown-item"
                 data-testid="export-ergogen-web-gui"
                 href="#"
                 @click.prevent="exportToErgogenWebGui"
@@ -506,6 +516,138 @@ const downloadPng = async () => {
       console.error('Unknown error downloading PNG:', error)
       toast.showError('Failed to save PNG image', 'Save Failed')
     }
+  }
+}
+
+const copyEmbedCode = async () => {
+  const canvas = document.querySelector('.keyboard-canvas') as HTMLCanvasElement
+  if (!canvas) {
+    toast.showError('Please make sure the keyboard is visible.', 'Canvas not found')
+    return
+  }
+
+  // Generate canvas with rounded background
+  const radiiValue = keyboardStore.metadata.radii?.trim() || '6px'
+  const tempCanvas = createCanvasWithRoundedBackground(canvas, radiiValue)
+
+  // If matrix overlay is visible, composite it on top
+  if (matrixDrawingStore.isModalOpen) {
+    const overlayCanvas = document.querySelector('.matrix-annotation-overlay') as HTMLCanvasElement
+    if (overlayCanvas) {
+      const tempCtx = tempCanvas.getContext('2d')
+      if (tempCtx) {
+        tempCtx.drawImage(overlayCanvas, 0, 0)
+      }
+    }
+  }
+
+  try {
+    // Helper function to escape HTML
+    const escapeHtml = (text: string): string => {
+      const div = document.createElement('div')
+      div.textContent = text
+      return div.innerHTML
+    }
+
+    // Get canvas as data URL
+    const imageDataUrl = tempCanvas.toDataURL('image/png')
+
+    // Get keyboard metadata
+    const layoutName = keyboardStore.metadata.name || keyboardStore.filename || 'Keyboard Layout'
+    const author = keyboardStore.metadata.author || ''
+
+    // Generate HTML content for iframe (inner content only)
+    const innerHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(layoutName)}</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background-color: #f5f5f5;
+      display: flex;
+      justify-content: center;
+    }
+    .keyboard-container {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      max-width: 100%;
+    }
+    .keyboard-title {
+      margin: 0 0 15px 0;
+      font-size: 24px;
+      font-weight: 600;
+      color: #333;
+    }
+    .keyboard-author {
+      margin: 0 0 20px 0;
+      font-size: 14px;
+      color: #666;
+    }
+    .keyboard-image {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 4px;
+    }
+    .keyboard-footer {
+      margin-top: 15px;
+      font-size: 12px;
+      color: #999;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="keyboard-container">
+    ${layoutName ? `<h1 class="keyboard-title">${escapeHtml(layoutName)}</h1>` : ''}
+    ${author ? `<p class="keyboard-author">by ${escapeHtml(author)}</p>` : ''}
+    <img src="${imageDataUrl}" alt="${escapeHtml(layoutName)}" class="keyboard-image" />
+    <p class="keyboard-footer">Created with <a href="https://editor.keyboard-tools.xyz/" target="_blank" rel="noopener">Keyboard Layout Editor NG</a></p>
+  </div>
+</body>
+</html>`
+
+    // Escape inner HTML for use in srcdoc attribute
+    const escapedInnerHtml = innerHtml.replace(/"/g, '&quot;').replace(/\n/g, ' ').replace(/\s+/g, ' ')
+
+    // Generate iframe tag only
+    const iframeCode = `<iframe
+  srcdoc="${escapedInnerHtml}"
+  style="width: 100%; border: 0;"
+></iframe>`
+
+    // Copy to clipboard
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(iframeCode)
+      toast.showSuccess('Embed code copied to clipboard!', 'Copied')
+    } else {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea')
+      textArea.value = iframeCode
+      textArea.style.position = 'fixed'
+      textArea.style.left = '-999999px'
+      document.body.appendChild(textArea)
+      textArea.focus()
+      textArea.select()
+      try {
+        document.execCommand('copy')
+        toast.showSuccess('Embed code copied to clipboard!', 'Copied')
+      } catch (err) {
+        toast.showError('Failed to copy to clipboard', 'Copy Failed')
+      }
+      document.body.removeChild(textArea)
+    }
+  } catch (error: unknown) {
+    console.error('Error generating embed code:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    toast.showError(`Failed to generate embed code: ${errorMessage}`, 'Failed')
   }
 }
 
