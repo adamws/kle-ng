@@ -639,7 +639,7 @@ const copyEmbedCode = async () => {
       try {
         document.execCommand('copy')
         toast.showSuccess('Embed code copied to clipboard!', 'Copied')
-      } catch (err) {
+      } catch {
         toast.showError('Failed to copy to clipboard', 'Copy Failed')
       }
       document.body.removeChild(textArea)
