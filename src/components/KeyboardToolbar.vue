@@ -189,7 +189,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useKeyboardStore, Keyboard, type Key } from '@/stores/keyboard'
+import { useKeyboardStore, Keyboard, KeyboardMetadata, type Key } from '@/stores/keyboard'
 import { useMatrixDrawingStore } from '@/stores/matrix-drawing'
 import presetsMetadata from '@/data/presets.json'
 import { toast } from '@/composables/useToast'
@@ -327,6 +327,81 @@ const handleFileUpload = async (event: Event) => {
   } finally {
     // Clear the input
     input.value = ''
+  }
+}
+
+/**
+ * Process and load JSON layout data with automatic format detection
+ * Handles VIA (not implemented here), Internal KLE (object with meta+keys),
+ * and Raw KLE formats (array-based).
+ */
+const processJsonLayout = async (
+  jsonText: string,
+  displayFilename: string,
+  storedFilename: string,
+) => {
+  let data: unknown
+
+  try {
+    data = JSON.parse(jsonText)
+  } catch (err) {
+    // Invalid JSON
+    const msg = err instanceof Error ? err.message : 'Invalid JSON'
+    toast.showError(msg, 'Import Failed')
+    return
+  }
+
+  try {
+    // Raw KLE: arrays (including empty arrays) are treated as raw KLE format
+    if (Array.isArray(data)) {
+      keyboardStore.loadKLELayout(data)
+      keyboardStore.filename = storedFilename
+      toast.showSuccess(`KLE layout loaded from ${displayFilename}`, 'Import successful')
+      return
+    }
+
+    // Internal KLE format: object with meta and keys (keys must be array)
+    if (
+      typeof data === 'object' &&
+      data !== null &&
+      'meta' in (data as Record<string, unknown>) &&
+      'keys' in (data as Record<string, unknown>) &&
+      Array.isArray((data as Record<string, unknown>).keys)
+    ) {
+      // Build a typed Keyboard object and load it
+      const obj = data as Record<string, unknown>
+      const keyboard = new Keyboard()
+      // Ensure keys are typed as `Key[]` after cloning
+      keyboard.keys = Array.isArray(obj.keys)
+        ? (JSON.parse(JSON.stringify(obj.keys)) as Key[])
+        : []
+      // Use provided meta or fallback to defaults
+      keyboard.meta = obj.meta
+        ? (JSON.parse(JSON.stringify(obj.meta)) as KeyboardMetadata)
+        : new KeyboardMetadata()
+
+      keyboardStore.loadKeyboard(keyboard)
+      // Store filename for downloads (even if meta.name exists, filename is tracked separately)
+      keyboardStore.filename = storedFilename
+      toast.showSuccess(`Internal KLE layout loaded from ${displayFilename}`, 'Import successful')
+      return
+    }
+
+    // Fallback: try to process as raw KLE (may throw)
+    try {
+      keyboardStore.loadKLELayout(data as Array<unknown>)
+      keyboardStore.filename = storedFilename
+      toast.showSuccess(`KLE layout loaded from ${displayFilename}`, 'Import successful')
+      return
+    } catch (err2) {
+      const errMsg = err2 instanceof Error ? err2.message : 'Failed to import layout'
+      toast.showError(errMsg, 'Import Failed')
+      return
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to import layout'
+    toast.showError(errorMessage, 'Import Failed')
+    throw error
   }
 }
 
