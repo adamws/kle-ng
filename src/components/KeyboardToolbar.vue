@@ -188,19 +188,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick, watch } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useKeyboardStore, Keyboard, type Key } from '@/stores/keyboard'
 import { useMatrixDrawingStore } from '@/stores/matrix-drawing'
 import presetsMetadata from '@/data/presets.json'
-import { parseJsonString } from '@/utils/serialization'
 import { toast } from '@/composables/useToast'
-import { parseBorderRadius, createRoundedRectanglePath } from '@/utils/border-radius'
 import { createPngWithKleLayout, extractKleLayout, hasKleMetadata } from '@/utils/png-metadata'
-import { isViaFormat, convertViaToKle, convertKleToVia } from '@/utils/via-import'
+import { convertKleToVia } from '@/utils/via-import'
 import { stringifyWithRounding } from '@/utils/serialization'
-import { decodeLayoutFromUrl, fetchGistLayout, loadErgogenKeyboard } from '@/utils/url-sharing'
 import { parseErgogenConfig, encodeKeyboardToErgogenUrl } from '@/utils/ergogen-converter'
-import LZString from 'lz-string'
 
 // Store
 const keyboardStore = useKeyboardStore()
@@ -259,30 +255,6 @@ const loadPreset = async () => {
 // Import functions
 const triggerFileUpload = () => {
   fileInput.value?.click()
-}
-
-import type { Key, KeyboardMetadata } from '@/stores/keyboard'
-
-// Extend KeyboardMetadata to include VIA custom data
-interface ExtendedKeyboardMetadata extends KeyboardMetadata {
-  _kleng_via_data?: string
-}
-
-// Define a type for the internal KLE format
-interface InternalKleFormat {
-  meta: KeyboardMetadata
-  keys: Key[]
-}
-
-// Format detection helper
-const isInternalKleFormat = (data: unknown): data is InternalKleFormat => {
-  return (
-    typeof data === 'object' &&
-    data !== null &&
-    'meta' in data &&
-    'keys' in data &&
-    Array.isArray((data as Record<string, unknown>).keys)
-  )
 }
 
 const handleFileUpload = async (event: Event) => {
@@ -705,11 +677,11 @@ const downloadHtmlFile = async () => {
     const htmlBlob = new Blob([innerHtml], { type: 'text/html' })
     const suggestedName = `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}.html`
 
-    if (typeof window.showSaveFilePicker === 'function') {
-      // Modern File System Access API
-      const handle = await (window as any).showSaveFilePicker({
+    const fsWindow = window as unknown as SaveFilePickerWindow
+    if (typeof fsWindow.showSaveFilePicker === 'function') {
+      const handle = await fsWindow.showSaveFilePicker({
         suggestedName,
-        types: [{ description: 'HTML files', accept: { 'text/html': ['.html'] } }],
+        types: [ { description: '...', accept: { 'text/html': ['.html'] } } ],
       })
       const writable = await handle.createWritable()
       await writable.write(htmlBlob)
@@ -734,6 +706,20 @@ const downloadHtmlFile = async () => {
     }
     toast.showError(`Failed to save HTML file: ${errorMessage}`, 'Export Failed')
   }
+}
+
+interface FileSystemWritableFileStream {
+  write(data: Blob): Promise<void>
+  close(): Promise<void>
+}
+interface FileSystemFileHandle {
+  createWritable(): Promise<FileSystemWritableFileStream>
+}
+interface SaveFilePickerWindow {
+  showSaveFilePicker?: (options: {
+    suggestedName?: string
+    types?: { description?: string; accept?: Record<string, string[]> }[]
+  }) => Promise<FileSystemFileHandle>
 }
 </script>
 
