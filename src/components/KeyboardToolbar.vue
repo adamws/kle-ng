@@ -197,6 +197,8 @@ import { createPngWithKleLayout, extractKleLayout, hasKleMetadata } from '@/util
 import { convertKleToVia } from '@/utils/via-import'
 import { stringifyWithRounding } from '@/utils/serialization'
 import { parseErgogenConfig, encodeKeyboardToErgogenUrl } from '@/utils/ergogen-converter'
+import { parseBorderRadius, createRoundedRectanglePath } from '@/utils/border-radius'
+import { generateShareableUrl } from '@/utils/url-sharing'
 
 // Store
 const keyboardStore = useKeyboardStore()
@@ -504,7 +506,7 @@ const downloadPng = async () => {
   try {
     // Get base PNG blob
     const basePngBlob = await new Promise<Blob>((resolve) =>
-      tempCanvas.toBlob((b) => resolve(b!), 'image/png'),
+      tempCanvas.toBlob((b: Blob | null) => resolve(b!), 'image/png'),
     )
 
     // Embed KLE layout metadata in PNG
@@ -783,8 +785,108 @@ const downloadHtmlFile = async () => {
   }
 }
 
+// Modal helpers
+const openUrlImportModal = () => {
+  showUrlImportModal.value = true
+}
+const closeUrlImportModal = () => {
+  showUrlImportModal.value = false
+}
+
+const importFromUrl = async () => {
+  if (!urlImportInput.value) return
+
+  try {
+    const response = await fetch(urlImportInput.value)
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    const contentType = response.headers.get('content-type') || ''
+    const text = await response.text()
+
+    // derive a simple filename from URL path
+    const filenameFromUrl = (() => {
+      try {
+        const u = new URL(urlImportInput.value)
+        const parts = u.pathname.split('/')
+        return (parts.pop() || '').replace(/\.[^/.]+$/, '') || 'imported-layout'
+      } catch {
+        return 'imported-layout'
+      }
+    })()
+
+    if (
+      urlImportInput.value.toLowerCase().endsWith('.yaml') ||
+      urlImportInput.value.toLowerCase().endsWith('.yml') ||
+      contentType.includes('yaml')
+    ) {
+      try {
+        const keyboard = await parseErgogenConfig(text)
+        keyboardStore.loadKeyboard(keyboard)
+        keyboardStore.filename = filenameFromUrl
+        toast.showSuccess(`Ergogen layout imported`, 'Import Successful')
+        closeUrlImportModal()
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Failed to import Ergogen layout'
+        toast.showError(msg, 'Import Failed')
+      }
+      return
+    }
+
+    // Attempt JSON processing (Raw KLE or internal KLE object)
+    await processJsonLayout(text, urlImportInput.value, filenameFromUrl)
+    closeUrlImportModal()
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Failed to fetch URL'
+    toast.showError(msg, 'Import Failed')
+  }
+}
+
+const shareLayout = async () => {
+  try {
+    const keyboard = new Keyboard()
+    keyboard.keys = JSON.parse(JSON.stringify(keyboardStore.keys))
+    keyboard.meta = JSON.parse(JSON.stringify(keyboardStore.metadata))
+    const shareUrl = generateShareableUrl(keyboard)
+
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(shareUrl)
+      toast.showSuccess('Share link copied to clipboard', 'Share Link')
+    } else {
+      // Fallback: open the URL
+      window.open(shareUrl, '_blank', 'noopener,noreferrer')
+      toast.showSuccess('Share link opened in new tab', 'Share Link')
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Failed to generate share link'
+    toast.showError(msg, 'Share Failed')
+  }
+}
+
+// Create a canvas element with a rounded rectangle background
+const createCanvasWithRoundedBackground = (canvas: HTMLCanvasElement, radiiValue: string): HTMLCanvasElement => {
+  const tempCanvas = document.createElement('canvas')
+  tempCanvas.width = canvas.width
+  tempCanvas.height = canvas.height
+
+  const ctx = tempCanvas.getContext('2d')
+  if (!ctx) return tempCanvas
+
+  // Fill background using border radius utilities
+  const backColor = keyboardStore.metadata.backcolor || '#ffffff'
+  const corners = parseBorderRadius(radiiValue, tempCanvas.width, tempCanvas.height)
+
+  ctx.fillStyle = backColor
+  createRoundedRectanglePath(ctx, 0, 0, tempCanvas.width, tempCanvas.height, corners)
+  ctx.fill()
+
+  // Draw original canvas on top
+  ctx.drawImage(canvas, 0, 0)
+
+  return tempCanvas
+}
+
+// Minimal File System Access API typings for showSaveFilePicker
 interface FileSystemWritableFileStream {
-  write(data: Blob): Promise<void>
+  write(data: Blob | string): Promise<void>
   close(): Promise<void>
 }
 interface FileSystemFileHandle {
