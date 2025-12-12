@@ -197,6 +197,7 @@ import { createPngWithKleLayout, extractKleLayout, hasKleMetadata } from '@/util
 import { convertKleToVia } from '@/utils/via-import'
 import { stringifyWithRounding } from '@/utils/serialization'
 import { parseErgogenConfig, encodeKeyboardToErgogenUrl } from '@/utils/ergogen-converter'
+import { loadErgogenKeyboard } from '@/utils/url-sharing'
 import { parseBorderRadius, createRoundedRectanglePath } from '@/utils/border-radius'
 import { generateShareableUrl } from '@/utils/url-sharing'
 
@@ -812,6 +813,27 @@ const importFromUrl = async () => {
         return 'imported-layout'
       }
     })()
+
+    // If ergogen.xyz URL with hash -> decode and load directly
+    if (urlImportInput.value.includes('ergogen.xyz') && urlImportInput.value.includes('#')) {
+      try {
+        const ergKeyboard = await loadErgogenKeyboard(urlImportInput.value)
+        if (ergKeyboard) {
+          keyboardStore.loadKeyboard(ergKeyboard)
+          keyboardStore.filename = filenameFromUrl
+          toast.showSuccess(`Ergogen layout imported`, 'Import Successful')
+          closeUrlImportModal()
+          return
+        } else {
+          toast.showError('No ergogen data found in URL', 'Import Failed')
+          return
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Failed to import Ergogen URL'
+        toast.showError(msg, 'Import Failed')
+        return
+      }
+    }
 
     if (
       urlImportInput.value.toLowerCase().endsWith('.yaml') ||
