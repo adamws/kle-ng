@@ -6,6 +6,7 @@ import KeyPropertiesPanel from './components/KeyPropertiesPanel.vue'
 import KeyboardMetadataPanel from './components/KeyboardMetadataPanel.vue'
 import SummaryPanel from './components/SummaryPanel.vue'
 import JsonEditorPanel from './components/JsonEditorPanel.vue'
+import PcbGeneratorPanel from './components/PcbGeneratorPanel.vue'
 import AppFooter from './components/AppFooter.vue'
 import CanvasToolbar from './components/CanvasToolbar.vue'
 import CanvasFooter from './components/CanvasFooter.vue'
@@ -23,7 +24,7 @@ const keyboardStore = useKeyboardStore()
 // Initialize theme composable (theme will be initialized automatically on mount)
 useTheme()
 
-const sectionOrder = ref(['canvas', 'properties', 'json'])
+const sectionOrder = ref(['canvas', 'properties', 'json', 'pcb'])
 const draggedSection = ref<string | null>(null)
 const dragOverSection = ref<string | null>(null)
 const isDraggingSection = ref(false)
@@ -36,6 +37,7 @@ const collapsedSections = ref<Record<string, boolean>>({
   properties: false,
   canvas: false,
   json: false,
+  pcb: false,
 })
 
 onMounted(() => {
@@ -43,8 +45,13 @@ onMounted(() => {
   if (savedOrder) {
     try {
       const parsedOrder = JSON.parse(savedOrder)
-      if (Array.isArray(parsedOrder) && parsedOrder.length === 3) {
-        sectionOrder.value = parsedOrder
+      if (Array.isArray(parsedOrder)) {
+        // Backward compatibility: if saved order has 3 items (old version), append 'pcb'
+        if (parsedOrder.length === 3 && !parsedOrder.includes('pcb')) {
+          sectionOrder.value = [...parsedOrder, 'pcb']
+        } else if (parsedOrder.length === 4) {
+          sectionOrder.value = parsedOrder
+        }
       }
     } catch (error) {
       console.warn('Failed to parse saved section order:', error)
@@ -187,6 +194,11 @@ const sections = computed(() => ({
     id: 'json',
     title: 'JSON Editor',
     component: 'JsonEditorPanel',
+  },
+  pcb: {
+    id: 'pcb',
+    title: 'PCB Generator',
+    component: 'PcbGeneratorPanel',
   },
 }))
 
@@ -401,6 +413,14 @@ const stopResize = () => {
             class="card-body"
           >
             <JsonEditorPanel />
+          </div>
+
+          <!-- PCB Generator Section -->
+          <div
+            v-else-if="section.id === 'pcb' && !collapsedSections[section.id]"
+            class="card-body p-0"
+          >
+            <PcbGeneratorPanel />
           </div>
         </div>
       </div>
