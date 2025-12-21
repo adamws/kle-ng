@@ -16,46 +16,34 @@ onUnmounted(() => {
 
 <template>
   <div class="pcb-generator-panel">
-    <!-- Header -->
-    <div class="panel-header">
-      <h4>PCB Generator</h4>
-      <p class="text-muted">
-        Generate KiCad PCB files from your keyboard layout. Configure settings below and click
-        "Generate PCB" to start.
-      </p>
-    </div>
-
-    <!-- Worker Status -->
-    <PcbWorkerStatus />
-
-    <!-- Settings and Controls in Two Columns -->
-    <div class="row">
-      <div class="col-md-6">
+    <!-- Two Column Layout: Controls | Output -->
+    <div class="row g-3">
+      <!-- Left Column: All Controls -->
+      <div class="col-md-4">
         <PcbGeneratorSettings />
-      </div>
-      <div class="col-md-6">
         <PcbGeneratorControls />
       </div>
-    </div>
 
-    <!-- Results -->
-    <PcbGeneratorResults />
+      <!-- Right Column: All Output -->
+      <div class="col-md-8">
+        <PcbWorkerStatus />
+        <PcbGeneratorResults />
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .pcb-generator-panel {
-  padding: 1.5rem;
+  padding: 1rem;
   background-color: white;
   border-radius: 0.5rem;
   box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
 }
 
 .panel-header {
-  margin-bottom: 1.5rem;
-}
-
-.panel-header h4 {
-  margin-bottom: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--bs-border-color);
 }
 </style>

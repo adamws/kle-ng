@@ -59,105 +59,90 @@ function getStatusIcon(): string {
 
 <template>
   <div class="pcb-worker-status">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h6 class="mb-0">Worker Status</h6>
-      <button
-        type="button"
-        class="btn btn-sm btn-outline-secondary"
-        :disabled="isRefreshing"
-        @click="refreshStatus"
-      >
-        <i class="bi bi-arrow-clockwise" :class="{ spinning: isRefreshing }"></i>
-        Refresh
-      </button>
-    </div>
-
-    <div v-if="workerStatus" class="status-card">
-      <div class="status-indicator" :class="`bg-${getStatusColor()}`">
-        <i class="bi" :class="getStatusIcon()"></i>
-      </div>
-
-      <div class="status-info">
-        <div class="row g-2">
-          <div class="col-6">
-            <div class="info-item">
-              <span class="info-label">Worker Processes:</span>
-              <span class="info-value">{{ workerStatus.worker_processes }}</span>
-            </div>
+    <div v-if="workerStatus" class="status-bar" :class="`status-bar-${getStatusColor()}`">
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-3">
+          <div class="status-badge">
+            <i class="bi" :class="getStatusIcon()"></i>
+            <span class="ms-1">Backend</span>
           </div>
-          <div class="col-6">
-            <div class="info-item">
-              <span class="info-label">Total Capacity:</span>
-              <span class="info-value">{{ workerStatus.total_capacity }}</span>
-            </div>
-          </div>
-          <div class="col-6">
-            <div class="info-item">
-              <span class="info-label">Active Tasks:</span>
-              <span class="info-value">{{ workerStatus.active_tasks }}</span>
-            </div>
-          </div>
-          <div class="col-6">
-            <div class="info-item">
-              <span class="info-label">Idle Capacity:</span>
-              <span class="info-value fw-bold" :class="`text-${getStatusColor()}`">
-                {{ workerStatus.idle_capacity }}
-              </span>
-            </div>
+          <div class="status-info-inline">
+            <span class="info-item">
+              <strong>{{ workerStatus.idle_capacity }}</strong
+              >/{{ workerStatus.total_capacity }} available
+            </span>
+            <span class="info-separator">•</span>
+            <span class="info-item">{{ workerStatus.active_tasks }} active</span>
           </div>
         </div>
+        <button
+          type="button"
+          class="btn btn-link btn-sm text-decoration-none p-0"
+          :disabled="isRefreshing"
+          @click="refreshStatus"
+          title="Refresh status"
+        >
+          <i class="bi bi-arrow-clockwise" :class="{ spinning: isRefreshing }"></i>
+        </button>
       </div>
     </div>
 
-    <div v-else class="text-muted text-center p-3">Loading worker status...</div>
+    <div v-else class="status-bar status-bar-loading">
+      <small class="text-muted">Loading backend status...</small>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .pcb-worker-status {
-  padding: 1rem;
-  background-color: var(--bs-light);
-  border-radius: 0.375rem;
   margin-bottom: 1rem;
 }
 
-.status-card {
-  display: flex;
-  gap: 1rem;
-  align-items: flex-start;
+.status-bar {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+  border-left: 3px solid;
+  font-size: 0.875rem;
 }
 
-.status-indicator {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+.status-bar-success {
+  background-color: #d1e7dd;
+  border-left-color: #198754;
+  color: #0f5132;
+}
+
+.status-bar-warning {
+  background-color: #fff3cd;
+  border-left-color: #ffc107;
+  color: #664d03;
+}
+
+.status-bar-secondary {
+  background-color: #e2e3e5;
+  border-left-color: #6c757d;
+  color: #41464b;
+}
+
+.status-bar-loading {
+  background-color: #f8f9fa;
+  border-left-color: #dee2e6;
+}
+
+.status-badge {
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 1.25rem;
-  flex-shrink: 0;
+  font-weight: 500;
 }
 
-.status-info {
-  flex: 1;
-}
-
-.info-item {
+.status-info-inline {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.info-label {
-  font-size: 0.75rem;
-  color: var(--bs-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.info-value {
-  font-size: 1rem;
+.info-separator {
+  color: currentColor;
+  opacity: 0.5;
 }
 
 .spinning {

@@ -11,7 +11,7 @@ const props = defineProps<Props>()
 
 type ViewType = 'front' | 'back' | 'schematic'
 
-const currentView = ref<ViewType>('front')
+const currentView = ref<ViewType>('schematic')
 const zoom = ref(1)
 const panX = ref(0)
 const panY = ref(0)
@@ -77,12 +77,28 @@ function handleMouseUp() {
 const transformStyle = computed(() => {
   return `translate(${panX.value}px, ${panY.value}px) scale(${zoom.value})`
 })
+
+const containerBackgroundClass = computed(() => {
+  // Darker background for front and back, lighter for schematic
+  return currentView.value === 'schematic' ? 'svg-container-light' : 'svg-container-dark'
+})
 </script>
 
 <template>
   <div class="pcb-render-viewer">
     <!-- View Toggle Buttons -->
     <div class="btn-group mb-3" role="group">
+      <button
+        type="button"
+        class="btn btn-sm"
+        :class="{
+          'btn-primary': currentView === 'schematic',
+          'btn-outline-primary': currentView !== 'schematic',
+        }"
+        @click="setView('schematic')"
+      >
+        Schematic
+      </button>
       <button
         type="button"
         class="btn btn-sm"
@@ -105,17 +121,6 @@ const transformStyle = computed(() => {
       >
         Back
       </button>
-      <button
-        type="button"
-        class="btn btn-sm"
-        :class="{
-          'btn-primary': currentView === 'schematic',
-          'btn-outline-primary': currentView !== 'schematic',
-        }"
-        @click="setView('schematic')"
-      >
-        Schematic
-      </button>
     </div>
 
     <!-- Zoom Controls -->
@@ -134,6 +139,7 @@ const transformStyle = computed(() => {
     <!-- SVG Viewer -->
     <div
       class="svg-container"
+      :class="containerBackgroundClass"
       @mousedown="handleMouseDown"
       @mousemove="handleMouseMove"
       @mouseup="handleMouseUp"
@@ -155,10 +161,6 @@ const transformStyle = computed(() => {
 </template>
 
 <style scoped>
-.pcb-render-viewer {
-  padding: 1rem;
-}
-
 .svg-container {
   width: 100%;
   height: 500px;
@@ -166,8 +168,15 @@ const transformStyle = computed(() => {
   border-radius: 0.375rem;
   overflow: hidden;
   position: relative;
-  background-color: var(--bs-light);
   cursor: grab;
+}
+
+.svg-container-light {
+  background-color: var(--bs-light);
+}
+
+.svg-container-dark {
+  background-color: #2b2b2b;
 }
 
 .svg-container:active {
