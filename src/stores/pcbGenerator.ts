@@ -58,6 +58,54 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
 
   const isTaskFailed = computed(() => taskStatus.value?.task_status === 'FAILURE')
 
+  // Validation computed properties
+  const KEY_DISTANCE_MIN = 10
+  const KEY_DISTANCE_MAX = 30
+
+  const isSettingsValid = computed(() => {
+    const { keyDistanceX, keyDistanceY } = settings.value
+
+    // Validate key distances
+    const isXValid =
+      typeof keyDistanceX === 'number' &&
+      !isNaN(keyDistanceX) &&
+      keyDistanceX >= KEY_DISTANCE_MIN &&
+      keyDistanceX <= KEY_DISTANCE_MAX
+
+    const isYValid =
+      typeof keyDistanceY === 'number' &&
+      !isNaN(keyDistanceY) &&
+      keyDistanceY >= KEY_DISTANCE_MIN &&
+      keyDistanceY <= KEY_DISTANCE_MAX
+
+    return isXValid && isYValid
+  })
+
+  const validationErrors = computed(() => {
+    const errors: string[] = []
+    const { keyDistanceX, keyDistanceY } = settings.value
+
+    if (
+      typeof keyDistanceX !== 'number' ||
+      isNaN(keyDistanceX) ||
+      keyDistanceX < KEY_DISTANCE_MIN ||
+      keyDistanceX > KEY_DISTANCE_MAX
+    ) {
+      errors.push(`Key distance X must be between ${KEY_DISTANCE_MIN} and ${KEY_DISTANCE_MAX} mm`)
+    }
+
+    if (
+      typeof keyDistanceY !== 'number' ||
+      isNaN(keyDistanceY) ||
+      keyDistanceY < KEY_DISTANCE_MIN ||
+      keyDistanceY > KEY_DISTANCE_MAX
+    ) {
+      errors.push(`Key distance Y must be between ${KEY_DISTANCE_MIN} and ${KEY_DISTANCE_MAX} mm`)
+    }
+
+    return errors
+  })
+
   // Helper functions
   function canSubmitTask(): boolean {
     if (!lastSubmitTime.value) return true
@@ -66,6 +114,12 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
 
   // Actions
   async function startTask() {
+    // Check settings validation
+    if (!isSettingsValid.value) {
+      const errorMsg = validationErrors.value.join('. ')
+      throw new ApiError('Validation error', `Invalid settings: ${errorMsg}`)
+    }
+
     // Check rate limiting
     if (!canSubmitTask()) {
       const remainingTime = Math.ceil(
@@ -86,12 +140,18 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
       const layout = keyboardStore.getSerializedData('kle-internal')
 
       // Validate layout size
-      const keyCount = Array.isArray(layout)
-        ? layout.flat().filter((k) => typeof k === 'object').length
-        : 0
+      // kle-internal format returns: { meta: {...}, keys: [...] }
+      const keyCount = layout?.keys?.length || 0
+
+      if (keyCount === 0) {
+        throw new ApiError('Validation error', 'Layout is empty. Please add keys to your layout.')
+      }
 
       if (keyCount > 150) {
-        throw new ApiError('Validation error', 'Layouts exceeding 150 keys are not supported')
+        throw new ApiError(
+          'Validation error',
+          `Layout has ${keyCount} keys. Layouts exceeding 150 keys are not supported.`,
+        )
       }
 
       // Convert settings to API format
@@ -307,6 +367,8 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
     isTaskActive,
     isTaskSuccess,
     isTaskFailed,
+    isSettingsValid,
+    validationErrors,
     startTask,
     pollTaskStatus,
     fetchRenders,

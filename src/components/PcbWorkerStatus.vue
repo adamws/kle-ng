@@ -59,11 +59,18 @@ function getStatusIcon(): string {
 
 <template>
   <div class="pcb-worker-status">
-    <div v-if="workerStatus" class="status-bar" :class="`status-bar-${getStatusColor()}`">
+    <div
+      v-if="workerStatus"
+      class="status-bar"
+      :class="`status-bar-${getStatusColor()}`"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
       <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
         <div class="d-flex align-items-center gap-3">
           <div class="status-badge">
-            <i class="bi" :class="getStatusIcon()"></i>
+            <i class="bi" :class="getStatusIcon()" aria-hidden="true"></i>
             <span class="ms-1">Backend</span>
           </div>
           <div class="status-info-inline">
@@ -71,7 +78,7 @@ function getStatusIcon(): string {
               <strong>{{ workerStatus.idle_capacity }}</strong
               >/{{ workerStatus.total_capacity }} available
             </span>
-            <span class="info-separator">•</span>
+            <span class="info-separator" aria-hidden="true">•</span>
             <span class="info-item">{{ workerStatus.active_tasks }} active</span>
           </div>
         </div>
@@ -81,13 +88,18 @@ function getStatusIcon(): string {
           :disabled="isRefreshing"
           @click="refreshStatus"
           title="Refresh status"
+          aria-label="Refresh backend worker status"
         >
-          <i class="bi bi-arrow-clockwise" :class="{ spinning: isRefreshing }"></i>
+          <i
+            class="bi bi-arrow-clockwise"
+            :class="{ spinning: isRefreshing }"
+            aria-hidden="true"
+          ></i>
         </button>
       </div>
     </div>
 
-    <div v-else class="status-bar status-bar-loading">
+    <div v-else class="status-bar status-bar-loading" role="status" aria-live="polite">
       <small class="text-muted">Loading backend status...</small>
     </div>
   </div>

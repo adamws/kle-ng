@@ -45,7 +45,7 @@ function getProgressPercentage(): number {
   <div class="pcb-generator-results">
     <!-- Progress Bar -->
     <div v-if="isTaskActive" class="mb-3">
-      <div class="progress" style="height: 20px">
+      <div class="progress" style="height: 20px" aria-label="PCB generation progress">
         <div
           class="progress-bar progress-bar-striped progress-bar-animated"
           role="progressbar"
@@ -53,11 +53,14 @@ function getProgressPercentage(): number {
           :aria-valuenow="getProgressPercentage()"
           aria-valuemin="0"
           aria-valuemax="100"
+          :aria-label="`${getProgressPercentage()}% complete`"
         >
           {{ getProgressPercentage() }}%
         </div>
       </div>
-      <small class="text-muted mt-1 d-block">{{ getStatusMessage() }}</small>
+      <small class="text-muted mt-1 d-block" aria-live="polite" aria-atomic="true">{{
+        getStatusMessage()
+      }}</small>
     </div>
 
     <!-- Success State with Renders -->
@@ -72,8 +75,9 @@ function getProgressPercentage(): number {
           :href="getDownloadUrl()!"
           class="btn btn-success btn-sm"
           download
+          aria-label="Download generated PCB project as ZIP file"
         >
-          <i class="bi bi-download me-1"></i>
+          <i class="bi bi-download me-1" aria-hidden="true"></i>
           Download ZIP
         </a>
       </div>
