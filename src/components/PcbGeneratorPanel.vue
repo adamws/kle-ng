@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onUnmounted } from 'vue'
 import { usePcbGeneratorStore } from '@/stores/pcbGenerator'
+import { isBackendConfigured } from '@/config/api'
 import PcbWorkerStatus from './PcbWorkerStatus.vue'
 import PcbGeneratorSettings from './PcbGeneratorSettings.vue'
 import PcbGeneratorControls from './PcbGeneratorControls.vue'
@@ -8,6 +9,7 @@ import PcbGeneratorResults from './PcbGeneratorResults.vue'
 import PcbDownloadButton from './PcbDownloadButton.vue'
 
 const pcbStore = usePcbGeneratorStore()
+const backendConfigured = isBackendConfigured()
 
 // Cleanup on component unmount
 onUnmounted(() => {
@@ -17,8 +19,24 @@ onUnmounted(() => {
 
 <template>
   <div class="pcb-generator-panel">
+    <!-- Backend Not Configured Warning -->
+    <div v-if="!backendConfigured" class="alert alert-warning" role="alert">
+      <h5 class="alert-heading">
+        <i class="bi bi-exclamation-triangle"></i> Backend Not Configured
+      </h5>
+      <p class="mb-0">
+        The PCB Generator requires a backend server. Please configure the
+        <code>VITE_BACKEND_URL</code> environment variable and rebuild the application.
+      </p>
+      <hr />
+      <p class="mb-0 small">
+        For development: Set <code>VITE_BACKEND_URL=""</code> in <code>.env.local</code> to use the
+        Vite proxy.
+      </p>
+    </div>
+
     <!-- Two Column Layout: Controls | Output -->
-    <div class="row g-3 h-100">
+    <div v-else class="row g-3 h-100">
       <!-- Left Column: All Controls -->
       <div class="col-md-4 d-flex flex-column" style="max-width: 500px">
         <div class="flex-grow-0">
