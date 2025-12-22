@@ -1,14 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { usePcbGeneratorStore } from '@/stores/pcbGenerator'
 import { storeToRefs } from 'pinia'
 
 const pcbStore = usePcbGeneratorStore()
 const { settings } = storeToRefs(pcbStore)
-
-// Validation constants
-const KEY_DISTANCE_MIN = 10
-const KEY_DISTANCE_MAX = 30
 
 // Switch footprint options
 const switchFootprintOptions = [
@@ -35,35 +30,6 @@ const routingOptions = [
   { value: 'Switch-Diode only', label: 'Switch-Diode only' },
   { value: 'Full', label: 'Full' },
 ]
-
-// Validation computed properties
-const isKeyDistanceXValid = computed(() => {
-  const val = settings.value.keyDistanceX
-  return (
-    typeof val === 'number' && !isNaN(val) && val >= KEY_DISTANCE_MIN && val <= KEY_DISTANCE_MAX
-  )
-})
-
-const isKeyDistanceYValid = computed(() => {
-  const val = settings.value.keyDistanceY
-  return (
-    typeof val === 'number' && !isNaN(val) && val >= KEY_DISTANCE_MIN && val <= KEY_DISTANCE_MAX
-  )
-})
-
-const keyDistanceXError = computed(() => {
-  if (!isKeyDistanceXValid.value) {
-    return `Must be between ${KEY_DISTANCE_MIN} and ${KEY_DISTANCE_MAX} mm`
-  }
-  return null
-})
-
-const keyDistanceYError = computed(() => {
-  if (!isKeyDistanceYValid.value) {
-    return `Must be between ${KEY_DISTANCE_MIN} and ${KEY_DISTANCE_MAX} mm`
-  }
-  return null
-})
 </script>
 
 <template>
@@ -111,55 +77,6 @@ const keyDistanceYError = computed(() => {
           {{ option.label }}
         </option>
       </select>
-    </div>
-
-    <!-- Key Distance -->
-    <div class="mb-3">
-      <label class="form-label form-label-sm">
-        Key Distance (mm)
-        <i
-          class="bi bi-question-circle ms-1"
-          title="Distance between key centers in millimeters. Default is 19.05mm (0.75 inches)"
-        ></i>
-      </label>
-      <div class="row g-2">
-        <div class="col">
-          <input
-            id="keyDistanceX"
-            v-model.number="settings.keyDistanceX"
-            type="number"
-            class="form-control form-control-sm"
-            :class="{ 'is-invalid': !isKeyDistanceXValid }"
-            placeholder="X"
-            min="10"
-            max="30"
-            step="0.01"
-            aria-label="Key distance X"
-            aria-describedby="keyDistanceXError"
-          />
-          <div v-if="keyDistanceXError" id="keyDistanceXError" class="invalid-feedback">
-            {{ keyDistanceXError }}
-          </div>
-        </div>
-        <div class="col">
-          <input
-            id="keyDistanceY"
-            v-model.number="settings.keyDistanceY"
-            type="number"
-            class="form-control form-control-sm"
-            :class="{ 'is-invalid': !isKeyDistanceYValid }"
-            placeholder="Y"
-            min="10"
-            max="30"
-            step="0.01"
-            aria-label="Key distance Y"
-            aria-describedby="keyDistanceYError"
-          />
-          <div v-if="keyDistanceYError" id="keyDistanceYError" class="invalid-feedback">
-            {{ keyDistanceYError }}
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 </template>

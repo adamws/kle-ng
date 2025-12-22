@@ -5,21 +5,12 @@ import { storeToRefs } from 'pinia'
 import { ApiError } from '@/utils/pcbApi'
 
 const pcbStore = usePcbGeneratorStore()
-const { taskStatus, isTaskActive, isSettingsValid, validationErrors } = storeToRefs(pcbStore)
+const { taskStatus, isTaskActive } = storeToRefs(pcbStore)
 
 const errorMessage = ref<string | null>(null)
 const isSubmitting = ref(false)
 
-const isGenerateDisabled = computed(
-  () => !isSettingsValid.value || isSubmitting.value || isTaskActive.value,
-)
-
-const validationWarning = computed(() => {
-  if (!isSettingsValid.value && validationErrors.value.length > 0) {
-    return validationErrors.value.join('. ')
-  }
-  return null
-})
+const isGenerateDisabled = computed(() => isSubmitting.value || isTaskActive.value)
 
 async function handleGeneratePcb() {
   errorMessage.value = null
@@ -46,14 +37,6 @@ function handleNewTask() {
 
 <template>
   <div class="pcb-generator-controls">
-    <!-- Validation Warning -->
-    <div v-if="validationWarning && !taskStatus" class="alert alert-warning py-2 mb-2" role="alert">
-      <small>
-        <i class="bi bi-exclamation-triangle me-1"></i>
-        {{ validationWarning }}
-      </small>
-    </div>
-
     <!-- Error Alert -->
     <div v-if="errorMessage" class="alert alert-danger alert-dismissible py-2 mb-2" role="alert">
       <small>{{ errorMessage }}</small>
@@ -73,7 +56,7 @@ function handleNewTask() {
         class="btn btn-primary btn-sm"
         :disabled="isGenerateDisabled"
         @click="handleGeneratePcb"
-        :title="validationWarning || 'Generate PCB from current layout'"
+        title="Generate PCB from current layout"
       >
         <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2" role="status">
           <span class="visually-hidden">Loading...</span>

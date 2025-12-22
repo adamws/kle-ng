@@ -3,9 +3,6 @@ export interface PcbSettings {
   switchFootprint: string
   diodeFootprint: string
   routing: string
-  keyDistanceX: number // Separate numeric values to prevent parsing errors
-  keyDistanceY: number
-  controllerCircuit: string
 }
 
 // API request format (for submission)
@@ -13,8 +10,6 @@ export interface PcbApiSettings {
   switchFootprint: string
   diodeFootprint: string
   routing: string
-  keyDistance: string // Formatted as "X Y" string for API
-  controllerCircuit: string
 }
 
 export interface TaskRequest {

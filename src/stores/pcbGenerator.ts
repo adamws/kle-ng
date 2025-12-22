@@ -16,9 +16,6 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
     switchFootprint: 'Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_{:.2f}u',
     diodeFootprint: 'Diode_SMD:D_SOD-123F',
     routing: 'Full',
-    keyDistanceX: 19.05, // Numeric values instead of string
-    keyDistanceY: 19.05,
-    controllerCircuit: 'None',
   })
 
   // Task state
@@ -58,54 +55,6 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
 
   const isTaskFailed = computed(() => taskStatus.value?.task_status === 'FAILURE')
 
-  // Validation computed properties
-  const KEY_DISTANCE_MIN = 10
-  const KEY_DISTANCE_MAX = 30
-
-  const isSettingsValid = computed(() => {
-    const { keyDistanceX, keyDistanceY } = settings.value
-
-    // Validate key distances
-    const isXValid =
-      typeof keyDistanceX === 'number' &&
-      !isNaN(keyDistanceX) &&
-      keyDistanceX >= KEY_DISTANCE_MIN &&
-      keyDistanceX <= KEY_DISTANCE_MAX
-
-    const isYValid =
-      typeof keyDistanceY === 'number' &&
-      !isNaN(keyDistanceY) &&
-      keyDistanceY >= KEY_DISTANCE_MIN &&
-      keyDistanceY <= KEY_DISTANCE_MAX
-
-    return isXValid && isYValid
-  })
-
-  const validationErrors = computed(() => {
-    const errors: string[] = []
-    const { keyDistanceX, keyDistanceY } = settings.value
-
-    if (
-      typeof keyDistanceX !== 'number' ||
-      isNaN(keyDistanceX) ||
-      keyDistanceX < KEY_DISTANCE_MIN ||
-      keyDistanceX > KEY_DISTANCE_MAX
-    ) {
-      errors.push(`Key distance X must be between ${KEY_DISTANCE_MIN} and ${KEY_DISTANCE_MAX} mm`)
-    }
-
-    if (
-      typeof keyDistanceY !== 'number' ||
-      isNaN(keyDistanceY) ||
-      keyDistanceY < KEY_DISTANCE_MIN ||
-      keyDistanceY > KEY_DISTANCE_MAX
-    ) {
-      errors.push(`Key distance Y must be between ${KEY_DISTANCE_MIN} and ${KEY_DISTANCE_MAX} mm`)
-    }
-
-    return errors
-  })
-
   // Helper functions
   function canSubmitTask(): boolean {
     if (!lastSubmitTime.value) return true
@@ -114,12 +63,6 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
 
   // Actions
   async function startTask() {
-    // Check settings validation
-    if (!isSettingsValid.value) {
-      const errorMsg = validationErrors.value.join('. ')
-      throw new ApiError('Validation error', `Invalid settings: ${errorMsg}`)
-    }
-
     // Check rate limiting
     if (!canSubmitTask()) {
       const remainingTime = Math.ceil(
@@ -159,8 +102,6 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
         switchFootprint: settings.value.switchFootprint,
         diodeFootprint: settings.value.diodeFootprint,
         routing: settings.value.routing,
-        keyDistance: `${settings.value.keyDistanceX} ${settings.value.keyDistanceY}`, // Format for API
-        controllerCircuit: settings.value.controllerCircuit,
       }
 
       const request = {
@@ -323,13 +264,6 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
-        // Ensure backward compatibility if user had string keyDistance
-        if (parsed.keyDistance && typeof parsed.keyDistance === 'string') {
-          const [x, y] = parsed.keyDistance.split(' ').map(parseFloat)
-          parsed.keyDistanceX = x || 19.05
-          parsed.keyDistanceY = y || 19.05
-          delete parsed.keyDistance
-        }
         Object.assign(settings.value, parsed)
       } catch (error) {
         console.warn('Failed to load PCB settings:', error)
@@ -367,8 +301,6 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
     isTaskActive,
     isTaskSuccess,
     isTaskFailed,
-    isSettingsValid,
-    validationErrors,
     startTask,
     pollTaskStatus,
     fetchRenders,
