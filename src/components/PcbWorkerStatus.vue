@@ -143,7 +143,6 @@ function getStatusIcon(): string {
 <style scoped>
 .pcb-worker-status {
   margin-top: 1.5rem;
-  margin-bottom: 1rem;
 }
 
 .status-bar {
@@ -151,6 +150,7 @@ function getStatusIcon(): string {
   border-radius: 0.375rem;
   border-left: 3px solid;
   font-size: 0.775rem;
+  margin-bottom: 0 !important;
 }
 
 .status-bar-loading {

@@ -80,7 +80,7 @@ const transformStyle = computed(() => {
 
 const containerBackgroundClass = computed(() => {
   // Darker background for front and back, lighter for schematic
-  return currentView.value === 'schematic' ? 'svg-container-light' : 'svg-container-dark'
+  return currentView.value === 'schematic' ? 'svg-container-schematic' : 'svg-container-pcb'
 })
 </script>
 
@@ -171,6 +171,12 @@ const containerBackgroundClass = computed(() => {
 
   display: flex;
   align-items: center;
+
+  background-color: var(--bs-secondary-bg);
+
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.15);
 }
 
 .svg-container {
@@ -183,11 +189,11 @@ const containerBackgroundClass = computed(() => {
   cursor: grab;
 }
 
-.svg-container-light {
-  background-color: var(--bs-light);
+.svg-container-schematic {
+  background-color: #f5f4ef;
 }
 
-.svg-container-dark {
+.svg-container-pcb {
   background-color: #2b2b2b;
 }
 

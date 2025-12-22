@@ -6,10 +6,6 @@ import PcbRenderViewer from './PcbRenderViewer.vue'
 const pcbStore = usePcbGeneratorStore()
 const { renders, isTaskSuccess, isTaskFailed, taskStatus, isTaskActive } = storeToRefs(pcbStore)
 
-function getDownloadUrl(): string | null {
-  return pcbStore.getResultDownloadUrl()
-}
-
 function hasRenders(): boolean {
   return (
     renders.value.front !== null || renders.value.back !== null || renders.value.schematic !== null
@@ -22,10 +18,8 @@ function getStatusMessage(): string {
   switch (taskStatus.value.task_status) {
     case 'PENDING':
       return 'Task is queued...'
-    case 'PROGRESS': {
-      const percentage = taskStatus.value.task_result?.percentage ?? 0
-      return `Generating PCB... ${percentage}%`
-    }
+    case 'PROGRESS':
+      return 'Generating PCB...'
     case 'SUCCESS':
       return 'PCB generated successfully!'
     case 'FAILURE':
@@ -44,8 +38,8 @@ function getProgressPercentage(): number {
 <template>
   <div class="pcb-generator-results">
     <!-- Progress Bar -->
-    <div v-if="isTaskActive" class="mb-3">
-      <div class="progress" style="height: 20px" aria-label="PCB generation progress">
+    <div v-if="isTaskActive" class="progress-wrapper">
+      <div class="progress" aria-label="PCB generation progress">
         <div
           class="progress-bar progress-bar-striped progress-bar-animated"
           role="progressbar"
@@ -55,37 +49,21 @@ function getProgressPercentage(): number {
           aria-valuemax="100"
           :aria-label="`${getProgressPercentage()}% complete`"
         >
-          {{ getProgressPercentage() }}%
+          <span class="progress-text">{{ getProgressPercentage() }}%</span>
         </div>
       </div>
-      <small class="text-muted mt-1 d-block" aria-live="polite" aria-atomic="true">{{
-        getStatusMessage()
-      }}</small>
+      <p class="text-muted mt-3 text-center" aria-live="polite" aria-atomic="true">
+        {{ getStatusMessage() }}
+      </p>
     </div>
 
     <!-- Success State with Renders -->
-    <div v-if="isTaskSuccess && hasRenders()">
+    <div v-else-if="isTaskSuccess && hasRenders()">
       <PcbRenderViewer
         :front-svg="renders.front"
         :back-svg="renders.back"
         :schematic-svg="renders.schematic"
       />
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <div class="d-flex align-items-center gap-2">
-          <i class="bi bi-check-circle-fill text-primary"></i>
-          <span class="fw-medium">{{ getStatusMessage() }}</span>
-        </div>
-        <a
-          v-if="getDownloadUrl()"
-          :href="getDownloadUrl()!"
-          class="btn btn-primary btn-sm"
-          download
-          aria-label="Download generated PCB project as ZIP file"
-        >
-          <i class="bi bi-download me-1" aria-hidden="true"></i>
-          Download ZIP
-        </a>
-      </div>
     </div>
 
     <!-- Failed State -->
@@ -118,5 +96,27 @@ function getProgressPercentage(): number {
 <style scoped>
 .pcb-generator-results {
   padding: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.progress-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 2rem;
+}
+
+.progress-wrapper .progress {
+  width: 100%;
+  height: 30px;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.progress-text {
+  line-height: 60px;
 }
 </style>

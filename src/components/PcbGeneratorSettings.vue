@@ -35,7 +35,7 @@ const routingOptions = [
 <template>
   <div class="pcb-generator-settings">
     <!-- Switch Footprint -->
-    <div class="mb-3">
+    <div class="mb-1">
       <label for="switchFootprint" class="form-label form-label-sm">Switch Footprint</label>
       <select
         id="switchFootprint"
@@ -50,7 +50,7 @@ const routingOptions = [
     </div>
 
     <!-- Diode Footprint -->
-    <div class="mb-3">
+    <div class="mb-1">
       <label for="diodeFootprint" class="form-label form-label-sm">Diode Footprint</label>
       <select
         id="diodeFootprint"
@@ -65,7 +65,7 @@ const routingOptions = [
     </div>
 
     <!-- Routing -->
-    <div class="mb-3">
+    <div class="mb-1">
       <label for="routing" class="form-label form-label-sm">Routing</label>
       <select
         id="routing"
