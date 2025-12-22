@@ -19,14 +19,14 @@ onUnmounted(() => {
     <!-- Two Column Layout: Controls | Output -->
     <div class="row g-3">
       <!-- Left Column: All Controls -->
-      <div class="col-md-4">
+      <div class="col-md-4" style="max-width: 500px">
         <PcbGeneratorSettings />
         <PcbGeneratorControls />
+        <PcbWorkerStatus />
       </div>
 
       <!-- Right Column: All Output -->
       <div class="col-md-8">
-        <PcbWorkerStatus />
         <PcbGeneratorResults />
       </div>
     </div>
@@ -36,7 +36,6 @@ onUnmounted(() => {
 <style scoped>
 .pcb-generator-panel {
   padding: 1rem;
-  background-color: white;
   border-radius: 0.5rem;
   box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
 }

@@ -33,6 +33,7 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
 
   // Worker state
   const workerStatus = ref<WorkerStatusResponse | null>(null)
+  const workerStatusError = ref<string | null>(null)
 
   // Rate limiting state
   const lastSubmitTime = ref<number | null>(null)
@@ -54,6 +55,11 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
   const isTaskSuccess = computed(() => taskStatus.value?.task_status === 'SUCCESS')
 
   const isTaskFailed = computed(() => taskStatus.value?.task_status === 'FAILURE')
+
+  const isBackendAvailable = computed(() => {
+    // Backend is available if we have worker status and at least one worker is idle
+    return workerStatus.value !== null && workerStatus.value.idle_capacity > 0
+  })
 
   // Helper functions
   function canSubmitTask(): boolean {
@@ -229,8 +235,15 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
     try {
       const status = await pcbApi.getWorkerStatus()
       workerStatus.value = status
+      workerStatusError.value = null
     } catch (error) {
-      console.error('Failed to fetch worker status:', error)
+      // Don't log to console - we handle this gracefully in the UI
+      workerStatus.value = null
+      if (error instanceof ApiError) {
+        workerStatusError.value = error.userMessage
+      } else {
+        workerStatusError.value = 'Backend is offline or unreachable'
+      }
     }
   }
 
@@ -297,10 +310,12 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
     taskStatus,
     renders,
     workerStatus,
+    workerStatusError,
     isPolling,
     isTaskActive,
     isTaskSuccess,
     isTaskFailed,
+    isBackendAvailable,
     startTask,
     pollTaskStatus,
     fetchRenders,

@@ -5,12 +5,24 @@ import { storeToRefs } from 'pinia'
 import { ApiError } from '@/utils/pcbApi'
 
 const pcbStore = usePcbGeneratorStore()
-const { taskStatus, isTaskActive } = storeToRefs(pcbStore)
+const { taskStatus, isTaskActive, isBackendAvailable, workerStatusError } = storeToRefs(pcbStore)
 
 const errorMessage = ref<string | null>(null)
 const isSubmitting = ref(false)
 
-const isGenerateDisabled = computed(() => isSubmitting.value || isTaskActive.value)
+const isGenerateDisabled = computed(
+  () => isSubmitting.value || isTaskActive.value || !isBackendAvailable.value,
+)
+
+const buttonTooltip = computed(() => {
+  if (!isBackendAvailable.value) {
+    if (workerStatusError.value) {
+      return workerStatusError.value
+    }
+    return 'Backend is not available or all workers are busy'
+  }
+  return 'Generate PCB from current layout'
+})
 
 async function handleGeneratePcb() {
   errorMessage.value = null
@@ -22,7 +34,7 @@ async function handleGeneratePcb() {
     if (error instanceof ApiError) {
       errorMessage.value = error.userMessage
     } else {
-      errorMessage.value = 'An unexpected error occurred. Please try again.'
+      errorMessage.value = 'An unexpected error occurred.'
     }
   } finally {
     isSubmitting.value = false
@@ -56,7 +68,7 @@ function handleNewTask() {
         class="btn btn-primary btn-sm"
         :disabled="isGenerateDisabled"
         @click="handleGeneratePcb"
-        title="Generate PCB from current layout"
+        :title="buttonTooltip"
       >
         <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2" role="status">
           <span class="visually-hidden">Loading...</span>

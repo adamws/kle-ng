@@ -65,15 +65,20 @@ function getProgressPercentage(): number {
 
     <!-- Success State with Renders -->
     <div v-if="isTaskSuccess && hasRenders()">
+      <PcbRenderViewer
+        :front-svg="renders.front"
+        :back-svg="renders.back"
+        :schematic-svg="renders.schematic"
+      />
       <div class="d-flex justify-content-between align-items-center mb-3">
         <div class="d-flex align-items-center gap-2">
-          <i class="bi bi-check-circle-fill text-success"></i>
+          <i class="bi bi-check-circle-fill text-primary"></i>
           <span class="fw-medium">{{ getStatusMessage() }}</span>
         </div>
         <a
           v-if="getDownloadUrl()"
           :href="getDownloadUrl()!"
-          class="btn btn-success btn-sm"
+          class="btn btn-primary btn-sm"
           download
           aria-label="Download generated PCB project as ZIP file"
         >
@@ -81,12 +86,6 @@ function getProgressPercentage(): number {
           Download ZIP
         </a>
       </div>
-
-      <PcbRenderViewer
-        :front-svg="renders.front"
-        :back-svg="renders.back"
-        :schematic-svg="renders.schematic"
-      />
     </div>
 
     <!-- Failed State -->

@@ -4,7 +4,7 @@ import { usePcbGeneratorStore } from '@/stores/pcbGenerator'
 import { storeToRefs } from 'pinia'
 
 const pcbStore = usePcbGeneratorStore()
-const { workerStatus } = storeToRefs(pcbStore)
+const { workerStatus, workerStatusError } = storeToRefs(pcbStore)
 
 const AUTO_REFRESH_INTERVAL_MS = 30000 // 30 seconds
 let refreshIntervalId: number | null = null
@@ -45,11 +45,13 @@ onUnmounted(() => {
 })
 
 function getStatusColor(): string {
+  if (workerStatusError.value) return 'danger'
   if (!workerStatus.value) return 'secondary'
   return workerStatus.value.idle_capacity > 0 ? 'success' : 'warning'
 }
 
 function getStatusIcon(): string {
+  if (workerStatusError.value) return 'bi-x-circle-fill'
   if (!workerStatus.value) return 'bi-question-circle'
   return workerStatus.value.idle_capacity > 0
     ? 'bi-check-circle-fill'
@@ -59,10 +61,45 @@ function getStatusIcon(): string {
 
 <template>
   <div class="pcb-worker-status">
+    <!-- Error state -->
     <div
-      v-if="workerStatus"
-      class="status-bar"
-      :class="`status-bar-${getStatusColor()}`"
+      v-if="workerStatusError"
+      class="status-bar alert-danger"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-3">
+          <div class="status-badge">
+            <i class="bi bi-x-circle-fill" aria-hidden="true"></i>
+          </div>
+          <div class="status-info-inline">
+            <span class="info-item">{{ workerStatusError }}</span>
+          </div>
+        </div>
+        <button
+          type="button"
+          class="btn btn-link btn-sm text-decoration-none p-0"
+          :disabled="isRefreshing"
+          @click="refreshStatus"
+          title="Retry connection"
+          aria-label="Retry backend connection"
+        >
+          <i
+            class="bi bi-arrow-clockwise"
+            :class="{ spinning: isRefreshing }"
+            aria-hidden="true"
+          ></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Success/Warning state -->
+    <div
+      v-else-if="workerStatus"
+      class="alert status-bar"
+      :class="`alert-${getStatusColor()}`"
       role="status"
       aria-live="polite"
       aria-atomic="true"
@@ -71,15 +108,12 @@ function getStatusIcon(): string {
         <div class="d-flex align-items-center gap-3">
           <div class="status-badge">
             <i class="bi" :class="getStatusIcon()" aria-hidden="true"></i>
-            <span class="ms-1">Backend</span>
           </div>
           <div class="status-info-inline">
             <span class="info-item">
               <strong>{{ workerStatus.idle_capacity }}</strong
-              >/{{ workerStatus.total_capacity }} available
+              >/{{ workerStatus.total_capacity }} workers available
             </span>
-            <span class="info-separator" aria-hidden="true">•</span>
-            <span class="info-item">{{ workerStatus.active_tasks }} active</span>
           </div>
         </div>
         <button
@@ -99,6 +133,7 @@ function getStatusIcon(): string {
       </div>
     </div>
 
+    <!-- Loading state -->
     <div v-else class="status-bar status-bar-loading" role="status" aria-live="polite">
       <small class="text-muted">Loading backend status...</small>
     </div>
@@ -107,32 +142,15 @@ function getStatusIcon(): string {
 
 <style scoped>
 .pcb-worker-status {
+  margin-top: 1.5rem;
   margin-bottom: 1rem;
 }
 
 .status-bar {
-  padding: 0.5rem 0.75rem;
+  padding: 0.2rem 0.75rem;
   border-radius: 0.375rem;
   border-left: 3px solid;
-  font-size: 0.875rem;
-}
-
-.status-bar-success {
-  background-color: #d1e7dd;
-  border-left-color: #198754;
-  color: #0f5132;
-}
-
-.status-bar-warning {
-  background-color: #fff3cd;
-  border-left-color: #ffc107;
-  color: #664d03;
-}
-
-.status-bar-secondary {
-  background-color: #e2e3e5;
-  border-left-color: #6c757d;
-  color: #41464b;
+  font-size: 0.775rem;
 }
 
 .status-bar-loading {

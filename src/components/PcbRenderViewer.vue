@@ -86,54 +86,56 @@ const containerBackgroundClass = computed(() => {
 
 <template>
   <div class="pcb-render-viewer">
-    <!-- View Toggle Buttons -->
-    <div class="btn-group mb-3" role="group">
-      <button
-        type="button"
-        class="btn btn-sm"
-        :class="{
-          'btn-primary': currentView === 'schematic',
-          'btn-outline-primary': currentView !== 'schematic',
-        }"
-        @click="setView('schematic')"
-      >
-        Schematic
-      </button>
-      <button
-        type="button"
-        class="btn btn-sm"
-        :class="{
-          'btn-primary': currentView === 'front',
-          'btn-outline-primary': currentView !== 'front',
-        }"
-        @click="setView('front')"
-      >
-        Front
-      </button>
-      <button
-        type="button"
-        class="btn btn-sm"
-        :class="{
-          'btn-primary': currentView === 'back',
-          'btn-outline-primary': currentView !== 'back',
-        }"
-        @click="setView('back')"
-      >
-        Back
-      </button>
-    </div>
+    <div class="pcb-render-viewer-buttons">
+      <!-- View Toggle Buttons -->
+      <div class="btn-group" role="group">
+        <button
+          type="button"
+          class="btn btn-sm"
+          :class="{
+            'btn-primary': currentView === 'schematic',
+            'btn-outline-primary': currentView !== 'schematic',
+          }"
+          @click="setView('schematic')"
+        >
+          Schematic
+        </button>
+        <button
+          type="button"
+          class="btn btn-sm"
+          :class="{
+            'btn-primary': currentView === 'front',
+            'btn-outline-primary': currentView !== 'front',
+          }"
+          @click="setView('front')"
+        >
+          Front
+        </button>
+        <button
+          type="button"
+          class="btn btn-sm"
+          :class="{
+            'btn-primary': currentView === 'back',
+            'btn-outline-primary': currentView !== 'back',
+          }"
+          @click="setView('back')"
+        >
+          Back
+        </button>
+      </div>
 
-    <!-- Zoom Controls -->
-    <div class="btn-group mb-3 ms-2" role="group">
-      <button type="button" class="btn btn-sm btn-outline-secondary" @click="zoomOut">
-        <i class="bi bi-dash"></i>
-      </button>
-      <button type="button" class="btn btn-sm btn-outline-secondary" @click="resetView">
-        Reset
-      </button>
-      <button type="button" class="btn btn-sm btn-outline-secondary" @click="zoomIn">
-        <i class="bi bi-plus"></i>
-      </button>
+      <!-- Zoom Controls -->
+      <div class="btn-group ms-2" role="group">
+        <button type="button" class="btn btn-sm btn-outline-primary" @click="zoomOut">
+          <i class="bi bi-zoom-out"></i>
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-primary" @click="resetView">
+          Reset
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-primary" @click="zoomIn">
+          <i class="bi bi-zoom-in"></i>
+        </button>
+      </div>
     </div>
 
     <!-- SVG Viewer -->
@@ -152,15 +154,25 @@ const containerBackgroundClass = computed(() => {
         No render available for {{ currentView }} view
       </div>
     </div>
-
-    <!-- Zoom Info -->
-    <div class="text-muted small mt-2">
-      Zoom: {{ Math.round(zoom * 100) }}% | Pan: {{ Math.round(panX) }}, {{ Math.round(panY) }}
-    </div>
   </div>
 </template>
 
 <style scoped>
+.pcb-render-viewer {
+  position: relative;
+}
+
+.pcb-render-viewer-buttons {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 99;
+
+  display: flex;
+  align-items: center;
+}
+
 .svg-container {
   width: 100%;
   height: 500px;

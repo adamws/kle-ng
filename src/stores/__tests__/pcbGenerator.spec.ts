@@ -188,6 +188,37 @@ describe('pcbGenerator store', () => {
       }
       expect(store.isTaskFailed).toBe(true)
     })
+
+    it('should compute isBackendAvailable correctly', () => {
+      const store = usePcbGeneratorStore()
+
+      // Initially no worker status
+      expect(store.isBackendAvailable).toBe(false)
+
+      // Backend available with idle capacity
+      store.workerStatus = {
+        worker_processes: 4,
+        total_capacity: 4,
+        active_tasks: 2,
+        idle_capacity: 2,
+        workers: [],
+      }
+      expect(store.isBackendAvailable).toBe(true)
+
+      // All workers busy
+      store.workerStatus = {
+        worker_processes: 4,
+        total_capacity: 4,
+        active_tasks: 4,
+        idle_capacity: 0,
+        workers: [],
+      }
+      expect(store.isBackendAvailable).toBe(false)
+
+      // Backend offline
+      store.workerStatus = null
+      expect(store.isBackendAvailable).toBe(false)
+    })
   })
 
   describe('startTask', () => {
@@ -511,8 +542,46 @@ describe('pcbGenerator store', () => {
 
       await store.fetchWorkerStatus()
 
-      // Should not throw, just log error
+      // Should not throw, just set error state
       expect(store.workerStatus).toBeNull()
+      expect(store.workerStatusError).toBe('Backend is offline or unreachable')
+    })
+
+    it('should handle ApiError with user message', async () => {
+      const store = usePcbGeneratorStore()
+
+      const apiError = new ApiError(
+        'HTTP 500',
+        'Server is experiencing issues. Please try again later.',
+        500,
+      )
+      vi.mocked(pcbApi.getWorkerStatus).mockRejectedValue(apiError)
+
+      await store.fetchWorkerStatus()
+
+      expect(store.workerStatus).toBeNull()
+      expect(store.workerStatusError).toBe('Server is experiencing issues. Please try again later.')
+    })
+
+    it('should clear error on successful fetch', async () => {
+      const store = usePcbGeneratorStore()
+
+      // First, set an error
+      store.workerStatusError = 'Previous error'
+
+      const mockResponse: WorkerStatusResponse = {
+        worker_processes: 4,
+        total_capacity: 4,
+        active_tasks: 0,
+        idle_capacity: 4,
+        workers: [],
+      }
+      vi.mocked(pcbApi.getWorkerStatus).mockResolvedValue(mockResponse)
+
+      await store.fetchWorkerStatus()
+
+      expect(store.workerStatus).toEqual(mockResponse)
+      expect(store.workerStatusError).toBeNull()
     })
   })
 

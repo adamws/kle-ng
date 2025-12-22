@@ -106,7 +106,7 @@ async function fetchWithErrorHandling(url: string, options: RequestInit = {}): P
           userMessage = errorData.message || 'Invalid request. Please check your layout.'
           break
         default:
-          userMessage = 'An unexpected error occurred. Please try again.'
+          userMessage = 'An unexpected error occurred.'
       }
 
       throw new ApiError(
