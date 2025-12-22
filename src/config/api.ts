@@ -23,13 +23,16 @@ function getBackendUrl(): string | null {
 }
 
 // Lazy initialization to avoid throwing errors during app startup
-let _apiConfig: { baseURL: string; timeout: number; headers: { 'Content-Type': string } } | null = null
+let _apiConfig: { baseURL: string; timeout: number; headers: { 'Content-Type': string } } | null =
+  null
 
 function getApiConfig() {
   if (_apiConfig === null) {
     const baseURL = getBackendUrl()
     if (baseURL === null) {
-      throw new Error('PCB Generator backend is not configured. Set VITE_BACKEND_URL environment variable.')
+      throw new Error(
+        'PCB Generator backend is not configured. Set VITE_BACKEND_URL environment variable.',
+      )
     }
     _apiConfig = {
       baseURL,

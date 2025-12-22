@@ -242,7 +242,7 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
       if (error instanceof ApiError) {
         workerStatusError.value = error.userMessage
       } else {
-        workerStatusError.value = 'Backend is offline or unreachable'
+        workerStatusError.value = 'No online backend server found'
       }
     }
   }

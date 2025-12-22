@@ -544,7 +544,7 @@ describe('pcbGenerator store', () => {
 
       // Should not throw, just set error state
       expect(store.workerStatus).toBeNull()
-      expect(store.workerStatusError).toBe('Backend is offline or unreachable')
+      expect(store.workerStatusError).toBe('No online backend server found')
     })
 
     it('should handle ApiError with user message', async () => {

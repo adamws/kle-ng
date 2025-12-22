@@ -98,6 +98,11 @@ async function fetchWithErrorHandling(url: string, options: RequestInit = {}): P
         case 503:
           userMessage = 'Server is busy. Please try again in a moment.'
           break
+        case 500:
+        case 502:
+        case 504:
+          userMessage = 'Backend server error. The server may be offline or misconfigured.'
+          break
         case 404:
           userMessage = 'Resource not found. The task may have expired.'
           break
@@ -125,12 +130,17 @@ async function fetchWithErrorHandling(url: string, options: RequestInit = {}): P
     }
 
     if (error instanceof DOMException && error.name === 'AbortError') {
-      throw new ApiError('Request aborted', 'Request was cancelled or timed out.', undefined, error)
+      throw new ApiError(
+        'Request aborted',
+        'No backend server found. Request timed out.',
+        undefined,
+        error,
+      )
     }
 
     throw new ApiError(
       'Network error',
-      'Network error. Please check your connection.',
+      'No online backend server found. Please start the backend or check your connection.',
       undefined,
       error,
     )

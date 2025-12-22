@@ -64,14 +64,14 @@ function getStatusIcon(): string {
     <!-- Error state -->
     <div
       v-if="workerStatusError"
-      class="status-bar alert-danger"
+      class="alert status-bar alert-danger"
       role="status"
       aria-live="polite"
       aria-atomic="true"
     >
-      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-        <div class="d-flex align-items-center gap-3">
-          <div class="status-badge">
+      <div class="d-flex align-items-center justify-content-between gap-2">
+        <div class="d-flex align-items-center gap-3 flex-grow-1 min-w-0">
+          <div class="status-badge flex-shrink-0">
             <i class="bi bi-x-circle-fill" aria-hidden="true"></i>
           </div>
           <div class="status-info-inline">
@@ -80,7 +80,7 @@ function getStatusIcon(): string {
         </div>
         <button
           type="button"
-          class="btn btn-link btn-sm text-decoration-none p-0"
+          class="btn btn-link btn-sm text-decoration-none p-0 flex-shrink-0"
           :disabled="isRefreshing"
           @click="refreshStatus"
           title="Retry connection"
@@ -104,9 +104,9 @@ function getStatusIcon(): string {
       aria-live="polite"
       aria-atomic="true"
     >
-      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-        <div class="d-flex align-items-center gap-3">
-          <div class="status-badge">
+      <div class="d-flex align-items-center justify-content-between gap-2">
+        <div class="d-flex align-items-center gap-3 flex-grow-1 min-w-0">
+          <div class="status-badge flex-shrink-0">
             <i class="bi" :class="getStatusIcon()" aria-hidden="true"></i>
           </div>
           <div class="status-info-inline">
@@ -118,7 +118,7 @@ function getStatusIcon(): string {
         </div>
         <button
           type="button"
-          class="btn btn-link btn-sm text-decoration-none p-0"
+          class="btn btn-link btn-sm text-decoration-none p-0 flex-shrink-0"
           :disabled="isRefreshing"
           @click="refreshStatus"
           title="Refresh status"
@@ -168,10 +168,29 @@ function getStatusIcon(): string {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.status-info-inline .info-item {
+  word-break: break-word;
 }
 
 .info-separator {
   color: currentColor;
+  opacity: 0.5;
+}
+
+.status-bar .btn-link {
+  color: inherit;
+  opacity: 0.8;
+}
+
+.status-bar .btn-link:hover {
+  opacity: 1;
+}
+
+.status-bar .btn-link:disabled {
   opacity: 0.5;
 }
 
