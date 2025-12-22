@@ -20,7 +20,12 @@ onUnmounted(() => {
 <template>
   <div class="pcb-generator-panel">
     <!-- Backend Not Configured Warning -->
-    <div v-if="!backendConfigured" class="alert alert-warning" role="alert">
+    <div
+      v-if="!backendConfigured"
+      class="alert alert-warning"
+      role="alert"
+      data-testid="pcb-backend-warning"
+    >
       <h5 class="alert-heading">
         <i class="bi bi-exclamation-triangle"></i> Backend Not Configured
       </h5>

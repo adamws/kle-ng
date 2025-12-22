@@ -312,7 +312,7 @@ test.describe('Matrix Coordinates Tool', () => {
     await editor.matrix.expectVisible()
 
     // Should be in warning step (because there are labels)
-    const warningAlert = page.locator('.alert-warning')
+    const warningAlert = page.locator('.matrix-modal .alert-warning')
     await expect(warningAlert).toBeVisible()
     await expect(warningAlert).toContainText('clear all existing labels')
 
@@ -364,7 +364,7 @@ test.describe('Matrix Coordinates Tool', () => {
     await editor.matrix.expectVisible()
 
     // Should show warning
-    await expect(page.locator('.alert-warning')).toBeVisible()
+    await expect(page.locator('.matrix-modal .alert-warning')).toBeVisible()
 
     // Click Cancel button
     const cancelButton = page
@@ -427,7 +427,7 @@ test.describe('Matrix Coordinates Tool', () => {
     await editor.matrix.expectVisible()
 
     // Should show warning
-    await expect(page.locator('.alert-warning')).toBeVisible()
+    await expect(page.locator('.matrix-modal .alert-warning')).toBeVisible()
 
     // Click OK button to proceed
     const okButton = page.locator('.matrix-modal .panel-footer button').filter({ hasText: 'OK' })
@@ -588,7 +588,7 @@ test.describe('Matrix Coordinates Tool', () => {
     await waitHelpers.waitForDoubleAnimationFrame()
 
     // Should show warning
-    const warningAlert = page.locator('.alert-warning')
+    const warningAlert = page.locator('.matrix-modal .alert-warning')
     await expect(warningAlert).toBeVisible()
     await expect(warningAlert).toContainText('Partial annotation detected')
 
