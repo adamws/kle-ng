@@ -254,7 +254,8 @@ onMounted(() => {
 
 textarea.font-monospace {
   resize: vertical;
-  min-height: 300px;
+  min-height: 180px;
+  height: 220px;
 }
 
 .is-invalid {
