@@ -21,9 +21,10 @@ export type TaskStatusType = 'PENDING' | 'PROGRESS' | 'SUCCESS' | 'FAILURE' | 'R
 
 export interface TaskResult {
   percentage: number
-  status?: string
   message?: string
   error?: string
+  retries?: number
+  max_retry?: number
 }
 
 export interface TaskStatusResponse {

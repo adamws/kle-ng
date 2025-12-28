@@ -19,11 +19,15 @@ function getStatusMessage(): string {
     case 'PENDING':
       return 'Task is queued...'
     case 'PROGRESS':
-      return 'Generating PCB...'
+      return taskStatus.value.task_result?.message ?? 'Generating PCB...'
     case 'SUCCESS':
       return 'PCB generated successfully!'
     case 'FAILURE':
       return taskStatus.value.task_result?.error ?? 'Task failed'
+    case 'RETRY':
+      const retries = taskStatus.value.task_result?.retries ?? 0
+      const maxRetry = taskStatus.value.task_result?.max_retry ?? 3
+      return `Retrying task (${retries}/${maxRetry})...`
     default:
       return ''
   }
