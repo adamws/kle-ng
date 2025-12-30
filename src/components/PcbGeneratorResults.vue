@@ -102,6 +102,7 @@ function getProgressPercentage(): number {
   padding: 0;
   width: 100%;
   height: 100%;
+  overflow: hidden;
 }
 
 .progress-wrapper {
@@ -111,6 +112,8 @@ function getProgressPercentage(): number {
   justify-content: center;
   height: 100%;
   padding: 2rem;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .progress-wrapper .progress {
@@ -120,7 +123,34 @@ function getProgressPercentage(): number {
   font-weight: 600;
 }
 
+.progress-wrapper p {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+  margin-left: 1rem;
+  margin-right: 1rem;
+}
+
 .progress-text {
   line-height: 60px;
+}
+
+.alert {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.alert small {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  display: block;
 }
 </style>
