@@ -75,6 +75,12 @@ describe('pcbGenerator store', () => {
         switchFootprint: 'Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_{:.2f}u',
         diodeFootprint: 'Diode_SMD:D_SOD-123F',
         routing: 'Full',
+        switchRotation: 0,
+        switchSide: 'FRONT',
+        diodeRotation: 90,
+        diodeSide: 'BACK',
+        diodePositionX: 5.08,
+        diodePositionY: 4,
       })
       expect(store.currentTaskId).toBeNull()
       expect(store.taskStatus).toBeNull()
@@ -95,7 +101,18 @@ describe('pcbGenerator store', () => {
 
       const store = usePcbGeneratorStore()
 
-      expect(store.settings).toEqual(savedSettings)
+      // Should merge saved settings with migration defaults for new fields
+      expect(store.settings).toEqual({
+        switchFootprint: 'Switch_Keyboard_Alps_Matias:SW_Alps_Matias_{:.2f}u',
+        diodeFootprint: 'Diode_SMD:D_SOD-123',
+        routing: 'Disabled',
+        switchRotation: 0,
+        switchSide: 'FRONT',
+        diodeRotation: 90,
+        diodeSide: 'BACK',
+        diodePositionX: 5.08,
+        diodePositionY: 4.0,
+      })
     })
 
     it('should handle corrupted localStorage gracefully', () => {
@@ -246,6 +263,12 @@ describe('pcbGenerator store', () => {
             switchFootprint: store.settings.switchFootprint,
             diodeFootprint: store.settings.diodeFootprint,
             routing: store.settings.routing,
+            switchRotation: store.settings.switchRotation,
+            switchSide: store.settings.switchSide,
+            diodeRotation: store.settings.diodeRotation,
+            diodeSide: store.settings.diodeSide,
+            diodePositionX: store.settings.diodePositionX,
+            diodePositionY: store.settings.diodePositionY,
           },
         },
         expect.any(Object), // AbortController signal

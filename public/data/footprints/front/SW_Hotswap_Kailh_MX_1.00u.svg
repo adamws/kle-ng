@@ -1,0 +1,40 @@
+<svg
+   version="1.1"
+   width="20mm"
+   height="20mm"
+   viewBox="-10 -10 20 20"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <g style="fill:#000000; fill-opacity:1.000;stroke:#000000; stroke-opacity:1.000; stroke-linecap:round; stroke-linejoin:round;">
+    <path
+       class="hoverable"
+       style="fill:#4D7FC4; fill-opacity:1.000; stroke:none;fill-rule:evenodd;"
+       d="M -8.360,-3.540 -8.341,-3.636 -8.287,-3.717 -8.206,-3.771 -8.110,-3.790 -6.060,-3.790 -5.964,-3.771 -5.883,-3.717 -5.829,-3.636 -5.810,-3.540 -5.810,-1.540 -5.829,-1.444 -5.883,-1.363 -5.964,-1.309 -6.060,-1.290 -8.110,-1.290 -8.206,-1.309 -8.287,-1.363 -8.341,-1.444 -8.360,-1.540 Z" />
+    <path
+       class="hoverable"
+       style="fill:#4D7FC4; fill-opacity:1.000; stroke:none;fill-rule:evenodd;"
+       d="M 4.567,-6.080 4.586,-6.176 4.640,-6.257 4.721,-6.311 4.817,-6.330 6.867,-6.330 6.963,-6.311 7.044,-6.257 7.098,-6.176 7.117,-6.080 7.117,-4.080 7.098,-3.984 7.044,-3.903 6.963,-3.849 6.867,-3.830 4.817,-3.830 4.721,-3.849 4.640,-3.903 4.586,-3.984 4.567,-4.080 Z" />
+  </g>
+  <g style="fill:#AFAFAF; fill-opacity:0.400; stroke:none;">
+    <circle class="hoverable" cx="-5.080" cy="0.000" r="0.875" />
+    <circle class="hoverable" cx="-3.810" cy="-2.540" r="1.525" />
+    <circle class="hoverable" cx="0.000" cy="0.000" r="2.000" />
+    <circle class="hoverable" cx="2.540" cy="-5.080" r="1.525" />
+    <circle class="hoverable" cx="5.080" cy="0.000" r="0.875" />
+  </g>
+  <g style="fill:none; stroke:#585D84; stroke-width:0.120; stroke-opacity:1; stroke-linecap:round; stroke-linejoin:round;">
+    <path d="M-6.000 -0.800 L-6.000 -4.800 " />
+    <path d="M-6.000 -0.800 L-2.300 -0.800 " />
+    <path d="M-4.000 -6.800 L4.800 -6.800 " />
+    <path d="M-0.300 -2.800 L4.800 -2.800 " />
+    <path d="M4.800 -6.800 L4.800 -2.800 " />
+    <path d="M-4.000 -6.800 A2.000 2.000 0.0 0 0 -6.000 -4.800" />
+    <path d="M-0.300 -2.800 A2.000 2.000 0.0 0 0 -2.300 -0.800" />
+  </g>
+  <g style="fill:none; stroke:#AFAFAF; stroke-width:0.100; stroke-opacity:1; stroke-linecap:round; stroke-linejoin:round;">
+    <path d="M-7.000 -7.000 L-7.000 7.000 " />
+    <path d="M-7.000 7.000 L7.000 7.000 " />
+    <path d="M7.000 -7.000 L-7.000 -7.000 " />
+    <path d="M7.000 7.000 L7.000 -7.000 " />
+  </g>
+</svg>

@@ -1,0 +1,31 @@
+<svg
+   version="1.1"
+   width="6mm"
+   height="2mm"
+   viewBox="-3 -1 6 2"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <g style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1">
+    <path
+       class="hoverable"
+       style="fill:#4d7fc4;fill-opacity:1;fill-rule:evenodd;stroke:none"
+       d="M 2.1,0.375 2.083,0.461 2.034,0.534 1.961,0.583 1.875,0.6 H 1.425 L 1.339,0.583 1.266,0.534 1.217,0.461 1.2,0.375 v -0.75 L 1.217,-0.461 1.266,-0.534 1.339,-0.583 1.425,-0.6 h 0.45 l 0.086,0.017 0.073,0.049 0.049,0.073 0.017,0.086 z" />
+    <path
+       class="hoverable"
+       style="fill:#4d7fc4;fill-opacity:1;fill-rule:evenodd;stroke:none"
+       d="M -1.2,0.375 -1.217,0.461 -1.266,0.534 -1.339,0.583 -1.425,0.6 h -0.45 L -1.961,0.583 -2.034,0.534 -2.083,0.461 -2.1,0.375 v -0.75 l 0.017,-0.086 0.049,-0.073 0.073,-0.049 0.086,-0.017 h 0.45 l 0.086,0.017 0.073,0.049 0.049,0.073 0.017,0.086 z" />
+  </g>
+  <g style="fill:none;stroke:#AFAFAF;stroke-width:0.1;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1">
+    <path d="M -1.4,-0.9 V 0.9" />
+    <path d="M -1.4,0.9 H 1.4" />
+    <path d="M -0.25,-0.4 V 0.4" />
+    <path d="m -0.25,0 h -0.5" />
+    <path d="M -0.25,0.4 0.35,0" />
+    <path d="m 0.35,0 -0.6,-0.4" />
+    <path d="M 0.35,0 V -0.55" />
+    <path d="M 0.35,0 V 0.55" />
+    <path d="M 0.75,0 H 0.35" />
+    <path d="M 1.4,-0.9 H -1.4" />
+    <path d="M 1.4,0.9 V -0.9" />
+  </g>
+</svg>

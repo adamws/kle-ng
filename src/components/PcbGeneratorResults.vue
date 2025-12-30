@@ -2,6 +2,7 @@
 import { usePcbGeneratorStore } from '@/stores/pcbGenerator'
 import { storeToRefs } from 'pinia'
 import PcbRenderViewer from './PcbRenderViewer.vue'
+import FootprintPreview from './FootprintPreview.vue'
 
 const pcbStore = usePcbGeneratorStore()
 const { renders, isTaskSuccess, isTaskFailed, taskStatus, isTaskActive } = storeToRefs(pcbStore)
@@ -89,10 +90,9 @@ function getProgressPercentage(): number {
       <small>Task completed but no renders are available.</small>
     </div>
 
-    <!-- Idle State -->
-    <div v-else-if="!taskStatus" class="text-muted text-center py-4">
-      <i class="bi bi-cpu d-block mb-2 fs-3 opacity-25"></i>
-      <small>Configure settings and click "Generate PCB" to start.</small>
+    <!-- Idle State with Footprint Preview -->
+    <div v-else-if="!taskStatus" class="idle-preview-container">
+      <FootprintPreview />
     </div>
   </div>
 </template>
@@ -152,5 +152,13 @@ function getProgressPercentage(): number {
   overflow-wrap: break-word;
   word-break: break-word;
   display: block;
+}
+
+.idle-preview-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
 }
 </style>

@@ -16,6 +16,14 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
     switchFootprint: 'Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_{:.2f}u',
     diodeFootprint: 'Diode_SMD:D_SOD-123F',
     routing: 'Full',
+    // Switch configuration
+    switchRotation: 0,
+    switchSide: 'FRONT',
+    // Diode configuration
+    diodeRotation: 90,
+    diodeSide: 'BACK',
+    diodePositionX: 5.08,
+    diodePositionY: 4.0,
   })
 
   // Task state
@@ -110,6 +118,14 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
         switchFootprint: settings.value.switchFootprint,
         diodeFootprint: settings.value.diodeFootprint,
         routing: settings.value.routing,
+        // Switch configuration
+        switchRotation: settings.value.switchRotation,
+        switchSide: settings.value.switchSide,
+        // Diode configuration
+        diodeRotation: settings.value.diodeRotation,
+        diodeSide: settings.value.diodeSide,
+        diodePositionX: settings.value.diodePositionX,
+        diodePositionY: settings.value.diodePositionY,
       }
 
       const request = {
@@ -279,7 +295,20 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
-        Object.assign(settings.value, parsed)
+        // Merge with defaults to ensure new fields have default values
+        // (backward compatibility for users with old localStorage data)
+        const defaults: PcbSettings = {
+          switchFootprint: 'Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_{:.2f}u',
+          diodeFootprint: 'Diode_SMD:D_SOD-123F',
+          routing: 'Full',
+          switchRotation: 0,
+          switchSide: 'FRONT',
+          diodeRotation: 90,
+          diodeSide: 'BACK',
+          diodePositionX: 5.08,
+          diodePositionY: 4.0,
+        }
+        settings.value = { ...defaults, ...parsed }
       } catch (error) {
         console.warn('Failed to load PCB settings:', error)
       }

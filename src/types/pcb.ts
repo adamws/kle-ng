@@ -3,6 +3,14 @@ export interface PcbSettings {
   switchFootprint: string
   diodeFootprint: string
   routing: string
+  // Switch configuration
+  switchRotation: number
+  switchSide: 'FRONT' | 'BACK'
+  // Diode configuration
+  diodeRotation: number
+  diodeSide: 'FRONT' | 'BACK'
+  diodePositionX: number
+  diodePositionY: number
 }
 
 // API request format (for submission)
@@ -10,6 +18,14 @@ export interface PcbApiSettings {
   switchFootprint: string
   diodeFootprint: string
   routing: string
+  // Switch configuration
+  switchRotation: number
+  switchSide: string // "FRONT" or "BACK"
+  // Diode configuration
+  diodeRotation: number
+  diodeSide: string // "FRONT" or "BACK"
+  diodePositionX: number
+  diodePositionY: number
 }
 
 export interface TaskRequest {

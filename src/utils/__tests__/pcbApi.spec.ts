@@ -56,6 +56,12 @@ describe('pcbApi', () => {
           switchFootprint: 'Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_{:.2f}u',
           diodeFootprint: 'Diode_SMD:D_SOD-123F',
           routing: 'Full',
+          switchRotation: 0,
+          switchSide: 'FRONT',
+          diodeRotation: 0,
+          diodeSide: 'BACK',
+          diodePositionX: 5.0,
+          diodePositionY: -4.5,
         },
       }
 
@@ -89,6 +95,12 @@ describe('pcbApi', () => {
           switchFootprint: 'Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_{:.2f}u',
           diodeFootprint: 'Diode_SMD:D_SOD-123F',
           routing: 'Full',
+          switchRotation: 0,
+          switchSide: 'FRONT',
+          diodeRotation: 0,
+          diodeSide: 'BACK',
+          diodePositionX: 5.0,
+          diodePositionY: -4.5,
         },
       }
 
@@ -129,6 +141,12 @@ describe('pcbApi', () => {
           switchFootprint: 'Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_{:.2f}u',
           diodeFootprint: 'Diode_SMD:D_SOD-123F',
           routing: 'Full',
+          switchRotation: 0,
+          switchSide: 'FRONT',
+          diodeRotation: 0,
+          diodeSide: 'BACK',
+          diodePositionX: 5.0,
+          diodePositionY: -4.5,
         },
       }
 
@@ -150,6 +168,12 @@ describe('pcbApi', () => {
           switchFootprint: 'Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_{:.2f}u',
           diodeFootprint: 'Diode_SMD:D_SOD-123F',
           routing: 'Full',
+          switchRotation: 0,
+          switchSide: 'FRONT',
+          diodeRotation: 0,
+          diodeSide: 'BACK',
+          diodePositionX: 5.0,
+          diodePositionY: -4.5,
         },
       }
 
@@ -367,6 +391,12 @@ describe('pcbApi', () => {
           switchFootprint: 'Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_{:.2f}u',
           diodeFootprint: 'Diode_SMD:D_SOD-123F',
           routing: 'Full',
+          switchRotation: 0,
+          switchSide: 'FRONT',
+          diodeRotation: 0,
+          diodeSide: 'BACK',
+          diodePositionX: 5.0,
+          diodePositionY: -4.5,
         },
       }
 
