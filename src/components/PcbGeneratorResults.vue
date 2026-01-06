@@ -3,6 +3,7 @@ import { usePcbGeneratorStore } from '@/stores/pcbGenerator'
 import { storeToRefs } from 'pinia'
 import PcbRenderViewer from './PcbRenderViewer.vue'
 import FootprintPreview from './FootprintPreview.vue'
+import DownloadExpirationNotice from './DownloadExpirationNotice.vue'
 
 const pcbStore = usePcbGeneratorStore()
 const { renders, isTaskSuccess, isTaskFailed, taskStatus, isTaskActive } = storeToRefs(pcbStore)
@@ -69,6 +70,7 @@ function getProgressPercentage(): number {
         :back-svg="renders.back"
         :schematic-svg="renders.schematic"
       />
+      <DownloadExpirationNotice />
     </div>
 
     <!-- Failed State -->

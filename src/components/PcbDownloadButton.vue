@@ -3,7 +3,7 @@ import { usePcbGeneratorStore } from '@/stores/pcbGenerator'
 import { storeToRefs } from 'pinia'
 
 const pcbStore = usePcbGeneratorStore()
-const { isTaskSuccess } = storeToRefs(pcbStore)
+const { isTaskSuccess, isDownloadAvailable } = storeToRefs(pcbStore)
 
 function getDownloadUrl(): string | null {
   return pcbStore.getResultDownloadUrl()
@@ -11,7 +11,7 @@ function getDownloadUrl(): string | null {
 
 function handleDownload() {
   const url = getDownloadUrl()
-  if (url) {
+  if (url && isDownloadAvailable.value) {
     const link = document.createElement('a')
     link.href = url
     link.download = ''
@@ -25,12 +25,16 @@ function handleDownload() {
     <button
       v-if="isTaskSuccess && getDownloadUrl()"
       type="button"
-      class="btn btn-primary btn-sm w-100"
+      class="btn btn-sm w-100"
+      :class="isDownloadAvailable ? 'btn-primary' : 'btn-secondary'"
+      :disabled="!isDownloadAvailable"
       @click="handleDownload"
-      aria-label="Download generated PCB project as ZIP file"
+      :aria-label="
+        isDownloadAvailable ? 'Download generated PCB project as ZIP file' : 'Download link expired'
+      "
     >
       <i class="bi bi-download me-1" aria-hidden="true"></i>
-      Download ZIP
+      {{ isDownloadAvailable ? 'Download ZIP' : 'Download Expired' }}
     </button>
   </div>
 </template>

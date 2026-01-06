@@ -9,6 +9,7 @@ import type {
 } from '@/types/pcb'
 import { pcbApi, ApiError } from '@/utils/pcbApi'
 import { useKeyboardStore } from '@/stores/keyboard'
+import { useToast } from '@/composables/useToast'
 
 export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
   // Settings state (stored as numeric values)
@@ -39,6 +40,12 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
     schematic: null,
   })
 
+  // Download expiration tracking
+  const downloadExpiresAt = ref<number | null>(null)
+  const expirationTimerId = ref<number | null>(null)
+  const countdownTimerId = ref<number | null>(null)
+  const countdownTick = ref(0)
+
   // Worker state
   const workerStatus = ref<WorkerStatusResponse | null>(null)
   const workerStatusError = ref<string | null>(null)
@@ -50,6 +57,12 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
   // Polling state
   let pollFailureCount = 0
   const MAX_POLL_FAILURES = 5
+
+  // Download timeout configuration
+  const DOWNLOAD_TIMEOUT_MS = import.meta.env.VITE_DOWNLOAD_TIMEOUT_MS
+    ? parseInt(import.meta.env.VITE_DOWNLOAD_TIMEOUT_MS)
+    : 60 * 60 * 1000
+  const COUNTDOWN_UPDATE_INTERVAL_MS = 1000
 
   // AbortController for request cancellation
   const abortController = ref<AbortController | null>(null)
@@ -71,10 +84,77 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
     return workerStatus.value !== null && workerStatus.value.idle_capacity > 0
   })
 
+  const isDownloadAvailable = computed(() => {
+    if (!isTaskSuccess.value || !downloadExpiresAt.value) return false
+    return Date.now() < downloadExpiresAt.value
+  })
+
+  const downloadTimeRemaining = computed(() => {
+    if (!downloadExpiresAt.value) return 0
+    // Force dependency on countdownTick to trigger updates every second
+    void countdownTick.value // Force Vue to track this dependency
+    const remaining = downloadExpiresAt.value - Date.now()
+    return Math.max(0, remaining)
+  })
+
+  const isDownloadExpired = computed(() => {
+    if (!downloadExpiresAt.value) return false
+    // Force dependency on countdownTick to trigger updates every second
+    void countdownTick.value // Force Vue to track this dependency
+    return Date.now() >= downloadExpiresAt.value
+  })
+
   // Helper functions
   function canSubmitTask(): boolean {
     if (!lastSubmitTime.value) return true
     return Date.now() - lastSubmitTime.value > SUBMIT_COOLDOWN_MS
+  }
+
+  function startDownloadTimer() {
+    // Clear any existing timers
+    stopDownloadTimer()
+
+    // Set expiration timestamp
+    downloadExpiresAt.value = Date.now() + DOWNLOAD_TIMEOUT_MS
+
+    // Start countdown interval for UI updates
+    countdownTimerId.value = window.setInterval(() => {
+      // Increment tick to trigger Vue reactivity for computed properties
+      countdownTick.value++
+    }, COUNTDOWN_UPDATE_INTERVAL_MS)
+
+    // Set timeout for auto-reset when expired
+    expirationTimerId.value = window.setTimeout(() => {
+      handleDownloadExpired()
+    }, DOWNLOAD_TIMEOUT_MS)
+  }
+
+  function stopDownloadTimer() {
+    if (countdownTimerId.value !== null) {
+      clearInterval(countdownTimerId.value)
+      countdownTimerId.value = null
+    }
+
+    if (expirationTimerId.value !== null) {
+      clearTimeout(expirationTimerId.value)
+      expirationTimerId.value = null
+    }
+
+    downloadExpiresAt.value = null
+    countdownTick.value = 0
+  }
+
+  function handleDownloadExpired() {
+    const { showWarning } = useToast()
+
+    showWarning(
+      'The download link has expired. You can generate a new PCB to get a fresh download link.',
+      'Download Expired',
+      { duration: 8000 },
+    )
+
+    // Stop timer and invalidate download (keeps renders visible)
+    stopDownloadTimer()
   }
 
   // Actions
@@ -185,6 +265,7 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
       if (response.task_status === 'SUCCESS') {
         stopPolling()
         await fetchRenders()
+        startDownloadTimer()
       } else if (response.task_status === 'FAILURE') {
         stopPolling()
       }
@@ -267,6 +348,7 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
 
   function resetTask() {
     stopPolling()
+    stopDownloadTimer()
 
     // Cancel any in-flight requests
     abortController.value?.abort()
@@ -286,6 +368,7 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
 
   // Cleanup function for component unmount
   function cleanup() {
+    stopDownloadTimer()
     resetTask()
   }
 
@@ -347,6 +430,9 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
     isTaskSuccess,
     isTaskFailed,
     isBackendAvailable,
+    isDownloadAvailable,
+    downloadTimeRemaining,
+    isDownloadExpired,
     startTask,
     pollTaskStatus,
     fetchRenders,
