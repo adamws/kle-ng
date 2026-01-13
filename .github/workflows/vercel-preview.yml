@@ -4,6 +4,8 @@ on:
   pull_request_target:
     types: [opened, synchronize, reopened]
     branches: [ master ]
+  push:
+    branches: [ develop ]
 
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -12,17 +14,17 @@ env:
 jobs:
   preview-deploy:
     runs-on: ubuntu-latest
-    # Use environment protection for PRs
-    environment: 'pr-approval'
+    # Use environment protection for PRs only
+    environment: ${{ github.event_name == 'pull_request_target' && 'pr-approval' || null }}
     if: github.event.action != 'closed'
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          # Use the PR's head repo and branch
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.ref }}
+          # Use the PR's head repo and branch for PRs, or the pushed commit for develop
+          repository: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.ref || github.ref }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -47,6 +49,8 @@ jobs:
 
       - name: Build Project Artifacts
         run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VITE_BACKEND_URL: https://kicad.vps.keyboard-tools.xyz
 
       - name: Deploy Preview to Vercel
         id: deploy
@@ -55,6 +59,7 @@ jobs:
           echo "preview-url=$url" >> $GITHUB_OUTPUT
 
       - name: Comment PR with Preview URL
+        if: github.event_name == 'pull_request_target'
         uses: actions/github-script@v7
         with:
           script: |
