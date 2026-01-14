@@ -193,6 +193,9 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
         )
       }
 
+      // Note: Matrix duplicate validation is handled at UI level (PcbGeneratorControls.vue)
+      // The Generate PCB button is disabled when invalid duplicates are detected
+
       // Convert settings to API format
       const apiSettings: PcbApiSettings = {
         switchFootprint: settings.value.switchFootprint,

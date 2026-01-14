@@ -26,8 +26,11 @@
       <div class="panel-body">
         <!-- Warning Step -->
         <div v-if="step === 'warning'">
-          <!-- Already Annotated Warning -->
-          <div v-if="keyboardStore.isViaAnnotated" class="alert alert-success mb-3">
+          <!-- Already Annotated - Success State (no duplicates) -->
+          <div
+            v-if="keyboardStore.isViaAnnotated && !keyboardStore.hasInvalidMatrixDuplicates"
+            class="alert alert-success mb-3"
+          >
             <div class="d-flex align-items-start gap-3">
               <i class="bi bi-check-circle-fill text-success" style="font-size: 1.5rem"></i>
               <div class="flex-grow-1">
@@ -40,6 +43,38 @@
                   <i class="bi bi-eye me-1"></i>
                   The matrix overlay is currently visible on the canvas showing the existing row and
                   column connections.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Already Annotated - Warning State (has duplicates) -->
+          <div
+            v-if="keyboardStore.isViaAnnotated && keyboardStore.hasInvalidMatrixDuplicates"
+            class="alert alert-warning mb-3"
+          >
+            <div class="d-flex align-items-start gap-3">
+              <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 1.5rem"></i>
+              <div class="flex-grow-1">
+                <h6 class="mb-2 text-warning fw-bold">Layout Annotated with Warnings</h6>
+                <p class="mb-2 small">
+                  This layout has VIA matrix coordinates, but
+                  <strong>duplicate matrix positions</strong> were detected at:
+                  <code>{{
+                    keyboardStore.matrixDuplicateValidation.duplicatesWithoutOption
+                      .map((d) => d.position)
+                      .join(', ')
+                  }}</code>
+                </p>
+                <p class="mb-2 small">
+                  Per VIA spec, keys sharing a matrix position must have
+                  <code>option,choice</code> labels in the bottom-right position (e.g., "0,0" and
+                  "0,1") to distinguish layout variants.
+                </p>
+                <p class="mb-0 small">
+                  <i class="bi bi-info-circle me-1"></i>
+                  Either add option,choice labels to duplicate keys, or re-annotate to assign unique
+                  positions.
                 </p>
               </div>
             </div>
@@ -147,8 +182,15 @@
               </div>
             </div>
 
-            <!-- Completion Message -->
-            <div v-if="isAnnotationComplete && !annotationIssues" class="alert alert-success mb-3">
+            <!-- Completion Message (only show if no duplicates from any source) -->
+            <div
+              v-if="
+                isAnnotationComplete &&
+                !annotationIssues &&
+                !keyboardStore.hasInvalidMatrixDuplicates
+              "
+              class="alert alert-success mb-3"
+            >
               <!-- Already Annotated (opened with existing annotations) -->
               <div v-if="isShowingExistingAnnotation" class="d-flex align-items-start gap-3">
                 <i class="bi bi-check-circle-fill text-success" style="font-size: 1.5rem"></i>
@@ -178,7 +220,40 @@
               </div>
             </div>
 
-            <!-- Duplicate Warning Message -->
+            <!-- Existing Duplicates Warning (from keyboard store - duplicates without option,choice) -->
+            <div
+              v-if="
+                isAnnotationComplete &&
+                !annotationIssues &&
+                keyboardStore.hasInvalidMatrixDuplicates
+              "
+              class="alert alert-warning mb-3"
+            >
+              <div class="d-flex align-items-start gap-3">
+                <i
+                  class="bi bi-exclamation-triangle-fill text-warning"
+                  style="font-size: 1.5rem"
+                ></i>
+                <div class="flex-grow-1">
+                  <h6 class="mb-2 text-warning fw-bold">Duplicate Matrix Positions Detected</h6>
+                  <p class="mb-2 small">
+                    All keys have matrix coordinates, but duplicate positions were found at:
+                    <code>{{
+                      keyboardStore.matrixDuplicateValidation.duplicatesWithoutOption
+                        .map((d) => d.position)
+                        .join(', ')
+                    }}</code>
+                  </p>
+                  <p class="mb-0 small">
+                    Per VIA spec, keys sharing a matrix position must have
+                    <code>option,choice</code> labels in the bottom-right position. Either add
+                    option,choice labels or re-annotate to assign unique positions.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Duplicate Warning Message (from automatic annotation) -->
             <div v-if="annotationIssues" class="alert alert-warning mb-3">
               <div class="d-flex align-items-start gap-3">
                 <i
@@ -1042,25 +1117,30 @@ watch(
       initializePosition({ x: window.innerWidth - modalWidth - margin, y: 100 })
       resetState()
 
-      // Handle the four scenarios:
-      // 1. Completely annotated layout → go directly to drawing
-      if (keyboardStore.isViaAnnotated) {
+      // Handle the five scenarios:
+      // 1. Completely annotated layout WITH invalid duplicates → show warning step
+      if (keyboardStore.isViaAnnotated && keyboardStore.hasInvalidMatrixDuplicates) {
+        showExistingMatrixOverlay()
+        step.value = 'warning'
+      }
+      // 2. Completely annotated layout WITHOUT invalid duplicates → go directly to drawing
+      else if (keyboardStore.isViaAnnotated) {
         showExistingMatrixOverlay()
         step.value = 'draw'
         // Auto-enable drawing in row mode
         matrixDrawingStore.enableDrawing('row')
       }
-      // 2. Not annotated (empty labels) → go directly to drawing
+      // 3. Not annotated (empty labels) → go directly to drawing
       else if (!hasLabels.value) {
         step.value = 'draw'
         // Auto-enable drawing in row mode
         matrixDrawingStore.enableDrawing('row')
       }
-      // 3. Partially annotated layout → show choice (both OK and Proceed without clearing)
+      // 4. Partially annotated layout → show choice (both OK and Proceed without clearing)
       else if (isPartiallyAnnotated.value) {
         step.value = 'warning'
       }
-      // 4. Regular layout with non-matrix labels → show warning with only OK option
+      // 5. Regular layout with non-matrix labels → show warning with only OK option
       else {
         step.value = 'warning'
       }

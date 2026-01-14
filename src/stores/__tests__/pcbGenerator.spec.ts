@@ -28,6 +28,7 @@ vi.mock('@/utils/pcbApi', () => ({
 // Mock the keyboard store
 const mockKeyboardStore = {
   getSerializedData: vi.fn(),
+  keys: [] as { x: number; y: number; labels?: string[]; ghost?: boolean; decal?: boolean }[],
 }
 
 vi.mock('@/stores/keyboard', () => ({
@@ -60,6 +61,7 @@ describe('pcbGenerator store', () => {
     // Reset mocks
     vi.clearAllMocks()
     vi.useFakeTimers()
+    mockKeyboardStore.keys = [] // Reset keys for each test
   })
 
   afterEach(() => {

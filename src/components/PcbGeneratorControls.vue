@@ -9,19 +9,30 @@ const pcbStore = usePcbGeneratorStore()
 const { taskStatus, isTaskActive, isBackendAvailable, workerStatusError } = storeToRefs(pcbStore)
 
 const keyboardStore = useKeyboardStore()
-const { isViaAnnotated } = storeToRefs(keyboardStore)
+const { isViaAnnotated, hasInvalidMatrixDuplicates, matrixDuplicateValidation } =
+  storeToRefs(keyboardStore)
 
 const errorMessage = ref<string | null>(null)
 const isSubmitting = ref(false)
 
+// Button should show when no task is active (taskStatus is null)
+const showGenerateButton = computed(() => !taskStatus.value)
+
 const isGenerateDisabled = computed(
   () =>
-    isSubmitting.value || isTaskActive.value || !isBackendAvailable.value || !isViaAnnotated.value,
+    isSubmitting.value ||
+    isTaskActive.value ||
+    !isBackendAvailable.value ||
+    !isViaAnnotated.value ||
+    hasInvalidMatrixDuplicates.value,
 )
 
 const buttonTooltip = computed(() => {
   if (!isViaAnnotated.value) {
     return 'Layout requires VIA annotations to generate PCB'
+  }
+  if (hasInvalidMatrixDuplicates.value) {
+    return 'Layout has duplicate matrix positions without option,choice labels'
   }
   if (!isBackendAvailable.value) {
     if (workerStatusError.value) {
@@ -30,6 +41,15 @@ const buttonTooltip = computed(() => {
     return 'Backend is not available or all workers are busy'
   }
   return 'Generate PCB from current layout'
+})
+
+// Get list of duplicate positions for display
+const duplicatePositions = computed(() => {
+  if (!hasInvalidMatrixDuplicates.value) return []
+  // Defensive check in case validation result is not yet available
+  const validation = matrixDuplicateValidation.value
+  if (!validation?.duplicatesWithoutOption) return []
+  return validation.duplicatesWithoutOption.map((d) => d.position)
 })
 
 async function handleGeneratePcb() {
@@ -71,7 +91,7 @@ function handleNewTask() {
     <!-- Control Buttons -->
     <div class="d-grid gap-2">
       <button
-        v-if="!taskStatus"
+        v-if="showGenerateButton"
         type="button"
         class="btn btn-primary btn-sm"
         :disabled="isGenerateDisabled"
@@ -85,7 +105,7 @@ function handleNewTask() {
       </button>
 
       <button
-        v-if="taskStatus"
+        v-if="!showGenerateButton"
         type="button"
         class="btn btn-secondary btn-sm"
         :disabled="isTaskActive"
@@ -97,13 +117,28 @@ function handleNewTask() {
 
     <!-- Annotation Required Message -->
     <div
-      v-if="!isViaAnnotated && !taskStatus"
+      v-if="!isViaAnnotated && showGenerateButton"
       class="alert alert-warning py-2 mt-2 mb-0"
       role="alert"
     >
       <small>
         Layout requires VIA annotations. Use
         <strong>Tools &rarr; Add Switch Matrix Coordinates</strong> to annotate.
+      </small>
+    </div>
+
+    <!-- Invalid Duplicates Warning -->
+    <div
+      v-if="isViaAnnotated && hasInvalidMatrixDuplicates && showGenerateButton"
+      class="alert alert-warning py-2 mt-2 mb-0"
+      role="alert"
+    >
+      <small>
+        <strong>Duplicate matrix positions detected:</strong> {{ duplicatePositions.join(', ') }}
+        <br />
+        Per VIA spec, keys sharing a matrix position must have
+        <code>option,choice</code> labels in the bottom-right position. Use
+        <strong>Tools &rarr; Add Switch Matrix Coordinates</strong> to fix.
       </small>
     </div>
   </div>

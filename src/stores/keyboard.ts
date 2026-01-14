@@ -32,6 +32,7 @@ import { useFontStore } from './font'
 import { svgCache } from '../utils/caches/SVGCache'
 import { parseCache } from '../utils/caches/ParseCache'
 import { imageCache } from '../utils/caches/ImageCache'
+import { validateMatrixDuplicates } from '../utils/matrix-validation'
 
 export { Key, Keyboard, KeyboardMetadata, type Array12 } from '@adamws/kle-serial'
 
@@ -499,6 +500,18 @@ export const useKeyboardStore = defineStore('keyboard', () => {
 
       // Clear render caches when loading new layout
       clearRenderCaches()
+
+      // Validate matrix duplicates after loading
+      // Per VIA spec, duplicate matrix positions must have option,choice labels
+      const validation = validateMatrixDuplicates(keys.value)
+      if (!validation.isValid) {
+        const positions = validation.duplicatesWithoutOption.map((d) => d.position).join(', ')
+        toast.showWarning(
+          `Layout has duplicate matrix positions without option,choice labels: ${positions}. Per VIA spec, keys sharing a matrix position must have option,choice labels in the bottom-right label (e.g., "0,0", "0,1").`,
+          'Matrix Warning',
+          { duration: 8000 },
+        )
+      }
     } catch (error) {
       console.error('Error loading layout:', error)
       throw error
@@ -1282,6 +1295,19 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     })
   })
 
+  // Validate matrix duplicate positions
+  // Per VIA spec, keys sharing a matrix position must have option,choice labels
+  const matrixDuplicateValidation = computed(() => {
+    return validateMatrixDuplicates(keys.value)
+  })
+
+  // Check if layout has invalid matrix duplicates (duplicates without option,choice)
+  const hasInvalidMatrixDuplicates = computed((): boolean => {
+    // Only check if layout is VIA annotated
+    if (!isViaAnnotated.value) return false
+    return !matrixDuplicateValidation.value.isValid
+  })
+
   // Matrix coordinates functionality
   const addMatrixCoordinates = () => {
     // Save state before making changes
@@ -1480,5 +1506,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     // Matrix coordinates
     addMatrixCoordinates,
     isViaAnnotated,
+    matrixDuplicateValidation,
+    hasInvalidMatrixDuplicates,
   }
 })

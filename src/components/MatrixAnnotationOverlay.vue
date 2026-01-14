@@ -21,6 +21,7 @@ import { getKeyCenter as calculateKeyCenter } from '@/utils/keyboard-geometry'
 import { findKeysAlongLine } from '@/utils/line-intersection'
 import { useKeyboardStore } from '@/stores/keyboard'
 import { useMatrixDrawingStore } from '@/stores/matrix-drawing'
+import { getKeyChoice } from '@/utils/matrix-validation'
 
 // Props
 interface Props {
@@ -78,6 +79,21 @@ const skipNextHoverClear = ref<boolean>(false) // Flag to prevent clearing after
 
 // Computed
 const ctx = computed(() => canvasRef.value?.getContext('2d'))
+
+// Check if a key is part of the default layout (no option,choice or choice=0)
+// Keys with choice > 0 are alternative layout options and should not have wires drawn
+// Uses getKeyChoice from matrix-validation.ts to avoid duplicating parsing logic
+const isDefaultLayoutKey = (key: Key): boolean => {
+  const choice = getKeyChoice(key)
+  // No option,choice (choice is null) = part of default layout
+  // choice=0 = default choice for this option
+  return choice === null || choice === 0
+}
+
+// Filter keys to only include those in the default layout
+const filterDefaultLayoutKeys = (keys: Key[]): Key[] => {
+  return keys.filter(isDefaultLayoutKey)
+}
 
 // Get key center in canvas coordinates (pixels)
 const getKeyCenter = (key: Key): { x: number; y: number } => {
@@ -948,13 +964,21 @@ const renderCanvas = () => {
   )
 
   // Render completed drawn rows (blue)
+  // Only render keys that are part of the default layout (no option,choice or choice=0)
   matrixDrawingStore.completedRows.forEach((keys) => {
-    renderRow(keys)
+    const defaultKeys = filterDefaultLayoutKeys(keys)
+    if (defaultKeys.length > 0) {
+      renderRow(defaultKeys)
+    }
   })
 
   // Render completed drawn columns (green)
+  // Only render keys that are part of the default layout (no option,choice or choice=0)
   matrixDrawingStore.completedColumns.forEach((keys) => {
-    renderColumn(keys)
+    const defaultKeys = filterDefaultLayoutKeys(keys)
+    if (defaultKeys.length > 0) {
+      renderColumn(defaultKeys)
+    }
   })
 
   // Render current sequence being drawn (yellow/orange)
@@ -1219,22 +1243,39 @@ const renderHoverEffects = () => {
 
   if (shouldShowSegmentOnly && hoveredSegment.value) {
     // NO CTRL in remove mode: Show only the hovered segment
-    renderHoveredSegment(hoveredSegment.value)
+    // Only show if both segment keys are in default layout
+    if (
+      isDefaultLayoutKey(hoveredSegment.value.startKey) &&
+      isDefaultLayoutKey(hoveredSegment.value.endKey)
+    ) {
+      renderHoveredSegment(hoveredSegment.value)
+    }
   } else {
     // CTRL HELD or NOT in remove mode: Show full wire
+    // Filter to only show default layout keys
     if (hoveredRow.value !== null) {
       const keys = matrixDrawingStore.completedRows.get(hoveredRow.value)
-      if (keys) renderHoveredRow(keys)
+      if (keys) {
+        const defaultKeys = filterDefaultLayoutKeys(keys)
+        if (defaultKeys.length > 0) {
+          renderHoveredRow(defaultKeys)
+        }
+      }
     }
 
     if (hoveredColumn.value !== null) {
       const keys = matrixDrawingStore.completedColumns.get(hoveredColumn.value)
-      if (keys) renderHoveredColumn(keys)
+      if (keys) {
+        const defaultKeys = filterDefaultLayoutKeys(keys)
+        if (defaultKeys.length > 0) {
+          renderHoveredColumn(defaultKeys)
+        }
+      }
     }
   }
 
-  // Node hover (unchanged - always shows)
-  if (hoveredAnchor.value) {
+  // Node hover - only show if key is in default layout
+  if (hoveredAnchor.value && isDefaultLayoutKey(hoveredAnchor.value.key)) {
     renderHoveredNode(hoveredAnchor.value)
   }
 }
