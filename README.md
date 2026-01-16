@@ -478,6 +478,26 @@ The JSON file may contain any recognizable layout format.
 
 **Note:** GitHub API has rate limits for unauthenticated requests. If you encounter rate limit errors, wait a few minutes before trying again.
 
+## PCB Generator
+
+The PCB Generator creates KiCAD projects directly from your keyboard layout.
+This feature requires a VIA-annotated layout (switch matrix coordinates can be defined using **Tools → Add Switch Matrix Coordinates**).
+
+<img src="resources/pcb-generator-section.png">
+
+**Usage:**
+
+1. Annotate your layout with switch matrix coordinates
+2. Open the **PCB Generator** panel
+3. Configure switch and diode settings (changes can be seen in preview window)
+4. Click **Generate PCB**
+5. Download the generated KiCAD project as a ZIP file
+
+> [!NOTE]
+> This feature sends your layout data to a backend server for processing.
+> Generated files are stored for **1 hour** and then automatically deleted.
+> No collected data is used for any other purposes.
+
 ## Custom Fonts
 
 The original Keyboard Layout Editor provided [fine-grained](https://github.com/ijprest/keyboard-layout-editor/wiki/Custom-Styles)
