@@ -25,7 +25,7 @@ const switchFootprintOptions = [
 const diodeFootprintOptions = [
   { value: 'Diode_SMD:D_SOD-123', label: 'SOD-123' },
   { value: 'Diode_SMD:D_SOD-123F', label: 'SOD-123F' },
-  { value: 'Diode_THT:D_SOD-323', label: 'SOD-323' },
+  { value: 'Diode_SMD:D_SOD-323', label: 'SOD-323' },
   { value: 'Diode_SMD:D_SOD-323F', label: 'SOD-323F' },
 ]
 
