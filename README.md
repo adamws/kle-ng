@@ -540,7 +540,7 @@ The following features are intentionally not supported:
 
 - Different key profiles (appearance of keycaps). There is single default keycap rendering style.
 - Full HTML content in key labels
-  - Supports small subset of HTML tags: `<b>`, `<i>`, `<img>`, and `<svg>`
+  - Supports small subset of HTML tags: `<br>`, `<b>`, `<i>`, `<img>`, and `<svg>`
 - Background textures, highly customizable CSS label styling
   - kle-ng provides [minimal `css` metadata support](#custom-fonts)
 - Legacy rendering quirks and edge cases
