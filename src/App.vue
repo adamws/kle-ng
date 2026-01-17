@@ -11,6 +11,7 @@ import AppFooter from './components/AppFooter.vue'
 import CanvasToolbar from './components/CanvasToolbar.vue'
 import CanvasFooter from './components/CanvasFooter.vue'
 import CanvasHelpModal from './components/CanvasHelpModal.vue'
+import PcbSettingsModal from './components/PcbSettingsModal.vue'
 import ToastContainer from './components/ToastContainer.vue'
 import ThemeToggle from './components/ThemeToggle.vue'
 import GitHubStarPopup from './components/GitHubStarPopup.vue'
@@ -20,6 +21,9 @@ import { useTheme } from '@/composables/useTheme'
 const canvasRef = ref<InstanceType<typeof KeyboardCanvas>>()
 
 const keyboardStore = useKeyboardStore()
+
+// Check if running in production mode (hide debug features)
+const isProduction = import.meta.env.PROD
 
 // Initialize theme composable (theme will be initialized automatically on mount)
 useTheme()
@@ -218,6 +222,17 @@ const closeHelp = () => {
   isHelpVisible.value = false
 }
 
+// PCB Settings modal state
+const isPcbSettingsVisible = ref(false)
+
+const showPcbSettings = () => {
+  isPcbSettingsVisible.value = true
+}
+
+const closePcbSettings = () => {
+  isPcbSettingsVisible.value = false
+}
+
 // Conservative minimum to ensure all tools fit comfortably
 const minLayoutEditorHeight = 300
 const initialLayoutEditorHeight = 530
@@ -350,6 +365,15 @@ const stopResize = () => {
               >
                 <i class="bi bi-question-circle"></i>
               </button>
+              <!-- Settings button only for PCB Generator section (debug/preview mode only) -->
+              <button
+                v-if="section.id === 'pcb' && !isProduction"
+                @click.stop="showPcbSettings"
+                class="btn btn-sm btn-outline-secondary settings-btn"
+                title="Settings"
+              >
+                <i class="bi bi-gear"></i>
+              </button>
               <button
                 @click.stop="toggleSectionCollapse(section.id)"
                 class="btn btn-sm btn-outline-secondary collapse-btn"
@@ -432,6 +456,9 @@ const stopResize = () => {
     <!-- Canvas Help Modal -->
     <CanvasHelpModal :is-visible="isHelpVisible" @close="closeHelp" />
 
+    <!-- PCB Settings Modal -->
+    <PcbSettingsModal :is-visible="isPcbSettingsVisible" @close="closePcbSettings" />
+
     <!-- Toast Notifications -->
     <ToastContainer />
 
@@ -510,7 +537,8 @@ const stopResize = () => {
 }
 
 .collapse-btn,
-.help-btn {
+.help-btn,
+.settings-btn {
   min-width: 28px;
   height: 28px;
   padding: 0;
@@ -520,6 +548,14 @@ const stopResize = () => {
   font-size: 14px;
   line-height: 1;
   border-radius: 4px;
+}
+
+.collapse-btn i,
+.help-btn i,
+.settings-btn i {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Drag States */

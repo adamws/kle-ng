@@ -1,5 +1,33 @@
+// Custom backend URL storage (session-only, not persisted)
+let _customBackendUrl: string | null = null
+
+// Set custom backend URL (call with null to reset to default)
+export function setCustomBackendUrl(url: string | null) {
+  _customBackendUrl = url
+  _apiConfig = null // Reset cached config to use new URL
+}
+
+// Get current custom backend URL (null if using default)
+export function getCustomBackendUrl(): string | null {
+  return _customBackendUrl
+}
+
+// Get the default backend URL from environment
+export function getDefaultBackendUrl(): string {
+  const url = import.meta.env.VITE_BACKEND_URL
+  if (!url && import.meta.env.DEV) {
+    return ''
+  }
+  return url || ''
+}
+
 // Helper to get and validate backend URL
 function getBackendUrl(): string | null {
+  // Custom URL takes precedence
+  if (_customBackendUrl !== null) {
+    return _customBackendUrl
+  }
+
   const url = import.meta.env.VITE_BACKEND_URL
 
   // Development: if empty, use same origin (Vite proxy handles /api/* requests)

@@ -10,6 +10,7 @@ import type {
 import { pcbApi, ApiError } from '@/utils/pcbApi'
 import { useKeyboardStore } from '@/stores/keyboard'
 import { useToast } from '@/composables/useToast'
+import { setCustomBackendUrl, getDefaultBackendUrl } from '@/config/api'
 
 export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
   // Settings state (stored as numeric values)
@@ -49,6 +50,14 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
   // Worker state
   const workerStatus = ref<WorkerStatusResponse | null>(null)
   const workerStatusError = ref<string | null>(null)
+
+  // Backend URL state (session-only, not persisted to localStorage)
+  const customBackendUrl = ref<string | null>(null)
+
+  // Computed: get effective backend URL (custom or default from env)
+  const effectiveBackendUrl = computed(() => {
+    return customBackendUrl.value !== null ? customBackendUrl.value : getDefaultBackendUrl()
+  })
 
   // Rate limiting state
   const lastSubmitTime = ref<number | null>(null)
@@ -375,6 +384,23 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
     resetTask()
   }
 
+  // Backend URL management
+  function setBackendUrl(url: string) {
+    customBackendUrl.value = url
+    setCustomBackendUrl(url)
+    // Reset worker status since backend may have changed
+    workerStatus.value = null
+    workerStatusError.value = null
+  }
+
+  function resetBackendUrl() {
+    customBackendUrl.value = null
+    setCustomBackendUrl(null)
+    // Reset worker status since backend may have changed
+    workerStatus.value = null
+    workerStatusError.value = null
+  }
+
   // Settings persistence
   function loadSettings() {
     const saved = localStorage.getItem('kle-ng-pcb-settings')
@@ -428,6 +454,8 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
     renders,
     workerStatus,
     workerStatusError,
+    customBackendUrl,
+    effectiveBackendUrl,
     isPolling,
     isTaskActive,
     isTaskSuccess,
@@ -444,5 +472,7 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
     resetTask,
     stopPolling,
     cleanup,
+    setBackendUrl,
+    resetBackendUrl,
   }
 })
