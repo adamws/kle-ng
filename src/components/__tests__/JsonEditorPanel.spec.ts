@@ -111,6 +111,40 @@ describe('JsonEditorPanel', () => {
     })
   })
 
+  describe('clear button', () => {
+    it('should clear JSON to empty array when clear button is clicked', async () => {
+      const wrapper = mount(JsonEditorPanel, {
+        global: {
+          plugins: [createPinia()],
+        },
+      })
+
+      await wrapper.vm.$nextTick()
+
+      const textarea = wrapper.find('textarea')
+
+      // First set some valid JSON content
+      await textarea.setValue('[["Q","W","E"]]')
+      await textarea.trigger('input')
+      await wrapper.vm.$nextTick()
+
+      // Find the clear button (has trash icon, is the first button)
+      const clearButton = wrapper.find('button.btn-outline-danger')
+      expect(clearButton.exists()).toBe(true)
+
+      // Click the clear button
+      await clearButton.trigger('click')
+      await wrapper.vm.$nextTick()
+
+      // Textarea should now contain empty array
+      expect((textarea.element as HTMLTextAreaElement).value).toBe('[]')
+
+      // Should not show error (empty array is valid JSON)
+      const errorElement = wrapper.find('.text-danger')
+      expect(errorElement.exists()).toBe(false)
+    })
+  })
+
   describe('undefined property handling', () => {
     it('should omit undefined properties from JSON output', async () => {
       const wrapper = mount(JsonEditorPanel, {

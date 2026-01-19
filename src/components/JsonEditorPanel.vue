@@ -16,6 +16,14 @@
         <div v-else class="text-success small"><i class="bi bi-check"></i> Valid JSON</div>
         <div class="d-flex gap-2">
           <button
+            @click="clearJson"
+            class="btn btn-outline-danger btn-sm"
+            :disabled="isDisabled"
+            title="Clear all"
+          >
+            <i class="bi bi-trash"></i>
+          </button>
+          <button
             @click="formatJson"
             class="btn btn-outline-secondary btn-sm"
             :disabled="hasJsonError || isDisabled"
@@ -153,6 +161,11 @@ const formatJson = () => {
       console.error('Error formatting JSON:', error)
     }
   }
+}
+
+const clearJson = () => {
+  jsonContent.value = '[]'
+  validateJson()
 }
 
 // Computed
