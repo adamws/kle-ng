@@ -230,8 +230,12 @@ const detectHover = (canvasX: number, canvasY: number) => {
   }> = []
 
   // Collect all row nodes from completed rows
+  // Only consider keys in the default layout (choice=0 or no option,choice)
   matrixDrawingStore.completedRows.forEach((keySequence, rowIndex) => {
     keySequence.forEach((key) => {
+      // Skip keys that are not part of the default layout (hidden wires)
+      if (!isDefaultLayoutKey(key)) return
+
       const center = getKeyCenter(key)
       const distance = Math.sqrt(Math.pow(center.x - canvasX, 2) + Math.pow(center.y - canvasY, 2))
       if (distance < NODE_HOVER_THRESHOLD) {
@@ -241,8 +245,12 @@ const detectHover = (canvasX: number, canvasY: number) => {
   })
 
   // Collect all column nodes from completed columns
+  // Only consider keys in the default layout (choice=0 or no option,choice)
   matrixDrawingStore.completedColumns.forEach((keySequence, colIndex) => {
     keySequence.forEach((key) => {
+      // Skip keys that are not part of the default layout (hidden wires)
+      if (!isDefaultLayoutKey(key)) return
+
       const center = getKeyCenter(key)
       const distance = Math.sqrt(Math.pow(center.x - canvasX, 2) + Math.pow(center.y - canvasY, 2))
       if (distance < NODE_HOVER_THRESHOLD) {
@@ -285,14 +293,17 @@ const detectHover = (canvasX: number, canvasY: number) => {
   }
 
   // Check for segment hover (rows) - priority over entire wire hover
+  // Only consider segments where both keys are in the default layout
   if (!hoveredAnchor.value) {
     // Check row segments
     for (const [rowIndex, keySequence] of matrixDrawingStore.completedRows) {
-      if (keySequence.length < 2) continue
+      // Filter to default layout keys for segment detection
+      const defaultKeys = filterDefaultLayoutKeys(keySequence)
+      if (defaultKeys.length < 2) continue
 
-      for (let i = 0; i < keySequence.length - 1; i++) {
-        const startKey = keySequence[i]
-        const endKey = keySequence[i + 1]
+      for (let i = 0; i < defaultKeys.length - 1; i++) {
+        const startKey = defaultKeys[i]
+        const endKey = defaultKeys[i + 1]
         if (!startKey || !endKey) continue
 
         const start = getKeyCenter(startKey)
@@ -301,11 +312,14 @@ const detectHover = (canvasX: number, canvasY: number) => {
         if (
           isPointNearLine(canvasX, canvasY, start.x, start.y, end.x, end.y, LINE_HOVER_THRESHOLD)
         ) {
+          // Map filtered indices back to original sequence indices for segment operations
+          const originalStartIndex = keySequence.indexOf(startKey)
+          const originalEndIndex = keySequence.indexOf(endKey)
           hoveredSegment.value = {
             type: 'row',
             wireIndex: rowIndex,
-            segmentStartIndex: i,
-            segmentEndIndex: i + 1,
+            segmentStartIndex: originalStartIndex,
+            segmentEndIndex: originalEndIndex,
             startKey,
             endKey,
           }
@@ -317,14 +331,17 @@ const detectHover = (canvasX: number, canvasY: number) => {
   }
 
   // Check for segment hover (columns) - priority over entire wire hover
+  // Only consider segments where both keys are in the default layout
   if (!hoveredAnchor.value && !hoveredSegment.value) {
     // Check column segments
     for (const [colIndex, keySequence] of matrixDrawingStore.completedColumns) {
-      if (keySequence.length < 2) continue
+      // Filter to default layout keys for segment detection
+      const defaultKeys = filterDefaultLayoutKeys(keySequence)
+      if (defaultKeys.length < 2) continue
 
-      for (let i = 0; i < keySequence.length - 1; i++) {
-        const startKey = keySequence[i]
-        const endKey = keySequence[i + 1]
+      for (let i = 0; i < defaultKeys.length - 1; i++) {
+        const startKey = defaultKeys[i]
+        const endKey = defaultKeys[i + 1]
         if (!startKey || !endKey) continue
 
         const start = getKeyCenter(startKey)
@@ -333,11 +350,14 @@ const detectHover = (canvasX: number, canvasY: number) => {
         if (
           isPointNearLine(canvasX, canvasY, start.x, start.y, end.x, end.y, LINE_HOVER_THRESHOLD)
         ) {
+          // Map filtered indices back to original sequence indices for segment operations
+          const originalStartIndex = keySequence.indexOf(startKey)
+          const originalEndIndex = keySequence.indexOf(endKey)
           hoveredSegment.value = {
             type: 'column',
             wireIndex: colIndex,
-            segmentStartIndex: i,
-            segmentEndIndex: i + 1,
+            segmentStartIndex: originalStartIndex,
+            segmentEndIndex: originalEndIndex,
             startKey,
             endKey,
           }
