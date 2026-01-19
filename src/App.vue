@@ -312,7 +312,10 @@ const stopResize = () => {
             <strong>Keyboard Layout Editor NG</strong>
           </h1>
           <!-- On small screens: toolbar and theme toggle in same row -->
-          <div class="d-flex flex-row flex-grow-1 align-items-center gap-2">
+          <nav
+            class="d-flex flex-row flex-grow-1 align-items-center gap-2"
+            aria-label="Main toolbar"
+          >
             <div class="flex-grow-1">
               <KeyboardToolbar />
             </div>
@@ -320,13 +323,13 @@ const stopResize = () => {
             <div class="d-flex align-items-center flex-shrink-0">
               <ThemeToggle />
             </div>
-          </div>
+          </nav>
         </div>
       </div>
     </header>
 
     <!-- Main Container -->
-    <div class="flex-grow-1">
+    <main class="flex-grow-1" role="main" aria-label="Keyboard layout editor workspace">
       <!-- Dynamic Reorderable Sections -->
       <div
         v-for="section in orderedSections"
@@ -402,6 +405,8 @@ const stopResize = () => {
                 @click.stop="toggleSectionCollapse(section.id)"
                 class="btn btn-sm btn-outline-secondary collapse-btn"
                 :title="collapsedSections[section.id] ? 'Expand' : 'Collapse'"
+                :aria-expanded="!collapsedSections[section.id]"
+                :aria-controls="`section-content-${section.id}`"
               >
                 <i
                   :class="collapsedSections[section.id] ? 'bi bi-chevron-down' : 'bi bi-chevron-up'"
@@ -472,7 +477,7 @@ const stopResize = () => {
           </div>
         </div>
       </div>
-    </div>
+    </main>
 
     <!-- Footer -->
     <AppFooter />

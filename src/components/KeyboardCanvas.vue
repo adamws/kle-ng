@@ -33,6 +33,8 @@
       @keydown="handleKeyDown"
       @focus="handleCanvasFocus"
       @blur="handleCanvasBlur"
+      role="img"
+      aria-label="Interactive keyboard layout canvas."
     />
 
     <!-- Matrix Annotation Overlay -->

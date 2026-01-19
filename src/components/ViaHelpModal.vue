@@ -16,7 +16,11 @@
               What is VIA Metadata?
             </h6>
             <div class="help-content">
-              <img align="right" src="/via-layout-example.png" />
+              <img
+                align="right"
+                src="/via-layout-example.png"
+                alt="Example of VIA layout format showing matrix coordinates on keycaps"
+              />
               <p>
                 <a href="https://www.caniusevia.com/" target="_blank">VIA</a> and
                 <a href="https://get.vial.today/" target="_blank">Vial</a> are keyboard
