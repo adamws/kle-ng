@@ -101,7 +101,7 @@
                 href="#"
                 @click.prevent="exportToErgogenWebGui"
               >
-                Edit in Ergogen Web GUI
+                Edit in Ergogen Web GUI <i class="bi bi-box-arrow-up-right"></i>
               </a>
             </li>
           </ul>
