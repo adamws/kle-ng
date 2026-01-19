@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import KeyboardToolbar from './components/KeyboardToolbar.vue'
 import KeyboardCanvas from './components/KeyboardCanvas.vue'
 import KeyPropertiesPanel from './components/KeyPropertiesPanel.vue'
@@ -27,6 +27,30 @@ const isProduction = import.meta.env.PROD
 
 // Initialize theme composable (theme will be initialized automatically on mount)
 useTheme()
+
+// Prevent accidental page refresh when there are unsaved changes
+const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+  event.preventDefault()
+  event.returnValue = ''
+  return ''
+}
+
+// Dynamically add/remove beforeunload listener based on dirty state (for performance)
+watch(
+  () => keyboardStore.dirty,
+  (isDirty) => {
+    if (isDirty) {
+      window.addEventListener('beforeunload', handleBeforeUnload)
+    } else {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  },
+  { immediate: true },
+)
+
+onUnmounted(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload)
+})
 
 const sectionOrder = ref(['canvas', 'properties', 'json', 'pcb'])
 const draggedSection = ref<string | null>(null)

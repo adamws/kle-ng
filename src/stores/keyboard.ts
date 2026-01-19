@@ -85,7 +85,26 @@ export const useKeyboardStore = defineStore('keyboard', () => {
       metadata: KeyboardMetadata
     }[]
   > = ref([])
-  const dirty = ref(false)
+  // Smart dirty detection: compare current state to baseline snapshot
+  const baselineSnapshot = ref<string>('')
+
+  const createSnapshot = (): string => {
+    return JSON.stringify({
+      keys: keys.value,
+      metadata: metadata.value,
+    })
+  }
+
+  const dirty = computed(() => {
+    // If no baseline set yet, not dirty
+    if (!baselineSnapshot.value) return false
+    return createSnapshot() !== baselineSnapshot.value
+  })
+
+  const updateBaseline = () => {
+    baselineSnapshot.value = createSnapshot()
+  }
+
   const resetViewTrigger = ref(0) // Incremented when layout changes to trigger view reset
 
   const canvasMode = ref<'select' | 'mirror-h' | 'mirror-v' | 'rotate' | 'move-exactly'>('select')
@@ -165,8 +184,6 @@ export const useKeyboardStore = defineStore('keyboard', () => {
       history.value.shift()
       historyIndex.value--
     }
-
-    dirty.value = true
 
     // Notify canvas of potential bounds changes
     if (typeof window !== 'undefined') {
@@ -430,7 +447,6 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     keys.value = JSON.parse(JSON.stringify(state.keys))
     metadata.value = JSON.parse(JSON.stringify(state.metadata))
     selectedKeys.value = []
-    dirty.value = true
 
     // Notify canvas of potential bounds changes (undo doesn't call saveState)
     if (typeof window !== 'undefined') {
@@ -448,7 +464,6 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     keys.value = JSON.parse(JSON.stringify(state.keys))
     metadata.value = JSON.parse(JSON.stringify(state.metadata))
     selectedKeys.value = []
-    dirty.value = true
 
     // Notify canvas of potential bounds changes (redo doesn't call saveState)
     if (typeof window !== 'undefined') {
@@ -495,7 +510,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
       history.value = []
       historyIndex.value = -1
       saveState()
-      dirty.value = false
+      updateBaseline()
       resetViewTrigger.value++ // Trigger view reset (will preserve zoom, reset pan only)
 
       // Clear render caches when loading new layout
@@ -536,7 +551,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     fontStore.resetToDefault()
 
     saveState()
-    dirty.value = false
+    updateBaseline()
     resetViewTrigger.value++ // Trigger view reset
   }
 
@@ -585,7 +600,6 @@ export const useKeyboardStore = defineStore('keyboard', () => {
 
       // Don't clear history - this preserves undo functionality
       saveState() // This adds current state to history
-      dirty.value = true // Mark as dirty since user made changes
 
       // Clear render caches when updating layout from JSON
       clearRenderCaches()
@@ -605,7 +619,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     ) {
       // Initialize empty state for tests
       saveState()
-      dirty.value = false
+      updateBaseline()
       return
     }
 
@@ -647,12 +661,12 @@ export const useKeyboardStore = defineStore('keyboard', () => {
       history.value = []
       historyIndex.value = -1
       saveState()
-      dirty.value = false
+      updateBaseline()
       resetViewTrigger.value++
     } catch (error) {
       console.error('Error loading sample layout:', error)
       saveState()
-      dirty.value = false
+      updateBaseline()
     }
   }
 
@@ -1365,9 +1379,9 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     saveState()
   }
 
-  const markDirty = () => {
-    dirty.value = true
-  }
+  // No-op: dirty is now a computed property based on comparison to baseline
+  // Kept for API compatibility with existing code
+  const markDirty = () => {}
 
   // Handle URL hash changes for dynamic gist loading
   const handleHashChange = async () => {
@@ -1502,6 +1516,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     // Legend tools
     saveToHistory,
     markDirty,
+    updateBaseline,
 
     // Matrix coordinates
     addMatrixCoordinates,

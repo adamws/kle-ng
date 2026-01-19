@@ -297,6 +297,7 @@ const handleFileUpload = async (event: Event) => {
           console.log(`Loading layout from PNG metadata: ${file.name}`)
           keyboardStore.loadKLELayout(layoutData)
           keyboardStore.filename = filenameWithoutExt
+          keyboardStore.updateBaseline()
           toast.showSuccess(`Layout imported from PNG metadata: ${file.name}`, 'Import Successful')
         } else {
           toast.showError('Failed to extract layout data from PNG metadata', 'Import Failed')
@@ -321,6 +322,7 @@ const handleFileUpload = async (event: Event) => {
         // Load the keyboard
         keyboardStore.loadKeyboard(keyboard)
         keyboardStore.filename = filenameWithoutExt
+        keyboardStore.updateBaseline()
 
         toast.showSuccess(`Ergogen layout imported`, 'Import Successful')
       } catch (error) {
@@ -358,6 +360,7 @@ const downloadJson = () => {
   a.download = `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}.json`
   a.click()
   URL.revokeObjectURL(url)
+  keyboardStore.updateBaseline()
 }
 
 const downloadKleInternalJson = () => {
@@ -658,6 +661,7 @@ const importFromShareLink = async (shareUrl: string) => {
     // Load the layout
     keyboardStore.loadKeyboard(layoutData)
     keyboardStore.filename = 'shared-layout'
+    keyboardStore.updateBaseline()
 
     toast.showSuccess('Layout imported from share link', 'Import Successful')
   } catch (error) {
@@ -708,6 +712,7 @@ const importFromUrlHash = async (urlWithHash: string) => {
       const layoutData = await fetchGistLayout(decodedUrl)
       keyboardStore.loadKeyboard(layoutData)
       keyboardStore.filename = `gist-${decodedUrl}`
+      keyboardStore.updateBaseline()
       toast.showSuccess(`Layout imported from gist: ${decodedUrl}`, 'Import Successful')
     } else {
       // Direct URL to JSON file
@@ -816,6 +821,9 @@ const processJsonLayout = async (
   }
 
   keyboardStore.filename = storedFilename
+
+  // Update baseline after all modifications are complete (including VIA metadata)
+  keyboardStore.updateBaseline()
 }
 
 const importFromErgogenUrl = async (ergogenUrl: string) => {
@@ -829,6 +837,7 @@ const importFromErgogenUrl = async (ergogenUrl: string) => {
     // Load the keyboard
     keyboardStore.loadKeyboard(keyboard)
     keyboardStore.filename = 'ergogen-import'
+    keyboardStore.updateBaseline()
 
     toast.showSuccess(
       `Ergogen layout imported from URL: ${Object.keys(keyboard.keys).length} keys`,

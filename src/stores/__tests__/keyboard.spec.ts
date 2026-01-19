@@ -1325,4 +1325,169 @@ describe('Keyboard Store', () => {
       expect(store.tempSelectedKeys).toHaveLength(0)
     })
   })
+
+  describe('smart dirty detection', () => {
+    it('should be clean after initial state', () => {
+      expect(store.dirty).toBe(false)
+    })
+
+    it('should become dirty after adding a key', () => {
+      store.addKey()
+      expect(store.dirty).toBe(true)
+    })
+
+    it('should become dirty after modifying a key property', () => {
+      store.addKey()
+      store.updateBaseline() // Reset baseline
+      expect(store.dirty).toBe(false)
+
+      const key = store.keys[0]
+      store.updateKeyProperty(key!, 'width', 2)
+      expect(store.dirty).toBe(true)
+    })
+
+    it('should become dirty after deleting a key', () => {
+      store.addKey()
+      store.addKey()
+      store.updateBaseline()
+      expect(store.dirty).toBe(false)
+
+      store.selectAll()
+      store.deleteKeys()
+      expect(store.dirty).toBe(true)
+    })
+
+    it('should return to clean state after undoing all changes', () => {
+      expect(store.dirty).toBe(false)
+
+      store.addKey()
+      expect(store.dirty).toBe(true)
+
+      store.undo()
+      expect(store.dirty).toBe(false)
+    })
+
+    it('should return to clean state after undoing multiple changes', () => {
+      expect(store.dirty).toBe(false)
+
+      store.addKey()
+      store.addKey()
+      store.addKey()
+      expect(store.dirty).toBe(true)
+
+      store.undo()
+      expect(store.dirty).toBe(true) // Still different from baseline
+
+      store.undo()
+      expect(store.dirty).toBe(true) // Still different from baseline
+
+      store.undo()
+      expect(store.dirty).toBe(false) // Back to baseline
+    })
+
+    it('should become dirty again after redo', () => {
+      store.addKey()
+      store.undo()
+      expect(store.dirty).toBe(false)
+
+      store.redo()
+      expect(store.dirty).toBe(true)
+    })
+
+    it('should be clean after loading a new layout', () => {
+      store.addKey()
+      expect(store.dirty).toBe(true)
+
+      const kleData = [{ name: 'New Layout' }, ['A', 'B']]
+      store.loadKLELayout(kleData)
+      expect(store.dirty).toBe(false) // New baseline established
+    })
+
+    it('should become dirty after modifying imported layout', () => {
+      const kleData = [{ name: 'Test Layout' }, ['Q', 'W', 'E']]
+      store.loadKLELayout(kleData)
+      expect(store.dirty).toBe(false)
+
+      store.addKey()
+      expect(store.dirty).toBe(true)
+    })
+
+    it('should be clean after clearing layout', () => {
+      store.addKey()
+      expect(store.dirty).toBe(true)
+
+      store.clearLayout()
+      expect(store.dirty).toBe(false)
+    })
+
+    it('should be clean after calling updateBaseline', () => {
+      store.addKey()
+      expect(store.dirty).toBe(true)
+
+      store.updateBaseline()
+      expect(store.dirty).toBe(false)
+    })
+
+    it('should detect when key position is reverted manually', () => {
+      store.addKey({ x: 0, y: 0 })
+      store.updateBaseline()
+      expect(store.dirty).toBe(false)
+
+      const key = store.keys[0]!
+
+      // Move the key
+      store.updateKeyProperty(key, 'x', 5)
+      expect(store.dirty).toBe(true)
+
+      // Move it back to original position
+      store.updateKeyProperty(key, 'x', 0)
+      expect(store.dirty).toBe(false) // Back to baseline state
+    })
+
+    it('should detect when multiple properties are reverted', () => {
+      store.addKey({ x: 0, y: 0, width: 1 })
+      store.updateBaseline()
+
+      const key = store.keys[0]!
+
+      // Change multiple properties
+      store.updateKeyProperty(key, 'x', 5)
+      store.updateKeyProperty(key, 'width', 2)
+      expect(store.dirty).toBe(true)
+
+      // Revert one property - still dirty
+      store.updateKeyProperty(key, 'x', 0)
+      expect(store.dirty).toBe(true)
+
+      // Revert second property - now clean
+      store.updateKeyProperty(key, 'width', 1)
+      expect(store.dirty).toBe(false)
+    })
+
+    it('should detect metadata changes', () => {
+      store.updateBaseline()
+      expect(store.dirty).toBe(false)
+
+      store.metadata.name = 'Changed Name'
+      store.saveState() // Trigger state save to update comparison
+      expect(store.dirty).toBe(true)
+    })
+
+    it('should not be affected by selection changes', () => {
+      store.addKey()
+      store.addKey()
+      store.updateBaseline()
+      expect(store.dirty).toBe(false)
+
+      // Selection changes should not affect dirty state
+      store.selectAll()
+      expect(store.dirty).toBe(false)
+
+      store.unselectAll()
+      expect(store.dirty).toBe(false)
+
+      store.selectKey(store.keys[0]!)
+      expect(store.dirty).toBe(false)
+    })
+  })
 })
