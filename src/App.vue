@@ -11,6 +11,7 @@ import AppFooter from './components/AppFooter.vue'
 import CanvasToolbar from './components/CanvasToolbar.vue'
 import CanvasFooter from './components/CanvasFooter.vue'
 import CanvasHelpModal from './components/CanvasHelpModal.vue'
+import PcbHelpModal from './components/PcbHelpModal.vue'
 import PcbSettingsModal from './components/PcbSettingsModal.vue'
 import ToastContainer from './components/ToastContainer.vue'
 import ThemeToggle from './components/ThemeToggle.vue'
@@ -246,6 +247,17 @@ const closeHelp = () => {
   isHelpVisible.value = false
 }
 
+// PCB Help modal state
+const isPcbHelpVisible = ref(false)
+
+const showPcbHelp = () => {
+  isPcbHelpVisible.value = true
+}
+
+const closePcbHelp = () => {
+  isPcbHelpVisible.value = false
+}
+
 // PCB Settings modal state
 const isPcbSettingsVisible = ref(false)
 
@@ -392,6 +404,15 @@ const stopResize = () => {
               >
                 <i class="bi bi-question-circle"></i>
               </button>
+              <!-- Help button for PCB Generator section -->
+              <button
+                v-if="section.id === 'pcb'"
+                @click.stop="showPcbHelp"
+                class="btn btn-sm btn-outline-secondary help-btn"
+                title="Help"
+              >
+                <i class="bi bi-question-circle"></i>
+              </button>
               <!-- Settings button only for PCB Generator section (debug/preview mode only) -->
               <button
                 v-if="section.id === 'pcb' && !isProduction"
@@ -484,6 +505,9 @@ const stopResize = () => {
 
     <!-- Canvas Help Modal -->
     <CanvasHelpModal :is-visible="isHelpVisible" @close="closeHelp" />
+
+    <!-- PCB Help Modal -->
+    <PcbHelpModal :is-visible="isPcbHelpVisible" @close="closePcbHelp" />
 
     <!-- PCB Settings Modal -->
     <PcbSettingsModal :is-visible="isPcbSettingsVisible" @close="closePcbSettings" />
