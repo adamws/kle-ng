@@ -393,6 +393,60 @@ It is the user's responsibility to maintain VIA format [specification](https://w
 Layouts which contain `_kleng_via_data` metadata can be exported back to VIA JSON format.
 Exporting works by decompressing the `_kleng_via_data` field and injecting layout data back to the `layouts` value.
 
+**QMK Format**
+
+[QMK](https://qmk.fm/) is an open-source keyboard firmware. QMK keyboards define their physical layout
+in `info.json` files which contain a `layouts` object with key positions and matrix coordinates.
+kle-ng can import these files directly, converting them to KLE format with matrix annotations preserved
+in key labels.
+
+<table>
+<tr>
+<td>Imported file</td>
+<td>Import result</td>
+</tr>
+<tr>
+<td>
+
+```json
+{
+  "keyboard_name": "Example",
+  "manufacturer": "Example",
+  "layouts": {
+    "LAYOUT_default": {
+      "layout": [
+        {"matrix": [3, 3], "x": 4, "y": 4.25},
+        {"matrix": [3, 4], "x": 4, "y": 4.25,
+        "r": 15, "rx": 4.5, "ry": 9.1},
+        {"matrix": [3, 5], "x": 4, "y": 4.25,
+        "h": 1.5, "r": 30, "rx": 5.4, "ry": 9.3}
+      ]
+    }
+  }
+}
+```
+
+</td>
+<td>
+
+Keys are created with:
+- Positions from `x`, `y` values
+- Dimensions from `w`, `h` (default: 1)
+- Rotation from `r`, `rx`, `ry`
+- Matrix coordinates in top-left label as `row,col` and alternative layout details as `option,choice` in bottom-right label
+- Keyboard name and manufacturer in metadata
+
+<a href="https://editor.keyboard-tools.xyz/#share=NobwRAhgrgLgFgewE5gFxgKIA8IFsAOANgKZgA0YAdnqetnkaQL5mhhZoAsFAnlwHQAmAKwswAZjLiwAXVbgUqAIzCKSDqk79VYJH1QBOfkooaAtAAZtvNGa0AOURUmdZ83WnEW1G4f266+kaS7LZK-haRUdHRAfpmfhbCMSkWJmBwaOFOEmTCsjJAA">
+  <img src="resources/qmk-example-layout.png">
+</a>
+
+</td>
+
+</tr>
+</table>
+
+The kle-ng **does not** support export to QMK format.
+
 **Ergogen Format**
 
 [Ergogen](https://ergogen.xyz/) is a keyboard layout generator that uses YAML configuration to define ergonomic keyboard layouts.
@@ -463,7 +517,7 @@ kle-ng supports multiple ways to import keyboard layouts:
 
 <img src="resources/gifs/file-drag-and-drop.gif">
 
-Supported file formats: JSON (KLE format), PNG (with embedded layout data), VIA/Vial JSON, Ergogen YAML
+Supported file formats: JSON (KLE, VIA/Vial, QMK), PNG (with embedded layout data), Ergogen YAML
 
 **Gist File Requirements:**
 

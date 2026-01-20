@@ -187,6 +187,7 @@ import { toast } from '@/composables/useToast'
 import { parseBorderRadius, createRoundedRectanglePath } from '@/utils/border-radius'
 import { createPngWithKleLayout, extractKleLayout, hasKleMetadata } from '@/utils/png-metadata'
 import { isViaFormat, convertViaToKle, convertKleToVia } from '@/utils/via-import'
+import { isQmkFormat, convertQmkToKle } from '@/utils/qmk-import'
 import { stringifyWithRounding } from '@/utils/serialization'
 import { decodeLayoutFromUrl, fetchGistLayout, loadErgogenKeyboard } from '@/utils/url-sharing'
 import { parseErgogenConfig, encodeKeyboardToErgogenUrl } from '@/utils/ergogen-converter'
@@ -777,7 +778,22 @@ const processJsonLayout = async (
   const data = parseJsonString(jsonText)
 
   // Auto-detect format and load accordingly
-  if (isViaFormat(data)) {
+  // Check QMK format first (has layouts with layout arrays containing matrix)
+  if (isQmkFormat(data)) {
+    // QMK format - convert to KLE
+    console.log(`Loading QMK format from: ${displayFilename}`)
+
+    try {
+      const keyboard = convertQmkToKle(data)
+      keyboardStore.loadKeyboard(keyboard)
+      toast.showSuccess(`QMK layout loaded from ${displayFilename}`, 'Import successful')
+    } catch (error) {
+      console.error('Error converting QMK format:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Failed to convert QMK format'
+      toast.showError(errorMessage, 'QMK Import Failed')
+      throw error
+    }
+  } else if (isViaFormat(data)) {
     // VIA format - convert to KLE with embedded VIA metadata
     console.log(`Loading VIA format from: ${displayFilename}`)
 
