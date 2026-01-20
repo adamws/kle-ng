@@ -28,9 +28,17 @@ export function getSwitchFootprintFilename(footprintValue: string): string {
     'Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_{:.2f}u': 'SW_Cherry_MX_PCB_1.00u.svg',
     'Switch_Keyboard_Alps_Matias:SW_Alps_Matias_{:.2f}u': 'SW_Alps_Matias_1.00u.svg',
     'Switch_Keyboard_Hybrid:SW_Hybrid_Cherry_MX_Alps_{:.2f}u': 'SW_Hybrid_Cherry_MX_Alps_1.00u.svg',
-    'Switch_Keyboard_Hotswap_Kailh:SW_Hotswap_Kailh_MX_{:.2f}u': 'SW_Hotswap_Kailh_MX_1.00u.svg',
+    'Switch_Keyboard_Kailh:SW_Kailh_Choc_V1_{:.2f}u': 'SW_Kailh_Choc_V1_1.00u.svg',
+    'Switch_Keyboard_Kailh:SW_Kailh_Choc_V2_{:.2f}u': 'SW_Kailh_Choc_V2_1.00u.svg',
+    'Switch_Keyboard_Kailh:SW_Kailh_Choc_V1V2_{:.2f}u': 'SW_Kailh_Choc_V1V2_1.00u.svg',
+    'Switch_Keyboard_Kailh:SW_Kailh_Choc_Mini_{:.2f}u': 'SW_Kailh_Choc_Mini_1.00u.svg',
+    'Switch_Keyboard_Hotswap_Kailh:SW_Hotswap_Kailh_Choc_V1_{:.2f}u':
+      'SW_Hotswap_Kailh_Choc_V1_1.00u.svg',
+    'Switch_Keyboard_Hotswap_Kailh:SW_Hotswap_Kailh_Choc_V2_{:.2f}u':
+      'SW_Hotswap_Kailh_Choc_V2_1.00u.svg',
     'Switch_Keyboard_Hotswap_Kailh:SW_Hotswap_Kailh_Choc_V1V2_{:.2f}u':
       'SW_Hotswap_Kailh_Choc_V1V2_1.00u.svg',
+    'Switch_Keyboard_Hotswap_Kailh:SW_Hotswap_Kailh_MX_{:.2f}u': 'SW_Hotswap_Kailh_MX_1.00u.svg',
   }
 
   const filename = mapping[footprintValue]

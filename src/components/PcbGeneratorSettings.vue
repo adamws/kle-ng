@@ -9,16 +9,37 @@ const { settings } = storeToRefs(pcbStore)
 // Switch footprint options
 const switchFootprintOptions = [
   { value: 'Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_{:.2f}u', label: 'Cherry MX' },
-  { value: 'Switch_Keyboard_Alps_Matias:SW_Alps_Matias_{:.2f}u', label: 'Alps' },
+  { value: 'Switch_Keyboard_Alps_Matias:SW_Alps_Matias_{:.2f}u', label: 'Alps/Matias' },
   {
     value: 'Switch_Keyboard_Hybrid:SW_Hybrid_Cherry_MX_Alps_{:.2f}u',
     label: 'Cherry MX/Alps Hybrid',
   },
-  { value: 'Switch_Keyboard_Hotswap_Kailh:SW_Hotswap_Kailh_MX_{:.2f}u', label: 'Hotswap Kailh MX' },
+  {
+    value: 'Switch_Keyboard_Kailh:SW_Kailh_Choc_V1_{:.2f}u',
+    label: 'Kailh Choc V1',
+  },
+  {
+    value: 'Switch_Keyboard_Kailh:SW_Kailh_Choc_V2_{:.2f}u',
+    label: 'Kailh Choc V2',
+  },
+  {
+    value: 'Switch_Keyboard_Kailh:SW_Kailh_Choc_V1V2_{:.2f}u',
+    label: 'Kailh Choc V1/V2',
+  },
+  { value: 'Switch_Keyboard_Kailh:SW_Kailh_Choc_Mini_{:.2f}u', label: 'Kailh Choc Mini' },
+  {
+    value: 'Switch_Keyboard_Hotswap_Kailh:SW_Hotswap_Kailh_Choc_V1_{:.2f}u',
+    label: 'Hotswap Kailh Choc V1',
+  },
+  {
+    value: 'Switch_Keyboard_Hotswap_Kailh:SW_Hotswap_Kailh_Choc_V2_{:.2f}u',
+    label: 'Hotswap Kailh Choc V2',
+  },
   {
     value: 'Switch_Keyboard_Hotswap_Kailh:SW_Hotswap_Kailh_Choc_V1V2_{:.2f}u',
-    label: 'Hotswap Kailh Choc',
+    label: 'Hotswap Kailh Choc V1/V2',
   },
+  { value: 'Switch_Keyboard_Hotswap_Kailh:SW_Hotswap_Kailh_MX_{:.2f}u', label: 'Hotswap Kailh MX' },
 ]
 
 // Diode footprint options
