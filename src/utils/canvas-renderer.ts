@@ -202,11 +202,12 @@ export class CanvasRenderer {
     return rotationRenderer.getRotationPointAtPosition(canvasX, canvasY)
   }
 
-  private drawKey(key: Key, isSelected = false) {
+  private drawKey(key: Key, isSelected = false, isHovered = false) {
     // Use KeyRenderer for shape rendering
     keyRenderer.drawKey(this.ctx, key, {
       unit: this.options.unit,
       isSelected,
+      isHovered,
     })
 
     // Get params for label rendering
@@ -310,6 +311,7 @@ export class CanvasRenderer {
     showRotationPoints: boolean = false,
     hoveredRotationPointId?: string,
     selectedRotationOrigin?: { x: number; y: number } | null,
+    popupHoveredKey?: Key | null,
   ) {
     // Clear canvas if requested
     if (clearCanvas) {
@@ -370,6 +372,11 @@ export class CanvasRenderer {
       this.drawKey(key, true)
     })
 
+    // Draw popup-hovered key on top with blue highlight (for overlapping key disambiguation)
+    if (popupHoveredKey) {
+      this.drawKey(popupHoveredKey, false, true)
+    }
+
     // Draw rotation origin indicators on top of all keys for selected keys
     selectedKeys.forEach((key) => {
       if (key.rotation_angle && key.rotation_angle !== 0) {
@@ -400,5 +407,9 @@ export class CanvasRenderer {
 
   public getKeyAtPosition(x: number, y: number, keys: Key[]): Key | null {
     return this.hitTester.getKeyAtPosition(x, y, keys)
+  }
+
+  public getAllKeysAtPosition(x: number, y: number, keys: Key[]): Key[] {
+    return this.hitTester.getAllKeysAtPosition(x, y, keys)
   }
 }

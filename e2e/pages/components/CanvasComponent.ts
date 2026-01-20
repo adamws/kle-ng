@@ -76,7 +76,10 @@ export class CanvasComponent {
    * Select all keys using keyboard shortcut (Ctrl+A)
    */
   async selectAll() {
-    await this.canvas.click() // Focus canvas first
+    // Canvas is sized to fit keys.
+    // Border is 9px, so clicking at (5, 5) hits the border area (empty)
+    // avoiding potential issues with overlaping keys selection dropdown
+    await this.clickAt(5, 5)
     await this.page.keyboard.press('Control+a')
   }
 

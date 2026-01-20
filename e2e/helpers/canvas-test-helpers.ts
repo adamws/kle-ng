@@ -358,7 +358,7 @@ export class CanvasTestHelper {
 
   async selectAllKeys() {
     const canvas = this.getCanvas()
-    await canvas.click()
+    await canvas.focus()
     await this.page.keyboard.press('Control+a')
   }
 

@@ -26,6 +26,8 @@ export interface KeyRenderOptions {
   bevelOffsetBottom?: number
   /** Whether this key is selected */
   isSelected?: boolean
+  /** Whether this key is hovered (popup disambiguation) */
+  isHovered?: boolean
 }
 
 /**
@@ -77,6 +79,7 @@ const defaultSizes: DefaultSizes = {
 export class KeyRenderer {
   // Visual constants
   private static readonly SELECTION_COLOR = '#dc3545' // Red color for selected keys
+  private static readonly HOVER_COLOR = KeyRenderer.SELECTION_COLOR // Same color for hovered keys (popup disambiguation)
   private static readonly GHOST_OPACITY = 0.3 // Opacity for ghost keys
   private static readonly PIXEL_ALIGNMENT_OFFSET = 0.5 // Offset for crisp stroke rendering
 
@@ -488,7 +491,7 @@ export class KeyRenderer {
       ...(options.roundOuter !== undefined && { roundOuter: options.roundOuter }),
       ...(options.roundInner !== undefined && { roundInner: options.roundInner }),
       unit: options.unit,
-      strokeWidth: options.strokeWidth || (options.isSelected ? 2 : 1),
+      strokeWidth: options.strokeWidth || (options.isSelected || options.isHovered ? 2 : 1),
     }
 
     ctx.save()
@@ -688,12 +691,19 @@ export class KeyRenderer {
 
     // Render using unified vector union approach for all keys
     if (!key.decal) {
+      // Determine border color based on hover/selection state
+      const borderColor = options.isHovered
+        ? KeyRenderer.HOVER_COLOR
+        : options.isSelected
+          ? KeyRenderer.SELECTION_COLOR
+          : '#000000'
+
       if (isRotaryEncoder) {
         // Render as circle for rotary encoders (uses 'w' only, ignores 'h')
         this.drawCircularKey(
           ctx,
           params,
-          options.isSelected ? KeyRenderer.SELECTION_COLOR : '#000000', // border color
+          borderColor,
           params.darkColor, // fill color
           params.lightColor, // inner color
           sizes.strokeWidth,
@@ -705,7 +715,7 @@ export class KeyRenderer {
           ctx,
           rectangles,
           sizes.roundOuter,
-          options.isSelected ? KeyRenderer.SELECTION_COLOR : '#000000', // border color
+          borderColor,
           params.darkColor, // fill color
           params.lightColor, // inner color
           sizes.strokeWidth,
@@ -713,8 +723,12 @@ export class KeyRenderer {
       }
     }
 
-    // For decal keys, only draw selection outline if selected
-    if (key.decal && options.isSelected) {
+    // For decal keys, only draw outline if selected or hovered
+    if (key.decal && (options.isSelected || options.isHovered)) {
+      const decalBorderColor = options.isHovered
+        ? KeyRenderer.HOVER_COLOR
+        : KeyRenderer.SELECTION_COLOR
+
       if (isRotaryEncoder) {
         // Draw circular outline for rotary encoder decals
         const centerX = params.outercapx + params.outercapwidth / 2
@@ -723,7 +737,7 @@ export class KeyRenderer {
 
         ctx.beginPath()
         ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI)
-        ctx.strokeStyle = KeyRenderer.SELECTION_COLOR
+        ctx.strokeStyle = decalBorderColor
         ctx.lineWidth = sizes.strokeWidth
         ctx.stroke()
       } else {
@@ -738,7 +752,7 @@ export class KeyRenderer {
             rect.height,
             sizes.roundOuter,
             undefined,
-            KeyRenderer.SELECTION_COLOR,
+            decalBorderColor,
             sizes.strokeWidth,
           )
         })

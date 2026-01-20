@@ -145,6 +145,20 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     >
   > = ref(new Map())
 
+  // Overlapping key selection popup state
+  const keySelectionPopup = ref<{
+    visible: boolean
+    position: { x: number; y: number }
+    keys: Key[]
+    extendSelection: boolean
+  }>({
+    visible: false,
+    position: { x: 0, y: 0 },
+    keys: [],
+    extendSelection: false,
+  })
+  const popupHoveredKey: Ref<Key | null> = ref(null)
+
   const canUndo = computed(() => historyIndex.value > 0)
   const canRedo = computed(() => historyIndex.value < history.value.length - 1)
   const canCopy = computed(() => selectedKeys.value.length > 0)
@@ -304,6 +318,40 @@ export const useKeyboardStore = defineStore('keyboard', () => {
 
   const unselectAll = () => {
     selectedKeys.value = []
+  }
+
+  // Overlapping key selection popup actions
+  const showKeySelectionPopup = (
+    x: number,
+    y: number,
+    overlappingKeys: Key[],
+    extendSelection: boolean,
+  ) => {
+    keySelectionPopup.value = {
+      visible: true,
+      position: { x, y },
+      keys: overlappingKeys,
+      extendSelection,
+    }
+  }
+
+  const hideKeySelectionPopup = () => {
+    keySelectionPopup.value = {
+      visible: false,
+      position: { x: 0, y: 0 },
+      keys: [],
+      extendSelection: false,
+    }
+    popupHoveredKey.value = null
+  }
+
+  const selectKeyFromPopup = (key: Key) => {
+    selectKey(key, keySelectionPopup.value.extendSelection)
+    hideKeySelectionPopup()
+  }
+
+  const setPopupHoveredKey = (key: Key | null) => {
+    popupHoveredKey.value = key
   }
 
   const copy = async () => {
@@ -1454,6 +1502,10 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     rotationPreviewAngle,
     showRotationPreview,
 
+    // Overlapping key selection popup
+    keySelectionPopup,
+    popupHoveredKey,
+
     canUndo,
     canRedo,
     canCopy,
@@ -1465,6 +1517,10 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     selectKey,
     selectAll,
     unselectAll,
+    showKeySelectionPopup,
+    hideKeySelectionPopup,
+    selectKeyFromPopup,
+    setPopupHoveredKey,
     copy,
     cut,
     paste,

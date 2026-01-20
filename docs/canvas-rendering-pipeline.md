@@ -16,6 +16,7 @@
   - [HitTester](#hittester)
   - [Layout Change Event System](#layout-change-event-system)
   - [RenderScheduler](#renderscheduler)
+  - [Key Selection Disambiguation](#key-selection-disambiguation)
 - [Parsers](#parsers)
 - [Performance Optimization](#performance-optimization)
 - [Implementation Details](#implementation-details)
@@ -34,6 +35,7 @@ The kle-ng canvas rendering pipeline is a modular, high-performance system for r
 - **High DPI rendering** with proper pixel alignment
 - **Performance optimization** through multi-level caching
 - **Asynchronous image loading** with progressive rendering
+- **Overlapping key disambiguation** with interactive popup selection
 
 The system is designed with **separation of concerns**, where each component has a single, well-defined responsibility.
 
@@ -209,7 +211,8 @@ CanvasRenderer.render(keys, selectedKeys, metadata)
 ```typescript
 class CanvasRenderer {
   // Rendering
-  render(keys, selectedKeys, metadata, clearCanvas?, showRotationPoints?, ...)
+  render(keys, selectedKeys, metadata, clearCanvas?, showRotationPoints?,
+         hoveredRotationPointId?, selectedRotationOrigin?, popupHoveredKey?)
 
   // Configuration
   updateOptions(options: RenderOptions)
@@ -233,6 +236,7 @@ class CanvasRenderer {
 
   // Hit testing
   getKeyAtPosition(x: number, y: number, keys: Key[])
+  getAllKeysAtPosition(x: number, y: number, keys: Key[])  // For overlapping key disambiguation
   getRotationPointAtPosition(x: number, y: number)
 }
 ```
@@ -256,6 +260,7 @@ interface RenderOptions {
   - Draws background with border radius
   - Sorts keys for proper z-ordering
   - Delegates key/label rendering
+  - Draws popup-hovered key on top with highlight (for overlapping key disambiguation)
   - Draws rotation UI overlays
 
 - **`updateOptions()`**: Updates render options and propagates to child components
@@ -276,6 +281,7 @@ interface RenderOptions {
 - **Rotation support**: Proper transformation handling for arbitrary angles
 - **Color calculation**: Lab color space lightening for realistic appearance (with caching)
 - **Performance optimized**: Native Math operations, color lightening cache
+- **Hover highlighting**: Visual feedback for overlapping key disambiguation popup
 
 **Rendering Algorithm**:
 
@@ -375,6 +381,7 @@ interface KeyRenderParams {
 ```typescript
 // Visual constants
 SELECTION_COLOR = '#dc3545'  // Red for selected keys
+HOVER_COLOR = '#dc3545'      // Same color for hovered keys (popup disambiguation)
 GHOST_OPACITY = 0.3          // Opacity for ghost keys
 PIXEL_ALIGNMENT_OFFSET = 0.5 // For crisp 1px strokes
 
@@ -758,31 +765,58 @@ return { minX, minY, maxX: maxX + strokeWidth, maxY: maxY + strokeWidth }
 - Reverse iteration (last key = topmost)
 - Rotation support (inverse transformation)
 - Non-rectangular keys (test both rectangles)
+- Overlapping key detection (returns all keys at position)
+
+**Public Methods**:
+
+- **`getKeyAtPosition(x, y, keys)`**: Returns the topmost key at the given position, or `null` if no key is hit
+- **`getAllKeysAtPosition(x, y, keys)`**: Returns all keys at the given position (for overlapping key disambiguation), ordered topmost first
 
 **Algorithm**:
 
 ```typescript
+// Internal helper for point-in-key testing
+isPointInKey(x, y, key, params):
+  let testX = x, testY = y
+
+  // Apply inverse rotation if needed
+  if (key.rotation_angle):
+    testX, testY = inverseRotate(x, y, params.origin_x, params.origin_y, -angle)
+
+  // Test main rectangle
+  if (testX >= outercapx && testX <= outercapx + outercapwidth &&
+      testY >= outercapy && testY <= outercapy + outercapheight):
+    return true
+
+  // Test second rectangle (non-rectangular keys)
+  if (params.nonRectangular && ...):
+    return true
+
+  return false
+
 getKeyAtPosition(x, y, keys):
-  // Iterate in reverse for proper z-order
+  // Iterate in reverse for proper z-order (topmost first)
   for (let i = keys.length - 1; i >= 0; i--):
     const key = keys[i]
     const params = getRenderParams(key)
 
-    // Apply inverse rotation if needed
-    let testX = x, testY = y
-    if (key.rotation_angle):
-      testX, testY = inverseRotate(x, y, params.origin_x, params.origin_y, -angle)
-
-    // Test main rectangle
-    if (testX >= outercapx && testX <= outercapx + outercapwidth &&
-        testY >= outercapy && testY <= outercapy + outercapheight):
-      return key
-
-    // Test second rectangle (non-rectangular keys)
-    if (params.nonRectangular && ...):
+    if (isPointInKey(x, y, key, params)):
       return key
 
   return null
+
+getAllKeysAtPosition(x, y, keys):
+  const result = []
+
+  // Iterate in reverse for proper z-order (topmost first in result)
+  for (let i = keys.length - 1; i >= 0; i--):
+    const key = keys[i]
+    const params = getRenderParams(key)
+
+    if (isPointInKey(x, y, key, params)):
+      result.push(key)
+
+  return result
 ```
 
 ### Layout Change Event System
@@ -970,6 +1004,92 @@ watch(keys, () => {
 })
 // → Both schedule the same function reference
 // → renderKeyboard() executes only once per frame
+```
+
+### Key Selection Disambiguation
+
+**Location**: `src/components/KeySelectionPopup.vue`, `src/components/KeyboardCanvas.vue`, `src/stores/keyboard.ts`
+
+**Purpose**: Allow users to select from overlapping keys when multiple keys occupy the same canvas position
+
+**Problem**: When keys overlap (e.g., stacked layouts), clicking on the overlapping area would only select the topmost key, making it impossible to select keys underneath.
+
+**Solution**: When a click detects multiple keys at the same position, display a popup menu listing all overlapping keys, allowing the user to choose which one to select.
+
+**Architecture**:
+
+```
+Click on canvas
+    │
+    ▼
+HitTester.getAllKeysAtPosition(x, y, keys)
+    │
+    ├─► 0 keys: Deselect all
+    ├─► 1 key: Select directly (no popup)
+    └─► 2+ keys: Show disambiguation popup
+              │
+              ▼
+        KeySelectionPopup.vue
+              │
+              ├─► Display list of overlapping keys
+              ├─► Show key color and label preview
+              ├─► Highlight hovered key on canvas
+              └─► User selects key → close popup
+```
+
+**Key Components**:
+
+1. **HitTester.getAllKeysAtPosition()**: Returns all keys at a position (topmost first)
+2. **KeySelectionPopup.vue**: Dropdown component for key selection
+3. **KeyRenderer `isHovered` option**: Renders highlighted border for popup-hovered key
+4. **CanvasRenderer `popupHoveredKey` parameter**: Draws hovered key on top with highlight
+
+**Popup Features**:
+- Displays key color swatch and label for identification
+- Shows position info (x, y coordinates)
+- Keyboard navigation (arrow keys, Enter, Escape)
+- Mouse hover highlights the corresponding key on canvas
+- Viewport-aware positioning (clamps to screen boundaries)
+- Supports both single-select and extend-selection (Shift+click)
+
+**Visual Feedback**:
+
+When hovering over a key in the popup:
+1. Store sets `popupHoveredKey` to the hovered key
+2. Canvas re-renders with the hovered key drawn on top
+3. KeyRenderer draws the key with `isHovered=true` (2px red border)
+
+```typescript
+// In CanvasRenderer.render()
+if (popupHoveredKey) {
+  this.drawKey(popupHoveredKey, false, true)  // isHovered=true
+}
+
+// In KeyRenderer.drawKey()
+const borderColor = options.isHovered
+  ? KeyRenderer.HOVER_COLOR    // Red highlight
+  : options.isSelected
+    ? KeyRenderer.SELECTION_COLOR
+    : '#000000'
+```
+
+**State Management**:
+
+```typescript
+// In keyboard store
+const keySelectionPopup = ref({
+  visible: boolean
+  position: { x: number, y: number }
+  keys: Key[]
+  extendSelection: boolean
+})
+const popupHoveredKey: Ref<Key | null> = ref(null)
+
+// Actions
+showKeySelectionPopup(x, y, overlappingKeys, extendSelection)
+hideKeySelectionPopup()
+selectKeyFromPopup(key)
+setPopupHoveredKey(key | null)
 ```
 
 ---

@@ -87,6 +87,17 @@
     @cancel="handleMoveExactlyCancel"
     @movement-change="handleMoveExactlyChange"
   />
+
+  <!-- Overlapping key selection popup -->
+  <KeySelectionPopup
+    :visible="keyboardStore.keySelectionPopup.visible"
+    :position="keyboardStore.keySelectionPopup.position"
+    :keys="keyboardStore.keySelectionPopup.keys"
+    @select="handlePopupKeySelect"
+    @close="handlePopupClose"
+    @highlight="handlePopupKeyHighlight"
+    @unhighlight="handlePopupKeyUnhighlight"
+  />
 </template>
 
 <script setup lang="ts">
@@ -107,6 +118,7 @@ import MoveExactlyModal from '@/components/MoveExactlyModal.vue'
 import MatrixAnnotationOverlay from '@/components/MatrixAnnotationOverlay.vue'
 import DebugOverlay from '@/components/DebugOverlay.vue'
 import DebugControlButton from '@/components/DebugControlButton.vue'
+import KeySelectionPopup from '@/components/KeySelectionPopup.vue'
 
 // Visual border around rendered keycaps (in pixels)
 const CANVAS_BORDER = 9
@@ -758,6 +770,7 @@ const renderKeyboard = () => {
         keyboardStore.canvasMode === 'rotate' && keyboardStore.selectedKeys.length > 0,
         hoveredRotationPointId.value || undefined,
         keyboardStore.rotationOrigin,
+        keyboardStore.popupHoveredKey,
       )
 
       // Draw rectangle selection if active
@@ -907,15 +920,28 @@ const handleCanvasClick = (event: MouseEvent) => {
     return
   }
 
-  const clickedKey = renderer.value.getKeyAtPosition(pos.x, pos.y, keyboardStore.keys)
+  // Get all keys at click position (for overlapping key detection)
+  const keysAtPosition = renderer.value.getAllKeysAtPosition(pos.x, pos.y, keyboardStore.keys)
 
-  if (clickedKey) {
-    keyboardStore.selectKey(clickedKey, event.ctrlKey || event.metaKey)
-  } else {
+  if (keysAtPosition.length === 0) {
     // Clicked on empty space - clear selection unless Ctrl/Cmd is held
     if (!event.ctrlKey && !event.metaKey) {
       keyboardStore.unselectAll()
     }
+  } else if (keysAtPosition.length === 1) {
+    // Single key - normal selection
+    const singleKey = keysAtPosition[0]
+    if (singleKey) {
+      keyboardStore.selectKey(singleKey, event.ctrlKey || event.metaKey)
+    }
+  } else {
+    // Multiple overlapping keys - show disambiguation popup
+    keyboardStore.showKeySelectionPopup(
+      event.clientX,
+      event.clientY,
+      keysAtPosition,
+      event.ctrlKey || event.metaKey,
+    )
   }
 
   // Keep focus on canvas
@@ -924,6 +950,11 @@ const handleCanvasClick = (event: MouseEvent) => {
 
 const handleMouseDown = (event: MouseEvent) => {
   if (!renderer.value) return
+
+  // Close popup when starting any drag operation
+  if (keyboardStore.keySelectionPopup.visible) {
+    keyboardStore.hideKeySelectionPopup()
+  }
 
   // In rotate mode, disable all mouse down interactions (no key selection/dragging)
   if (keyboardStore.canvasMode === 'rotate') {
@@ -936,7 +967,6 @@ const handleMouseDown = (event: MouseEvent) => {
   }
 
   const pos = getCanvasPosition(event)
-  const clickedKey = renderer.value.getKeyAtPosition(pos.x, pos.y, keyboardStore.keys)
 
   // Left mouse button (0) - Selection (single click or rectangle drag)
   if (event.button === 0) {
@@ -963,23 +993,49 @@ const handleMouseDown = (event: MouseEvent) => {
       canvasRef.value.focus()
     }
 
-    if (clickedKey) {
-      // If key is not selected, automatically select it first
-      if (!keyboardStore.selectedKeys.includes(clickedKey)) {
-        keyboardStore.selectKey(clickedKey, false) // Select only this key (clear previous selection)
-      }
+    // Get all keys at position for overlapping key detection
+    const keysAtPosition = renderer.value.getAllKeysAtPosition(pos.x, pos.y, keyboardStore.keys)
 
-      // Cache coordinate offset at start of key drag to prevent feedback loops
+    if (keysAtPosition.length === 0) {
+      // No key clicked, do nothing
+      return
+    }
+
+    // Check if any of the keys at this position is already selected
+    const selectedKeyAtPosition = keysAtPosition.find((key) =>
+      keyboardStore.selectedKeys.includes(key),
+    )
+
+    if (selectedKeyAtPosition) {
+      // A selected key is at this position - start dragging it (no popup needed)
       dragCoordinateOffset.value = getCoordinateSystemOffset()
-      // Start moving the selected keys
-      keyboardStore.startKeyDrag(clickedKey, pos)
-      mouseDownOnKey.value = { key: clickedKey, pos }
+      keyboardStore.startKeyDrag(selectedKeyAtPosition, pos)
+      mouseDownOnKey.value = { key: selectedKeyAtPosition, pos }
       keyDragOccurred.value = false
-      // Add global listeners for drag operations
       document.addEventListener('mousemove', handleGlobalMouseMove)
       document.addEventListener('mouseup', handleGlobalMouseUp)
+      return
     }
-    // If no key clicked, do nothing
+
+    if (keysAtPosition.length > 1) {
+      // Multiple overlapping keys, none selected - show disambiguation popup
+      keyboardStore.showKeySelectionPopup(event.clientX, event.clientY, keysAtPosition, false)
+      return
+    }
+
+    // Single unselected key at position - select and start dragging
+    const targetKey = keysAtPosition[0]!
+    keyboardStore.selectKey(targetKey, false)
+
+    // Cache coordinate offset at start of key drag to prevent feedback loops
+    dragCoordinateOffset.value = getCoordinateSystemOffset()
+    // Start moving the selected keys
+    keyboardStore.startKeyDrag(targetKey, pos)
+    mouseDownOnKey.value = { key: targetKey, pos }
+    keyDragOccurred.value = false
+    // Add global listeners for drag operations
+    document.addEventListener('mousemove', handleGlobalMouseMove)
+    document.addEventListener('mouseup', handleGlobalMouseUp)
     return
   }
 
@@ -1229,6 +1285,10 @@ const handleCanvasFocus = () => {
 // Using @blur to trigger this when canvas out of focus
 const handleCanvasBlur = () => {
   canvasFocused.value = false
+
+  // Note: Don't close popup on canvas blur - the popup has its own close handlers
+  // (click outside, escape key). Closing here would interfere with popup item clicks.
+
   // Emit blur state to parent for status line
   window.dispatchEvent(
     new CustomEvent('canvas-focus-change', {
@@ -1720,6 +1780,39 @@ const handleMoveExactlyCancel = () => {
 const handleMoveExactlyChange = () => {
   // This could be used for real-time preview, but for now we'll just ignore it
   // The actual movement happens only on apply
+}
+
+// Popup event handlers for overlapping key selection
+const handlePopupKeySelect = (key: Key) => {
+  keyboardStore.selectKeyFromPopup(key)
+  // Re-render to show selection
+  renderScheduler.schedule(renderKeyboard)
+  // Refocus canvas to keep it responsive
+  nextTick(() => {
+    canvasRef.value?.focus()
+  })
+}
+
+const handlePopupClose = () => {
+  keyboardStore.hideKeySelectionPopup()
+  // Re-render to remove hover highlight
+  renderScheduler.schedule(renderKeyboard)
+  // Refocus canvas to keep it responsive
+  nextTick(() => {
+    canvasRef.value?.focus()
+  })
+}
+
+const handlePopupKeyHighlight = (key: Key) => {
+  keyboardStore.setPopupHoveredKey(key)
+  // Re-render to show hover highlight
+  renderScheduler.schedule(renderKeyboard)
+}
+
+const handlePopupKeyUnhighlight = () => {
+  keyboardStore.setPopupHoveredKey(null)
+  // Re-render to remove hover highlight
+  renderScheduler.schedule(renderKeyboard)
 }
 
 // Cleanup
