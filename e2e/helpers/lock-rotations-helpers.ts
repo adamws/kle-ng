@@ -250,6 +250,7 @@ export class LockRotationsHelper {
    * Select all keys
    */
   async selectAll(): Promise<void> {
+    await this.getCanvas().focus() // Ensure canvas is focused
     await this.page.keyboard.press('Control+a')
     await this.waitHelpers.waitForDoubleAnimationFrame()
   }

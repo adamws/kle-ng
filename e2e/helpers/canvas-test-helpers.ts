@@ -586,4 +586,74 @@ export class CanvasTestHelper {
   async expectPropertiesPanelVisible() {
     await expect(this.getPropertiesPanel()).toBeVisible()
   }
+
+  // =============================================================================
+  // Overlapping Key Selection Test Methods
+  // =============================================================================
+
+  /**
+   * Set key position using the properties panel inputs
+   * @param x - X position in units
+   * @param y - Y position in units
+   */
+  async setKeyPosition(x: number, y: number) {
+    const xInput = this.page.locator('input[title="X Position"]').first()
+    const yInput = this.page.locator('input[title="Y Position"]').first()
+
+    // Wait for inputs to be visible and ready
+    await expect(xInput).toBeVisible()
+    await expect(yInput).toBeVisible()
+
+    // Set X position with proper event dispatch
+    await xInput.clear()
+    await xInput.fill(x.toString())
+    await xInput.dispatchEvent('input')
+    await xInput.dispatchEvent('change')
+    await xInput.blur()
+
+    // Set Y position with proper event dispatch
+    await yInput.clear()
+    await yInput.fill(y.toString())
+    await yInput.dispatchEvent('input')
+    await yInput.dispatchEvent('change')
+    await yInput.blur()
+
+    await this.waitForRender()
+  }
+
+  /**
+   * Create two overlapping keys at the specified position using JSON layout
+   * More reliable than UI-based key creation for CI environments
+   *
+   * @param x - X position in units (default: 0)
+   * @param y - Y position in units (default: 0)
+   */
+  async createOverlappingKeys(x: number = 0, y: number = 0) {
+    // Use JSON layout to create two overlapping keys at exact same position
+    const layout = JSON.stringify([[{ x, y }, 'Key 1', { x: x - 1, y }, 'Key 2']])
+    await this.loadJsonLayout(layout)
+  }
+
+  /**
+   * Create multiple overlapping keys at the specified position using JSON layout
+   * More reliable than UI-based key creation for CI environments
+   *
+   * @param count - Number of keys to create
+   * @param x - X position in units (default: 0)
+   * @param y - Y position in units (default: 0)
+   */
+  async createKeyStack(count: number, x: number = 0, y: number = 0) {
+    // Build JSON layout array with all keys at the same position
+    const keys: Array<{ x?: number; y?: number } | string> = []
+    for (let i = 0; i < count; i++) {
+      if (i === 0) {
+        keys.push({ x, y }, `Key ${i + 1}`)
+      } else {
+        // Set x to go back to the same position (x - 1 to offset from previous key)
+        keys.push({ x: x - 1, y }, `Key ${i + 1}`)
+      }
+    }
+    const layout = JSON.stringify([keys])
+    await this.loadJsonLayout(layout)
+  }
 }

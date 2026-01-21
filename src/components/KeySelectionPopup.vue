@@ -1,30 +1,43 @@
 <template>
   <Teleport to="body">
-    <div v-if="visible" class="key-selection-overlay" @click.self="close" @contextmenu.prevent>
+    <div
+      v-if="visible"
+      class="key-selection-overlay"
+      data-testid="key-selection-overlay"
+      @click.self="close"
+      @contextmenu.prevent
+    >
       <div
         ref="popupRef"
         class="key-selection-popup"
+        data-testid="key-selection-popup"
         :style="popupStyle"
+        tabindex="-1"
         role="listbox"
         aria-label="Select overlapping key"
         @keydown="handleKeyDown"
       >
-        <div class="popup-header">Select Key</div>
-        <ul class="popup-list" role="presentation">
+        <div class="popup-header" data-testid="key-selection-header">Select Key</div>
+        <ul class="popup-list" data-testid="key-selection-list" role="presentation">
           <li
             v-for="(key, index) in keys"
             :key="index"
             class="popup-item"
             :class="{ 'popup-item--focused': focusedIndex === index }"
+            :data-testid="`key-selection-item-${index}`"
             role="option"
             :aria-selected="focusedIndex === index"
             @click="selectKey(key)"
             @mouseenter="handleMouseEnter(key, index)"
             @mouseleave="handleMouseLeave"
           >
-            <span class="key-color" :style="{ backgroundColor: key.color || '#cccccc' }"></span>
-            <span class="key-label">{{ getKeyLabel(key) }}</span>
-            <span class="key-info">{{ getKeyInfo(key) }}</span>
+            <span
+              class="key-color"
+              data-testid="key-selection-color"
+              :style="{ backgroundColor: key.color || '#cccccc' }"
+            ></span>
+            <span class="key-label" data-testid="key-selection-label">{{ getKeyLabel(key) }}</span>
+            <span class="key-info" data-testid="key-selection-info">{{ getKeyInfo(key) }}</span>
           </li>
         </ul>
       </div>

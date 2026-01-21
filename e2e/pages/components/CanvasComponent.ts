@@ -80,6 +80,7 @@ export class CanvasComponent {
     // Border is 9px, so clicking at (5, 5) hits the border area (empty)
     // avoiding potential issues with overlaping keys selection dropdown
     await this.clickAt(5, 5)
+    await this.canvas.focus() // Ensure focus in case popup appeared
     await this.page.keyboard.press('Control+a')
   }
 

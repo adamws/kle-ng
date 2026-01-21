@@ -154,4 +154,20 @@ export const SELECTORS = {
     UNITS_TOGGLE_U: 'label[for="centers-units-u"]',
     UNITS_TOGGLE_MM: 'label[for="centers-units-mm"]',
   },
+
+  /**
+   * Key Selection Popup - Overlapping key disambiguation
+   */
+  KEY_SELECTION_POPUP: {
+    OVERLAY: '[data-testid="key-selection-overlay"]',
+    POPUP: '[data-testid="key-selection-popup"]',
+    HEADER: '[data-testid="key-selection-header"]',
+    LIST: '[data-testid="key-selection-list"]',
+    /** Use getItem(index) helper for specific items */
+    ITEM_PREFIX: 'key-selection-item',
+    ITEM_FOCUSED: '.popup-item--focused',
+    KEY_COLOR: '[data-testid="key-selection-color"]',
+    KEY_LABEL: '[data-testid="key-selection-label"]',
+    KEY_INFO: '[data-testid="key-selection-info"]',
+  },
 } as const

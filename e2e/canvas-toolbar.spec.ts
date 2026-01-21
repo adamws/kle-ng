@@ -131,9 +131,7 @@ test.describe('Canvas Toolbar', () => {
       await expect(canvasHelper.getKeysCounter()).toContainText('Keys: 5')
 
       // Try rectangle selection by using Ctrl+A as a more reliable alternative
-      const canvas = canvasHelper.getCanvas()
-      await canvas.click() // Focus canvas
-      await page.keyboard.press('Control+a')
+      await canvasHelper.selectAllKeys()
 
       // Wait for selection to process
       await expect(page.getByTestId('counter-selected')).toContainText(/Selected: [1-5]/)
@@ -207,9 +205,7 @@ test.describe('Canvas Toolbar', () => {
       await toolbarHelper.selectSelectionMode()
 
       // Select all keys using Ctrl+A
-      const canvas = canvasHelper.getCanvas()
-      await canvas.click() // Focus canvas
-      await page.keyboard.press('Control+a')
+      await canvasHelper.selectAllKeys()
 
       // Wait for keys to be selected
       await expect(page.getByTestId('counter-selected')).toContainText(/Selected: [2-3]/)
@@ -288,9 +284,7 @@ test.describe('Canvas Toolbar', () => {
       await toolbarHelper.selectSelectionMode()
 
       // Select all keys using Ctrl+A
-      const canvas = canvasHelper.getCanvas()
-      await canvas.click()
-      await page.keyboard.press('Control+a')
+      await canvasHelper.selectAllKeys()
       // Wait for all keys to be selected
       await expect(page.getByTestId('counter-selected')).toContainText(/Selected: [1-3]/)
 
@@ -317,9 +311,7 @@ test.describe('Canvas Toolbar', () => {
       await toolbarHelper.selectSelectionMode()
 
       // Select all keys
-      const canvas = canvasHelper.getCanvas()
-      await canvas.click()
-      await page.keyboard.press('Control+a')
+      await canvasHelper.selectAllKeys()
       // Wait for keys to be selected
       await expect(page.getByTestId('counter-selected')).toContainText(/Selected: [1-3]/)
 
@@ -339,9 +331,7 @@ test.describe('Canvas Toolbar', () => {
       await toolbarHelper.selectSelectionMode()
 
       // Select some keys using Ctrl+A
-      const canvas = canvasHelper.getCanvas()
-      await canvas.click()
-      await page.keyboard.press('Control+a')
+      await canvasHelper.selectAllKeys()
       // Wait for keys to be selected
       await expect(page.getByTestId('counter-selected')).toContainText(/Selected: [1-3]/)
 
