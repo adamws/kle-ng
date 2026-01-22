@@ -25,6 +25,11 @@
   },
   "dependencies": {
     "@adamws/kle-serial": "github:adamws/kle-serial2#v0.18.1",
+    "@codemirror/autocomplete": "^6.20.0",
+    "@codemirror/commands": "^6.10.1",
+    "@codemirror/lang-json": "^6.0.2",
+    "@codemirror/state": "^6.5.4",
+    "@codemirror/view": "^6.39.11",
     "bootstrap": "^5.3.8",
     "bootstrap-icons": "^1.13.1",
     "decimal.js": "^10.6.0",

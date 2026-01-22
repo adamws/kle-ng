@@ -42,15 +42,11 @@
     </div>
 
     <div class="position-relative">
-      <textarea
-        v-model="jsonContent"
-        @input="onJsonChange"
-        class="form-control font-monospace"
+      <div
+        ref="editorContainer"
+        class="json-editor-container"
         :class="{ 'is-invalid': hasJsonError }"
-        rows="20"
-        spellcheck="false"
-        placeholder="Loading JSON..."
-      ></textarea>
+      ></div>
 
       <div v-if="hasJsonError" class="invalid-feedback d-block">
         {{ jsonError }}
@@ -74,10 +70,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useKeyboardStore } from '@/stores/keyboard'
 import { parseJsonString } from '@/utils/serialization'
 import { D } from '@/utils/decimal-math'
+import { useCodeMirror } from '@/composables/useCodeMirror'
+import { keyHighlightExtension, setHighlightedRanges } from '@/composables/useJsonKeyHighlighting'
+import { findKeyRangesInJson } from '@/utils/json-key-positions'
+import { json } from '@codemirror/lang-json'
+import { EditorView } from '@codemirror/view'
 
 // Store
 const keyboardStore = useKeyboardStore()
@@ -87,6 +88,7 @@ const jsonContent = ref('')
 const originalJson = ref('')
 const hasJsonError = ref(false)
 const jsonError = ref('')
+const editorContainer = ref<HTMLElement | null>(null)
 
 // Compact JSON formatting similar to original KLE
 const formatJsonCompact = (data: unknown[]): string => {
@@ -142,10 +144,6 @@ const validateJson = () => {
     jsonError.value = error instanceof Error ? error.message : 'Invalid JSON format'
     return false
   }
-}
-
-const onJsonChange = () => {
-  validateJson()
 }
 
 const formatJson = () => {
@@ -234,6 +232,69 @@ const applyChanges = () => {
   }
 }
 
+// Setup CodeMirror editor with JSON syntax highlighting and key highlighting
+const { view } = useCodeMirror(editorContainer, jsonContent, {
+  extensions: [
+    json(),
+    keyHighlightExtension(),
+    // Enable line wrapping
+    EditorView.lineWrapping,
+    // Basic editor styling
+    EditorView.theme({
+      '&': {
+        height: '220px',
+      },
+      '.cm-scroller': {
+        overflow: 'auto',
+        fontFamily: "'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace",
+        fontSize: '0.875rem',
+        lineHeight: '1.4',
+      },
+      '.cm-content': {
+        padding: '0.375rem',
+      },
+      '.cm-gutters': {
+        backgroundColor: 'var(--bs-body-bg)',
+        borderRight: '1px solid var(--bs-border-color)',
+      },
+    }),
+  ],
+  onUpdate: (content) => {
+    jsonContent.value = content
+    validateJson()
+  },
+})
+
+// Watch selected keys and update highlights
+watch(
+  () => keyboardStore.selectedKeys,
+  (selectedKeys) => {
+    if (!view.value) return
+
+    const ranges = findKeyRangesInJson(jsonContent.value, keyboardStore.keys, selectedKeys)
+
+    view.value.dispatch({
+      effects: setHighlightedRanges.of(ranges),
+    })
+  },
+  { immediate: true },
+)
+
+// Also update highlights when JSON content changes (to ensure ranges stay valid)
+watch(jsonContent, () => {
+  if (!view.value) return
+
+  const ranges = findKeyRangesInJson(
+    jsonContent.value,
+    keyboardStore.keys,
+    keyboardStore.selectedKeys,
+  )
+
+  view.value.dispatch({
+    effects: setHighlightedRanges.of(ranges),
+  })
+})
+
 // Keyboard shortcut for apply changes
 const handleKeydown = (event: KeyboardEvent) => {
   if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
@@ -243,39 +304,42 @@ const handleKeydown = (event: KeyboardEvent) => {
 }
 
 // Add keyboard event listener
-nextTick(() => {
+onMounted(() => {
   document.addEventListener('keydown', handleKeydown)
 })
 
 // Cleanup
-const cleanup = () => {
+onUnmounted(() => {
   document.removeEventListener('keydown', handleKeydown)
-}
-
-// Handle component unmount
-onMounted(() => {
-  return cleanup
 })
 </script>
 
 <style scoped>
-.font-monospace {
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
-  font-size: 0.875rem;
-  line-height: 1.4;
+.json-editor-container {
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius);
+  overflow: hidden;
 }
 
-textarea.font-monospace {
-  resize: vertical;
-  min-height: 180px;
-  height: 220px;
-}
-
-.is-invalid {
+.json-editor-container.is-invalid {
   border-color: var(--bs-danger);
 }
 
-.is-invalid:focus {
+.json-editor-container :deep(.cm-editor) {
+  height: 220px;
+}
+
+.json-editor-container :deep(.cm-editor.cm-focused) {
+  outline: none;
+  box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+.json-editor-container.is-invalid :deep(.cm-editor.cm-focused) {
   box-shadow: 0 0 0 0.25rem var(--bs-danger-border-subtle);
+}
+
+.json-editor-container :deep(.cm-key-highlight) {
+  background-color: rgba(255, 213, 79, 0.4);
+  border-radius: 2px;
 }
 </style>

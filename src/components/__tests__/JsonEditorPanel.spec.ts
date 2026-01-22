@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import JsonEditorPanel from '../JsonEditorPanel.vue'
 
@@ -18,10 +18,11 @@ describe('JsonEditorPanel', () => {
       })
 
       await wrapper.vm.$nextTick()
+      await flushPromises()
 
-      // Should have the main elements
-      const textarea = wrapper.find('textarea')
-      expect(textarea.exists()).toBe(true)
+      // Should have the CodeMirror container
+      const editorContainer = wrapper.find('.json-editor-container')
+      expect(editorContainer.exists()).toBe(true)
 
       const buttons = wrapper.findAll('button')
       const formatButton = buttons.find((button) => button.text().includes('Format'))
@@ -61,15 +62,23 @@ describe('JsonEditorPanel', () => {
       })
 
       await wrapper.vm.$nextTick()
+      await flushPromises()
 
-      const textarea = wrapper.find('textarea')
+      // Access component internals to set invalid JSON
+      // (CodeMirror doesn't support setValue directly, so we use the exposed ref)
+      const component = wrapper.vm as unknown as {
+        jsonContent: string
+        validateJson: () => boolean
+        hasJsonError: boolean
+      }
 
-      // Enter invalid JSON
-      await textarea.setValue('{ invalid json }')
-      await textarea.trigger('input')
+      // Set invalid JSON directly on the component
+      component.jsonContent = '{ invalid json }'
+      component.validateJson()
       await wrapper.vm.$nextTick()
 
       // Should show error
+      expect(component.hasJsonError).toBe(true)
       const errorElement = wrapper.find('.text-danger')
       expect(errorElement.exists()).toBe(true)
 
@@ -92,16 +101,24 @@ describe('JsonEditorPanel', () => {
       })
 
       await wrapper.vm.$nextTick()
+      await flushPromises()
 
-      const textarea = wrapper.find('textarea')
+      // Access component internals to set valid JSON
+      const component = wrapper.vm as unknown as {
+        jsonContent: string
+        originalJson: string
+        validateJson: () => boolean
+        hasJsonError: boolean
+      }
 
-      // Enter valid KLE JSON
+      // Set valid KLE JSON directly
       const validKleJson = '[["Q","W","E"],["A","S","D"]]'
-      await textarea.setValue(validKleJson)
-      await textarea.trigger('input')
+      component.jsonContent = validKleJson
+      component.validateJson()
       await wrapper.vm.$nextTick()
 
       // Should not show error
+      expect(component.hasJsonError).toBe(false)
       const errorElement = wrapper.find('.text-danger')
       expect(errorElement.exists()).toBe(false)
 
@@ -120,12 +137,17 @@ describe('JsonEditorPanel', () => {
       })
 
       await wrapper.vm.$nextTick()
+      await flushPromises()
 
-      const textarea = wrapper.find('textarea')
+      // Access component internals
+      const component = wrapper.vm as unknown as {
+        jsonContent: string
+        validateJson: () => boolean
+      }
 
       // First set some valid JSON content
-      await textarea.setValue('[["Q","W","E"]]')
-      await textarea.trigger('input')
+      component.jsonContent = '[["Q","W","E"]]'
+      component.validateJson()
       await wrapper.vm.$nextTick()
 
       // Find the clear button (has trash icon, is the first button)
@@ -136,8 +158,8 @@ describe('JsonEditorPanel', () => {
       await clearButton.trigger('click')
       await wrapper.vm.$nextTick()
 
-      // Textarea should now contain empty array
-      expect((textarea.element as HTMLTextAreaElement).value).toBe('[]')
+      // Content should now be empty array
+      expect(component.jsonContent).toBe('[]')
 
       // Should not show error (empty array is valid JSON)
       const errorElement = wrapper.find('.text-danger')
