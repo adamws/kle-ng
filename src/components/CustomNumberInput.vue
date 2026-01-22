@@ -193,6 +193,9 @@ const updateSuffixWidth = async () => {
 
   await nextTick()
 
+  // Re-check after await since ref could become null
+  if (!suffixRef.value) return
+
   // Reset width to auto to measure content
   suffixRef.value.style.width = 'auto'
 
