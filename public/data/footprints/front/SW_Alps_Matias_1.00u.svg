@@ -5,11 +5,15 @@
    viewBox="-10 -10 20 20"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
-  <g style="fill:#4D7FC4; fill-opacity:1.000; stroke:none;">
+  <g style="fill:#4D7FC4;fill-opacity:1.000;stroke:none;">
     <circle class="hoverable" cx="-2.500" cy="-4.000" r="1.250" />
     <circle class="hoverable" cx="2.500" cy="-4.500" r="1.250" />
   </g>
-  <g style="fill:none; stroke:#AFAFAF; stroke-width:0.100; stroke-opacity:1; stroke-linecap:round; stroke-linejoin:round;">
+  <g style="fill:#AFAFAF;fill-opacity:1.000;stroke:none;">
+    <circle class="hoverable" cx="-2.500" cy="-4.000" r="0.750" />
+    <circle class="hoverable" cx="2.500" cy="-4.500" r="0.750" />
+  </g>
+  <g style="fill:none;stroke:#AFAFAF;stroke-width:0.100;stroke-opacity:1;stroke-linecap:round;stroke-linejoin:round;">
     <path d="M-7.750 -6.400 L-7.750 6.400 " />
     <path d="M-7.750 6.400 L7.750 6.400 " />
     <path d="M7.750 -6.400 L-7.750 -6.400 " />

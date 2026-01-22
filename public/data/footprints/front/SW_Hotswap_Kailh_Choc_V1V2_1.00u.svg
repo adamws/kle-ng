@@ -8,14 +8,14 @@
   <g style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1">
     <path
        class="hoverable"
-       style="fill:#4d7fc4;fill-opacity:1;fill-rule:evenodd;stroke:none"
+       style="fill:#4D7FC4;fill-opacity:1;fill-rule:evenodd;stroke:none"
        d="m -4.775,-7 0.019,-0.096 0.054,-0.081 0.081,-0.054 0.096,-0.019 h 2.05 l 0.096,0.019 0.081,0.054 0.054,0.081 0.019,0.096 v 2 l -0.019,0.096 -0.054,0.081 -0.081,0.054 -0.096,0.019 h -2.05 L -4.621,-4.769 -4.702,-4.823 -4.756,-4.904 -4.775,-5 Z" />
     <path
        class="hoverable"
-       style="fill:#4d7fc4;fill-opacity:1;fill-rule:evenodd;stroke:none"
+       style="fill:#4D7FC4;fill-opacity:1;fill-rule:evenodd;stroke:none"
        d="M 7.225,-4.8 7.244,-4.896 7.298,-4.977 7.379,-5.031 7.475,-5.05 h 2.05 l 0.096,0.019 0.081,0.054 0.054,0.081 0.019,0.096 v 2 L 9.756,-2.704 9.702,-2.623 9.621,-2.569 9.525,-2.55 H 7.475 L 7.379,-2.569 7.298,-2.623 7.244,-2.704 7.225,-2.8 Z" />
   </g>
-  <g style="fill:#AFAFAF;fill-opacity:0.4;stroke:none">
+  <g style="fill:#AFAFAF;fill-opacity:1.0;stroke:none">
     <circle class="hoverable" cx="-5.5" cy="0" r="0.95" />
     <circle class="hoverable" cx="-5" cy="5.15" r="0.8" />
     <circle class="hoverable" cx="0" cy="-5.9" r="1.525" />
@@ -23,7 +23,7 @@
     <circle class="hoverable" cx="5" cy="-3.8" r="1.525" />
     <circle class="hoverable" cx="5.5" cy="0" r="0.95" />
   </g>
-  <g style="fill:none;stroke:#585d84;stroke-width:0.1;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1">
+  <g style="fill:none;stroke:#585D84;stroke-width:0.1;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1">
     <path d="M -2.275,-7.45 -1.45,-8.275" />
     <path d="M -1.45,-8.275 H 1.261" />
     <path d="M -1.45,-3.625 -2.275,-4.45" />
@@ -53,7 +53,7 @@
     <path d="m 7.575,-2.225 v 0.8" />
     <path d="M 7.575,-1.425 H 3.567" />
   </g>
-  <g style="fill:none;stroke:#afafaf;stroke-width:0.1;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1">
+  <g style="fill:none;stroke:#AFAFAF;stroke-width:0.1;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1">
     <path d="m -7.5,-7.5 v 15" />
     <path d="m -7.5,7.5 h 15" />
     <path d="m 7.5,-7.5 h -15" />

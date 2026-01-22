@@ -8,14 +8,14 @@
   <g style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1">
     <path
        class="hoverable"
-       style="fill:#4d7fc4;fill-opacity:1;fill-rule:evenodd;stroke:none"
+       style="fill:#4D7FC4;fill-opacity:1;fill-rule:evenodd;stroke:none"
        d="M 1.95,0.3 1.931,0.396 1.877,0.477 1.796,0.531 1.7,0.55 H 1.1 L 1.004,0.531 0.923,0.477 0.869,0.396 0.85,0.3 V -0.3 L 0.869,-0.396 0.923,-0.477 1.004,-0.531 1.1,-0.55 h 0.6 l 0.096,0.019 0.081,0.054 0.054,0.081 0.019,0.096 z" />
     <path
        class="hoverable"
-       style="fill:#4d7fc4;fill-opacity:1;fill-rule:evenodd;stroke:none"
+       style="fill:#4D7FC4;fill-opacity:1;fill-rule:evenodd;stroke:none"
        d="M -0.85,0.3 -0.869,0.396 -0.923,0.477 -1.004,0.531 -1.1,0.55 H -1.7 L -1.796,0.531 -1.877,0.477 -1.931,0.396 -1.95,0.3 v -0.6 l 0.019,-0.096 0.054,-0.081 0.081,-0.054 0.096,-0.019 h 0.6 l 0.096,0.019 0.081,0.054 0.054,0.081 0.019,0.096 z" />
   </g>
-  <g style="fill:none;stroke:#AFAFAF;stroke-width:0.1;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1">
+  <g style="fill:none;stroke:#585D84;stroke-width:0.1;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1">
     <path d="M -1.4,-0.9 V 0.9" />
     <path d="M -1.4,0.9 H 1.4" />
     <path d="M -0.25,-0.4 V 0.4" />

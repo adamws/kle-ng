@@ -11,15 +11,23 @@
     <path d="M7.2500 -6.7500 L-7.2500 -6.7500 " />
     <path d="M7.2500 6.7500 L7.2500 -6.7500 " />
   </g>
-  <g style="fill:none;stroke:#AFAFAF;stroke-width:0.1000;stroke-opacity:0.4;stroke-linecap:round;stroke-linejoin:round;">
-    <path d="M 2.05,3 V 4.05 H -2.5 V 3 H -5.9 V -2.9 H 5.95 V 3 Z" style="fill:#AFAFAF;fill-opacity:0.4" />
+  <g style="fill:none;stroke:#AFAFAF;stroke-width:0.1000;stroke-opacity:1.0;stroke-linecap:round;stroke-linejoin:round;">
+    <path d="M 2.05,3 V 4.05 H -2.5 V 3 H -5.9 V -2.9 H 5.95 V 3 Z" style="fill:#AFAFAF;fill-opacity:1.0" />
   </g>
   <g style="fill:none;stroke:#4D7FC4;stroke-width:1.2000;stroke-opacity:1;stroke-linecap:round;stroke-linejoin:round;">
+    <path class="hoverable" d="M-5.2900 -4.9500 L-5.2900 -4.5500 " />
+    <path class="hoverable" d="M5.2900 -4.9500 L5.2900 -4.5500 " />
+  </g>
+  <g style="fill:none;stroke:#AFAFAF;stroke-width:0.8000;stroke-opacity:1;stroke-linecap:round;stroke-linejoin:round;">
     <path class="hoverable" d="M-5.2900 -4.9500 L-5.2900 -4.5500 " />
     <path class="hoverable" d="M5.2900 -4.9500 L5.2900 -4.5500 " />
   </g>
   <g style="fill:#4D7FC4;fill-opacity:1.0000;stroke:none;">
     <circle class="hoverable" cx="2.0000" cy="5.4000" r="0.7500" />
     <circle class="hoverable" cx="-4.5800" cy="5.1000" r="0.7500" />
+  </g>
+  <g style="fill:#AFAFAF;fill-opacity:1.0000;stroke:none;">
+    <circle class="hoverable" cx="2.0000" cy="5.4000" r="0.6" />
+    <circle class="hoverable" cx="-4.5800" cy="5.1000" r="0.6" />
   </g>
 </svg>
