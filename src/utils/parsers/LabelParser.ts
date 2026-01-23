@@ -1,7 +1,7 @@
 /**
- * LabelParser - Parses HTML-formatted key labels
+ * LabelParser - Parses HTML-formatted key labels using DOMParser
  *
- * Supports: <b>, <i>, <b><i> (nested), <img>, <svg>...</svg>
+ * Supports: <b>, <strong>, <i>, <em>, <a>, <img>, <svg>
  *
  * Performance: Uses ParseCache to avoid redundant parsing.
  *
@@ -18,148 +18,190 @@
  * - Server must support CORS for cross-origin SVG files (external only)
  */
 
-import { parseCache, type ParsedSegment } from '../caches/ParseCache'
+import { parseCache } from '../caches/ParseCache'
 import { svgProcessor } from './SVGProcessor'
+import type { LabelNode, TextStyle } from './LabelAST'
 
 export class LabelParser {
   /**
    * Process label text by converting <br> tags to newlines
    */
   public processLabelText(label: string): string {
-    // Convert <br> and <BR> tags (with optional attributes and self-closing) to newlines
-    return label.replace(/<br[^>]*>/gi, '\n')
+    // Convert <br>, </br>, <BR>, etc. tags (with optional attributes and self-closing) to newlines
+    // Matches: <br>, <br/>, <br />, </br>, <BR>, etc.
+    return label.replace(/<\/?br[^>]*>/gi, '\n')
   }
 
   /**
-   * Parse text with HTML formatting tags and extract text segments with their styles
-   * Uses ParseCache to avoid redundant regex parsing for the same label content.
+   * Parse text with HTML formatting tags and return AST nodes.
+   * Uses ParseCache to avoid redundant parsing for the same label content.
    */
-  public parseHtmlText(text: string): ParsedSegment[] {
-    // Use cache to avoid redundant parsing
-    return parseCache.getParsed(text, (textToParse) => this.doParseHtmlText(textToParse))
+  public parse(text: string): LabelNode[] {
+    return parseCache.getParsed(text, (textToParse) => this.doParse(textToParse))
   }
 
   /**
-   * Internal parser implementation (called only on cache miss)
+   * Internal parser implementation using DOMParser (called only on cache miss)
    */
-  private doParseHtmlText(text: string): ParsedSegment[] {
-    const segments: ParsedSegment[] = []
-    let currentBold = false
-    let currentItalic = false
-    let currentText = ''
+  private doParse(text: string): LabelNode[] {
+    // Handle empty text
+    if (!text) {
+      return [{ type: 'text', text: '', style: {} }]
+    }
 
-    // Regular expression to match HTML tags and text
-    // Updated to handle <img> tags, inline <svg> tags, and formatting tags
-    const regex = /<\s*(\/?)([bi])\s*>|<img\s+([^>]+)>|<svg[^>]*>([\s\S]*?)<\/svg>|([^<]+)/gi
-    let match: RegExpExecArray | null
+    // Use DOMParser to parse HTML
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(`<div>${text}</div>`, 'text/html')
+    const container = doc.body.firstChild
 
-    while ((match = regex.exec(text)) !== null) {
-      if (match[5]) {
-        // Plain text segment
-        currentText += match[5]
-      } else if (match[4] !== undefined) {
-        // Inline <svg> tag
-        // Save any accumulated text first
-        if (currentText) {
-          segments.push({
-            type: 'text',
-            text: currentText,
-            bold: currentBold,
-            italic: currentItalic,
-          })
-          currentText = ''
-        }
+    if (!container) {
+      return [{ type: 'text', text, style: {} }]
+    }
 
-        // Extract SVG content (match[0] is the full <svg>...</svg>)
-        const svgContent = match[0]
+    const nodes = this.parseChildNodes(container, {})
 
-        // Extract dimensions using SVGProcessor
-        const { width, height } = svgProcessor.extractDimensions(svgContent)
+    // If no nodes were created:
+    // - If the input contained HTML tags, return empty (the HTML was parsed but had no content)
+    // - Otherwise, return original text as plain text
+    if (nodes.length === 0) {
+      if (this.hasHtmlFormatting(text)) {
+        // HTML was parsed but resulted in no content (e.g., <i class="fa fa-icon"></i>)
+        return []
+      }
+      return [{ type: 'text', text, style: {} }]
+    }
 
-        segments.push({
+    return nodes
+  }
+
+  /**
+   * Parse all child nodes of an element
+   */
+  private parseChildNodes(element: Node, style: TextStyle): LabelNode[] {
+    const nodes: LabelNode[] = []
+
+    element.childNodes.forEach((child) => {
+      const childNodes = this.parseNode(child, style)
+      nodes.push(...childNodes)
+    })
+
+    return nodes
+  }
+
+  /**
+   * Parse a single DOM node into LabelNode(s)
+   */
+  private parseNode(node: Node, style: TextStyle): LabelNode[] {
+    // Text node
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent ?? ''
+      if (text) {
+        return [{ type: 'text', text, style: { ...style } }]
+      }
+      return []
+    }
+
+    // Element node
+    if (node.nodeType !== Node.ELEMENT_NODE) {
+      return []
+    }
+
+    const el = node as HTMLElement
+    const tag = el.tagName.toLowerCase()
+
+    // Bold tags
+    if (tag === 'b' || tag === 'strong') {
+      return this.parseChildNodes(el, { ...style, bold: true })
+    }
+
+    // Italic tags
+    if (tag === 'i' || tag === 'em') {
+      return this.parseChildNodes(el, { ...style, italic: true })
+    }
+
+    // Anchor/link tag
+    if (tag === 'a') {
+      const href = el.getAttribute('href') ?? ''
+      const text = el.textContent ?? ''
+      // Skip empty links (no text to display)
+      if (!text) {
+        return []
+      }
+      return [{ type: 'link', href, text, style: { ...style } }]
+    }
+
+    // Image tag
+    if (tag === 'img') {
+      const src = el.getAttribute('src') ?? ''
+      const widthAttr = el.getAttribute('width')
+      const heightAttr = el.getAttribute('height')
+
+      return [
+        {
+          type: 'image',
+          src,
+          width: widthAttr ? parseInt(widthAttr) : undefined,
+          height: heightAttr ? parseInt(heightAttr) : undefined,
+        },
+      ]
+    }
+
+    // SVG tag
+    if (tag === 'svg') {
+      const content = el.outerHTML
+      const { width, height } = svgProcessor.extractDimensions(content)
+
+      return [
+        {
           type: 'svg',
-          svgContent,
+          content,
           width,
           height,
-        })
-      } else if (match[3]) {
-        // <img> tag with attributes
-        // Save any accumulated text first
-        if (currentText) {
-          segments.push({
-            type: 'text',
-            text: currentText,
-            bold: currentBold,
-            italic: currentItalic,
-          })
-          currentText = ''
-        }
-
-        // Parse img attributes
-        const attrs = match[3]
-        const srcMatch = attrs.match(/src\s*=\s*["']([^"']+)["']/i)
-        const widthMatch = attrs.match(/width\s*=\s*["']?(\d+)["']?/i)
-        const heightMatch = attrs.match(/height\s*=\s*["']?(\d+)["']?/i)
-
-        if (srcMatch) {
-          segments.push({
-            type: 'image',
-            src: srcMatch[1],
-            width: widthMatch ? parseInt(widthMatch[1] ?? '0') : undefined,
-            height: heightMatch ? parseInt(heightMatch[1] ?? '0') : undefined,
-          })
-        }
-      } else if (match[2]) {
-        // HTML tag (opening or closing)
-        const isClosing = match[1] === '/'
-        const tagName = match[2].toLowerCase()
-
-        // If we have accumulated text, save it with current styles
-        if (currentText) {
-          segments.push({
-            type: 'text',
-            text: currentText,
-            bold: currentBold,
-            italic: currentItalic,
-          })
-          currentText = ''
-        }
-
-        // Update current style state
-        if (tagName === 'b') {
-          currentBold = !isClosing
-        } else if (tagName === 'i') {
-          currentItalic = !isClosing
-        }
-      }
+        },
+      ]
     }
 
-    // Add any remaining text
-    if (currentText) {
-      segments.push({ type: 'text', text: currentText, bold: currentBold, italic: currentItalic })
-    }
-
-    // If no segments were created (no valid HTML), return the original text as plain
-    if (segments.length === 0) {
-      segments.push({ type: 'text', text, bold: false, italic: false })
-    }
-
-    return segments
+    // Default: recurse into children (handles div, span, etc.)
+    return this.parseChildNodes(el, style)
   }
 
   /**
-   * Check if text contains HTML formatting tags or inline SVG
+   * Check if text contains HTML elements using DOMParser.
+   * Returns true if the text contains any element nodes (not just text).
    */
   public hasHtmlFormatting(text: string): boolean {
-    return /<\s*[bi]\s*>|<\s*\/\s*[bi]\s*>|<img\s+|<svg[^>]*>/i.test(text)
+    if (!text) return false
+
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(`<div>${text}</div>`, 'text/html')
+    const container = doc.body.firstChild
+
+    if (!container) return false
+
+    // Check if there are any element nodes (not just text nodes)
+    return this.containsElementNodes(container)
+  }
+
+  /**
+   * Check if a node contains any element nodes (not just text)
+   */
+  private containsElementNodes(node: Node): boolean {
+    const children = node.childNodes
+    for (let i = 0; i < children.length; i++) {
+      const child = children.item(i)
+      if (child && child.nodeType === Node.ELEMENT_NODE) {
+        return true
+      }
+    }
+    return false
   }
 
   /**
    * Strip HTML formatting tags from text (but not img tags)
    */
   public stripHtmlTags(text: string): string {
-    // Only strip <b>, </b>, <i>, </i> tags, not <img>
-    return text.replace(/<\s*\/?[bi]\s*>/gi, '')
+    // Only strip formatting tags, not <img>
+    return text.replace(/<\s*\/?[biu]\s*>|<\s*\/?(strong|em)\s*>/gi, '')
   }
 
   /**
@@ -175,40 +217,58 @@ export class LabelParser {
     buildFontStyle: (bold: boolean, italic: boolean) => string,
     getImage: (url: string) => HTMLImageElement | null,
   ): number {
-    const segments = this.parseHtmlText(text)
-    let totalWidth = 0
+    const nodes = this.parse(text)
 
     // Save current font
     const originalFont = ctx.font
 
-    segments.forEach((segment) => {
-      if (segment.type === 'text') {
-        // Apply font style for this segment
-        const fontStyle = buildFontStyle(segment.bold!, segment.italic!)
-        ctx.font = fontStyle
+    // Track max width across all lines and the current line width
+    let maxWidth = 0
+    let currentLineWidth = 0
 
-        // Measure this segment
-        totalWidth += ctx.measureText(segment.text!).width
-      } else if (segment.type === 'image') {
-        // Images contribute their width (or a default if not loaded)
-        const img = getImage(segment.src!)
-        if (img) {
-          const width = segment.width || img.naturalWidth
-          totalWidth += width
-        } else {
-          // Placeholder width for unloaded images
-          totalWidth += segment.width || 16
+    const measureNodes = (nodeList: LabelNode[]): void => {
+      for (const node of nodeList) {
+        if (node.type === 'text') {
+          const fontStyle = buildFontStyle(node.style.bold ?? false, node.style.italic ?? false)
+          ctx.font = fontStyle
+
+          // Handle newlines in text - each line is measured separately
+          const lines = node.text.split('\n')
+          for (let i = 0; i < lines.length; i++) {
+            const line = lines[i] ?? ''
+            if (i > 0) {
+              // New line: save current line width and start fresh
+              maxWidth = Math.max(maxWidth, currentLineWidth)
+              currentLineWidth = 0
+            }
+            currentLineWidth += ctx.measureText(line).width
+          }
+        } else if (node.type === 'link') {
+          const fontStyle = buildFontStyle(node.style.bold ?? false, node.style.italic ?? false)
+          ctx.font = fontStyle
+          currentLineWidth += ctx.measureText(node.text).width
+        } else if (node.type === 'image') {
+          const img = getImage(node.src)
+          if (img) {
+            currentLineWidth += node.width || img.naturalWidth
+          } else {
+            currentLineWidth += node.width || 16
+          }
+        } else if (node.type === 'svg') {
+          currentLineWidth += node.width || 16
         }
-      } else if (segment.type === 'svg') {
-        // SVGs contribute their width
-        totalWidth += segment.width || 16
       }
-    })
+    }
+
+    measureNodes(nodes)
+
+    // Include the final line width
+    maxWidth = Math.max(maxWidth, currentLineWidth)
 
     // Restore original font
     ctx.font = originalFont
 
-    return totalWidth
+    return maxWidth
   }
 
   /**

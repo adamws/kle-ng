@@ -1,15 +1,16 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { ParseCache, type ParsedSegment } from '../ParseCache'
+import { ParseCache } from '../ParseCache'
+import type { LabelNode } from '../../parsers/LabelAST'
 
 describe('ParseCache', () => {
   let cache: ParseCache
-  let mockParser: (text: string) => ParsedSegment[]
+  let mockParser: (text: string) => LabelNode[]
 
   beforeEach(() => {
     cache = new ParseCache()
-    mockParser = vi.fn((text: string): ParsedSegment[] => {
-      // Simple mock parser that splits text into segments
-      return [{ type: 'text', text, bold: false, italic: false }]
+    mockParser = vi.fn((text: string): LabelNode[] => {
+      // Simple mock parser that creates a text node
+      return [{ type: 'text', text, style: {} }]
     })
   })
 
@@ -69,10 +70,10 @@ describe('ParseCache', () => {
     })
 
     it('should cache complex parse results', () => {
-      const complexParser = vi.fn((): ParsedSegment[] => [
-        { type: 'text', text: 'Bold', bold: true, italic: false },
+      const complexParser = vi.fn((): LabelNode[] => [
+        { type: 'text', text: 'Bold', style: { bold: true } },
         { type: 'image', src: 'icon.png', width: 32, height: 32 },
-        { type: 'svg', svgContent: '<svg>...</svg>', width: 16, height: 16 },
+        { type: 'svg', content: '<svg>...</svg>', width: 16, height: 16 },
       ])
 
       const text = '<b>Bold</b><img src="icon.png" width=32 height=32>'
@@ -87,9 +88,7 @@ describe('ParseCache', () => {
 
     it('should handle HTML entities correctly', () => {
       const htmlText = '&lt;b&gt;Test&lt;/b&gt;'
-      const parser = vi.fn((text: string): ParsedSegment[] => [
-        { type: 'text', text, bold: false, italic: false },
-      ])
+      const parser = vi.fn((text: string): LabelNode[] => [{ type: 'text', text, style: {} }])
 
       cache.getParsed(htmlText, parser)
       cache.getParsed(htmlText, parser)
@@ -99,7 +98,7 @@ describe('ParseCache', () => {
 
     it('should handle empty strings', () => {
       const emptyText = ''
-      const parser = vi.fn((): ParsedSegment[] => [])
+      const parser = vi.fn((): LabelNode[] => [])
 
       const result = cache.getParsed(emptyText, parser)
 
@@ -292,14 +291,14 @@ describe('ParseCache', () => {
     })
 
     it('should handle complex parse results efficiently', () => {
-      const complexParser = vi.fn((): ParsedSegment[] => {
+      const complexParser = vi.fn((): LabelNode[] => {
         // Simulate expensive parsing
         return [
-          { type: 'text', text: 'Complex', bold: true, italic: false },
+          { type: 'text', text: 'Complex', style: { bold: true } },
           { type: 'image', src: 'img1.png', width: 32, height: 32 },
-          { type: 'text', text: ' Label ', bold: false, italic: true },
-          { type: 'svg', svgContent: '<svg>...</svg>', width: 16, height: 16 },
-          { type: 'text', text: 'End', bold: false, italic: false },
+          { type: 'text', text: ' Label ', style: { italic: true } },
+          { type: 'svg', content: '<svg>...</svg>', width: 16, height: 16 },
+          { type: 'text', text: 'End', style: {} },
         ]
       })
 

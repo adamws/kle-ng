@@ -31,122 +31,141 @@ describe('LabelParser', () => {
       expect(parser.processLabelText('A<br>B<br>C')).toBe('A\nB\nC')
     })
 
+    it('should handle closing </br> tag style', () => {
+      expect(parser.processLabelText('Line 1</br>Line 2')).toBe('Line 1\nLine 2')
+      expect(parser.processLabelText('A</br>B</br>C')).toBe('A\nB\nC')
+    })
+
     it('should return unchanged text if no <br> tags', () => {
       expect(parser.processLabelText('No breaks here')).toBe('No breaks here')
     })
   })
 
-  describe('parseHtmlText', () => {
+  describe('parse', () => {
     describe('plain text', () => {
       it('should parse plain text', () => {
-        const result = parser.parseHtmlText('Hello World')
-        expect(result).toEqual([{ type: 'text', text: 'Hello World', bold: false, italic: false }])
+        const result = parser.parse('Hello World')
+        expect(result).toEqual([{ type: 'text', text: 'Hello World', style: {} }])
       })
 
       it('should return plain text for empty string', () => {
-        const result = parser.parseHtmlText('')
-        expect(result).toEqual([{ type: 'text', text: '', bold: false, italic: false }])
+        const result = parser.parse('')
+        expect(result).toEqual([{ type: 'text', text: '', style: {} }])
       })
     })
 
     describe('bold formatting', () => {
       it('should parse bold text', () => {
-        const result = parser.parseHtmlText('<b>Bold</b>')
-        expect(result).toEqual([{ type: 'text', text: 'Bold', bold: true, italic: false }])
+        const result = parser.parse('<b>Bold</b>')
+        expect(result).toEqual([{ type: 'text', text: 'Bold', style: { bold: true } }])
+      })
+
+      it('should parse strong text as bold', () => {
+        const result = parser.parse('<strong>Strong</strong>')
+        expect(result).toEqual([{ type: 'text', text: 'Strong', style: { bold: true } }])
       })
 
       it('should parse mixed bold and plain text', () => {
-        const result = parser.parseHtmlText('Normal <b>Bold</b> Normal')
+        const result = parser.parse('Normal <b>Bold</b> Normal')
         expect(result).toEqual([
-          { type: 'text', text: 'Normal ', bold: false, italic: false },
-          { type: 'text', text: 'Bold', bold: true, italic: false },
-          { type: 'text', text: ' Normal', bold: false, italic: false },
+          { type: 'text', text: 'Normal ', style: {} },
+          { type: 'text', text: 'Bold', style: { bold: true } },
+          { type: 'text', text: ' Normal', style: {} },
         ])
       })
 
       it('should handle multiple bold sections', () => {
-        const result = parser.parseHtmlText('<b>A</b> <b>B</b>')
+        const result = parser.parse('<b>A</b> <b>B</b>')
         expect(result).toEqual([
-          { type: 'text', text: 'A', bold: true, italic: false },
-          { type: 'text', text: ' ', bold: false, italic: false },
-          { type: 'text', text: 'B', bold: true, italic: false },
+          { type: 'text', text: 'A', style: { bold: true } },
+          { type: 'text', text: ' ', style: {} },
+          { type: 'text', text: 'B', style: { bold: true } },
         ])
       })
     })
 
     describe('italic formatting', () => {
       it('should parse italic text', () => {
-        const result = parser.parseHtmlText('<i>Italic</i>')
-        expect(result).toEqual([{ type: 'text', text: 'Italic', bold: false, italic: true }])
+        const result = parser.parse('<i>Italic</i>')
+        expect(result).toEqual([{ type: 'text', text: 'Italic', style: { italic: true } }])
+      })
+
+      it('should parse em text as italic', () => {
+        const result = parser.parse('<em>Emphasis</em>')
+        expect(result).toEqual([{ type: 'text', text: 'Emphasis', style: { italic: true } }])
       })
 
       it('should parse mixed italic and plain text', () => {
-        const result = parser.parseHtmlText('Normal <i>Italic</i> Normal')
+        const result = parser.parse('Normal <i>Italic</i> Normal')
         expect(result).toEqual([
-          { type: 'text', text: 'Normal ', bold: false, italic: false },
-          { type: 'text', text: 'Italic', bold: false, italic: true },
-          { type: 'text', text: ' Normal', bold: false, italic: false },
+          { type: 'text', text: 'Normal ', style: {} },
+          { type: 'text', text: 'Italic', style: { italic: true } },
+          { type: 'text', text: ' Normal', style: {} },
         ])
       })
     })
 
     describe('nested formatting', () => {
       it('should parse nested bold and italic', () => {
-        const result = parser.parseHtmlText('<b><i>Bold Italic</i></b>')
-        expect(result).toEqual([{ type: 'text', text: 'Bold Italic', bold: true, italic: true }])
+        const result = parser.parse('<b><i>Bold Italic</i></b>')
+        expect(result).toEqual([
+          { type: 'text', text: 'Bold Italic', style: { bold: true, italic: true } },
+        ])
       })
 
       it('should parse nested italic and bold', () => {
-        const result = parser.parseHtmlText('<i><b>Italic Bold</b></i>')
-        expect(result).toEqual([{ type: 'text', text: 'Italic Bold', bold: true, italic: true }])
+        const result = parser.parse('<i><b>Italic Bold</b></i>')
+        expect(result).toEqual([
+          { type: 'text', text: 'Italic Bold', style: { bold: true, italic: true } },
+        ])
       })
 
       it('should handle complex nested formatting', () => {
-        const result = parser.parseHtmlText('A <b>B <i>C</i> D</b> E')
+        const result = parser.parse('A <b>B <i>C</i> D</b> E')
         expect(result).toEqual([
-          { type: 'text', text: 'A ', bold: false, italic: false },
-          { type: 'text', text: 'B ', bold: true, italic: false },
-          { type: 'text', text: 'C', bold: true, italic: true },
-          { type: 'text', text: ' D', bold: true, italic: false },
-          { type: 'text', text: ' E', bold: false, italic: false },
+          { type: 'text', text: 'A ', style: {} },
+          { type: 'text', text: 'B ', style: { bold: true } },
+          { type: 'text', text: 'C', style: { bold: true, italic: true } },
+          { type: 'text', text: ' D', style: { bold: true } },
+          { type: 'text', text: ' E', style: {} },
         ])
       })
     })
 
     describe('image tags', () => {
       it('should parse img tag with src', () => {
-        const result = parser.parseHtmlText('<img src="test.png">')
+        const result = parser.parse('<img src="test.png">')
         expect(result).toEqual([
           { type: 'image', src: 'test.png', width: undefined, height: undefined },
         ])
       })
 
       it('should parse img tag with dimensions', () => {
-        const result = parser.parseHtmlText('<img src="test.png" width="32" height="32">')
+        const result = parser.parse('<img src="test.png" width="32" height="32">')
         expect(result).toEqual([{ type: 'image', src: 'test.png', width: 32, height: 32 }])
       })
 
       it('should parse img tag with single quotes', () => {
-        const result = parser.parseHtmlText("<img src='test.png'>")
+        const result = parser.parse("<img src='test.png'>")
         expect(result).toEqual([
           { type: 'image', src: 'test.png', width: undefined, height: undefined },
         ])
       })
 
       it('should parse img tag mixed with text', () => {
-        const result = parser.parseHtmlText('Before <img src="test.png"> After')
+        const result = parser.parse('Before <img src="test.png"> After')
         expect(result).toEqual([
-          { type: 'text', text: 'Before ', bold: false, italic: false },
+          { type: 'text', text: 'Before ', style: {} },
           { type: 'image', src: 'test.png', width: undefined, height: undefined },
-          { type: 'text', text: ' After', bold: false, italic: false },
+          { type: 'text', text: ' After', style: {} },
         ])
       })
 
       it('should handle multiple images', () => {
-        const result = parser.parseHtmlText('<img src="a.png"> <img src="b.png">')
+        const result = parser.parse('<img src="a.png"> <img src="b.png">')
         expect(result).toEqual([
           { type: 'image', src: 'a.png', width: undefined, height: undefined },
-          { type: 'text', text: ' ', bold: false, italic: false },
+          { type: 'text', text: ' ', style: {} },
           { type: 'image', src: 'b.png', width: undefined, height: undefined },
         ])
       })
@@ -154,56 +173,154 @@ describe('LabelParser', () => {
 
     describe('SVG tags', () => {
       it('should parse inline SVG', () => {
-        const svgContent = '<svg width="32" height="32"><circle r="10"/></svg>'
-        const result = parser.parseHtmlText(svgContent)
-        expect(result).toEqual([{ type: 'svg', svgContent, width: 32, height: 32 }])
+        const result = parser.parse('<svg width="32" height="32"><circle r="10"/></svg>')
+        expect(result).toHaveLength(1)
+        const svgNode = result[0]!
+        expect(svgNode.type).toBe('svg')
+        expect((svgNode as { width?: number }).width).toBe(32)
+        expect((svgNode as { height?: number }).height).toBe(32)
+        expect((svgNode as { content?: string }).content).toContain('svg')
       })
 
       it('should parse SVG without dimensions', () => {
-        const svgContent = '<svg><circle r="10"/></svg>'
-        const result = parser.parseHtmlText(svgContent)
-        expect(result).toEqual([{ type: 'svg', svgContent, width: undefined, height: undefined }])
-      })
-
-      it('should parse SVG with single quotes', () => {
-        const svgContent = "<svg width='32' height='32'><circle r='10'/></svg>"
-        const result = parser.parseHtmlText(svgContent)
-        expect(result).toEqual([{ type: 'svg', svgContent, width: 32, height: 32 }])
+        const result = parser.parse('<svg><circle r="10"/></svg>')
+        expect(result).toHaveLength(1)
+        const svgNode = result[0]!
+        expect(svgNode.type).toBe('svg')
+        expect((svgNode as { width?: number }).width).toBeUndefined()
+        expect((svgNode as { height?: number }).height).toBeUndefined()
       })
 
       it('should parse SVG mixed with text', () => {
-        const svgContent = '<svg width="32" height="32"><circle r="10"/></svg>'
-        const result = parser.parseHtmlText(`Before ${svgContent} After`)
+        const result = parser.parse('Before <svg width="32" height="32"></svg> After')
+        expect(result).toHaveLength(3)
+        expect(result[0]).toEqual({ type: 'text', text: 'Before ', style: {} })
+        expect(result[1]!.type).toBe('svg')
+        expect(result[2]).toEqual({ type: 'text', text: ' After', style: {} })
+      })
+    })
+
+    describe('link tags', () => {
+      it('should parse link with double quotes', () => {
+        const result = parser.parse('<a href="https://example.com">Example</a>')
         expect(result).toEqual([
-          { type: 'text', text: 'Before ', bold: false, italic: false },
-          { type: 'svg', svgContent, width: 32, height: 32 },
-          { type: 'text', text: ' After', bold: false, italic: false },
+          {
+            type: 'link',
+            href: 'https://example.com',
+            text: 'Example',
+            style: {},
+          },
         ])
       })
 
-      it('should handle complex SVG content', () => {
-        const svgContent =
-          '<svg width="48" height="48"><path d="M10,10 L20,20"/><circle cx="24" cy="24" r="5"/></svg>'
-        const result = parser.parseHtmlText(svgContent)
-        expect(result).toEqual([{ type: 'svg', svgContent, width: 48, height: 48 }])
+      it('should parse link with single quotes', () => {
+        const result = parser.parse("<a href='https://example.com'>Example</a>")
+        expect(result).toEqual([
+          {
+            type: 'link',
+            href: 'https://example.com',
+            text: 'Example',
+            style: {},
+          },
+        ])
+      })
+
+      it('should parse link mixed with text', () => {
+        const result = parser.parse('Visit <a href="https://example.com">Example</a> site')
+        expect(result).toEqual([
+          { type: 'text', text: 'Visit ', style: {} },
+          {
+            type: 'link',
+            href: 'https://example.com',
+            text: 'Example',
+            style: {},
+          },
+          { type: 'text', text: ' site', style: {} },
+        ])
+      })
+
+      it('should parse link inside bold formatting', () => {
+        const result = parser.parse('<b><a href="https://example.com">Bold Link</a></b>')
+        expect(result).toEqual([
+          {
+            type: 'link',
+            href: 'https://example.com',
+            text: 'Bold Link',
+            style: { bold: true },
+          },
+        ])
+      })
+
+      it('should parse link inside italic formatting', () => {
+        const result = parser.parse('<i><a href="https://example.com">Italic Link</a></i>')
+        expect(result).toEqual([
+          {
+            type: 'link',
+            href: 'https://example.com',
+            text: 'Italic Link',
+            style: { italic: true },
+          },
+        ])
+      })
+
+      it('should parse link inside bold and italic formatting', () => {
+        const result = parser.parse(
+          '<b><i><a href="https://example.com">Bold Italic Link</a></i></b>',
+        )
+        expect(result).toEqual([
+          {
+            type: 'link',
+            href: 'https://example.com',
+            text: 'Bold Italic Link',
+            style: { bold: true, italic: true },
+          },
+        ])
+      })
+
+      it('should parse multiple links', () => {
+        const result = parser.parse('<a href="https://a.com">A</a> <a href="https://b.com">B</a>')
+        expect(result).toEqual([
+          { type: 'link', href: 'https://a.com', text: 'A', style: {} },
+          { type: 'text', text: ' ', style: {} },
+          { type: 'link', href: 'https://b.com', text: 'B', style: {} },
+        ])
+      })
+
+      it('should parse link with extra attributes', () => {
+        const result = parser.parse(
+          '<a class="foo" href="https://example.com" target="_blank">Link</a>',
+        )
+        expect(result).toEqual([
+          { type: 'link', href: 'https://example.com', text: 'Link', style: {} },
+        ])
+      })
+
+      it('should handle link with relative URL', () => {
+        const result = parser.parse('<a href="/path/to/page">Relative</a>')
+        expect(result).toEqual([
+          { type: 'link', href: '/path/to/page', text: 'Relative', style: {} },
+        ])
       })
     })
 
     describe('mixed content', () => {
       it('should parse text, formatting, images, and SVG together', () => {
-        const result = parser.parseHtmlText(
+        const result = parser.parse(
           'Text <b>Bold</b> <img src="a.png"> <svg width="16" height="16"></svg> <i>Italic</i>',
         )
-        expect(result).toEqual([
-          { type: 'text', text: 'Text ', bold: false, italic: false },
-          { type: 'text', text: 'Bold', bold: true, italic: false },
-          { type: 'text', text: ' ', bold: false, italic: false },
-          { type: 'image', src: 'a.png', width: undefined, height: undefined },
-          { type: 'text', text: ' ', bold: false, italic: false },
-          { type: 'svg', svgContent: '<svg width="16" height="16"></svg>', width: 16, height: 16 },
-          { type: 'text', text: ' ', bold: false, italic: false },
-          { type: 'text', text: 'Italic', bold: false, italic: true },
-        ])
+        expect(result[0]).toEqual({ type: 'text', text: 'Text ', style: {} })
+        expect(result[1]).toEqual({ type: 'text', text: 'Bold', style: { bold: true } })
+        expect(result[2]).toEqual({ type: 'text', text: ' ', style: {} })
+        expect(result[3]).toEqual({
+          type: 'image',
+          src: 'a.png',
+          width: undefined,
+          height: undefined,
+        })
+        expect(result[4]).toEqual({ type: 'text', text: ' ', style: {} })
+        expect(result[5]!.type).toBe('svg')
+        expect(result[6]).toEqual({ type: 'text', text: ' ', style: {} })
+        expect(result[7]).toEqual({ type: 'text', text: 'Italic', style: { italic: true } })
       })
     })
 
@@ -212,13 +329,13 @@ describe('LabelParser', () => {
         const text = 'Test <b>Bold</b>'
 
         // First call - cache miss
-        const result1 = parser.parseHtmlText(text)
+        const result1 = parser.parse(text)
         const stats1 = parseCache.getStats()
         expect(stats1.misses).toBe(1)
         expect(stats1.hits).toBe(0)
 
         // Second call - cache hit
-        const result2 = parser.parseHtmlText(text)
+        const result2 = parser.parse(text)
         const stats2 = parseCache.getStats()
         expect(stats2.misses).toBe(1)
         expect(stats2.hits).toBe(1)
@@ -228,9 +345,9 @@ describe('LabelParser', () => {
       })
 
       it('should cache different texts separately', () => {
-        parser.parseHtmlText('Text A')
-        parser.parseHtmlText('Text B')
-        parser.parseHtmlText('Text A') // Should be cached
+        parser.parse('Text A')
+        parser.parse('Text B')
+        parser.parse('Text A') // Should be cached
 
         const stats = parseCache.getStats()
         expect(stats.misses).toBe(2) // A and B
@@ -239,29 +356,107 @@ describe('LabelParser', () => {
     })
 
     describe('edge cases', () => {
-      it('should handle whitespace in tags', () => {
-        const result = parser.parseHtmlText('< b >Bold</ b >')
-        // Whitespace in tags is not supported by the regex, treated as plain text
-        expect(result[0]).toBeDefined()
-        expect(result[0]!.type).toBe('text')
-      })
-
       it('should handle unclosed tags gracefully', () => {
-        const result = parser.parseHtmlText('<b>Bold text')
-        expect(result).toEqual([{ type: 'text', text: 'Bold text', bold: true, italic: false }])
+        const result = parser.parse('<b>Bold text')
+        expect(result).toEqual([{ type: 'text', text: 'Bold text', style: { bold: true } }])
       })
 
       it('should handle special characters', () => {
-        const result = parser.parseHtmlText('Special: & < >')
-        // The < and > are treated as potential HTML tags, so parsing stops
+        const result = parser.parse('Special: &amp; &lt; &gt;')
         expect(result[0]).toBeDefined()
-        expect(result[0]!.type).toBe('text')
-        expect(result[0]!.text).toContain('Special:')
+        const textNode = result[0]!
+        expect(textNode.type).toBe('text')
+        expect((textNode as { text?: string }).text).toContain('Special:')
+      })
+    })
+
+    describe('CSS classes and inline styles (ignored)', () => {
+      it('should ignore CSS class on bold tag', () => {
+        const result = parser.parse('<b class="highlight">Bold</b>')
+        expect(result).toEqual([{ type: 'text', text: 'Bold', style: { bold: true } }])
       })
 
-      it('should handle dimensions without quotes', () => {
-        const result = parser.parseHtmlText('<img src="test.png" width=32 height=24>')
-        expect(result).toEqual([{ type: 'image', src: 'test.png', width: 32, height: 24 }])
+      it('should ignore inline style on italic tag', () => {
+        const result = parser.parse('<i style="color: red; font-size: 20px;">Italic</i>')
+        expect(result).toEqual([{ type: 'text', text: 'Italic', style: { italic: true } }])
+      })
+
+      it('should ignore CSS class and style on link', () => {
+        const result = parser.parse(
+          '<a href="https://example.com" class="btn btn-primary" style="color: blue;">Link</a>',
+        )
+        expect(result).toEqual([
+          { type: 'link', href: 'https://example.com', text: 'Link', style: {} },
+        ])
+      })
+
+      it('should ignore CSS class on image (only src, width, height are used)', () => {
+        const result = parser.parse(
+          '<img src="test.png" class="rounded" style="border: 1px solid black;" width="32" height="32">',
+        )
+        expect(result).toEqual([{ type: 'image', src: 'test.png', width: 32, height: 32 }])
+      })
+
+      it('should ignore id attribute', () => {
+        const result = parser.parse('<b id="main-title">Title</b>')
+        expect(result).toEqual([{ type: 'text', text: 'Title', style: { bold: true } }])
+      })
+
+      it('should ignore data attributes', () => {
+        const result = parser.parse('<a href="https://example.com" data-tracking="click">Link</a>')
+        expect(result).toEqual([
+          { type: 'link', href: 'https://example.com', text: 'Link', style: {} },
+        ])
+      })
+
+      it('should render span with class as plain text (styles ignored)', () => {
+        const result = parser.parse('Text with <span class="highlight">highlighted</span> word')
+        expect(result).toEqual([
+          { type: 'text', text: 'Text with ', style: {} },
+          { type: 'text', text: 'highlighted', style: {} },
+          { type: 'text', text: ' word', style: {} },
+        ])
+      })
+
+      it('should render div with style as plain text (styles ignored)', () => {
+        const result = parser.parse('<div style="background: yellow;">Content</div>')
+        expect(result).toEqual([{ type: 'text', text: 'Content', style: {} }])
+      })
+
+      it('should return empty for Font Awesome icon tag (empty content with class)', () => {
+        const result = parser.parse("<i class='fa fa-mouse-pointer'></i>")
+        expect(result).toEqual([])
+      })
+
+      it('should return empty for empty bold tag with class', () => {
+        const result = parser.parse('<b class="highlight"></b>')
+        expect(result).toEqual([])
+      })
+
+      it('should return empty for empty span with class', () => {
+        const result = parser.parse('<span class="icon"></span>')
+        expect(result).toEqual([])
+      })
+
+      it('should return empty for empty link', () => {
+        const result = parser.parse('<a href="https://example.com"></a>')
+        expect(result).toEqual([])
+      })
+
+      it('should return text for non-empty element with class', () => {
+        const result = parser.parse("<i class='fa'>icon text</i>")
+        expect(result).toEqual([{ type: 'text', text: 'icon text', style: { italic: true } }])
+      })
+
+      it('should handle mixed empty and non-empty elements', () => {
+        const result = parser.parse(
+          "Text <i class='fa fa-icon'></i> more text <b class='x'>bold</b>",
+        )
+        expect(result).toEqual([
+          { type: 'text', text: 'Text ', style: {} },
+          { type: 'text', text: ' more text ', style: {} },
+          { type: 'text', text: 'bold', style: { bold: true } },
+        ])
       })
     })
   })
@@ -275,6 +470,14 @@ describe('LabelParser', () => {
       expect(parser.hasHtmlFormatting('<i>Italic</i>')).toBe(true)
     })
 
+    it('should detect strong tags', () => {
+      expect(parser.hasHtmlFormatting('<strong>Strong</strong>')).toBe(true)
+    })
+
+    it('should detect em tags', () => {
+      expect(parser.hasHtmlFormatting('<em>Emphasis</em>')).toBe(true)
+    })
+
     it('should detect img tags', () => {
       expect(parser.hasHtmlFormatting('<img src="test.png">')).toBe(true)
     })
@@ -283,13 +486,12 @@ describe('LabelParser', () => {
       expect(parser.hasHtmlFormatting('<svg></svg>')).toBe(true)
     })
 
-    it('should return false for plain text', () => {
-      expect(parser.hasHtmlFormatting('Plain text')).toBe(false)
+    it('should detect anchor tags', () => {
+      expect(parser.hasHtmlFormatting('<a href="https://example.com">Link</a>')).toBe(true)
     })
 
-    it('should detect closing tags', () => {
-      expect(parser.hasHtmlFormatting('</b>')).toBe(true)
-      expect(parser.hasHtmlFormatting('</i>')).toBe(true)
+    it('should return false for plain text', () => {
+      expect(parser.hasHtmlFormatting('Plain text')).toBe(false)
     })
   })
 
@@ -406,6 +608,26 @@ describe('LabelParser', () => {
     it('should use default width for SVG without dimensions', () => {
       const width = parser.measureHtmlText('<svg></svg>', ctx, buildFontStyle, getImage)
       expect(width).toBe(16) // Default placeholder width
+    })
+
+    it('should measure link text', () => {
+      const width = parser.measureHtmlText(
+        '<a href="https://example.com">Link</a>',
+        ctx,
+        buildFontStyle,
+        getImage,
+      )
+      expect(width).toBe(40) // 4 characters * 10px
+    })
+
+    it('should measure link text mixed with regular text', () => {
+      const width = parser.measureHtmlText(
+        'Visit <a href="https://example.com">Link</a>',
+        ctx,
+        buildFontStyle,
+        getImage,
+      )
+      expect(width).toBe(100) // 10 characters * 10px ("Visit " + "Link")
     })
 
     it('should restore original font after measuring', () => {

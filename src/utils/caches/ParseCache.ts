@@ -1,24 +1,14 @@
 /**
  * ParseCache - Caches HTML label parsing results
  *
- * Optimizes performance by avoiding redundant regex parsing
+ * Optimizes performance by avoiding redundant parsing
  * for the same label content across multiple renders.
  *
  * Uses LRU (Least Recently Used) eviction to prevent memory bloat.
  */
 
 import { LRUCache } from './LRUCache'
-
-export interface ParsedSegment {
-  type: 'text' | 'image' | 'svg'
-  text?: string
-  bold?: boolean
-  italic?: boolean
-  src?: string
-  svgContent?: string
-  width?: number
-  height?: number
-}
+import type { LabelNode } from '../parsers/LabelAST'
 
 export interface ParseCacheStats {
   hits: number
@@ -38,14 +28,14 @@ export interface ParseCacheOptions {
 }
 
 export class ParseCache {
-  private cache: LRUCache<string, ParsedSegment[]>
+  private cache: LRUCache<string, LabelNode[]>
 
   /**
    * Create a new parse cache
    * @param options - Cache configuration options
    */
   constructor(options: ParseCacheOptions = {}) {
-    this.cache = new LRUCache<string, ParsedSegment[]>({
+    this.cache = new LRUCache<string, LabelNode[]>({
       maxSize: options.maxSize ?? 1000,
     })
   }
@@ -54,9 +44,9 @@ export class ParseCache {
    * Get cached parse result or parse and cache
    * @param text - The label text to parse
    * @param parser - Function to parse the text (called only on cache miss)
-   * @returns Parsed segments
+   * @returns Parsed nodes
    */
-  public getParsed(text: string, parser: (text: string) => ParsedSegment[]): ParsedSegment[] {
+  public getParsed(text: string, parser: (text: string) => LabelNode[]): LabelNode[] {
     // Check cache first
     const cached = this.cache.get(text)
     if (cached !== undefined) {
