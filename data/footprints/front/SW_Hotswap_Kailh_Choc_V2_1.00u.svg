@@ -1,0 +1,60 @@
+<svg
+   version="1.1"
+   width="20mm"
+   height="20mm"
+   viewBox="-10 -10 20 20"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <g style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1">
+    <path
+       class="hoverable"
+       style="fill:#4D7FC4;fill-opacity:1;fill-rule:evenodd;stroke:none"
+       d="m -4.775,-7 0.019,-0.096 0.054,-0.081 0.081,-0.054 0.096,-0.019 h 2.05 l 0.096,0.019 0.081,0.054 0.054,0.081 0.019,0.096 v 2 l -0.019,0.096 -0.054,0.081 -0.081,0.054 -0.096,0.019 h -2.05 L -4.621,-4.769 -4.702,-4.823 -4.756,-4.904 -4.775,-5 Z" />
+    <path
+       class="hoverable"
+       style="fill:#4D7FC4;fill-opacity:1;fill-rule:evenodd;stroke:none"
+       d="M 7.225,-4.8 7.244,-4.896 7.298,-4.977 7.379,-5.031 7.475,-5.05 h 2.05 l 0.096,0.019 0.081,0.054 0.054,0.081 0.019,0.096 v 2 L 9.756,-2.704 9.702,-2.623 9.621,-2.569 9.525,-2.55 H 7.475 L 7.379,-2.569 7.298,-2.623 7.244,-2.704 7.225,-2.8 Z" />
+  </g>
+  <g style="fill:#AFAFAF;fill-opacity:1.0;stroke:none">
+    <circle class="hoverable" cx="-5" cy="5.15" r="0.8" />
+    <circle class="hoverable" cx="0" cy="-5.9" r="1.525" />
+    <circle class="hoverable" cx="0" cy="0" r="2.525" />
+    <circle class="hoverable" cx="5" cy="-3.8" r="1.525" />
+  </g>
+  <g style="fill:none;stroke:#585d84;stroke-width:0.1;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1">
+    <path d="M -2.275,-7.45 -1.45,-8.275" />
+    <path d="M -1.45,-8.275 H 1.261" />
+    <path d="M -1.45,-3.625 -2.275,-4.45" />
+    <path d="M 1.175,-3.625 H -1.45" />
+    <path d="m 1.261,-8.275 0.382,0.076" />
+    <path d="m 1.643,-8.199 0.325,0.217" />
+    <path d="M 1.756,-3.516 1.175,-3.625" />
+    <path d="m 1.968,-7.982 0.507,0.507" />
+    <path d="M 2.258,-3.203 1.756,-3.516" />
+    <path d="m 2.475,-7.475 v 0.2" />
+    <path d="m 2.475,-7.275 0.091,0.459" />
+    <path d="m 2.566,-6.816 0.26,0.39" />
+    <path d="M 2.612,-2.729 2.258,-3.203" />
+    <path d="M 2.769,-2.158 2.612,-2.729" />
+    <path d="m 2.826,-6.426 0.39,0.26" />
+    <path d="M 2.848,-1.873 2.769,-2.158" />
+    <path d="M 3.025,-1.636 2.848,-1.873" />
+    <path d="m 3.216,-6.166 0.459,0.091" />
+    <path d="M 3.276,-1.48 3.025,-1.636" />
+    <path d="M 3.567,-1.425 3.276,-1.48" />
+    <path d="m 3.675,-6.075 h 2.8" />
+    <path d="m 6.475,-6.075 0.306,0.061" />
+    <path d="m 6.781,-6.014 0.26,0.173" />
+    <path d="m 7.041,-5.841 0.173,0.26" />
+    <path d="m 7.214,-5.581 0.061,0.306" />
+    <path d="m 7.275,-2.225 h 0.3" />
+    <path d="m 7.575,-2.225 v 0.8" />
+    <path d="M 7.575,-1.425 H 3.567" />
+  </g>
+  <g style="fill:none;stroke:#AFAFAF;stroke-width:0.1;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1">
+    <path d="m -7.5,-7.5 v 15" />
+    <path d="m -7.5,7.5 h 15" />
+    <path d="m 7.5,-7.5 h -15" />
+    <path d="m 7.5,7.5 v -15" />
+  </g>
+</svg>

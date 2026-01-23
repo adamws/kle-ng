@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+Disallow: /data/presets/
+Disallow: /data/footprints/
+
+Sitemap: https://editor.keyboard-tools.xyz/sitemap.xml
