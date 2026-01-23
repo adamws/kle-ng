@@ -11,9 +11,10 @@
       </h6>
       <div class="help-content">
         <p>
-          The PCB Generator creates a KiCad project files based on your keyboard layout. It creates
-          key matrix schematic and places switch and diode footprints according to your layout's key
-          positions and can optionally route the connections between components.
+          The PCB Generator creates a <a href="https://kicad.org">KiCad</a> project files based on
+          your keyboard layout. It creates key matrix schematic and places switch and diode
+          footprints according to your layout's key positions and can optionally route the
+          connections between components.
         </p>
       </div>
     </div>
