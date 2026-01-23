@@ -132,6 +132,12 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
+.modal-header .modal-title > :first-child {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
 /* Shared help section styles - use :deep() for slot content */
 :deep(.help-section) {
   margin-bottom: 1.5rem;
