@@ -11,6 +11,7 @@ import AppFooter from './components/AppFooter.vue'
 import CanvasToolbar from './components/CanvasToolbar.vue'
 import CanvasFooter from './components/CanvasFooter.vue'
 import CanvasHelpModal from './components/CanvasHelpModal.vue'
+import FundingModal from './components/FundingModal.vue'
 import PcbHelpModal from './components/PcbHelpModal.vue'
 import PcbSettingsModal from './components/PcbSettingsModal.vue'
 import ToastContainer from './components/ToastContainer.vue'
@@ -247,6 +248,17 @@ const closeHelp = () => {
   isHelpVisible.value = false
 }
 
+// Funding modal state
+const isFundingVisible = ref(false)
+
+const showFunding = () => {
+  isFundingVisible.value = true
+}
+
+const closeFunding = () => {
+  isFundingVisible.value = false
+}
+
 // PCB Help modal state
 const isPcbHelpVisible = ref(false)
 
@@ -404,6 +416,15 @@ const stopResize = () => {
               >
                 <i class="bi bi-question-circle"></i>
               </button>
+              <!-- Funding button only for Layout Editor section -->
+              <button
+                v-if="section.id === 'canvas'"
+                @click.stop="showFunding"
+                class="btn btn-sm btn-outline-secondary help-btn"
+                title="Funding"
+              >
+                <i class="bi bi-coin"></i>
+              </button>
               <!-- Help button for PCB Generator section -->
               <button
                 v-if="section.id === 'pcb'"
@@ -505,6 +526,9 @@ const stopResize = () => {
 
     <!-- Canvas Help Modal -->
     <CanvasHelpModal :is-visible="isHelpVisible" @close="closeHelp" />
+
+    <!-- Funding Modal -->
+    <FundingModal :is-visible="isFundingVisible" @close="closeFunding" />
 
     <!-- PCB Help Modal -->
     <PcbHelpModal :is-visible="isPcbHelpVisible" @close="closePcbHelp" />
