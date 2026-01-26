@@ -1,9 +1,18 @@
 import type { Key } from '@adamws/kle-serial'
 import type { KeyRenderParams } from '../canvas-renderer'
-import type { LabelNode } from '../parsers/LabelAST'
+import type { LabelNode, TextStyle } from '../parsers/LabelAST'
 import { labelParser } from '../parsers/LabelParser'
 import { svgCache } from '../caches/SVGCache'
 import { linkTracker } from './LinkTracker'
+
+/**
+ * Rotation context for link hit testing
+ */
+interface RotationContext {
+  angle: number
+  originX: number
+  originY: number
+}
 
 // Link styling constants
 const LINK_COLOR = '#0066cc'
@@ -183,8 +192,9 @@ export class LabelRenderer {
         // Image-only label: position based on alignment
         this.drawImageLabel(ctx, label, params, pos, index, getImageFn, loadImageFn, onLoadCallback)
       } else {
-        // Text or mixed content: use normal text rendering
+        // Text or mixed content: parse once and render with pre-parsed nodes
         const processedLabel = labelParser.processLabelText(label)
+        const nodes = labelParser.parse(processedLabel)
 
         // Build rotation context for link tracking (if key is rotated)
         const rotationContext = key.rotation_angle
@@ -195,8 +205,9 @@ export class LabelRenderer {
             }
           : undefined
 
-        this.drawWrappedText(
+        this.drawWrappedNodes(
           ctx,
+          nodes,
           processedLabel,
           x,
           y,
@@ -308,8 +319,9 @@ export class LabelRenderer {
         // Image-only label: position based on alignment
         this.drawImageLabel(ctx, label, params, pos, index, getImageFn, loadImageFn, onLoadCallback)
       } else {
-        // Text or mixed content: use normal text rendering
+        // Text or mixed content: parse once and render with pre-parsed nodes
         const processedLabel = labelParser.processLabelText(label)
+        const nodes = labelParser.parse(processedLabel)
 
         // Build rotation context for link tracking (if key is rotated)
         const rotationContext = key.rotation_angle
@@ -320,8 +332,9 @@ export class LabelRenderer {
             }
           : undefined
 
-        this.drawWrappedText(
+        this.drawWrappedNodes(
           ctx,
+          nodes,
           processedLabel,
           x,
           y,
@@ -466,9 +479,31 @@ export class LabelRenderer {
    *
    * @param text - Text to check
    * @returns True if text contains HTML tags
+   * @deprecated Use nodesHaveFormatting() with pre-parsed nodes instead
    */
   public hasHtmlFormatting(text: string): boolean {
     return labelParser.hasHtmlFormatting(text)
+  }
+
+  /**
+   * Check if parsed nodes contain any HTML formatting (links, images, SVG, or styled text).
+   * Use this instead of hasHtmlFormatting() when you have pre-parsed nodes.
+   *
+   * @param nodes - Parsed label nodes
+   * @returns True if nodes contain HTML formatting
+   */
+  public nodesHaveFormatting(nodes: LabelNode[]): boolean {
+    for (const node of nodes) {
+      // Links, images, and SVGs are always considered "formatted"
+      if (node.type === 'link' || node.type === 'image' || node.type === 'svg') {
+        return true
+      }
+      // Text nodes with bold or italic styling are "formatted"
+      if (node.type === 'text' && (node.style.bold || node.style.italic)) {
+        return true
+      }
+    }
+    return false
   }
 
   /**
@@ -609,54 +644,17 @@ export class LabelRenderer {
     }
 
     if (node.type === 'link') {
-      const fontStyle = this.buildFontStyle(
+      const linkWidth = this.renderLinkNode(
         ctx,
-        node.style.bold ?? false,
-        node.style.italic ?? false,
-        fontFamily,
-      )
-      ctx.font = fontStyle
-
-      const linkWidth = ctx.measureText(node.text).width
-
-      // Calculate bounding box Y based on baseline
-      let boundingY = y
-      if (originalTextBaseline === 'middle') {
-        boundingY = y - fontSize / 2
-      } else if (originalTextBaseline === 'alphabetic') {
-        boundingY = y - fontSize
-      }
-
-      // Apply link color
-      ctx.fillStyle = LINK_COLOR
-      ctx.fillText(node.text, x, y)
-
-      // Draw underline only when this link is hovered
-      if (hoveredLinkHref === node.href) {
-        const metrics = ctx.measureText(node.text)
-        const underlineY = y + metrics.actualBoundingBoxDescent + LINK_UNDERLINE_OFFSET
-
-        ctx.beginPath()
-        ctx.strokeStyle = LINK_COLOR
-        ctx.lineWidth = 1
-        ctx.moveTo(x, underlineY)
-        ctx.lineTo(x + linkWidth, underlineY)
-        ctx.stroke()
-      }
-
-      // Register link bounding box for hit testing
-      linkTracker.registerLink(
-        node.href,
-        node.text,
+        node,
         x,
-        boundingY,
-        linkWidth,
+        y,
+        fontFamily,
         fontSize,
-        rotationContext?.angle || 0,
-        rotationContext?.originX || 0,
-        rotationContext?.originY || 0,
+        originalTextBaseline,
+        rotationContext,
+        hoveredLinkHref,
       )
-
       ctx.font = originalFont
       ctx.fillStyle = originalFillStyle
       return linkWidth
@@ -697,11 +695,93 @@ export class LabelRenderer {
   }
 
   /**
-   * Draw HTML formatted text at a specific position.
+   * Render a link node with styling, underline on hover, and hit testing registration.
+   *
+   * @param ctx - Canvas rendering context
+   * @param node - Link node to render
+   * @param x - X coordinate
+   * @param y - Y coordinate
+   * @param fontFamily - Font family to use
+   * @param fontSize - Font size in pixels
+   * @param textBaseline - Current text baseline for bounding box calculation
+   * @param rotationContext - Optional rotation context for link tracking
+   * @param hoveredLinkHref - Optional href of currently hovered link (for underline)
+   * @returns Width of rendered link
+   */
+  private renderLinkNode(
+    ctx: CanvasRenderingContext2D,
+    node: { type: 'link'; href: string; text: string; style: TextStyle },
+    x: number,
+    y: number,
+    fontFamily: string,
+    fontSize: number,
+    textBaseline: CanvasTextBaseline,
+    rotationContext?: RotationContext,
+    hoveredLinkHref?: string | null,
+  ): number {
+    const originalFillStyle = ctx.fillStyle
+
+    // Build and apply font style
+    const fontStyle = this.buildFontStyle(
+      ctx,
+      node.style.bold ?? false,
+      node.style.italic ?? false,
+      fontFamily,
+    )
+    ctx.font = fontStyle
+
+    const linkWidth = ctx.measureText(node.text).width
+
+    // Calculate bounding box Y based on baseline
+    let boundingY = y
+    if (textBaseline === 'middle') {
+      boundingY = y - fontSize / 2
+    } else if (textBaseline === 'alphabetic') {
+      boundingY = y - fontSize
+    }
+
+    // Apply link color and draw text
+    ctx.fillStyle = LINK_COLOR
+    ctx.fillText(node.text, x, y)
+
+    // Draw underline only when this link is hovered
+    if (hoveredLinkHref === node.href) {
+      const metrics = ctx.measureText(node.text)
+      const underlineY = y + metrics.actualBoundingBoxDescent + LINK_UNDERLINE_OFFSET
+
+      ctx.beginPath()
+      ctx.strokeStyle = LINK_COLOR
+      ctx.lineWidth = 1
+      ctx.moveTo(x, underlineY)
+      ctx.lineTo(x + linkWidth, underlineY)
+      ctx.stroke()
+    }
+
+    // Register link bounding box for hit testing
+    linkTracker.registerLink(
+      node.href,
+      node.text,
+      x,
+      boundingY,
+      linkWidth,
+      fontSize,
+      rotationContext?.angle || 0,
+      rotationContext?.originX || 0,
+      rotationContext?.originY || 0,
+    )
+
+    // Restore fill style
+    ctx.fillStyle = originalFillStyle
+
+    return linkWidth
+  }
+
+  /**
+   * Draw pre-parsed label nodes at a specific position.
    * Handles mixed bold, italic, and plain text segments with images and links.
    *
    * @param ctx - Canvas rendering context
-   * @param text - HTML formatted text to draw
+   * @param nodes - Pre-parsed label nodes to draw
    * @param x - X coordinate
    * @param y - Y coordinate
    * @param fontFamily - Font family to use
@@ -712,20 +792,18 @@ export class LabelRenderer {
    * @param hoveredLinkHref - Optional href of currently hovered link (for underline)
    * @returns The final Y position after rendering (useful for content after block elements)
    */
-  public drawHtmlText(
+  public drawParsedNodes(
     ctx: CanvasRenderingContext2D,
-    text: string,
+    nodes: LabelNode[],
     x: number,
     y: number,
     fontFamily: string,
     getImageFn: (url: string) => HTMLImageElement | null,
     loadImageFn: (url: string, onLoad?: () => void) => void,
     onLoadCallback?: () => void,
-    rotationContext?: { angle: number; originX: number; originY: number },
+    rotationContext?: RotationContext,
     hoveredLinkHref?: string | null,
   ): number {
-    const nodes = labelParser.parse(text)
-
     // Save context state
     const originalFont = ctx.font
     const originalTextAlign = ctx.textAlign
@@ -769,58 +847,17 @@ export class LabelRenderer {
         ctx.fillText(node.text, currentX, currentY)
         currentX += ctx.measureText(node.text).width
       } else if (node.type === 'link') {
-        const fontStyle = this.buildFontStyle(
+        currentX += this.renderLinkNode(
           ctx,
-          node.style.bold ?? false,
-          node.style.italic ?? false,
-          fontFamily,
-        )
-        ctx.font = fontStyle
-
-        const linkWidth = ctx.measureText(node.text).width
-
-        // Calculate bounding box Y based on baseline
-        let boundingY = currentY
-        if (originalTextBaseline === 'middle') {
-          boundingY = currentY - fontSize / 2
-        } else if (originalTextBaseline === 'alphabetic') {
-          boundingY = currentY - fontSize
-        }
-
-        // Apply link color
-        ctx.fillStyle = LINK_COLOR
-        ctx.fillText(node.text, currentX, currentY)
-
-        // Draw underline only when this link is hovered
-        if (hoveredLinkHref === node.href) {
-          const metrics = ctx.measureText(node.text)
-          const underlineY = currentY + metrics.actualBoundingBoxDescent + LINK_UNDERLINE_OFFSET
-
-          ctx.beginPath()
-          ctx.strokeStyle = LINK_COLOR
-          ctx.lineWidth = 1
-          ctx.moveTo(currentX, underlineY)
-          ctx.lineTo(currentX + linkWidth, underlineY)
-          ctx.stroke()
-        }
-
-        // Register link bounding box for hit testing
-        linkTracker.registerLink(
-          node.href,
-          node.text,
+          node,
           currentX,
-          boundingY,
-          linkWidth,
+          currentY,
+          fontFamily,
           fontSize,
-          rotationContext?.angle || 0,
-          rotationContext?.originX || 0,
-          rotationContext?.originY || 0,
+          originalTextBaseline,
+          rotationContext,
+          hoveredLinkHref,
         )
-
-        // Restore original fill style for next node
-        ctx.fillStyle = originalFillStyle
-
-        currentX += linkWidth
       } else if (node.type === 'image') {
         const img = getImageFn(node.src)
         if (!img) {
@@ -889,6 +926,50 @@ export class LabelRenderer {
   }
 
   /**
+   * Draw HTML formatted text at a specific position.
+   * Handles mixed bold, italic, and plain text segments with images and links.
+   *
+   * @param ctx - Canvas rendering context
+   * @param text - HTML formatted text to draw
+   * @param x - X coordinate
+   * @param y - Y coordinate
+   * @param fontFamily - Font family to use
+   * @param getImageFn - Function to get cached image
+   * @param loadImageFn - Function to load image if not cached
+   * @param onLoadCallback - Optional callback when image loads
+   * @param rotationContext - Optional rotation context for link tracking
+   * @param hoveredLinkHref - Optional href of currently hovered link (for underline)
+   * @returns The final Y position after rendering (useful for content after block elements)
+   * @deprecated Use drawParsedNodes() with pre-parsed nodes instead
+   */
+  public drawHtmlText(
+    ctx: CanvasRenderingContext2D,
+    text: string,
+    x: number,
+    y: number,
+    fontFamily: string,
+    getImageFn: (url: string) => HTMLImageElement | null,
+    loadImageFn: (url: string, onLoad?: () => void) => void,
+    onLoadCallback?: () => void,
+    rotationContext?: RotationContext,
+    hoveredLinkHref?: string | null,
+  ): number {
+    const nodes = labelParser.parse(text)
+    return this.drawParsedNodes(
+      ctx,
+      nodes,
+      x,
+      y,
+      fontFamily,
+      getImageFn,
+      loadImageFn,
+      onLoadCallback,
+      rotationContext,
+      hoveredLinkHref,
+    )
+  }
+
+  /**
    * Measure the width of a single node.
    *
    * @param ctx - Canvas rendering context
@@ -941,6 +1022,28 @@ export class LabelRenderer {
     }
 
     return 0
+  }
+
+  /**
+   * Measure the total width of pre-parsed nodes.
+   *
+   * @param ctx - Canvas rendering context
+   * @param nodes - Pre-parsed label nodes
+   * @param fontFamily - Font family to use
+   * @param getImageFn - Function to get cached image
+   * @returns Total width of all nodes in pixels
+   */
+  public measureNodesWidth(
+    ctx: CanvasRenderingContext2D,
+    nodes: LabelNode[],
+    fontFamily: string,
+    getImageFn: (url: string) => HTMLImageElement | null,
+  ): number {
+    let totalWidth = 0
+    for (const node of nodes) {
+      totalWidth += this.measureNodeWidth(ctx, node, fontFamily, getImageFn)
+    }
+    return totalWidth
   }
 
   /**
@@ -1330,6 +1433,286 @@ export class LabelRenderer {
     const firstLine = finalLines[0]
     if (finalLines.length === 1 && firstLine && measureLine(firstLine) <= maxWidth) {
       if (this.hasHtmlFormatting(firstLine)) {
+        this.drawHtmlText(
+          ctx,
+          firstLine,
+          x,
+          y,
+          fontFamily,
+          getImageFn,
+          loadImageFn,
+          onLoadCallback,
+          rotationContext,
+          hoveredLinkHref,
+        )
+      } else {
+        ctx.fillText(firstLine, x, y)
+      }
+      return
+    }
+
+    // Use multi-line rendering for multiple lines or overflow cases
+    if (anyLineHasHtml) {
+      this.drawMultiLineHtmlText(
+        ctx,
+        finalLines.slice(0, maxLines),
+        x,
+        y,
+        lineHeight,
+        pos,
+        fontFamily,
+        getImageFn,
+        loadImageFn,
+        onLoadCallback,
+        rotationContext,
+        hoveredLinkHref,
+      )
+    } else {
+      this.drawMultiLineText(ctx, finalLines.slice(0, maxLines), x, y, lineHeight, pos)
+    }
+  }
+
+  /**
+   * Draw pre-parsed label nodes with automatic wrapping to fit within bounds.
+   * This is the preferred method - labels should be parsed once and nodes passed here.
+   *
+   * @param ctx - Canvas rendering context
+   * @param nodes - Pre-parsed label nodes
+   * @param text - Original processed text (used for line break handling and word wrapping)
+   * @param x - X coordinate
+   * @param y - Y coordinate
+   * @param maxWidth - Maximum width in pixels
+   * @param maxHeight - Maximum height in pixels
+   * @param pos - Position configuration for alignment
+   * @param fontFamily - Font family to use
+   * @param getImageFn - Function to get cached image
+   * @param loadImageFn - Function to load image if not cached
+   * @param onLoadCallback - Optional callback when image loads
+   * @param rotationContext - Optional rotation context for link tracking
+   * @param hoveredLinkHref - Optional href of currently hovered link (for underline)
+   */
+  public drawWrappedNodes(
+    ctx: CanvasRenderingContext2D,
+    nodes: LabelNode[],
+    text: string,
+    x: number,
+    y: number,
+    maxWidth: number,
+    maxHeight: number,
+    pos: LabelPosition,
+    fontFamily: string,
+    getImageFn: (url: string) => HTMLImageElement | null,
+    loadImageFn: (url: string, onLoad?: () => void) => void,
+    onLoadCallback?: () => void,
+    rotationContext?: RotationContext,
+    hoveredLinkHref?: string | null,
+  ): void {
+    const lineHeight = parseInt(ctx.font.match(/\d+/)?.[0] || '12') * 1.2
+    const maxLines = Math.floor(maxHeight / lineHeight)
+
+    if (maxLines < 1) {
+      // Not enough vertical space for even one line
+      return
+    }
+
+    // Check if nodes contain HTML formatting (using pre-parsed nodes)
+    const hasFormatting = this.nodesHaveFormatting(nodes)
+
+    // Check if text contains explicit line breaks from <br> tags
+    const hasLineBreaks = text.includes('\n')
+
+    if (!hasLineBreaks && !hasFormatting) {
+      // No line breaks and no HTML - use simple plain text logic
+      const textWidth = ctx.measureText(text).width
+      if (textWidth <= maxWidth) {
+        // Text fits on one line
+        ctx.fillText(text, x, y)
+        return
+      }
+
+      // Text is too long - wrap by words
+      const words = text.split(' ')
+      if (words.length === 1) {
+        // Single word too long
+        this.drawOverflowText(ctx, text, x, y, maxWidth)
+        return
+      }
+
+      // Multiple words - wrap them
+      const lines: string[] = []
+      let currentLine = ''
+
+      for (const word of words) {
+        const testLine = currentLine ? `${currentLine} ${word}` : word
+        const testWidth = ctx.measureText(testLine).width
+
+        if (testWidth <= maxWidth) {
+          currentLine = testLine
+        } else {
+          if (currentLine) {
+            lines.push(currentLine)
+            currentLine = word
+          } else {
+            // Single word too long for line
+            lines.push(word)
+          }
+
+          if (lines.length >= maxLines) {
+            break
+          }
+        }
+      }
+
+      if (currentLine && lines.length < maxLines) {
+        lines.push(currentLine)
+      }
+
+      this.drawMultiLineText(ctx, lines, x, y, lineHeight, pos)
+      return
+    } else if (hasFormatting && !hasLineBreaks) {
+      // Has HTML formatting but no line breaks - render with formatting
+      const textWidth = this.measureNodesWidth(ctx, nodes, fontFamily, getImageFn)
+      if (textWidth <= maxWidth) {
+        // Text fits on one line - render nodes directly
+        this.drawParsedNodes(
+          ctx,
+          nodes,
+          x,
+          y,
+          fontFamily,
+          getImageFn,
+          loadImageFn,
+          onLoadCallback,
+          rotationContext,
+          hoveredLinkHref,
+        )
+        return
+      }
+
+      // HTML text is too long - wrap with formatting preserved
+      // Note: wrapHtmlText still needs text string for word splitting logic
+      const wrappedLines = this.wrapHtmlText(ctx, text, maxWidth, fontFamily)
+      if (wrappedLines.length === 0) {
+        return
+      }
+
+      // Draw each line with HTML formatting
+      this.drawMultiLineHtmlText(
+        ctx,
+        wrappedLines,
+        x,
+        y,
+        lineHeight,
+        pos,
+        fontFamily,
+        getImageFn,
+        loadImageFn,
+        onLoadCallback,
+        rotationContext,
+        hoveredLinkHref,
+      )
+      return
+    }
+
+    // Handle text with explicit line breaks (may also contain HTML)
+    const explicitLines = text.split('\n')
+    const finalLines: string[] = []
+    // Track which lines have formatting (to avoid re-parsing)
+    const lineHasFormatting: boolean[] = []
+
+    // Helper to measure line width (parses line only if we don't already know)
+    const measureLine = (line: string, lineIndex: number): number => {
+      if (lineHasFormatting[lineIndex]) {
+        return this.measureHtmlText(ctx, line, fontFamily, getImageFn)
+      }
+      return ctx.measureText(line).width
+    }
+
+    for (const line of explicitLines) {
+      const trimmedLine = line.trim()
+
+      if (!trimmedLine) {
+        // Empty line from line break - add it
+        finalLines.push('')
+        lineHasFormatting.push(false)
+        if (finalLines.length >= maxLines) break
+        continue
+      }
+
+      // Parse this line once to check formatting
+      const lineNodes = labelParser.parse(trimmedLine)
+      const lineFormatted = this.nodesHaveFormatting(lineNodes)
+
+      // Check if this line fits as-is
+      const lineWidth = lineFormatted
+        ? this.measureNodesWidth(ctx, lineNodes, fontFamily, getImageFn)
+        : ctx.measureText(trimmedLine).width
+
+      if (lineWidth <= maxWidth) {
+        // Line fits, add it directly
+        finalLines.push(trimmedLine)
+        lineHasFormatting.push(lineFormatted)
+      } else {
+        // Line is too long, need to wrap words within this line
+        if (lineFormatted) {
+          const wrappedLines = this.wrapHtmlText(ctx, trimmedLine, maxWidth, fontFamily)
+          for (const wrapped of wrappedLines) {
+            finalLines.push(wrapped)
+            lineHasFormatting.push(true) // wrapped HTML lines still have formatting
+            if (finalLines.length >= maxLines) break
+          }
+        } else {
+          // Plain text - wrap by words
+          const words = trimmedLine.split(' ')
+
+          if (words.length === 1) {
+            // Single word that's too long - add it and let rendering handle overflow
+            finalLines.push(trimmedLine)
+            lineHasFormatting.push(false)
+          } else {
+            // Multiple words - wrap them
+            let currentLine = ''
+
+            for (const word of words) {
+              const testLine = currentLine ? `${currentLine} ${word}` : word
+              const testWidth = ctx.measureText(testLine).width
+
+              if (testWidth <= maxWidth) {
+                currentLine = testLine
+              } else {
+                if (currentLine) {
+                  finalLines.push(currentLine)
+                  lineHasFormatting.push(false)
+                  currentLine = word
+                  if (finalLines.length >= maxLines) break
+                } else {
+                  // Single word too long for line
+                  finalLines.push(word)
+                  lineHasFormatting.push(false)
+                  break
+                }
+              }
+            }
+
+            if (currentLine && finalLines.length < maxLines) {
+              finalLines.push(currentLine)
+              lineHasFormatting.push(false)
+            }
+          }
+        }
+      }
+
+      // Stop if we've reached max lines
+      if (finalLines.length >= maxLines) break
+    }
+
+    // Check if any line has HTML formatting (using tracked info)
+    const anyLineHasHtml = lineHasFormatting.some((hasFormat) => hasFormat)
+
+    // If we only have one line and it fits, use appropriate rendering
+    const firstLine = finalLines[0]
+    if (finalLines.length === 1 && firstLine && measureLine(firstLine, 0) <= maxWidth) {
+      if (lineHasFormatting[0]) {
         this.drawHtmlText(
           ctx,
           firstLine,
