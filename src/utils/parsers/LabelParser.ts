@@ -1,7 +1,7 @@
 /**
  * LabelParser - Parses HTML-formatted key labels using DOMParser
  *
- * Supports: <b>, <strong>, <i>, <em>, <a>, <img>, <svg>
+ * Supports: <b>, <strong>, <i>, <em>, <a>, <img>, <svg>, <br>
  *
  * Performance: Uses ParseCache to avoid redundant parsing.
  *
@@ -24,16 +24,8 @@ import type { LabelNode, TextStyle } from './LabelAST'
 
 export class LabelParser {
   /**
-   * Process label text by converting <br> tags to newlines
-   */
-  public processLabelText(label: string): string {
-    // Convert <br>, </br>, <BR>, etc. tags (with optional attributes and self-closing) to newlines
-    // Matches: <br>, <br/>, <br />, </br>, <BR>, etc.
-    return label.replace(/<\/?br[^>]*>/gi, '\n')
-  }
-
-  /**
    * Parse text with HTML formatting tags and return AST nodes.
+   * Handles <br> tags by converting them to newline characters in text nodes.
    * Uses ParseCache to avoid redundant parsing for the same label content.
    */
   public parse(text: string): LabelNode[] {
@@ -108,6 +100,11 @@ export class LabelParser {
 
     const el = node as HTMLElement
     const tag = el.tagName.toLowerCase()
+
+    // Line break tag - convert to newline in text node
+    if (tag === 'br') {
+      return [{ type: 'text', text: '\n', style: { ...style } }]
+    }
 
     // Bold tags
     if (tag === 'b' || tag === 'strong') {
@@ -279,6 +276,26 @@ export class LabelParser {
     if (bold) style += 'bold '
     if (italic) style += 'italic '
     return style
+  }
+
+  /**
+   * Extract plain text content from parsed nodes.
+   * Useful for text operations like line break detection and word wrapping.
+   *
+   * @param nodes - Parsed label nodes
+   * @returns Plain text representation with newlines preserved
+   */
+  public getPlainText(nodes: LabelNode[]): string {
+    let text = ''
+    for (const node of nodes) {
+      if (node.type === 'text') {
+        text += node.text
+      } else if (node.type === 'link') {
+        text += node.text
+      }
+      // Images and SVGs don't contribute to plain text
+    }
+    return text
   }
 }
 

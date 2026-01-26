@@ -10,37 +10,6 @@ describe('LabelParser', () => {
     parseCache.clear()
   })
 
-  describe('processLabelText', () => {
-    it('should convert <br> tags to newlines', () => {
-      expect(parser.processLabelText('Line 1<br>Line 2')).toBe('Line 1\nLine 2')
-    })
-
-    it('should convert <BR> tags to newlines', () => {
-      expect(parser.processLabelText('Line 1<BR>Line 2')).toBe('Line 1\nLine 2')
-    })
-
-    it('should handle self-closing <br/> tags', () => {
-      expect(parser.processLabelText('Line 1<br/>Line 2')).toBe('Line 1\nLine 2')
-    })
-
-    it('should handle <br> tags with attributes', () => {
-      expect(parser.processLabelText('Line 1<br class="foo">Line 2')).toBe('Line 1\nLine 2')
-    })
-
-    it('should handle multiple <br> tags', () => {
-      expect(parser.processLabelText('A<br>B<br>C')).toBe('A\nB\nC')
-    })
-
-    it('should handle closing </br> tag style', () => {
-      expect(parser.processLabelText('Line 1</br>Line 2')).toBe('Line 1\nLine 2')
-      expect(parser.processLabelText('A</br>B</br>C')).toBe('A\nB\nC')
-    })
-
-    it('should return unchanged text if no <br> tags', () => {
-      expect(parser.processLabelText('No breaks here')).toBe('No breaks here')
-    })
-  })
-
   describe('parse', () => {
     describe('plain text', () => {
       it('should parse plain text', () => {
@@ -51,6 +20,64 @@ describe('LabelParser', () => {
       it('should return plain text for empty string', () => {
         const result = parser.parse('')
         expect(result).toEqual([{ type: 'text', text: '', style: {} }])
+      })
+    })
+
+    describe('line breaks (<br> tags)', () => {
+      it('should convert <br> to newline text node', () => {
+        const result = parser.parse('Line 1<br>Line 2')
+        expect(result).toEqual([
+          { type: 'text', text: 'Line 1', style: {} },
+          { type: 'text', text: '\n', style: {} },
+          { type: 'text', text: 'Line 2', style: {} },
+        ])
+      })
+
+      it('should handle <BR> (uppercase)', () => {
+        const result = parser.parse('Line 1<BR>Line 2')
+        expect(result).toEqual([
+          { type: 'text', text: 'Line 1', style: {} },
+          { type: 'text', text: '\n', style: {} },
+          { type: 'text', text: 'Line 2', style: {} },
+        ])
+      })
+
+      it('should handle self-closing <br/>', () => {
+        const result = parser.parse('Line 1<br/>Line 2')
+        expect(result).toEqual([
+          { type: 'text', text: 'Line 1', style: {} },
+          { type: 'text', text: '\n', style: {} },
+          { type: 'text', text: 'Line 2', style: {} },
+        ])
+      })
+
+      it('should handle multiple <br> tags', () => {
+        const result = parser.parse('A<br>B<br>C')
+        expect(result).toEqual([
+          { type: 'text', text: 'A', style: {} },
+          { type: 'text', text: '\n', style: {} },
+          { type: 'text', text: 'B', style: {} },
+          { type: 'text', text: '\n', style: {} },
+          { type: 'text', text: 'C', style: {} },
+        ])
+      })
+
+      it('should handle <br> with formatting', () => {
+        const result = parser.parse('<b>Bold</b><br>Normal')
+        expect(result).toEqual([
+          { type: 'text', text: 'Bold', style: { bold: true } },
+          { type: 'text', text: '\n', style: {} },
+          { type: 'text', text: 'Normal', style: {} },
+        ])
+      })
+
+      it('should handle <br> inside formatting tags', () => {
+        const result = parser.parse('<b>A<br>B</b>')
+        expect(result).toEqual([
+          { type: 'text', text: 'A', style: { bold: true } },
+          { type: 'text', text: '\n', style: { bold: true } },
+          { type: 'text', text: 'B', style: { bold: true } },
+        ])
       })
     })
 
@@ -655,6 +682,47 @@ describe('LabelParser', () => {
 
     it('should build bold italic font style', () => {
       expect(parser.buildFontStyle(true, true)).toBe('bold italic ')
+    })
+  })
+
+  describe('getPlainText', () => {
+    it('should extract text from plain text nodes', () => {
+      const nodes = parser.parse('Hello World')
+      expect(parser.getPlainText(nodes)).toBe('Hello World')
+    })
+
+    it('should extract text from formatted nodes', () => {
+      const nodes = parser.parse('<b>Bold</b> and <i>Italic</i>')
+      expect(parser.getPlainText(nodes)).toBe('Bold and Italic')
+    })
+
+    it('should extract text from links', () => {
+      const nodes = parser.parse('Visit <a href="https://example.com">Example</a>')
+      expect(parser.getPlainText(nodes)).toBe('Visit Example')
+    })
+
+    it('should preserve newlines from <br> tags', () => {
+      const nodes = parser.parse('Line 1<br>Line 2')
+      expect(parser.getPlainText(nodes)).toBe('Line 1\nLine 2')
+    })
+
+    it('should ignore image nodes', () => {
+      const nodes = parser.parse('Text <img src="test.png"> More')
+      expect(parser.getPlainText(nodes)).toBe('Text  More')
+    })
+
+    it('should ignore SVG nodes', () => {
+      const nodes = parser.parse('Text <svg></svg> More')
+      expect(parser.getPlainText(nodes)).toBe('Text  More')
+    })
+
+    it('should return empty string for empty nodes', () => {
+      expect(parser.getPlainText([])).toBe('')
+    })
+
+    it('should handle complex mixed content', () => {
+      const nodes = parser.parse('<b>Bold</b><br><a href="#">Link</a><img src="x.png"><i>End</i>')
+      expect(parser.getPlainText(nodes)).toBe('Bold\nLinkEnd')
     })
   })
 })

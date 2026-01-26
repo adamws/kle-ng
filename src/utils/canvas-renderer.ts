@@ -269,14 +269,6 @@ export class CanvasRenderer {
   }
 
   /**
-   * Process label text to handle line breaks while preserving other content
-   * Only <br> and <BR> tags are converted to line breaks; all other HTML is preserved
-   */
-  private processLabelText(label: string): string {
-    return labelParser.processLabelText(label)
-  }
-
-  /**
    * Parse text with HTML formatting tags and extract AST nodes.
    * Supports: <b>, <strong>, <i>, <em>, <u>, <a>, <img>, <svg>
    *
