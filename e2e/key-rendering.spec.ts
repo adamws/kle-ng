@@ -235,7 +235,7 @@ test.describe('Key Rendering Tests', () => {
 
     test('key with mixed HTML formatting', async () => {
       await helper.addKey()
-      await helper.setKeyLabel('center', 'Normal <b>Bold</b> <i>Italic</i>')
+      await helper.setKeyLabel('center', '<b>Bold</b> <i>Italic</i>')
       await helper.waitForRender()
 
       await expect(helper.getCanvas()).toHaveScreenshot('labels-html-mixed.png')
