@@ -213,6 +213,11 @@ describe('CanvasRenderer', () => {
 
   describe('label positioning', () => {
     it('should use smaller margins for small keys to prevent overlap', () => {
+      // Mock measureText to return realistic widths based on text length
+      mockContext.measureText.mockImplementation((text: string) => ({
+        width: text.length * 8,
+      }))
+
       const smallKey = {
         ...new Key(),
         x: 0,
@@ -240,6 +245,9 @@ describe('CanvasRenderer', () => {
       const leftX = leftCall![1]
       const rightX = rightCall![1]
       expect(leftX).toBeLessThan(rightX) // Left should be to the left of right
+
+      // Reset mock implementation to default
+      mockContext.measureText.mockReturnValue({ width: 50 })
     })
 
     it('should use larger margins for large keys', () => {

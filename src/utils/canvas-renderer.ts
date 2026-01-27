@@ -2,14 +2,16 @@ import type { Key, KeyboardMetadata } from '@adamws/kle-serial'
 import { D } from './decimal-math'
 import { parseBorderRadius, createRoundedRectanglePath } from './border-radius'
 import { svgCache } from './caches/SVGCache'
-import { parseCache, type ParsedSegment } from './caches/ParseCache'
+import { parseCache } from './caches/ParseCache'
 import { imageCache } from './caches/ImageCache'
 import { labelParser } from './parsers/LabelParser'
 import { keyRenderer } from './renderers/KeyRenderer'
 import { labelRenderer } from './renderers/LabelRenderer'
 import { rotationRenderer } from './renderers/RotationRenderer'
+import { linkTracker } from './renderers/LinkTracker'
 import { BoundsCalculator } from './utils/BoundsCalculator'
 import { HitTester } from './utils/HitTester'
+import type { LabelNode } from './parsers/LabelAST'
 
 export interface RenderOptions {
   unit: number
@@ -202,7 +204,12 @@ export class CanvasRenderer {
     return rotationRenderer.getRotationPointAtPosition(canvasX, canvasY)
   }
 
-  private drawKey(key: Key, isSelected = false, isHovered = false) {
+  private drawKey(
+    key: Key,
+    isSelected = false,
+    isHovered = false,
+    hoveredLinkHref?: string | null,
+  ) {
     // Use KeyRenderer for shape rendering
     keyRenderer.drawKey(this.ctx, key, {
       unit: this.options.unit,
@@ -244,6 +251,7 @@ export class CanvasRenderer {
         getImageFn,
         loadImageFn,
         this.onImageLoadCallback,
+        hoveredLinkHref,
       )
     } else {
       labelRenderer.drawKeyLabels(
@@ -254,24 +262,17 @@ export class CanvasRenderer {
         getImageFn,
         loadImageFn,
         this.onImageLoadCallback,
+        hoveredLinkHref,
       )
     }
     this.ctx.restore()
   }
 
   /**
-   * Process label text to handle line breaks while preserving other content
-   * Only <br> and <BR> tags are converted to line breaks; all other HTML is preserved
-   */
-  private processLabelText(label: string): string {
-    return labelParser.processLabelText(label)
-  }
-
-  /**
-   * Parse text with HTML formatting tags and extract text segments with their styles
-   * Supports: <b>, <i>, <b><i> (nested), <img>, <svg>...</svg>
+   * Parse text with HTML formatting tags and extract AST nodes.
+   * Supports: <b>, <strong>, <i>, <em>, <u>, <a>, <img>, <svg>
    *
-   * Uses ParseCache to avoid redundant regex parsing for the same label content.
+   * Uses ParseCache to avoid redundant parsing for the same label content.
    *
    * Image formats:
    * - External images: <img src="path/to/image.png"> or <img src="path/to/image.svg">
@@ -285,8 +286,8 @@ export class CanvasRenderer {
    * - External resources (CSS, images) must be inlined as data URLs
    * - Server must support CORS for cross-origin SVG files (external only)
    */
-  private parseHtmlText(text: string): ParsedSegment[] {
-    return labelParser.parseHtmlText(text)
+  private parseHtmlText(text: string): LabelNode[] {
+    return labelParser.parse(text)
   }
 
   /**
@@ -312,7 +313,11 @@ export class CanvasRenderer {
     hoveredRotationPointId?: string,
     selectedRotationOrigin?: { x: number; y: number } | null,
     popupHoveredKey?: Key | null,
+    hoveredLinkHref?: string | null,
   ) {
+    // Clear link tracker at start of each render
+    linkTracker.clear()
+
     // Clear canvas if requested
     if (clearCanvas) {
       this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height)
@@ -364,17 +369,17 @@ export class CanvasRenderer {
 
     // Draw non-selected keys first (bottom layer)
     sortedNonSelectedKeys.forEach((key) => {
-      this.drawKey(key, false)
+      this.drawKey(key, false, false, hoveredLinkHref)
     })
 
     // Draw selected keys on top of non-selected keys (with red selection stroke)
     sortedSelectedKeys.forEach((key) => {
-      this.drawKey(key, true)
+      this.drawKey(key, true, false, hoveredLinkHref)
     })
 
     // Draw popup-hovered key on top with blue highlight (for overlapping key disambiguation)
     if (popupHoveredKey) {
-      this.drawKey(popupHoveredKey, false, true)
+      this.drawKey(popupHoveredKey, false, true, hoveredLinkHref)
     }
 
     // Draw rotation origin indicators on top of all keys for selected keys
@@ -411,5 +416,15 @@ export class CanvasRenderer {
 
   public getAllKeysAtPosition(x: number, y: number, keys: Key[]): Key[] {
     return this.hitTester.getAllKeysAtPosition(x, y, keys)
+  }
+
+  /**
+   * Get the link at a canvas position (for click/hover detection)
+   * @param x - X coordinate in canvas pixels
+   * @param y - Y coordinate in canvas pixels
+   * @returns The link at this position, or null if none
+   */
+  public getLinkAtPosition(x: number, y: number) {
+    return linkTracker.getLinkAtPosition(x, y)
   }
 }

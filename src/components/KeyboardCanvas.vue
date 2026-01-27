@@ -37,6 +37,11 @@
       aria-label="Interactive keyboard layout canvas."
     />
 
+    <!-- Link URL preview (shown at bottom when hovering over links) -->
+    <div v-if="hoveredLinkHref" class="link-preview">
+      {{ hoveredLinkHref }}
+    </div>
+
     <!-- Matrix Annotation Overlay -->
     <MatrixAnnotationOverlay
       ref="matrixOverlayRef"
@@ -176,6 +181,9 @@ const dragCoordinateOffset = ref<{ x: number; y: number } | null>(null)
 // Rotation points interaction state
 const hoveredRotationPointId = ref<string | null>(null)
 
+// Link hover state (for clickable links in key labels)
+const hoveredLinkHref = ref<string | null>(null)
+
 const zoom = ref(1)
 
 const rectSelectionOccurred = ref(false)
@@ -205,7 +213,14 @@ const isFileDragEvent = (event: DragEvent): boolean => {
 
 const canvasCursor = computed(() => {
   if (keyboardStore.canvasMode === 'select') {
-    return keyboardStore.mouseDragMode === 'rect-select' ? 'crosshair' : 'default'
+    if (keyboardStore.mouseDragMode === 'rect-select') {
+      return 'crosshair'
+    }
+    // Show pointer cursor when hovering over links
+    if (hoveredLinkHref.value) {
+      return 'pointer'
+    }
+    return 'default'
   }
   if (keyboardStore.canvasMode === 'rotate') {
     // Show pointer cursor when hovering over rotation points, otherwise default
@@ -771,6 +786,7 @@ const renderKeyboard = () => {
         hoveredRotationPointId.value || undefined,
         keyboardStore.rotationOrigin,
         keyboardStore.popupHoveredKey,
+        hoveredLinkHref.value,
       )
 
       // Draw rectangle selection if active
@@ -904,6 +920,15 @@ const handleCanvasClick = (event: MouseEvent) => {
   }
 
   const pos = getCanvasPosition(event)
+
+  // Handle link clicks in select mode
+  if (keyboardStore.canvasMode === 'select') {
+    const link = renderer.value.getLinkAtPosition(pos.x, pos.y)
+    if (link) {
+      openLinkSafely(link.href)
+      return // Don't process as key click
+    }
+  }
 
   // Handle mirror mode clicks - set axis and perform mirror operation
   if (keyboardStore.canvasMode === 'mirror-h' || keyboardStore.canvasMode === 'mirror-v') {
@@ -1050,6 +1075,28 @@ const handleMouseDown = (event: MouseEvent) => {
 const handleMouseMove = (event: MouseEvent) => {
   // Update mouse position for display (only if mouse is over canvas)
   updateMousePosition(event)
+
+  // Handle link hover in select mode (only when not dragging)
+  if (
+    keyboardStore.canvasMode === 'select' &&
+    keyboardStore.mouseDragMode === 'none' &&
+    renderer.value
+  ) {
+    const pos = getCanvasPosition(event)
+    const link = renderer.value.getLinkAtPosition(pos.x, pos.y)
+
+    if (link) {
+      if (hoveredLinkHref.value !== link.href) {
+        hoveredLinkHref.value = link.href
+        // Re-render to show underline on hover
+        renderScheduler.schedule(renderKeyboard)
+      }
+    } else if (hoveredLinkHref.value) {
+      hoveredLinkHref.value = null
+      // Re-render to hide underline
+      renderScheduler.schedule(renderKeyboard)
+    }
+  }
 
   // Handle rotation points hover when in rotate mode
   if (keyboardStore.canvasMode === 'rotate' && renderer.value) {
@@ -1552,6 +1599,21 @@ const copyToSystemClipboard = async (rawKleData: string) => {
   }
 }
 
+// Safely open links from key labels
+const openLinkSafely = (href: string) => {
+  try {
+    const url = new URL(href, window.location.origin)
+    // Only allow http and https protocols for security
+    if (url.protocol === 'http:' || url.protocol === 'https:') {
+      window.open(url.href, '_blank', 'noopener,noreferrer')
+    } else {
+      console.warn('Invalid URL protocol:', url.protocol)
+    }
+  } catch {
+    console.warn('Invalid URL:', href)
+  }
+}
+
 // Handle system copy event from store
 const handleSystemCopy = (event: Event) => {
   const customEvent = event as CustomEvent
@@ -1963,5 +2025,27 @@ defineExpose({})
   font-size: 11px;
   font-weight: 600;
   border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+/* Link URL preview shown at bottom of canvas */
+.link-preview {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  padding: 2px 6px;
+  font-size: 12px;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+  border-radius: 3px;
+  max-width: 90%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10;
 }
 </style>

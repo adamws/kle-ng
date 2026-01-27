@@ -235,7 +235,7 @@ test.describe('Key Rendering Tests', () => {
 
     test('key with mixed HTML formatting', async () => {
       await helper.addKey()
-      await helper.setKeyLabel('center', 'Normal <b>Bold</b> <i>Italic</i>')
+      await helper.setKeyLabel('center', '<b>Bold</b> <i>Italic</i>')
       await helper.waitForRender()
 
       await expect(helper.getCanvas()).toHaveScreenshot('labels-html-mixed.png')
@@ -504,6 +504,206 @@ test.describe('Key Rendering Tests', () => {
       await waitHelpers.waitForDoubleAnimationFrame()
 
       await expect(helper.getCanvas()).toHaveScreenshot('labels-delete-label-1x1-key.png')
+    })
+
+    test('key with complex multiline label (bold, italic, and link)', async () => {
+      await helper.addKey()
+      await helper.setKeySize(2, 2)
+      await helper.setKeyLabel(
+        'center',
+        'Bold: <b>Title</b><br>Italics: <i>Subtitle</i><br>Link: <a href="https://example.com">Link</a>',
+      )
+      await helper.waitForRender()
+
+      await expect(helper.getCanvas()).toHaveScreenshot(
+        'labels-complex-multiline-bold-italic-link.png',
+      )
+    })
+
+    test.describe('Clickable Links', () => {
+      // P0: Simple link in center label (visual test)
+      test('simple link in center label', async () => {
+        await helper.addKey()
+        await helper.setKeyLabel('center', '<a href="https://example.com">Click</a>')
+        await helper.waitForRender()
+        await expect(helper.getCanvas()).toHaveScreenshot('labels-link-simple-center.png')
+      })
+
+      // P0: Clicking link opens in new tab
+      test('clicking link opens in new tab', async () => {
+        const windowOpenCalls: { url: string; target: string; features: string }[] = []
+        await helper.page.exposeFunction(
+          'mockWindowOpen',
+          (url: string, target: string, features: string) => {
+            windowOpenCalls.push({ url, target, features })
+          },
+        )
+        await helper.page.evaluate(() => {
+          window.open = (url?: string | URL, target?: string, features?: string) => {
+            ;(window as unknown as { mockWindowOpen: typeof window.open }).mockWindowOpen(
+              url as string,
+              target as string,
+              features as string,
+            )
+            return null
+          }
+        })
+
+        await helper.addKey()
+        await helper.setKeyLabel('center', '<a href="https://example.com">Click</a>')
+        await helper.waitForRender()
+
+        const canvas = helper.getCanvas()
+        const box = await canvas.boundingBox()
+        // Click center of canvas where link text is
+        await canvas.click({ position: { x: box!.width / 2, y: box!.height / 2 } })
+
+        await helper.page.waitForTimeout(100)
+        // URL gets normalized with trailing slash
+        expect(windowOpenCalls[0]?.url).toBe('https://example.com/')
+        expect(windowOpenCalls[0]?.target).toBe('_blank')
+        expect(windowOpenCalls[0]?.features).toBe('noopener,noreferrer')
+      })
+
+      // P0: JavaScript protocol is blocked
+      test('javascript protocol is blocked for security', async () => {
+        const windowOpenCalls: string[] = []
+        const consoleWarnings: string[][] = []
+
+        await helper.page.exposeFunction('mockWindowOpen', (url: string) => {
+          windowOpenCalls.push(url)
+        })
+        await helper.page.exposeFunction('mockConsoleWarn', (...args: string[]) => {
+          consoleWarnings.push(args)
+        })
+
+        await helper.page.evaluate(() => {
+          window.open = (url?: string | URL) => {
+            ;(window as unknown as { mockWindowOpen: (url: string) => void }).mockWindowOpen(
+              url as string,
+            )
+            return null
+          }
+          const originalWarn = console.warn
+          console.warn = (...args: unknown[]) => {
+            ;(
+              window as unknown as { mockConsoleWarn: (...args: string[]) => void }
+            ).mockConsoleWarn(...(args as string[]))
+            originalWarn(...args)
+          }
+        })
+
+        await helper.addKey()
+        await helper.setKeyLabel('center', '<a href="javascript:alert(\'xss\')">Bad</a>')
+        await helper.waitForRender()
+
+        const canvas = helper.getCanvas()
+        const box = await canvas.boundingBox()
+        // Click center of canvas where link text is
+        await canvas.click({ position: { x: box!.width / 2, y: box!.height / 2 } })
+
+        await helper.page.waitForTimeout(100)
+        expect(windowOpenCalls).toHaveLength(0)
+        expect(consoleWarnings.some((w) => w.some((s) => s.includes('Invalid URL protocol')))).toBe(
+          true,
+        )
+      })
+
+      // P1: Link in different label positions
+      test('link in different label positions', async () => {
+        await helper.addKey()
+        await helper.setKeyLabel('topLeft', '<a href="https://example.com/1">AB</a>')
+        await helper.setKeyLabel('center', '<a href="https://example.com/2">CD</a>')
+        await helper.setKeyLabel('bottomRight', '<a href="https://example.com/3">EF</a>')
+        await helper.waitForRender()
+        await expect(helper.getCanvas()).toHaveScreenshot('labels-link-multiple-positions.png')
+      })
+
+      // P1: Bold link
+      test('bold link', async () => {
+        await helper.addKey()
+        await helper.setKeyLabel('center', '<b><a href="https://example.com">Click</a></b>')
+        await helper.waitForRender()
+        await expect(helper.getCanvas()).toHaveScreenshot('labels-link-bold.png')
+      })
+
+      // P1: Italic link
+      test('italic link', async () => {
+        await helper.addKey()
+        await helper.setKeyLabel('center', '<i><a href="https://example.com">Click</a></i>')
+        await helper.waitForRender()
+        await expect(helper.getCanvas()).toHaveScreenshot('labels-link-italic.png')
+      })
+
+      // P1: HTTP URL is allowed
+      test('http URL is allowed', async () => {
+        const windowOpenCalls: { url: string; target: string; features: string }[] = []
+        await helper.page.exposeFunction(
+          'mockWindowOpenHttp',
+          (url: string, target: string, features: string) => {
+            windowOpenCalls.push({ url, target, features })
+          },
+        )
+        await helper.page.evaluate(() => {
+          window.open = (url?: string | URL, target?: string, features?: string) => {
+            ;(window as unknown as { mockWindowOpenHttp: typeof window.open }).mockWindowOpenHttp(
+              url as string,
+              target as string,
+              features as string,
+            )
+            return null
+          }
+        })
+
+        await helper.addKey()
+        // Use short link text like the passing test
+        await helper.setKeyLabel('center', '<a href="http://example.com">Click</a>')
+        await helper.waitForRender()
+
+        const canvas = helper.getCanvas()
+        const box = await canvas.boundingBox()
+        // Click center of canvas where link text is
+        await canvas.click({ position: { x: box!.width / 2, y: box!.height / 2 } })
+
+        await helper.page.waitForTimeout(100)
+        // URL gets normalized with trailing slash
+        expect(windowOpenCalls[0]?.url).toBe('http://example.com/')
+      })
+
+      // P1: HTTPS URL is allowed
+      test('https URL is allowed', async () => {
+        const windowOpenCalls: { url: string; target: string; features: string }[] = []
+        await helper.page.exposeFunction(
+          'mockWindowOpenHttps',
+          (url: string, target: string, features: string) => {
+            windowOpenCalls.push({ url, target, features })
+          },
+        )
+        await helper.page.evaluate(() => {
+          window.open = (url?: string | URL, target?: string, features?: string) => {
+            ;(window as unknown as { mockWindowOpenHttps: typeof window.open }).mockWindowOpenHttps(
+              url as string,
+              target as string,
+              features as string,
+            )
+            return null
+          }
+        })
+
+        await helper.addKey()
+        // Use exact same link text as the passing "clicking link opens" test
+        await helper.setKeyLabel('center', '<a href="https://example.com">Click</a>')
+        await helper.waitForRender()
+
+        const canvas = helper.getCanvas()
+        const box = await canvas.boundingBox()
+        // Click center of canvas where link text is
+        await canvas.click({ position: { x: box!.width / 2, y: box!.height / 2 } })
+
+        await helper.page.waitForTimeout(100)
+        // URL gets normalized with trailing slash
+        expect(windowOpenCalls[0]?.url).toBe('https://example.com/')
+      })
     })
   })
 
