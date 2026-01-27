@@ -506,6 +506,20 @@ test.describe('Key Rendering Tests', () => {
       await expect(helper.getCanvas()).toHaveScreenshot('labels-delete-label-1x1-key.png')
     })
 
+    test('key with complex multiline label (bold, italic, and link)', async () => {
+      await helper.addKey()
+      await helper.setKeySize(2, 2)
+      await helper.setKeyLabel(
+        'center',
+        'Bold: <b>Title</b><br>Italics: <i>Subtitle</i><br>Link: <a href="https://example.com">Link</a>',
+      )
+      await helper.waitForRender()
+
+      await expect(helper.getCanvas()).toHaveScreenshot(
+        'labels-complex-multiline-bold-italic-link.png',
+      )
+    })
+
     test.describe('Clickable Links', () => {
       // P0: Simple link in center label (visual test)
       test('simple link in center label', async () => {
