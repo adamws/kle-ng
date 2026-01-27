@@ -955,6 +955,36 @@ export class LabelRenderer {
   }
 
   /**
+   * Truncate text with ellipsis to fit within maxWidth.
+   *
+   * @param ctx - Canvas rendering context
+   * @param text - Text to truncate
+   * @param maxWidth - Maximum width in pixels
+   * @returns Truncated text with ellipsis, or original if it fits
+   */
+  private truncateWithEllipsis(
+    ctx: CanvasRenderingContext2D,
+    text: string,
+    maxWidth: number,
+  ): string {
+    if (ctx.measureText(text).width <= maxWidth) {
+      return text
+    }
+
+    let truncated = text
+    while (truncated.length > 1) {
+      truncated = truncated.slice(0, -1)
+      const testText = truncated + '...'
+      if (ctx.measureText(testText).width <= maxWidth) {
+        return testText
+      }
+    }
+
+    // If even one character + ellipsis is too wide, return original (will overflow)
+    return text
+  }
+
+  /**
    * Wrap a single line of nodes by word boundaries to fit within maxWidth.
    *
    * @param ctx - Canvas rendering context
@@ -1018,8 +1048,31 @@ export class LabelRenderer {
             if (currentLine.length > 0) {
               result.push(currentLine)
             }
-            currentLine = [tempNode]
-            currentLineWidth = wordWidth
+
+            // Check if word itself is wider than maxWidth - truncate with ellipsis
+            if (wordWidth > maxWidth) {
+              const originalFont = ctx.font
+              const fontStyle = this.buildFontStyle(
+                ctx,
+                node.style.bold ?? false,
+                node.style.italic ?? false,
+                fontFamily,
+              )
+              ctx.font = fontStyle
+              const truncatedText = this.truncateWithEllipsis(ctx, word, maxWidth)
+              ctx.font = originalFont
+
+              const truncatedNode: LabelNode =
+                node.type === 'text'
+                  ? { type: 'text', text: truncatedText, style: { ...node.style } }
+                  : { type: 'link', href: node.href, text: truncatedText, style: { ...node.style } }
+
+              currentLine = [truncatedNode]
+              currentLineWidth = this.measureNodeWidth(ctx, truncatedNode, fontFamily, getImageFn)
+            } else {
+              currentLine = [tempNode]
+              currentLineWidth = wordWidth
+            }
           }
         }
       } else {

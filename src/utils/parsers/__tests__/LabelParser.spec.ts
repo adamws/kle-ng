@@ -90,7 +90,9 @@ describe('LabelParser', () => {
       })
 
       it('should preserve link node after multiple <br> tags', () => {
-        const result = parser.parse('First<br>Second<br><a href="https://docs.example.com">documentation</a>')
+        const result = parser.parse(
+          'First<br>Second<br><a href="https://docs.example.com">documentation</a>',
+        )
         expect(result).toEqual([
           { type: 'text', text: 'First', style: {} },
           { type: 'text', text: '\n', style: {} },
