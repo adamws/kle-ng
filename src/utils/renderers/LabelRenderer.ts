@@ -1198,6 +1198,107 @@ export class LabelRenderer {
   }
 
   /**
+   * Draw multiple lines of pre-parsed nodes.
+   * This is the preferred method for multi-line content with HTML formatting.
+   *
+   * @param ctx - Canvas rendering context
+   * @param nodeLines - Array of lines, each line is an array of nodes
+   * @param x - X coordinate
+   * @param y - Starting Y coordinate
+   * @param lineHeight - Height of each line
+   * @param pos - Position configuration for alignment
+   * @param fontFamily - Font family to use
+   * @param getImageFn - Function to get cached image
+   * @param loadImageFn - Function to load image if not cached
+   * @param onLoadCallback - Optional callback when image loads
+   * @param rotationContext - Optional rotation context for link tracking
+   * @param hoveredLinkHref - Optional href of currently hovered link (for underline)
+   */
+  public drawMultiLineNodes(
+    ctx: CanvasRenderingContext2D,
+    nodeLines: LabelNode[][],
+    x: number,
+    y: number,
+    lineHeight: number,
+    pos: LabelPosition,
+    fontFamily: string,
+    getImageFn: (url: string) => HTMLImageElement | null,
+    loadImageFn: (url: string, onLoad?: () => void) => void,
+    onLoadCallback?: () => void,
+    rotationContext?: { angle: number; originX: number; originY: number },
+    hoveredLinkHref?: string | null,
+  ): void {
+    let startY = y
+
+    // Adjust starting Y based on baseline
+    if (pos.baseline === 'middle') {
+      // Center the block of text vertically around the provided Y
+      const totalHeight = (nodeLines.length - 1) * lineHeight
+      startY = y - totalHeight / 2
+    } else if (pos.baseline === 'alphabetic') {
+      // Position so the last line ends at the provided Y
+      const totalHeight = (nodeLines.length - 1) * lineHeight
+      startY = y - totalHeight
+    }
+
+    // Draw each line with pre-parsed nodes
+    nodeLines.forEach((lineNodes, index) => {
+      const lineY = startY + index * lineHeight
+      this.drawParsedNodes(
+        ctx,
+        lineNodes,
+        x,
+        lineY,
+        fontFamily,
+        getImageFn,
+        loadImageFn,
+        onLoadCallback,
+        rotationContext,
+        hoveredLinkHref,
+      )
+    })
+  }
+
+  /**
+   * Split AST nodes into lines at newline characters.
+   * Preserves node types and styles (including links) for each line.
+   *
+   * @param nodes - Pre-parsed label nodes
+   * @returns Array of lines, each line is an array of nodes
+   */
+  private splitNodesByNewline(nodes: LabelNode[]): LabelNode[][] {
+    const lines: LabelNode[][] = []
+    let currentLine: LabelNode[] = []
+
+    for (const node of nodes) {
+      if (node.type === 'text') {
+        // Text nodes may contain newlines
+        const parts = node.text.split('\n')
+        for (let i = 0; i < parts.length; i++) {
+          const part = parts[i]
+          if (i > 0) {
+            // Start a new line
+            lines.push(currentLine)
+            currentLine = []
+          }
+          // Add non-empty text parts
+          if (part) {
+            currentLine.push({ type: 'text', text: part, style: { ...node.style } })
+          }
+        }
+      } else {
+        // Links, images, SVGs don't split - add to current line
+        currentLine.push(node)
+      }
+    }
+
+    // Don't forget the last line
+    lines.push(currentLine)
+
+    return lines
+  }
+
+  /**
    * Draw pre-parsed label nodes with automatic wrapping to fit within bounds.
    * This is the preferred method - labels should be parsed once and nodes passed here.
    *
@@ -1339,108 +1440,23 @@ export class LabelRenderer {
       return
     }
 
-    // Handle text with explicit line breaks (may also contain HTML)
-    const explicitLines = text.split('\n')
-    const finalLines: string[] = []
-    // Track which lines have formatting (to avoid re-parsing)
-    const lineHasFormatting: boolean[] = []
+    // Handle text with explicit line breaks using node-based splitting
+    // This preserves link nodes and other HTML formatting across line breaks
+    const nodeLines = this.splitNodesByNewline(nodes)
 
-    // Helper to measure line width (parses line only if we don't already know)
-    const measureLine = (line: string, lineIndex: number): number => {
-      if (lineHasFormatting[lineIndex]) {
-        return this.measureHtmlText(ctx, line, fontFamily, getImageFn)
-      }
-      return ctx.measureText(line).width
-    }
+    // Limit to maxLines
+    const limitedNodeLines = nodeLines.slice(0, maxLines)
 
-    for (const line of explicitLines) {
-      const trimmedLine = line.trim()
-
-      if (!trimmedLine) {
-        // Empty line from line break - add it
-        finalLines.push('')
-        lineHasFormatting.push(false)
-        if (finalLines.length >= maxLines) break
-        continue
-      }
-
-      // Parse this line once to check formatting
-      const lineNodes = labelParser.parse(trimmedLine)
-      const lineFormatted = this.nodesHaveFormatting(lineNodes)
-
-      // Check if this line fits as-is
-      const lineWidth = lineFormatted
-        ? this.measureNodesWidth(ctx, lineNodes, fontFamily, getImageFn)
-        : ctx.measureText(trimmedLine).width
+    // If only one line after splitting, render directly
+    if (limitedNodeLines.length === 1) {
+      const lineNodes = limitedNodeLines[0] || []
+      const lineWidth = this.measureNodesWidth(ctx, lineNodes, fontFamily, getImageFn)
 
       if (lineWidth <= maxWidth) {
-        // Line fits, add it directly
-        finalLines.push(trimmedLine)
-        lineHasFormatting.push(lineFormatted)
-      } else {
-        // Line is too long, need to wrap words within this line
-        if (lineFormatted) {
-          const wrappedLines = this.wrapHtmlText(ctx, trimmedLine, maxWidth, fontFamily)
-          for (const wrapped of wrappedLines) {
-            finalLines.push(wrapped)
-            lineHasFormatting.push(true) // wrapped HTML lines still have formatting
-            if (finalLines.length >= maxLines) break
-          }
-        } else {
-          // Plain text - wrap by words
-          const words = trimmedLine.split(' ')
-
-          if (words.length === 1) {
-            // Single word that's too long - add it and let rendering handle overflow
-            finalLines.push(trimmedLine)
-            lineHasFormatting.push(false)
-          } else {
-            // Multiple words - wrap them
-            let currentLine = ''
-
-            for (const word of words) {
-              const testLine = currentLine ? `${currentLine} ${word}` : word
-              const testWidth = ctx.measureText(testLine).width
-
-              if (testWidth <= maxWidth) {
-                currentLine = testLine
-              } else {
-                if (currentLine) {
-                  finalLines.push(currentLine)
-                  lineHasFormatting.push(false)
-                  currentLine = word
-                  if (finalLines.length >= maxLines) break
-                } else {
-                  // Single word too long for line
-                  finalLines.push(word)
-                  lineHasFormatting.push(false)
-                  break
-                }
-              }
-            }
-
-            if (currentLine && finalLines.length < maxLines) {
-              finalLines.push(currentLine)
-              lineHasFormatting.push(false)
-            }
-          }
-        }
-      }
-
-      // Stop if we've reached max lines
-      if (finalLines.length >= maxLines) break
-    }
-
-    // Check if any line has HTML formatting (using tracked info)
-    const anyLineHasHtml = lineHasFormatting.some((hasFormat) => hasFormat)
-
-    // If we only have one line and it fits, use appropriate rendering
-    const firstLine = finalLines[0]
-    if (finalLines.length === 1 && firstLine && measureLine(firstLine, 0) <= maxWidth) {
-      if (lineHasFormatting[0]) {
-        this.drawHtmlText(
+        // Single line fits
+        this.drawParsedNodes(
           ctx,
-          firstLine,
+          lineNodes,
           x,
           y,
           fontFamily,
@@ -1450,21 +1466,15 @@ export class LabelRenderer {
           rotationContext,
           hoveredLinkHref,
         )
-      } else {
-        ctx.fillText(firstLine, x, y)
+        return
       }
-      return
-    }
-
-    // Use multi-line rendering for multiple lines or overflow cases
-    if (anyLineHasHtml) {
-      this.drawMultiLineHtmlText(
+      // Single line too wide - could implement word wrapping for nodes here
+      // For now, just render and let it overflow
+      this.drawParsedNodes(
         ctx,
-        finalLines.slice(0, maxLines),
+        lineNodes,
         x,
         y,
-        lineHeight,
-        pos,
         fontFamily,
         getImageFn,
         loadImageFn,
@@ -1472,9 +1482,24 @@ export class LabelRenderer {
         rotationContext,
         hoveredLinkHref,
       )
-    } else {
-      this.drawMultiLineText(ctx, finalLines.slice(0, maxLines), x, y, lineHeight, pos)
+      return
     }
+
+    // Multiple lines - use multi-line node rendering
+    this.drawMultiLineNodes(
+      ctx,
+      limitedNodeLines,
+      x,
+      y,
+      lineHeight,
+      pos,
+      fontFamily,
+      getImageFn,
+      loadImageFn,
+      onLoadCallback,
+      rotationContext,
+      hoveredLinkHref,
+    )
   }
 
   /**

@@ -79,6 +79,37 @@ describe('LabelParser', () => {
           { type: 'text', text: 'B', style: { bold: true } },
         ])
       })
+
+      it('should preserve link node after <br> tags', () => {
+        const result = parser.parse('Text<br><a href="https://example.com">Link</a>')
+        expect(result).toEqual([
+          { type: 'text', text: 'Text', style: {} },
+          { type: 'text', text: '\n', style: {} },
+          { type: 'link', href: 'https://example.com', text: 'Link', style: {} },
+        ])
+      })
+
+      it('should preserve link node after multiple <br> tags', () => {
+        const result = parser.parse('First<br>Second<br><a href="https://docs.example.com">documentation</a>')
+        expect(result).toEqual([
+          { type: 'text', text: 'First', style: {} },
+          { type: 'text', text: '\n', style: {} },
+          { type: 'text', text: 'Second', style: {} },
+          { type: 'text', text: '\n', style: {} },
+          { type: 'link', href: 'https://docs.example.com', text: 'documentation', style: {} },
+        ])
+      })
+
+      it('should handle mixed content with links before and after <br>', () => {
+        const result = parser.parse(
+          '<a href="https://a.com">Link A</a><br><a href="https://b.com">Link B</a>',
+        )
+        expect(result).toEqual([
+          { type: 'link', href: 'https://a.com', text: 'Link A', style: {} },
+          { type: 'text', text: '\n', style: {} },
+          { type: 'link', href: 'https://b.com', text: 'Link B', style: {} },
+        ])
+      })
     })
 
     describe('bold formatting', () => {
