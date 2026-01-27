@@ -14,10 +14,14 @@
 - [Utility Components](#utility-components)
   - [BoundsCalculator](#boundscalculator)
   - [HitTester](#hittester)
+  - [LinkTracker](#linktracker)
   - [Layout Change Event System](#layout-change-event-system)
   - [RenderScheduler](#renderscheduler)
   - [Key Selection Disambiguation](#key-selection-disambiguation)
 - [Parsers](#parsers)
+  - [LabelParser](#labelparser)
+  - [LabelAST](#labelast)
+  - [SVGProcessor](#svgprocessor)
 - [Performance Optimization](#performance-optimization)
 - [Implementation Details](#implementation-details)
 - [Troubleshooting](#troubleshooting)
@@ -30,7 +34,7 @@
 The kle-ng canvas rendering pipeline is a modular, high-performance system for rendering keyboard layouts on HTML5 Canvas. It supports advanced features like:
 
 - **Key rendering** with multiple shapes (rectangular, non-rectangular, circular)
-- **Rich label formatting** with HTML tags, images, and inline SVG
+- **Rich label formatting** with HTML tags, images, inline SVG, and clickable links
 - **Rotation support** with interactive rotation origin controls
 - **High DPI rendering** with proper pixel alignment
 - **Performance optimization** through multi-level caching
@@ -67,6 +71,7 @@ The rendering pipeline follows a **layered architecture**:
        │          Support Components              │
        │  - BoundsCalculator (geometry)           │
        │  - HitTester (mouse interaction)         │
+       │  - LinkTracker (link hit testing)        │
        │  - RotationRenderer (rotation UI)        │
        └───────┬──────────────────────────────────┘
                │
@@ -80,7 +85,8 @@ The rendering pipeline follows a **layered architecture**:
                │
        ┌───────▼──────────────────────────────────┐
        │             Parsers                      │
-       │  - LabelParser (HTML labels)             │
+       │  - LabelParser (HTML → AST)              │
+       │  - LabelAST (AST type definitions)       │
        │  - SVGProcessor (SVG validation)         │
        └──────────────────────────────────────────┘
 ```
@@ -212,7 +218,8 @@ CanvasRenderer.render(keys, selectedKeys, metadata)
 class CanvasRenderer {
   // Rendering
   render(keys, selectedKeys, metadata, clearCanvas?, showRotationPoints?,
-         hoveredRotationPointId?, selectedRotationOrigin?, popupHoveredKey?)
+         hoveredRotationPointId?, selectedRotationOrigin?, popupHoveredKey?,
+         hoveredLinkHref?)
 
   // Configuration
   updateOptions(options: RenderOptions)
@@ -238,6 +245,7 @@ class CanvasRenderer {
   getKeyAtPosition(x: number, y: number, keys: Key[])
   getAllKeysAtPosition(x: number, y: number, keys: Key[])  // For overlapping key disambiguation
   getRotationPointAtPosition(x: number, y: number)
+  getLinkAtPosition(x: number, y: number)  // For clickable link detection
 }
 ```
 
@@ -256,12 +264,17 @@ interface RenderOptions {
 **Important Methods**:
 
 - **`render()`**: Main rendering entry point
+  - Clears linkTracker at start (for fresh link hit testing)
   - Clears canvas (optional)
   - Draws background with border radius
   - Sorts keys for proper z-ordering
-  - Delegates key/label rendering
+  - Delegates key/label rendering (passing `hoveredLinkHref` for underline styling)
   - Draws popup-hovered key on top with highlight (for overlapping key disambiguation)
   - Draws rotation UI overlays
+
+- **`getLinkAtPosition()`**: Returns clickable link at canvas coordinates
+  - Delegates to LinkTracker singleton
+  - Used for hover detection and click handling
 
 - **`updateOptions()`**: Updates render options and propagates to child components
 
@@ -412,10 +425,12 @@ roundInner = 3        // Inner corner radius
 **Key Features**:
 - **12 label positions**: 3x3 grid on top + 3 front legends
 - **Rich formatting**: Bold, italic, nested styles
-- **Mixed content**: Text + images + SVG
+- **Clickable links**: `<a>` tag support with hover underline and URL preview
+- **Mixed content**: Text + images + SVG + links
 - **Auto-wrapping**: Word wrapping with overflow handling
 - **Multi-line support**: `<br>` tag support
 - **Asynchronous images**: Progressive rendering as images load
+- **Link hit testing**: Registers link bounding boxes with LinkTracker
 
 **Label Position Grid**:
 
@@ -453,14 +468,17 @@ for (const [index, label] of key.labels.entries()) {
   } else if (isSvgOnly(label)) {
     drawSvgLabel(label, x, y)
   } else {
-    // 4. Process text
-    const processed = processLabelText(label)  // Convert <br> to \n
+    // 4. Parse HTML into AST nodes
+    const nodes = labelParser.parse(label)  // Cached! Returns LabelNode[]
 
-    // 5. Parse HTML
-    const segments = parseHtmlText(processed)  // Cached!
+    // 5. Build rotation context for link tracking (if key is rotated)
+    const rotationContext = key.rotation_angle
+      ? { angle, originX, originY }
+      : undefined
 
-    // 6. Render with wrapping
-    drawWrappedText(segments, x, y, availableWidth, availableHeight)
+    // 6. Render with wrapping (handles text, links, images, SVGs)
+    drawWrappedNodes(nodes, x, y, availableWidth, availableHeight,
+                     rotationContext, hoveredLinkHref)
   }
 }
 ```
@@ -468,9 +486,10 @@ for (const [index, label] of key.labels.entries()) {
 **HTML Label Parsing**:
 
 Supported tags:
-- `<b>...</b>` - Bold text
-- `<i>...</i>` - Italic text
+- `<b>...</b>` or `<strong>...</strong>` - Bold text
+- `<i>...</i>` or `<em>...</em>` - Italic text
 - `<b><i>...</i></b>` - Bold + italic (nested)
+- `<a href="url">...</a>` - Clickable link (opens in new tab)
 - `<br>` or `<br/>` - Line break
 - `<img src="url" width="32" height="32">` - External image
 - `<svg width="32" height="32">...</svg>` - Inline SVG
@@ -480,10 +499,22 @@ Example:
 ```html
 <b>Shift</b>          → Bold "Shift"
 <i>Ctrl</i>           → Italic "Ctrl"
+<strong>Alt</strong>  → Bold "Alt" (same as <b>)
+<em>Meta</em>         → Italic "Meta" (same as <i>)
 <b><i>Alt</i></b>     → Bold italic "Alt"
 Hello<br>World        → "Hello" on line 1, "World" on line 2
+<a href="https://example.com">Link</a>  → Blue clickable link with underline on hover
 <img src="icon.png" width="16" height="16">  → 16x16 image
 ```
+
+**Link Rendering**:
+
+Links (`<a>` tags) are rendered with special styling and interactivity:
+- **Color**: Links render in blue (#0066cc)
+- **Hover underline**: When `hoveredLinkHref` matches the link's href, an underline is drawn
+- **Hit testing**: Link bounding boxes are registered with LinkTracker for click detection
+- **Security**: Only `http://` and `https://` URLs are opened (validated in KeyboardCanvas.vue)
+- **Rotation support**: Links work correctly on rotated keys via inverse rotation transformation
 
 **Image Label Positioning**:
 
@@ -614,22 +645,23 @@ img.crossOrigin = 'anonymous'
 
 **Purpose**: Cache HTML label parsing results
 
-**Why needed**: Regex parsing is expensive, labels rarely change
+**Why needed**: DOMParser-based parsing is expensive, labels rarely change
 
 **Usage**:
 ```typescript
-const segments = parseCache.getParsed(label, (text) => {
+const nodes = parseCache.getParsed(label, (text) => {
   // Parser function only called on cache miss
-  return doParseHtmlText(text)
+  return labelParser.doParse(text)
 })
 ```
 
-**Parsed segments structure**:
+**Cached type**:
 ```typescript
-type ParsedSegment =
-  | { type: 'text', text: string, bold: boolean, italic: boolean }
-  | { type: 'image', src: string, width?: number, height?: number }
-  | { type: 'svg', svgContent: string, width?: number, height?: number }
+// Now caches LabelNode[] (AST nodes) instead of old ParsedSegment[]
+type LabelNode = TextNode | LinkNode | ImageNode | SVGNode
+
+// TextNode and LinkNode include TextStyle for bold/italic
+interface TextStyle { bold?: boolean; italic?: boolean }
 ```
 
 **Implementation**: LRU cache with max 1000 entries
@@ -818,6 +850,76 @@ getAllKeysAtPosition(x, y, keys):
 
   return result
 ```
+
+### LinkTracker
+
+**Location**: `src/utils/renderers/LinkTracker.ts`
+
+**Purpose**: Track clickable link bounding boxes during label rendering for hit testing
+
+Since HTML Canvas has no native link support, the LinkTracker provides a mechanism to:
+1. Register link bounding boxes during rendering
+2. Provide hit testing with rotation support for click/hover detection
+
+**Key Features**:
+- **Bounding box registration**: During rendering, links register their position and dimensions
+- **Hit testing with rotation**: `getLinkAtPosition(x, y)` returns the link at canvas coordinates
+- **Rotation support**: Applies inverse rotation transformation for accurate hit testing on rotated keys
+- **Singleton pattern**: Global `linkTracker` instance shared across the application
+
+**Interface**:
+
+```typescript
+interface LinkBoundingBox {
+  id: string              // Unique identifier
+  href: string            // URL to open when clicked
+  displayText: string     // Link text (for debugging)
+  localX: number          // X position in key's coordinate space
+  localY: number          // Y position (top of bounding box)
+  localWidth: number      // Width of bounding box
+  localHeight: number     // Height of bounding box
+  rotationAngle: number   // Key's rotation angle in degrees
+  rotationOriginX: number // Rotation origin X in canvas coordinates
+  rotationOriginY: number // Rotation origin Y in canvas coordinates
+}
+```
+
+**Public Methods**:
+
+- **`clear()`**: Clear all tracked links. Called at the start of each render.
+- **`registerLink(...)`**: Register a link during rendering with position, size, and rotation info.
+- **`getLinkAtPosition(x, y)`**: Get the link at canvas coordinates (handles rotation).
+- **`getLinks()`**: Get all registered links (for debugging).
+- **`count`**: Get the number of registered links.
+
+**Hit Testing Algorithm**:
+
+```typescript
+getLinkAtPosition(canvasX, canvasY):
+  // Check links in reverse order (last registered is on top)
+  for (let i = links.length - 1; i >= 0; i--):
+    const link = links[i]
+    let testX = canvasX, testY = canvasY
+
+    // Apply inverse rotation if link's key is rotated
+    if (link.rotationAngle):
+      const angle = -link.rotationAngle * PI / 180
+      testX, testY = inverseRotate(canvasX, canvasY, origin, angle)
+
+    // Test if point is inside link bounding box
+    if (testX >= link.localX && testX <= link.localX + link.localWidth &&
+        testY >= link.localY && testY <= link.localY + link.localHeight):
+      return link
+
+  return null
+```
+
+**Usage in Rendering Pipeline**:
+
+1. `CanvasRenderer.render()` calls `linkTracker.clear()` at start of each render
+2. `LabelRenderer.renderLinkNode()` calls `linkTracker.registerLink()` for each link
+3. `CanvasRenderer.getLinkAtPosition()` delegates to `linkTracker.getLinkAtPosition()`
+4. `KeyboardCanvas.vue` uses `getLinkAtPosition()` for hover detection and click handling
 
 ### Layout Change Event System
 
@@ -1100,58 +1202,151 @@ setPopupHoveredKey(key | null)
 
 **Location**: `src/utils/parsers/LabelParser.ts`
 
-**Purpose**: Parse HTML-formatted labels into renderable segments
+**Purpose**: Parse HTML-formatted labels into an Abstract Syntax Tree (AST) of renderable nodes
+
+The LabelParser uses DOMParser for robust HTML parsing instead of regex, providing better handling of nested elements and malformed HTML.
 
 **Supported HTML**:
 
 ```html
 <b>Bold text</b>
+<strong>Also bold</strong>
 <i>Italic text</i>
+<em>Also italic</em>
 <b><i>Bold and italic</i></b>
+<a href="https://example.com">Clickable link</a>
 Text<br>with<br>breaks
 <img src="icon.png" width="16" height="16">
 <svg width="24" height="24">...</svg>
 ```
 
-**Parsing algorithm**:
+**Parsing Architecture**:
 
 ```typescript
-// Regex matches:
-// 1. Opening/closing <b> or <i> tags
-// 2. <img> tags with attributes
-// 3. <svg>...</svg> tags with content
-// 4. Plain text segments
+class LabelParser {
+  // Main entry point - uses ParseCache for performance
+  public parse(text: string): LabelNode[] {
+    return parseCache.getParsed(text, (t) => this.doParse(t))
+  }
 
-const regex = /<\s*(\/?)([bi])\s*>|<img\s+([^>]+)>|<svg[^>]*>([\s\S]*?)<\/svg>|([^<]+)/gi
+  // Internal parser using DOMParser (called only on cache miss)
+  private doParse(text: string): LabelNode[] {
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(`<div>${text}</div>`, 'text/html')
+    return this.parseChildNodes(doc.body.firstChild, {})
+  }
 
-// State tracking:
-let currentBold = false
-let currentItalic = false
-let currentText = ''
+  // Recursively parse DOM nodes into LabelNode[]
+  private parseNode(node: Node, style: TextStyle): LabelNode[] {
+    if (node is text):
+      return [{ type: 'text', text: node.textContent, style }]
 
-// Process matches:
-for (const match of regex.exec(text)):
-  if (match is text):
-    currentText += match
-  else if (match is <b> or <i>):
-    if (currentText):
-      emit({ type: 'text', text: currentText, bold, italic })
-      currentText = ''
-    update bold/italic state
-  else if (match is <img>):
-    extract src, width, height
-    emit({ type: 'image', src, width, height })
-  else if (match is <svg>):
-    extract dimensions
-    emit({ type: 'svg', svgContent, width, height })
+    if (node is element):
+      switch (tag):
+        case 'br':
+          return [{ type: 'text', text: '\n', style }]
+        case 'b', 'strong':
+          return parseChildNodes(node, { ...style, bold: true })
+        case 'i', 'em':
+          return parseChildNodes(node, { ...style, italic: true })
+        case 'a':
+          return [{ type: 'link', href, text, style }]
+        case 'img':
+          return [{ type: 'image', src, width, height }]
+        case 'svg':
+          return [{ type: 'svg', content, width, height }]
+        default:
+          return parseChildNodes(node, style)  // Handle div, span, etc.
+  }
+}
 ```
 
-**Line break processing**:
+**Key Methods**:
+
+- **`parse(text)`**: Main entry point. Uses ParseCache for performance.
+- **`hasHtmlFormatting(text)`**: Check if text contains HTML elements.
+- **`measureHtmlText(text, ctx, ...)`**: Measure width of formatted text.
+- **`getPlainText(nodes)`**: Extract plain text from parsed nodes.
+
+### LabelAST
+
+**Location**: `src/utils/parsers/LabelAST.ts`
+
+**Purpose**: Define the AST type structure for parsed HTML labels
+
+The LabelAST module provides TypeScript type definitions and type guards for the AST nodes produced by LabelParser.
+
+**Node Types**:
 
 ```typescript
-processLabelText(label):
-  // Convert <br> and <BR> tags to newlines
-  return label.replace(/<br[^>]*>/gi, '\n')
+/**
+ * Text styling options
+ */
+interface TextStyle {
+  bold?: boolean
+  italic?: boolean
+}
+
+/**
+ * Plain text node with optional styling
+ */
+interface TextNode {
+  type: 'text'
+  text: string
+  style: TextStyle
+}
+
+/**
+ * Hyperlink node
+ */
+interface LinkNode {
+  type: 'link'
+  href: string
+  text: string
+  style: TextStyle
+}
+
+/**
+ * External image node
+ */
+interface ImageNode {
+  type: 'image'
+  src: string
+  width?: number
+  height?: number
+}
+
+/**
+ * Inline SVG node
+ */
+interface SVGNode {
+  type: 'svg'
+  content: string
+  width?: number
+  height?: number
+}
+
+/**
+ * Union type of all possible label nodes
+ */
+type LabelNode = TextNode | LinkNode | ImageNode | SVGNode
+```
+
+**Type Guards**:
+
+```typescript
+isTextNode(node: LabelNode): node is TextNode
+isLinkNode(node: LabelNode): node is LinkNode
+isImageNode(node: LabelNode): node is ImageNode
+isSVGNode(node: LabelNode): node is SVGNode
+isInlineNode(node: LabelNode): node is TextNode | LinkNode
+```
+
+**Helper Functions**:
+
+```typescript
+emptyStyle(): TextStyle           // Returns {}
+mergeStyles(base, override): TextStyle  // Merges two styles
 ```
 
 ### SVGProcessor
@@ -1782,6 +1977,70 @@ Prior to commit `595127f`, the RenderScheduler used an array to store callbacks,
 ---
 
 ## Recent Improvements
+
+### Link Support and Label Parser Refactoring (Commit ca665d9)
+
+**1. Major LabelParser Refactoring**
+
+**Problem**: The original LabelParser used regex-based parsing which was fragile with nested tags and couldn't easily support new element types like links.
+
+**Solution**: Complete rewrite using DOMParser for proper HTML parsing:
+
+```typescript
+// Before (regex-based):
+const regex = /<\s*(\/?)([bi])\s*>|<img\s+([^>]+)>|<svg[^>]*>[\s\S]*?<\/svg>|([^<]+)/gi
+// Fragile, hard to extend, limited nesting support
+
+// After (DOMParser-based):
+const parser = new DOMParser()
+const doc = parser.parseFromString(`<div>${text}</div>`, 'text/html')
+// Robust, extensible, proper HTML handling
+```
+
+**Benefits**:
+- More robust handling of malformed HTML
+- Proper support for nested tags
+- Easy to add new element types
+- Standard DOM traversal instead of regex
+
+**2. New LabelAST Module**
+
+Created `src/utils/parsers/LabelAST.ts` to define the AST structure:
+- `TextNode` - Plain text with optional bold/italic styling
+- `LinkNode` - Clickable links with href and styling
+- `ImageNode` - External images with optional dimensions
+- `SVGNode` - Inline SVG content with dimensions
+- Type guards for type-safe node handling
+
+**3. Clickable Link Support**
+
+Added full support for `<a href="...">` tags in key labels:
+
+- **Visual styling**: Links render in blue (#0066cc)
+- **Hover underline**: Underline appears when hovering over link
+- **URL preview**: Shows URL at bottom of canvas when hovering
+- **Click handling**: Opens link in new tab with security validation
+- **Rotation support**: Links work correctly on rotated keys
+
+**4. New LinkTracker Component**
+
+Created `src/utils/renderers/LinkTracker.ts` for link hit testing:
+- Registers link bounding boxes during rendering
+- Provides `getLinkAtPosition(x, y)` for hover/click detection
+- Handles rotated keys via inverse rotation transformation
+- Singleton pattern for global access
+
+**5. Updated Components**
+
+- **LabelRenderer**: New `renderLinkNode()` method, `hoveredLinkHref` parameter
+- **CanvasRenderer**: New `getLinkAtPosition()` method, clears linkTracker per render
+- **ParseCache**: Now stores `LabelNode[]` instead of old `ParsedSegment[]`
+- **KeyboardCanvas.vue**: Link hover detection, click handling, URL preview
+
+**New Supported Tags**:
+- `<strong>` - Bold text (alias for `<b>`)
+- `<em>` - Italic text (alias for `<i>`)
+- `<a href="...">` - Clickable links
 
 ### Performance Optimizations (Commits 595127f, ffab9a0)
 
