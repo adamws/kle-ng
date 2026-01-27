@@ -1,6 +1,6 @@
 import type { Key } from '@adamws/kle-serial'
 import type { KeyRenderParams } from '../canvas-renderer'
-import type { LabelNode, TextStyle } from '../parsers/LabelAST'
+import type { LabelNode, ListNode, TextStyle } from '../parsers/LabelAST'
 import { labelParser } from '../parsers/LabelParser'
 import { svgCache } from '../caches/SVGCache'
 import { linkTracker } from './LinkTracker'
@@ -17,6 +17,14 @@ interface RotationContext {
 // Link styling constants
 const LINK_COLOR = '#0066cc'
 const LINK_UNDERLINE_OFFSET = -1
+
+// List rendering constants
+const LIST_BULLET = '•'
+const LIST_INDENT = 12 // Pixels to indent nested list content
+const LIST_ITEM_SPACING = 2 // Extra vertical spacing between items
+
+// Dummy image getter for list measurement (lists don't support images)
+const noopGetImage = (): null => null
 
 /**
  * Options for label rendering
@@ -478,13 +486,24 @@ export class LabelRenderer {
    */
   public nodesHaveFormatting(nodes: LabelNode[]): boolean {
     for (const node of nodes) {
-      // Links, images, and SVGs are always considered "formatted"
-      if (node.type === 'link' || node.type === 'image' || node.type === 'svg') {
+      // Links, images, SVGs, and lists are always considered "formatted"
+      if (
+        node.type === 'link' ||
+        node.type === 'image' ||
+        node.type === 'svg' ||
+        node.type === 'list'
+      ) {
         return true
       }
       // Text nodes with bold or italic styling are "formatted"
       if (node.type === 'text' && (node.style.bold || node.style.italic)) {
         return true
+      }
+      // Check list item children
+      if (node.type === 'list-item') {
+        if (this.nodesHaveFormatting(node.children)) {
+          return true
+        }
       }
     }
     return false
@@ -594,17 +613,81 @@ export class LabelRenderer {
   }
 
   /**
+   * Draw inline nodes (text and links) at a specific position.
+   * This is the core text rendering method used by both general label rendering
+   * and list item rendering.
+   *
+   * NOTE: Images and SVGs are intentionally NOT handled here. They are only
+   * supported as standalone labels (checked via isImageOnly/isSvgOnly regex)
+   * and rendered via drawImageLabel. Mixed image+text content will skip images.
+   *
+   * @param ctx - Canvas rendering context
+   * @param nodes - Nodes to draw (only text and link nodes are rendered)
+   * @param startX - Starting X coordinate
+   * @param y - Y coordinate
+   * @param fontFamily - Font family to use
+   * @param fontSize - Font size for link rendering
+   * @param textBaseline - Text baseline for link bounding box calculation
+   * @param rotationContext - Optional rotation context for link tracking
+   * @param hoveredLinkHref - Optional href of currently hovered link (for underline)
+   * @returns The final X position after drawing all nodes
+   */
+  private drawInlineNodes(
+    ctx: CanvasRenderingContext2D,
+    nodes: LabelNode[],
+    startX: number,
+    y: number,
+    fontFamily: string,
+    fontSize: number,
+    textBaseline: CanvasTextBaseline,
+    rotationContext?: RotationContext,
+    hoveredLinkHref?: string | null,
+  ): number {
+    let currentX = startX
+
+    for (const node of nodes) {
+      if (node.type === 'text') {
+        const fontStyle = this.buildFontStyle(
+          ctx,
+          node.style.bold ?? false,
+          node.style.italic ?? false,
+          fontFamily,
+        )
+        ctx.font = fontStyle
+        ctx.fillText(node.text, currentX, y)
+        currentX += ctx.measureText(node.text).width
+      } else if (node.type === 'link') {
+        currentX += this.renderLinkNode(
+          ctx,
+          node,
+          currentX,
+          y,
+          fontFamily,
+          fontSize,
+          textBaseline,
+          rotationContext,
+          hoveredLinkHref,
+        )
+      }
+      // Images/SVGs are skipped - only supported as standalone labels
+      // Lists are handled separately by renderListNode
+    }
+
+    return currentX
+  }
+
+  /**
    * Draw pre-parsed label nodes at a specific position.
-   * Handles mixed bold, italic, and plain text segments with images and links.
+   * Handles text, links, and lists. Images/SVGs are only supported standalone.
    *
    * @param ctx - Canvas rendering context
    * @param nodes - Pre-parsed label nodes to draw
    * @param x - X coordinate
    * @param y - Y coordinate
    * @param fontFamily - Font family to use
-   * @param getImageFn - Function to get cached image
-   * @param loadImageFn - Function to load image if not cached
-   * @param onLoadCallback - Optional callback when image loads
+   * @param getImageFn - Function to get cached image (used for measuring)
+   * @param loadImageFn - Function to load image if not cached (unused, kept for API compatibility)
+   * @param onLoadCallback - Optional callback when image loads (unused, kept for API compatibility)
    * @param rotationContext - Optional rotation context for link tracking
    * @param hoveredLinkHref - Optional href of currently hovered link (for underline)
    * @returns The final Y position after rendering (useful for content after block elements)
@@ -616,10 +699,11 @@ export class LabelRenderer {
     y: number,
     fontFamily: string,
     getImageFn: (url: string) => HTMLImageElement | null,
-    loadImageFn: (url: string, onLoad?: () => void) => void,
-    onLoadCallback?: () => void,
+    _loadImageFn: (url: string, onLoad?: () => void) => void,
+    _onLoadCallback?: () => void,
     rotationContext?: RotationContext,
     hoveredLinkHref?: string | null,
+    maxWidth?: number,
   ): number {
     // Save context state
     const originalFont = ctx.font
@@ -635,14 +719,19 @@ export class LabelRenderer {
 
     // Track current position
     let currentX = x
-    const currentY = y
+
+    // Check if this line contains a list (block element)
+    const containsList = nodes.some((node) => node.type === 'list')
 
     // For center/right alignment of inline content, we need to adjust starting X
-    if (originalTextAlign === 'center' || originalTextAlign === 'right') {
-      // Calculate width of all inline content
+    // But NOT for lists - they handle their own alignment
+    if (!containsList && (originalTextAlign === 'center' || originalTextAlign === 'right')) {
+      // Calculate width of inline content only (text and links)
       let totalWidth = 0
       for (const node of nodes) {
-        totalWidth += this.measureNodeWidth(ctx, node, fontFamily, getImageFn)
+        if (node.type === 'text' || node.type === 'link') {
+          totalWidth += this.measureNodeWidth(ctx, node, fontFamily, getImageFn)
+        }
       }
       if (originalTextAlign === 'center') {
         currentX = x - totalWidth / 2
@@ -651,85 +740,41 @@ export class LabelRenderer {
       }
     }
 
-    // Draw each node
-    for (const node of nodes) {
-      if (node.type === 'text') {
-        const fontStyle = this.buildFontStyle(
-          ctx,
-          node.style.bold ?? false,
-          node.style.italic ?? false,
-          fontFamily,
-        )
-        ctx.font = fontStyle
-        ctx.fillText(node.text, currentX, currentY)
-        currentX += ctx.measureText(node.text).width
-      } else if (node.type === 'link') {
-        currentX += this.renderLinkNode(
+    // Separate inline nodes from lists
+    const inlineNodes = nodes.filter((n) => n.type === 'text' || n.type === 'link')
+    const listNodes = nodes.filter((n) => n.type === 'list')
+
+    // Draw inline content (text and links)
+    if (inlineNodes.length > 0) {
+      this.drawInlineNodes(
+        ctx,
+        inlineNodes,
+        currentX,
+        y,
+        fontFamily,
+        fontSize,
+        originalTextBaseline,
+        rotationContext,
+        hoveredLinkHref,
+      )
+    }
+
+    // Draw lists (block elements)
+    for (const node of listNodes) {
+      if (node.type === 'list') {
+        this.renderListNode(
           ctx,
           node,
-          currentX,
-          currentY,
+          x, // Lists use original x, not adjusted currentX
+          y,
           fontFamily,
-          fontSize,
+          originalTextAlign,
           originalTextBaseline,
           rotationContext,
           hoveredLinkHref,
+          maxWidth,
+          noopGetImage,
         )
-      } else if (node.type === 'image') {
-        const img = getImageFn(node.src)
-        if (!img) {
-          loadImageFn(node.src, onLoadCallback)
-
-          const width = node.width || 16
-          const height = node.height || 16
-
-          let imgY = currentY
-          if (originalTextBaseline === 'middle') {
-            imgY = currentY - height / 2
-          } else if (originalTextBaseline === 'alphabetic') {
-            imgY = currentY - height
-          }
-
-          ctx.save()
-          ctx.strokeStyle = '#ccc'
-          ctx.strokeRect(currentX, imgY, width, height)
-          ctx.restore()
-
-          currentX += width
-        } else {
-          const width = node.width || img.naturalWidth
-          const height = node.height || img.naturalHeight
-
-          let imgY = currentY
-          if (originalTextBaseline === 'middle') {
-            imgY = currentY - height / 2
-          } else if (originalTextBaseline === 'alphabetic') {
-            imgY = currentY - height
-          }
-
-          ctx.drawImage(img, currentX, imgY, width, height)
-          currentX += width
-        }
-      } else if (node.type === 'svg') {
-        const dataUrl = svgCache.toDataUrl(node.content)
-        const img = getImageFn(dataUrl)
-        if (!img) {
-          loadImageFn(dataUrl, onLoadCallback)
-          currentX += node.width || 16
-        } else {
-          const width = node.width || img.naturalWidth || 32
-          const height = node.height || img.naturalHeight || 32
-
-          let imgY = currentY
-          if (originalTextBaseline === 'middle') {
-            imgY = currentY - height / 2
-          } else if (originalTextBaseline === 'alphabetic') {
-            imgY = currentY - height
-          }
-
-          ctx.drawImage(img, currentX, imgY, width, height)
-          currentX += width
-        }
       }
     }
 
@@ -738,6 +783,164 @@ export class LabelRenderer {
     ctx.textAlign = originalTextAlign
     ctx.textBaseline = originalTextBaseline
     ctx.fillStyle = originalFillStyle
+
+    return y
+  }
+
+  /**
+   * Render a list (ordered or unordered) with proper alignment
+   * Each list item renders on a new line with bullet/number prefix
+   * NOTE: Lists are text-only (no images/SVGs) - simplified rendering
+   *
+   * IMPORTANT: This method does NOT adjust for baseline - that should be handled
+   * by the caller (drawMultiLineNodes) when positioning multiline content.
+   * The list renders starting at the given Y position and grows downward.
+   */
+  private renderListNode(
+    ctx: CanvasRenderingContext2D,
+    list: ListNode,
+    x: number,
+    y: number,
+    fontFamily: string,
+    alignment: CanvasTextAlign,
+    baseline: CanvasTextBaseline,
+    rotationContext?: RotationContext,
+    hoveredLinkHref?: string | null,
+    maxWidth?: number,
+    getImageFn?: (url: string) => HTMLImageElement | null,
+  ): number {
+    const fontSize = parseInt(ctx.font.match(/\d+/)?.[0] || '12')
+    const lineHeight = fontSize * 1.2
+    let currentY = y
+
+    // NOTE: Do NOT adjust Y for baseline here - the caller handles vertical positioning
+    // for multiline content. The list starts at Y and grows downward.
+
+    // Use provided getImageFn or noop (lists don't have images)
+    const getImage = getImageFn || noopGetImage
+
+    for (let i = 0; i < list.items.length; i++) {
+      const item = list.items[i]
+      if (!item) continue
+
+      // Generate marker text
+      const marker = list.ordered ? `${i + 1}.` : LIST_BULLET
+      const markerWidth = ctx.measureText(marker + ' ').width
+      const itemContentMaxWidth = maxWidth ? maxWidth - markerWidth : undefined
+
+      // Get inline children (text/links only, not nested lists)
+      const inlineChildren = item.children.filter((c) => c.type !== 'list')
+
+      // Apply word wrapping if maxWidth is specified
+      let wrappedLines: LabelNode[][] = [inlineChildren]
+      if (itemContentMaxWidth && inlineChildren.length > 0) {
+        const contentWidth = this.measureNodesWidth(ctx, inlineChildren, fontFamily, getImage)
+        if (contentWidth > itemContentMaxWidth) {
+          wrappedLines = this.wrapSingleLine(
+            ctx,
+            inlineChildren,
+            itemContentMaxWidth,
+            fontFamily,
+            getImage,
+          )
+        }
+      }
+
+      // Draw each wrapped line
+      for (let lineIdx = 0; lineIdx < wrappedLines.length; lineIdx++) {
+        const lineNodes = wrappedLines[lineIdx]
+        const isFirstLine = lineIdx === 0
+
+        // Measure this line's content width
+        const lineContentWidth =
+          lineNodes && lineNodes.length > 0
+            ? this.measureNodesWidth(ctx, lineNodes, fontFamily, getImage)
+            : 0
+
+        // Calculate positions based on alignment - each line aligned independently
+        let markerX: number
+        let contentX: number
+
+        if (alignment === 'center') {
+          if (isFirstLine) {
+            // First line includes marker
+            const totalLineWidth = markerWidth + lineContentWidth
+            markerX = x - totalLineWidth / 2
+            contentX = markerX + markerWidth
+          } else {
+            // Subsequent lines: center content only (no marker)
+            contentX = x - lineContentWidth / 2
+            markerX = contentX - markerWidth // Not used, but set for consistency
+          }
+        } else if (alignment === 'right') {
+          if (isFirstLine) {
+            // First line: right edge of content at x
+            contentX = x - lineContentWidth
+            markerX = contentX - markerWidth
+          } else {
+            // Subsequent lines: right edge of content at x (no marker)
+            contentX = x - lineContentWidth
+            markerX = contentX - markerWidth // Not used
+          }
+        } else {
+          // Left alignment (default)
+          markerX = x
+          contentX = x + markerWidth
+        }
+
+        // Draw marker on first line only
+        if (isFirstLine) {
+          ctx.textAlign = 'left'
+          ctx.fillText(marker, markerX, currentY)
+        }
+
+        // Draw line content using the shared inline rendering method
+        if (lineNodes && lineNodes.length > 0) {
+          ctx.textAlign = 'left'
+          this.drawInlineNodes(
+            ctx,
+            lineNodes,
+            contentX,
+            currentY,
+            fontFamily,
+            fontSize,
+            baseline,
+            rotationContext,
+            hoveredLinkHref,
+          )
+        }
+
+        currentY += lineHeight + LIST_ITEM_SPACING
+      }
+
+      // Handle nested lists - position based on alignment
+      const nestedLists = item.children.filter((c) => c.type === 'list') as ListNode[]
+      for (const nestedList of nestedLists) {
+        const nestedMaxWidth = itemContentMaxWidth ? itemContentMaxWidth - LIST_INDENT : undefined
+        // For nested lists, calculate starting X based on parent alignment
+        let nestedX: number
+        if (alignment === 'left') {
+          nestedX = x + markerWidth + LIST_INDENT
+        } else {
+          // For center/right, nested lists are indented from the left edge
+          // Use a consistent indentation from x
+          nestedX = x + LIST_INDENT
+        }
+        currentY = this.renderListNode(
+          ctx,
+          nestedList,
+          nestedX,
+          currentY,
+          fontFamily,
+          alignment, // Pass through the alignment
+          'hanging',
+          rotationContext,
+          hoveredLinkHref,
+          nestedMaxWidth,
+          getImage,
+        )
+      }
+    }
 
     return currentY
   }
@@ -794,7 +997,172 @@ export class LabelRenderer {
       return node.width || 16
     }
 
+    if (node.type === 'list') {
+      // Lists are block elements - measure max item width
+      return this.measureListWidth(ctx, node, fontFamily)
+    }
+
+    if (node.type === 'list-item') {
+      // List items measured via their children (text-only)
+      return this.measureListItemWidth(ctx, node.children, fontFamily)
+    }
+
     return 0
+  }
+
+  /**
+   * Measure the maximum width of a list (for layout calculations)
+   * Lists contain only text content (text, links, nested lists) - no images
+   */
+  private measureListWidth(
+    ctx: CanvasRenderingContext2D,
+    list: ListNode,
+    fontFamily: string,
+  ): number {
+    let maxWidth = 0
+
+    for (let i = 0; i < list.items.length; i++) {
+      const item = list.items[i]
+      if (!item) continue
+
+      // Measure marker width
+      const markerText = list.ordered ? `${i + 1}. ` : `${LIST_BULLET} `
+      const markerWidth = ctx.measureText(markerText).width
+
+      // Measure item content width (text-only, no images)
+      const contentWidth = this.measureListItemWidth(ctx, item.children, fontFamily)
+
+      // Check for nested lists
+      const nestedListWidth = this.measureNestedListsWidth(ctx, item.children, fontFamily)
+
+      maxWidth = Math.max(maxWidth, markerWidth + contentWidth, markerWidth + nestedListWidth)
+    }
+
+    return maxWidth
+  }
+
+  /**
+   * Measure text-only content width for list items
+   */
+  private measureListItemWidth(
+    ctx: CanvasRenderingContext2D,
+    children: LabelNode[],
+    fontFamily: string,
+  ): number {
+    const originalFont = ctx.font
+    let width = 0
+    for (const child of children) {
+      if (child.type === 'text' || child.type === 'link') {
+        const fontStyle = this.buildFontStyle(
+          ctx,
+          child.style.bold ?? false,
+          child.style.italic ?? false,
+          fontFamily,
+        )
+        ctx.font = fontStyle
+        width += ctx.measureText(child.text).width
+      }
+      // Nested lists measured separately, images/SVGs not supported
+    }
+    ctx.font = originalFont
+    return width
+  }
+
+  /**
+   * Measure nested lists within item children
+   */
+  private measureNestedListsWidth(
+    ctx: CanvasRenderingContext2D,
+    children: LabelNode[],
+    fontFamily: string,
+  ): number {
+    let maxWidth = 0
+    for (const child of children) {
+      if (child.type === 'list') {
+        const nestedWidth = LIST_INDENT + this.measureListWidth(ctx, child, fontFamily)
+        maxWidth = Math.max(maxWidth, nestedWidth)
+      }
+    }
+    return maxWidth
+  }
+
+  /**
+   * Calculate the total height of a list including all items and nested lists
+   * Accounts for word wrapping when maxWidth is specified
+   */
+  private measureListHeight(
+    ctx: CanvasRenderingContext2D,
+    list: ListNode,
+    fontFamily?: string,
+    maxWidth?: number,
+  ): number {
+    const fontSize = parseInt(ctx.font.match(/\d+/)?.[0] || '12')
+    const lineHeight = fontSize * 1.2
+    let totalHeight = 0
+
+    for (let i = 0; i < list.items.length; i++) {
+      const item = list.items[i]
+      if (!item) continue
+
+      // Calculate marker width for this item
+      const marker = list.ordered ? `${i + 1}.` : LIST_BULLET
+      const markerWidth = ctx.measureText(marker + ' ').width
+      const contentMaxWidth = maxWidth ? maxWidth - markerWidth : undefined
+
+      // Get inline children (text/links only, not nested lists)
+      const inlineChildren = item.children.filter((c) => c.type !== 'list')
+
+      // Calculate how many lines this item takes with wrapping
+      let itemLineCount = 1
+      if (contentMaxWidth && fontFamily && inlineChildren.length > 0) {
+        const contentWidth = this.measureNodesWidth(ctx, inlineChildren, fontFamily, noopGetImage)
+        if (contentWidth > contentMaxWidth) {
+          const wrappedLines = this.wrapSingleLine(
+            ctx,
+            inlineChildren,
+            contentMaxWidth,
+            fontFamily,
+            noopGetImage,
+          )
+          itemLineCount = wrappedLines.length
+        }
+      }
+
+      // Add height for all lines of this item
+      totalHeight += itemLineCount * (lineHeight + LIST_ITEM_SPACING)
+
+      // Check for nested lists which add more height
+      for (const child of item.children) {
+        if (child.type === 'list') {
+          const nestedMaxWidth = contentMaxWidth ? contentMaxWidth - LIST_INDENT : undefined
+          totalHeight += this.measureListHeight(ctx, child, fontFamily, nestedMaxWidth)
+        }
+      }
+    }
+
+    return totalHeight
+  }
+
+  /**
+   * Calculate the height of a line of nodes (accounting for lists)
+   */
+  private measureLineHeight(
+    ctx: CanvasRenderingContext2D,
+    nodes: LabelNode[],
+    fontFamily?: string,
+    maxWidth?: number,
+  ): number {
+    const fontSize = parseInt(ctx.font.match(/\d+/)?.[0] || '12')
+    const baseLineHeight = fontSize * 1.2
+
+    // Check if line contains a list
+    for (const node of nodes) {
+      if (node.type === 'list') {
+        return this.measureListHeight(ctx, node, fontFamily, maxWidth)
+      }
+    }
+
+    return baseLineHeight
   }
 
   /**
@@ -849,41 +1217,73 @@ export class LabelRenderer {
     onLoadCallback?: () => void,
     rotationContext?: { angle: number; originX: number; originY: number },
     hoveredLinkHref?: string | null,
+    maxWidth?: number,
   ): void {
+    // Check if any line contains a list (which has variable height)
+    const hasLists = nodeLines.some((line) => line.some((node) => node.type === 'list'))
+
     let startY = y
 
-    // Adjust starting Y based on baseline
-    if (pos.baseline === 'middle') {
-      // Center the block of text vertically around the provided Y
+    if (hasLists) {
+      // Calculate total height accounting for variable-height lines (lists with wrapping)
+      let totalHeight = 0
+      for (let i = 0; i < nodeLines.length; i++) {
+        const line = nodeLines[i]
+        if (line) {
+          totalHeight += this.measureLineHeight(ctx, line, fontFamily, maxWidth)
+        }
+      }
+
+      // Adjust starting Y based on baseline
+      if (pos.baseline === 'middle') {
+        // Center the block of text vertically around the provided Y
+        startY = y - totalHeight / 2
+      } else if (pos.baseline === 'alphabetic') {
+        // Position so the last line ends at the provided Y
+        startY = y - totalHeight + lineHeight
+      }
+    } else {
+      // For regular text without lists, use the original calculation
+      // which is based on (numLines - 1) to account for text baseline positioning
       const totalHeight = (nodeLines.length - 1) * lineHeight
-      startY = y - totalHeight / 2
-    } else if (pos.baseline === 'alphabetic') {
-      // Position so the last line ends at the provided Y
-      const totalHeight = (nodeLines.length - 1) * lineHeight
-      startY = y - totalHeight
+
+      if (pos.baseline === 'middle') {
+        startY = y - totalHeight / 2
+      } else if (pos.baseline === 'alphabetic') {
+        startY = y - totalHeight
+      }
     }
 
-    // Draw each line with pre-parsed nodes
-    nodeLines.forEach((lineNodes, index) => {
-      const lineY = startY + index * lineHeight
+    // Draw each line with pre-parsed nodes, tracking actual Y position
+    let currentY = startY
+    for (const lineNodes of nodeLines) {
       this.drawParsedNodes(
         ctx,
         lineNodes,
         x,
-        lineY,
+        currentY,
         fontFamily,
         getImageFn,
         loadImageFn,
         onLoadCallback,
         rotationContext,
         hoveredLinkHref,
+        maxWidth,
       )
-    })
+      // Advance Y by the height of this line
+      // Use measureLineHeight for lists (variable height), fixed lineHeight for regular text
+      if (hasLists) {
+        currentY += this.measureLineHeight(ctx, lineNodes, fontFamily, maxWidth)
+      } else {
+        currentY += lineHeight
+      }
+    }
   }
 
   /**
    * Split AST nodes into lines at newline characters.
    * Preserves node types and styles (including links) for each line.
+   * Lists are treated as block elements and get their own "line".
    *
    * @param nodes - Pre-parsed label nodes
    * @returns Array of lines, each line is an array of nodes
@@ -908,6 +1308,14 @@ export class LabelRenderer {
             currentLine.push({ type: 'text', text: part, style: { ...node.style } })
           }
         }
+      } else if (node.type === 'list') {
+        // Lists are block elements - flush current line and add list separately
+        if (currentLine.length > 0) {
+          lines.push(currentLine)
+          currentLine = []
+        }
+        // Each list gets its own "line" (will be rendered specially)
+        lines.push([node])
       } else {
         // Links, images, SVGs don't split - add to current line
         currentLine.push(node)
@@ -915,7 +1323,9 @@ export class LabelRenderer {
     }
 
     // Don't forget the last line
-    lines.push(currentLine)
+    if (currentLine.length > 0) {
+      lines.push(currentLine)
+    }
 
     return lines
   }
@@ -1164,6 +1574,7 @@ export class LabelRenderer {
         onLoadCallback,
         rotationContext,
         hoveredLinkHref,
+        maxWidth,
       )
     } else {
       // Multiple lines - use multi-line node rendering
@@ -1180,6 +1591,7 @@ export class LabelRenderer {
         onLoadCallback,
         rotationContext,
         hoveredLinkHref,
+        maxWidth,
       )
     }
   }

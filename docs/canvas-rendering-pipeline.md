@@ -34,7 +34,7 @@
 The kle-ng canvas rendering pipeline is a modular, high-performance system for rendering keyboard layouts on HTML5 Canvas. It supports advanced features like:
 
 - **Key rendering** with multiple shapes (rectangular, non-rectangular, circular)
-- **Rich label formatting** with HTML tags, images, inline SVG, and clickable links
+- **Rich label formatting** with HTML tags, images, inline SVG, clickable links, and lists
 - **Rotation support** with interactive rotation origin controls
 - **High DPI rendering** with proper pixel alignment
 - **Performance optimization** through multi-level caching
@@ -426,6 +426,7 @@ roundInner = 3        // Inner corner radius
 - **12 label positions**: 3x3 grid on top + 3 front legends
 - **Rich formatting**: Bold, italic, nested styles
 - **Clickable links**: `<a>` tag support with hover underline and URL preview
+- **Lists**: Ordered (`<ol>`) and unordered (`<ul>`) lists with proper bullet/number markers
 - **Mixed content**: Text + images + SVG + links
 - **Auto-wrapping**: Word wrapping with overflow handling
 - **Multi-line support**: `<br>` tag support
@@ -493,6 +494,8 @@ Supported tags:
 - `<br>` or `<br/>` - Line break
 - `<img src="url" width="32" height="32">` - External image
 - `<svg width="32" height="32">...</svg>` - Inline SVG
+- `<ul><li>...</li></ul>` - Unordered list (bullet points)
+- `<ol><li>...</li></ol>` - Ordered list (numbered)
 
 Example:
 
@@ -505,6 +508,8 @@ Example:
 Hello<br>World        → "Hello" on line 1, "World" on line 2
 <a href="https://example.com">Link</a>  → Blue clickable link with underline on hover
 <img src="icon.png" width="16" height="16">  → 16x16 image
+<ul><li>Item 1</li><li>Item 2</li></ul>  → Bulleted list
+<ol><li>First</li><li>Second</li></ol>   → Numbered list
 ```
 
 **Link Rendering**:
@@ -515,6 +520,33 @@ Links (`<a>` tags) are rendered with special styling and interactivity:
 - **Hit testing**: Link bounding boxes are registered with LinkTracker for click detection
 - **Security**: Only `http://` and `https://` URLs are opened (validated in KeyboardCanvas.vue)
 - **Rotation support**: Links work correctly on rotated keys via inverse rotation transformation
+
+**List Rendering**:
+
+Lists (`<ul>` and `<ol>` tags) are rendered as block elements with proper formatting:
+- **Unordered lists**: Rendered with bullet markers (`•`)
+- **Ordered lists**: Rendered with numbered markers (`1.`, `2.`, etc.)
+- **Nested lists**: Supported with proper indentation (12px per level)
+- **Alignment**: Lists respect label alignment (left/center/right)
+- **Word wrapping**: Long list items wrap with proper indentation
+- **Text-only content**: Lists support text, links, and nested lists (images/SVGs filtered out)
+- **Item spacing**: 2px extra vertical spacing between items
+
+List Rendering Constants:
+```typescript
+LIST_BULLET = '•'        // Bullet character for unordered lists
+LIST_INDENT = 12         // Pixels to indent nested list content
+LIST_ITEM_SPACING = 2    // Extra vertical spacing between items
+```
+
+Example rendering:
+```
+Unordered list:           Ordered list:
+• Item 1                  1. First
+• Item 2                  2. Second
+  • Nested item           3. Third
+• Item 3
+```
 
 **Image Label Positioning**:
 
@@ -1218,6 +1250,8 @@ The LabelParser uses DOMParser for robust HTML parsing instead of regex, providi
 Text<br>with<br>breaks
 <img src="icon.png" width="16" height="16">
 <svg width="24" height="24">...</svg>
+<ul><li>Unordered item</li></ul>
+<ol><li>Ordered item</li></ol>
 ```
 
 **Parsing Architecture**:
@@ -1255,8 +1289,27 @@ class LabelParser {
           return [{ type: 'image', src, width, height }]
         case 'svg':
           return [{ type: 'svg', content, width, height }]
+        case 'ul', 'ol':
+          return parseList(node, style, tag === 'ol')
         default:
           return parseChildNodes(node, style)  // Handle div, span, etc.
+  }
+
+  // Parse list elements
+  private parseList(element, style, ordered): LabelNode[] {
+    const items = []
+    for (child of element.children):
+      if (child.tagName === 'li'):
+        items.push(parseListItem(child, style))
+    return [{ type: 'list', ordered, items }]
+  }
+
+  // Parse list item - filters out images/SVGs (text-only content)
+  private parseListItem(element, style): ListItemNode {
+    const children = parseChildNodes(element, style)
+    // Filter out images/SVGs - lists are text-only
+    const filtered = children.filter(c => c.type !== 'image' && c.type !== 'svg')
+    return { type: 'list-item', children: filtered }
   }
 }
 ```
@@ -1327,9 +1380,27 @@ interface SVGNode {
 }
 
 /**
+ * List item node - contains text content and optional nested lists
+ * NOTE: Images/SVGs are NOT supported in list items (text-only content)
+ */
+interface ListItemNode {
+  type: 'list-item'
+  children: LabelNode[]  // Text content only: text, links, nested lists
+}
+
+/**
+ * List node - ordered or unordered list container
+ */
+interface ListNode {
+  type: 'list'
+  ordered: boolean  // true = <ol>, false = <ul>
+  items: ListItemNode[]
+}
+
+/**
  * Union type of all possible label nodes
  */
-type LabelNode = TextNode | LinkNode | ImageNode | SVGNode
+type LabelNode = TextNode | LinkNode | ImageNode | SVGNode | ListNode | ListItemNode
 ```
 
 **Type Guards**:
@@ -1339,7 +1410,8 @@ isTextNode(node: LabelNode): node is TextNode
 isLinkNode(node: LabelNode): node is LinkNode
 isImageNode(node: LabelNode): node is ImageNode
 isSVGNode(node: LabelNode): node is SVGNode
-isInlineNode(node: LabelNode): node is TextNode | LinkNode
+isListNode(node: LabelNode): node is ListNode
+isInlineNode(node: LabelNode): node is TextNode | LinkNode  // Lists are NOT inline
 ```
 
 **Helper Functions**:

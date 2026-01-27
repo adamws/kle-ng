@@ -20,7 +20,7 @@
 
 import { parseCache } from '../caches/ParseCache'
 import { svgProcessor } from './SVGProcessor'
-import type { LabelNode, TextStyle } from './LabelAST'
+import type { LabelNode, ListItemNode, TextStyle } from './LabelAST'
 
 export class LabelParser {
   /**
@@ -158,8 +158,79 @@ export class LabelParser {
       ]
     }
 
+    // List tags (ul, ol)
+    if (tag === 'ul' || tag === 'ol') {
+      return this.parseList(el, style, tag === 'ol')
+    }
+
     // Default: recurse into children (handles div, span, etc.)
     return this.parseChildNodes(el, style)
+  }
+
+  /**
+   * Parse a list element (<ul> or <ol>) into a LabelNode[]
+   * Handles nested lists by recursively calling parseChildNodes
+   */
+  private parseList(element: HTMLElement, style: TextStyle, ordered: boolean): LabelNode[] {
+    const items: ListItemNode[] = []
+
+    // Iterate through child elements looking for <li> tags
+    for (let i = 0; i < element.children.length; i++) {
+      const child = element.children[i]
+      if (child && child.tagName.toLowerCase() === 'li') {
+        const itemNode = this.parseListItem(child as HTMLElement, style)
+        if (itemNode) {
+          items.push(itemNode)
+        }
+      }
+    }
+
+    // Return empty array for empty lists (consistent with other empty content handling)
+    if (items.length === 0) {
+      return []
+    }
+
+    return [
+      {
+        type: 'list',
+        ordered,
+        items,
+      },
+    ]
+  }
+
+  /**
+   * Parse a list item (<li>) into a ListItemNode
+   * List items can contain:
+   * - Text content (plain text, bold, italic)
+   * - Links (<a>)
+   * - Nested lists (<ul>, <ol>)
+   * NOTE: Images/SVGs are intentionally filtered out (not supported in lists)
+   */
+  private parseListItem(element: HTMLElement, style: TextStyle): ListItemNode | null {
+    // Parse all child content with inherited style
+    const children = this.parseChildNodes(element, style)
+
+    // Filter out empty text nodes AND images/SVGs (not supported in lists)
+    const filteredChildren = children.filter((child) => {
+      // Filter out images and SVGs - lists are text-only
+      if (child.type === 'image' || child.type === 'svg') {
+        return false
+      }
+      if (child.type === 'text') {
+        return child.text.trim().length > 0 || child.text.includes('\n')
+      }
+      return true
+    })
+
+    if (filteredChildren.length === 0) {
+      return null
+    }
+
+    return {
+      type: 'list-item',
+      children: filteredChildren,
+    }
   }
 
   /**
@@ -253,6 +324,38 @@ export class LabelParser {
           }
         } else if (node.type === 'svg') {
           currentLineWidth += node.width || 16
+        } else if (node.type === 'list') {
+          // Lists are block elements - flush current line and measure list items
+          maxWidth = Math.max(maxWidth, currentLineWidth)
+          currentLineWidth = 0
+
+          // Measure each list item
+          const bulletWidth = ctx.measureText('• ').width
+          for (const item of node.items) {
+            // Measure item content (text/links only, no images in lists)
+            let itemWidth = bulletWidth
+            for (const child of item.children) {
+              if (child.type === 'text') {
+                const fontStyle = buildFontStyle(
+                  child.style.bold ?? false,
+                  child.style.italic ?? false,
+                )
+                ctx.font = fontStyle
+                itemWidth += ctx.measureText(child.text).width
+              } else if (child.type === 'link') {
+                const fontStyle = buildFontStyle(
+                  child.style.bold ?? false,
+                  child.style.italic ?? false,
+                )
+                ctx.font = fontStyle
+                itemWidth += ctx.measureText(child.text).width
+              } else if (child.type === 'list') {
+                // Nested lists - measure recursively (simplified: just track max width)
+                measureNodes([child])
+              }
+            }
+            maxWidth = Math.max(maxWidth, itemWidth)
+          }
         }
       }
     }
@@ -292,6 +395,11 @@ export class LabelParser {
         text += node.text
       } else if (node.type === 'link') {
         text += node.text
+      } else if (node.type === 'list') {
+        // Extract text from list items
+        for (const item of node.items) {
+          text += this.getPlainText(item.children) + '\n'
+        }
       }
       // Images and SVGs don't contribute to plain text
     }

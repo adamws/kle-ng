@@ -753,4 +753,141 @@ test.describe('Key Rendering Tests', () => {
       await expect(helper.getCanvas()).toHaveScreenshot('non-rectangular-big-ass-enter-colored.png')
     })
   })
+
+  test.describe('Lists', () => {
+    test.describe('Basic Lists', () => {
+      test('simple unordered list', async () => {
+        await helper.addKey()
+        await helper.setKeySize(2, 2)
+        await helper.setKeyLabel(
+          'topLeft',
+          '<ul><li>Item 1</li><li>Item 2</li><li>Item 3</li></ul>',
+        )
+        await helper.waitForRender()
+        await expect(helper.getCanvas()).toHaveScreenshot('labels-list-unordered.png')
+      })
+
+      test('simple ordered list', async () => {
+        await helper.addKey()
+        await helper.setKeySize(2, 2)
+        await helper.setKeyLabel('topLeft', '<ol><li>First</li><li>Second</li><li>Third</li></ol>')
+        await helper.waitForRender()
+        await expect(helper.getCanvas()).toHaveScreenshot('labels-list-ordered.png')
+      })
+    })
+
+    test.describe('Lists with Formatting', () => {
+      test('list with bold items', async () => {
+        await helper.addKey()
+        await helper.setKeySize(2, 2)
+        await helper.setKeyLabel(
+          'topLeft',
+          '<ul><li><b>Bold Item</b></li><li>Normal Item</li></ul>',
+        )
+        await helper.waitForRender()
+        await expect(helper.getCanvas()).toHaveScreenshot('labels-list-bold.png')
+      })
+
+      test('list with italic items', async () => {
+        await helper.addKey()
+        await helper.setKeySize(2, 2)
+        await helper.setKeyLabel(
+          'topLeft',
+          '<ul><li><i>Italic Item</i></li><li>Normal Item</li></ul>',
+        )
+        await helper.waitForRender()
+        await expect(helper.getCanvas()).toHaveScreenshot('labels-list-italic.png')
+      })
+
+      test('list with links', async () => {
+        await helper.addKey()
+        await helper.setKeySize(2, 2)
+        await helper.setKeyLabel(
+          'topLeft',
+          '<ul><li><a href="https://example.com">Link Item</a></li></ul>',
+        )
+        await helper.waitForRender()
+        await expect(helper.getCanvas()).toHaveScreenshot('labels-list-with-link.png')
+      })
+    })
+
+    test.describe('Nested Lists', () => {
+      test('two-level nested unordered list', async () => {
+        await helper.addKey()
+        await helper.setKeySize(3, 3)
+        await helper.setKeyLabel(
+          'topLeft',
+          '<ul><li>Parent 1<ul><li>Child 1.1</li><li>Child 1.2</li></ul></li><li>Parent 2</li></ul>',
+        )
+        await helper.waitForRender()
+        await expect(helper.getCanvas()).toHaveScreenshot('labels-list-nested-ul.png')
+      })
+
+      test('mixed nested list (ol containing ul)', async () => {
+        await helper.addKey()
+        await helper.setKeySize(3, 3)
+        await helper.setKeyLabel(
+          'topLeft',
+          '<ol><li>First<ul><li>Bullet A</li><li>Bullet B</li></ul></li><li>Second</li></ol>',
+        )
+        await helper.waitForRender()
+        await expect(helper.getCanvas()).toHaveScreenshot('labels-list-nested-mixed.png')
+      })
+    })
+
+    test.describe('List Alignment', () => {
+      test('list in left-aligned position', async () => {
+        await helper.addKey()
+        await helper.setKeySize(2, 2)
+        await helper.setKeyLabel('topLeft', '<ul><li>Left</li><li>Aligned</li></ul>')
+        await helper.waitForRender()
+        await expect(helper.getCanvas()).toHaveScreenshot('labels-list-align-left.png')
+      })
+
+      test('list in center-aligned position', async () => {
+        await helper.addKey()
+        await helper.setKeySize(2, 2)
+        await helper.setKeyLabel('topCenter', '<ul><li>Center</li><li>Aligned</li></ul>')
+        await helper.waitForRender()
+        await expect(helper.getCanvas()).toHaveScreenshot('labels-list-align-center.png')
+      })
+
+      test('list in right-aligned position', async () => {
+        await helper.addKey()
+        await helper.setKeySize(2, 2)
+        await helper.setKeyLabel('topRight', '<ul><li>Right</li><li>Aligned</li></ul>')
+        await helper.waitForRender()
+        await expect(helper.getCanvas()).toHaveScreenshot('labels-list-align-right.png')
+      })
+    })
+
+    test.describe('List Edge Cases', () => {
+      test('list on rotated key', async () => {
+        await helper.addKey()
+        await helper.setKeySize(2, 2)
+        await helper.setKeyRotation(45)
+        await helper.setKeyLabel('topLeft', '<ul><li>Rotated</li><li>List</li></ul>')
+        await helper.waitForRender()
+        await expect(helper.getCanvas()).toHaveScreenshot('labels-list-rotated.png')
+      })
+
+      test('list on small key (overflow handling)', async () => {
+        await helper.addKey()
+        await helper.setKeyLabel('topLeft', '<ul><li>LongWord</li><li>AnotherLongWord</li></ul>')
+        await helper.waitForRender()
+        await expect(helper.getCanvas()).toHaveScreenshot('labels-list-small-key.png')
+      })
+
+      test('complex multiline with list', async () => {
+        await helper.addKey()
+        await helper.setKeySize(2, 2)
+        await helper.setKeyLabel(
+          'topLeft',
+          'Introduction<br><ul><li>First point</li><li>Second point</li></ul>Conclusion text here.',
+        )
+        await helper.waitForRender()
+        await expect(helper.getCanvas()).toHaveScreenshot('labels-list-complex-multiline.png')
+      })
+    })
+  })
 })

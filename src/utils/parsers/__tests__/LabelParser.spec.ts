@@ -519,6 +519,196 @@ describe('LabelParser', () => {
         ])
       })
     })
+
+    describe('list parsing', () => {
+      describe('unordered lists', () => {
+        it('should parse simple unordered list', () => {
+          const result = parser.parse('<ul><li>Item 1</li><li>Item 2</li></ul>')
+          expect(result).toHaveLength(1)
+          expect(result[0]!.type).toBe('list')
+          const list = result[0] as {
+            type: 'list'
+            ordered: boolean
+            items: Array<{ type: 'list-item'; children: unknown[] }>
+          }
+          expect(list.ordered).toBe(false)
+          expect(list.items).toHaveLength(2)
+          expect(list.items[0]!.type).toBe('list-item')
+          expect(list.items[1]!.type).toBe('list-item')
+        })
+
+        it('should parse unordered list with styled items', () => {
+          const result = parser.parse('<ul><li><b>Bold</b></li><li><i>Italic</i></li></ul>')
+          const list = result[0] as {
+            type: 'list'
+            items: Array<{
+              children: Array<{ type: string; style?: { bold?: boolean; italic?: boolean } }>
+            }>
+          }
+          expect(list.items[0]!.children[0]).toMatchObject({ type: 'text', style: { bold: true } })
+          expect(list.items[1]!.children[0]).toMatchObject({
+            type: 'text',
+            style: { italic: true },
+          })
+        })
+
+        it('should handle uppercase UL tag', () => {
+          const result = parser.parse('<UL><LI>Item</LI></UL>')
+          expect(result).toHaveLength(1)
+          expect(result[0]!.type).toBe('list')
+        })
+      })
+
+      describe('ordered lists', () => {
+        it('should parse simple ordered list', () => {
+          const result = parser.parse('<ol><li>First</li><li>Second</li></ol>')
+          expect(result).toHaveLength(1)
+          expect(result[0]!.type).toBe('list')
+          const list = result[0] as { type: 'list'; ordered: boolean; items: unknown[] }
+          expect(list.ordered).toBe(true)
+          expect(list.items).toHaveLength(2)
+        })
+
+        it('should handle uppercase OL tag', () => {
+          const result = parser.parse('<OL><LI>Item</LI></OL>')
+          expect(result).toHaveLength(1)
+          const list = result[0] as { type: 'list'; ordered: boolean }
+          expect(list.ordered).toBe(true)
+        })
+      })
+
+      describe('nested lists', () => {
+        it('should parse nested unordered list', () => {
+          const result = parser.parse('<ul><li>Parent<ul><li>Child</li></ul></li></ul>')
+          const outerList = result[0] as {
+            type: 'list'
+            items: Array<{ children: Array<{ type: string }> }>
+          }
+          expect(outerList.items).toHaveLength(1)
+          const nestedList = outerList.items[0]!.children.find((c) => c.type === 'list')
+          expect(nestedList).toBeDefined()
+        })
+
+        it('should parse mixed nested lists (ul in ol)', () => {
+          const result = parser.parse('<ol><li>Numbered<ul><li>Bullet</li></ul></li></ol>')
+          const outerList = result[0] as {
+            type: 'list'
+            ordered: boolean
+            items: Array<{ children: Array<{ type: string; ordered?: boolean }> }>
+          }
+          expect(outerList.ordered).toBe(true)
+          const innerList = outerList.items[0]!.children.find((c) => c.type === 'list') as {
+            ordered: boolean
+          }
+          expect(innerList.ordered).toBe(false)
+        })
+
+        it('should parse deeply nested lists', () => {
+          const result = parser.parse(
+            '<ul><li>L1<ul><li>L2<ul><li>L3</li></ul></li></ul></li></ul>',
+          )
+          expect(result).toHaveLength(1)
+          const l1 = result[0] as {
+            type: 'list'
+            items: Array<{
+              children: Array<{
+                type: string
+                items?: Array<{ children: Array<{ type: string }> }>
+              }>
+            }>
+          }
+          const l2 = l1.items[0]!.children.find((c) => c.type === 'list') as {
+            items: Array<{ children: Array<{ type: string }> }>
+          }
+          expect(l2).toBeDefined()
+          const l3 = l2.items[0]!.children.find((c) => c.type === 'list')
+          expect(l3).toBeDefined()
+        })
+      })
+
+      describe('lists with links', () => {
+        it('should parse list items with links', () => {
+          const result = parser.parse('<ul><li><a href="https://example.com">Link</a></li></ul>')
+          const list = result[0] as {
+            type: 'list'
+            items: Array<{ children: Array<{ type: string; href?: string }> }>
+          }
+          expect(list.items[0]!.children[0]).toMatchObject({
+            type: 'link',
+            href: 'https://example.com',
+          })
+        })
+
+        it('should parse list items with mixed text and links', () => {
+          const result = parser.parse(
+            '<ul><li>Visit <a href="https://example.com">Example</a> site</li></ul>',
+          )
+          const list = result[0] as { type: 'list'; items: Array<{ children: unknown[] }> }
+          expect(list.items[0]!.children).toHaveLength(3)
+        })
+      })
+
+      describe('edge cases', () => {
+        it('should return empty array for empty list', () => {
+          const result = parser.parse('<ul></ul>')
+          expect(result).toHaveLength(0)
+        })
+
+        it('should skip empty list items', () => {
+          const result = parser.parse('<ul><li></li><li>Valid</li></ul>')
+          const list = result[0] as { type: 'list'; items: unknown[] }
+          expect(list.items).toHaveLength(1)
+        })
+
+        it('should skip whitespace-only list items', () => {
+          const result = parser.parse('<ul><li>   </li><li>Valid</li></ul>')
+          const list = result[0] as { type: 'list'; items: unknown[] }
+          expect(list.items).toHaveLength(1)
+        })
+
+        it('should filter out images from list items (not supported)', () => {
+          const result = parser.parse('<ul><li><img src="test.png">Text</li></ul>')
+          const list = result[0] as {
+            type: 'list'
+            items: Array<{ children: Array<{ type: string }> }>
+          }
+          // Image should be filtered out, only text remains
+          expect(list.items[0]!.children).toHaveLength(1)
+          expect(list.items[0]!.children[0]!.type).toBe('text')
+        })
+
+        it('should filter out SVGs from list items (not supported)', () => {
+          const result = parser.parse('<ul><li><svg width="10" height="10"></svg>Text</li></ul>')
+          const list = result[0] as {
+            type: 'list'
+            items: Array<{ children: Array<{ type: string }> }>
+          }
+          // SVG should be filtered out, only text remains
+          expect(list.items[0]!.children).toHaveLength(1)
+          expect(list.items[0]!.children[0]!.type).toBe('text')
+        })
+
+        it('should return empty if list item only contains image', () => {
+          const result = parser.parse('<ul><li><img src="test.png"></li></ul>')
+          // List should be empty since the only item has no valid content after filtering
+          expect(result).toHaveLength(0)
+        })
+
+        it('should handle list mixed with other content', () => {
+          const result = parser.parse('Before<ul><li>Item</li></ul>After')
+          expect(result).toHaveLength(3)
+          expect(result[0]).toMatchObject({ type: 'text', text: 'Before' })
+          expect(result[1]!.type).toBe('list')
+          expect(result[2]).toMatchObject({ type: 'text', text: 'After' })
+        })
+
+        it('should handle single item list', () => {
+          const result = parser.parse('<ul><li>Only</li></ul>')
+          const list = result[0] as { type: 'list'; items: unknown[] }
+          expect(list.items).toHaveLength(1)
+        })
+      })
+    })
   })
 
   describe('hasHtmlFormatting', () => {
@@ -548,6 +738,11 @@ describe('LabelParser', () => {
 
     it('should detect anchor tags', () => {
       expect(parser.hasHtmlFormatting('<a href="https://example.com">Link</a>')).toBe(true)
+    })
+
+    it('should detect list tags', () => {
+      expect(parser.hasHtmlFormatting('<ul><li>Item</li></ul>')).toBe(true)
+      expect(parser.hasHtmlFormatting('<ol><li>Item</li></ol>')).toBe(true)
     })
 
     it('should return false for plain text', () => {
@@ -756,6 +951,23 @@ describe('LabelParser', () => {
     it('should handle complex mixed content', () => {
       const nodes = parser.parse('<b>Bold</b><br><a href="#">Link</a><img src="x.png"><i>End</i>')
       expect(parser.getPlainText(nodes)).toBe('Bold\nLinkEnd')
+    })
+
+    it('should extract text from lists', () => {
+      const nodes = parser.parse('<ul><li>Item 1</li><li>Item 2</li></ul>')
+      expect(parser.getPlainText(nodes)).toBe('Item 1\nItem 2\n')
+    })
+
+    it('should extract text from nested lists', () => {
+      const nodes = parser.parse('<ul><li>Parent<ul><li>Child</li></ul></li></ul>')
+      const plainText = parser.getPlainText(nodes)
+      expect(plainText).toContain('Parent')
+      expect(plainText).toContain('Child')
+    })
+
+    it('should extract text from lists with formatted content', () => {
+      const nodes = parser.parse('<ul><li><b>Bold</b> item</li></ul>')
+      expect(parser.getPlainText(nodes)).toBe('Bold item\n')
     })
   })
 })

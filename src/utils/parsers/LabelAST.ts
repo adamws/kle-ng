@@ -54,9 +54,27 @@ export interface SVGNode {
 }
 
 /**
+ * List item node - contains text content and optional nested lists
+ * NOTE: Images/SVGs are NOT supported in list items (text-only content)
+ */
+export interface ListItemNode {
+  type: 'list-item'
+  children: LabelNode[] // Text content only: text, links, nested lists
+}
+
+/**
+ * List node - ordered or unordered list container
+ */
+export interface ListNode {
+  type: 'list'
+  ordered: boolean // true = <ol>, false = <ul>
+  items: ListItemNode[]
+}
+
+/**
  * Union type of all possible label nodes
  */
-export type LabelNode = TextNode | LinkNode | ImageNode | SVGNode
+export type LabelNode = TextNode | LinkNode | ImageNode | SVGNode | ListNode | ListItemNode
 
 /**
  * Type guard for TextNode
@@ -87,7 +105,15 @@ export function isSVGNode(node: LabelNode): node is SVGNode {
 }
 
 /**
+ * Type guard for ListNode
+ */
+export function isListNode(node: LabelNode): node is ListNode {
+  return node.type === 'list'
+}
+
+/**
  * Check if a node is an inline node (text or link)
+ * Lists and list items are NOT inline - they are block-level elements
  */
 export function isInlineNode(node: LabelNode): node is TextNode | LinkNode {
   return node.type === 'text' || node.type === 'link'
