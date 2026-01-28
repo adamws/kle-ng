@@ -16,7 +16,7 @@ interface RotationContext {
 
 // Link styling constants
 const LINK_COLOR = '#0066cc'
-const LINK_UNDERLINE_OFFSET = -1
+const LINK_UNDERLINE_OFFSET = 0
 
 // List rendering constants
 const LIST_BULLET = '•'
