@@ -1,76 +1,79 @@
 <template>
-  <div
-    class="keyboard-canvas-container"
-    ref="containerRef"
-    @click="handleContainerClick"
-    @mousedown="handleContainerMouseDown"
-    @mouseup="handleContainerMouseUp"
-    @dragover="handleDragOver"
-    @dragenter="handleDragEnter"
-    @dragleave="handleDragLeave"
-    @drop="handleDrop"
-    :class="{ 'drag-target': isDragOver }"
-  >
-    <canvas
-      ref="canvasRef"
-      :width="scaledCanvasWidth"
-      :height="scaledCanvasHeight"
-      :style="{
-        cursor: canvasCursor,
-        width: canvasWidth + 'px',
-        height: canvasHeight + 'px',
-      }"
-      @click="handleCanvasClick"
-      @mousedown="handleMouseDown"
-      @mousemove="handleMouseMove"
-      @mouseup="handleMouseUp"
-      @mouseenter="handleMouseEnter"
-      @mouseleave="handleMouseLeave"
-      @contextmenu="handleContextMenu"
-      class="keyboard-canvas"
-      data-testid="canvas-main"
-      tabindex="0"
-      @keydown="handleKeyDown"
-      @focus="handleCanvasFocus"
-      @blur="handleCanvasBlur"
-      role="img"
-      aria-label="Interactive keyboard layout canvas."
-    />
+  <div class="keyboard-canvas-wrapper">
+    <div
+      class="keyboard-canvas-container"
+      ref="containerRef"
+      @click="handleContainerClick"
+      @mousedown="handleContainerMouseDown"
+      @mouseup="handleContainerMouseUp"
+      @dragover="handleDragOver"
+      @dragenter="handleDragEnter"
+      @dragleave="handleDragLeave"
+      @drop="handleDrop"
+      :class="{ 'drag-target': isDragOver }"
+    >
+      <canvas
+        ref="canvasRef"
+        :width="scaledCanvasWidth"
+        :height="scaledCanvasHeight"
+        :style="{
+          cursor: canvasCursor,
+          width: canvasWidth + 'px',
+          height: canvasHeight + 'px',
+        }"
+        @click="handleCanvasClick"
+        @mousedown="handleMouseDown"
+        @mousemove="handleMouseMove"
+        @mouseup="handleMouseUp"
+        @mouseenter="handleMouseEnter"
+        @mouseleave="handleMouseLeave"
+        @contextmenu="handleContextMenu"
+        class="keyboard-canvas"
+        data-testid="canvas-main"
+        tabindex="0"
+        @keydown="handleKeyDown"
+        @focus="handleCanvasFocus"
+        @blur="handleCanvasBlur"
+        role="img"
+        aria-label="Interactive keyboard layout canvas."
+      />
 
-    <!-- Link URL preview (shown at bottom when hovering over links) -->
-    <div v-if="hoveredLinkHref" class="link-preview">
-      {{ hoveredLinkHref }}
+      <!-- Matrix Annotation Overlay -->
+      <MatrixAnnotationOverlay
+        ref="matrixOverlayRef"
+        :visible="matrixAnnotationVisible"
+        :canvasWidth="canvasWidth"
+        :canvasHeight="canvasHeight"
+        :zoom="zoom"
+        :coordinateOffset="getCoordinateSystemOffset()"
+        :renderer="renderer || null"
+      />
+
+      <!-- Debug Overlay (development mode only) -->
+      <DebugOverlay
+        v-if="isDevMode"
+        ref="debugOverlayRef"
+        :visible="true"
+        :canvasWidth="canvasWidth"
+        :canvasHeight="canvasHeight"
+        :zoom="zoom"
+        :coordinateOffset="getCoordinateSystemOffset()"
+      />
+
+      <!-- Debug Control Button (development mode only) -->
+      <DebugControlButton v-if="isDevMode" :debugOverlayRef="debugOverlayRef" />
+
+      <!-- Matrix Renumbering Status Bar -->
+      <div v-if="matrixRenumberingStatus" class="matrix-renumbering-status">
+        <span class="status-label">{{ matrixRenumberingStatus.message }}</span>
+        <span class="status-hint">Press <kbd>Enter</kbd> to confirm, <kbd>Esc</kbd> to cancel</span>
+      </div>
     </div>
 
-    <!-- Matrix Annotation Overlay -->
-    <MatrixAnnotationOverlay
-      ref="matrixOverlayRef"
-      :visible="matrixAnnotationVisible"
-      :canvasWidth="canvasWidth"
-      :canvasHeight="canvasHeight"
-      :zoom="zoom"
-      :coordinateOffset="getCoordinateSystemOffset()"
-      :renderer="renderer || null"
-    />
-
-    <!-- Debug Overlay (development mode only) -->
-    <DebugOverlay
-      v-if="isDevMode"
-      ref="debugOverlayRef"
-      :visible="true"
-      :canvasWidth="canvasWidth"
-      :canvasHeight="canvasHeight"
-      :zoom="zoom"
-      :coordinateOffset="getCoordinateSystemOffset()"
-    />
-
-    <!-- Debug Control Button (development mode only) -->
-    <DebugControlButton v-if="isDevMode" :debugOverlayRef="debugOverlayRef" />
-
-    <!-- Matrix Renumbering Status Bar -->
-    <div v-if="matrixRenumberingStatus" class="matrix-renumbering-status">
-      <span class="status-label">{{ matrixRenumberingStatus.message }}</span>
-      <span class="status-hint">Press <kbd>Enter</kbd> to confirm, <kbd>Esc</kbd> to cancel</span>
+    <!-- Link URL preview (shown at bottom when hovering over links) -->
+    <!-- Positioned relative to wrapper so it stays visible when container scrolls -->
+    <div v-if="hoveredLinkHref" class="link-preview">
+      {{ hoveredLinkHref }}
     </div>
   </div>
 
@@ -1919,12 +1922,17 @@ defineExpose({})
 </script>
 
 <style scoped>
+.keyboard-canvas-wrapper {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
 .keyboard-canvas-container {
   width: 100%;
   height: 100%;
   overflow: auto;
   background: var(--bs-tertiary-bg);
-  position: relative;
 }
 
 .keyboard-canvas {
@@ -2027,7 +2035,8 @@ defineExpose({})
   border: 1px solid rgba(0, 0, 0, 0.2);
 }
 
-/* Link URL preview shown at bottom of canvas */
+/* Link URL preview shown at bottom of visible viewport */
+/* Positioned relative to wrapper (not the scrollable container) so it stays fixed */
 .link-preview {
   position: absolute;
   bottom: 4px;
