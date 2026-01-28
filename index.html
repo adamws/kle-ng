@@ -30,13 +30,42 @@
     <meta name="theme-color" content="#0d6efd">
     <meta name="application-name" content="Keyboard Layout Editor NG">
 
+    <style>
+      /* Critical CSS - shows immediately before JS loads */
+      #app-loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        font-family: system-ui, -apple-system, sans-serif;
+        background: #f8f9fa;
+        color: #6c757d;
+      }
+      @media (prefers-color-scheme: dark) {
+        #app-loading { background: #212529; color: #adb5bd; }
+      }
+      .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid currentColor;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+
     <script
       defer
       src="https://cloud.umami.is/script.js"
       data-website-id="4e25208b-5f07-4aca-b8fc-15cd6f487a5a"></script>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <div id="app-loading">
+        <div class="loading-spinner"></div>
+      </div>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
