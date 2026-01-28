@@ -693,7 +693,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
         '*',
         '-',
         { x: 0.25, f: 5, w: 12.5, h: 5, d: true },
-        "Getting Started with Keyboard Layout Editor NG<br><br>Start by exploring the presets and samples from the menu-bar to give you an idea of the possibilities. Once you are ready to start designing your own keyboard, just load one of the presets and start customizing it!<br><br><ul><li>Use left-side toolbar to add and edit keys</li><li>The selected keys can be modified on the Properties tab. Use mouse left click to select one or multiple keys</li><li>Move selection with arrows or with mouse middle-click drag.</li><li>To learn more see <a href=\"https://github.com/adamws/kle-ng/blob/master/README.md\">documentation</a></li></ul><br>When you're ready to save your layout, simply use 'Export' from the menu-bar. Have fun!",
+        'Getting Started with Keyboard Layout Editor NG<br><br>Start by exploring the presets from the menu-bar to give you an idea of the possibilities.<br>Once you are ready to start designing your own keyboard, just load one of the presets and start customizing it!<br><br><ul><li>Use left-side toolbar to add and edit keys</li><li>The selected keys can be modified on the <i>Properties</i> tab. Use mouse left click to select one or multiple keys</li><li>Move selection with arrows or with mouse middle-click drag</li><li>To learn more see <a href="https://github.com/adamws/kle-ng/blob/master/README.md">documentation</a></li></ul><br>When you\'re ready to save your layout, simply use <i>Export</i> from the menu-bar. Have fun!',
       ],
       [{ f: 3 }, '7\nHome', '8\n↑', '9\nPgUp', { h: 2 }, '+'],
       ['4\n←', '5', '6\n→'],
