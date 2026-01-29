@@ -1,0 +1,27 @@
+<svg
+   version="1.1"
+   width="20mm"
+   height="20mm"
+   viewBox="-10 -10 20 20"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <g style="fill:#4D7FC4;fill-opacity:1.000;stroke:none;">
+    <circle class="hoverable" cx="0" cy="-5.9" r="1.1" />
+    <circle class="hoverable" cx="5" cy="-3.8" r="1.1" />
+  </g>
+  <g style="fill:#AFAFAF;fill-opacity:1.000;stroke:none;">
+    <circle class="hoverable" cx="0" cy="-5.9" r="0.6" />
+    <circle class="hoverable" cx="5" cy="-3.8" r="0.6" />
+  </g>
+  <g style="fill:#AFAFAF;fill-opacity:1.0;stroke:none">
+    <circle class="hoverable" cx="-5.5" cy="0" r="0.95" />
+    <circle class="hoverable" cx="0" cy="0" r="1.725" />
+    <circle class="hoverable" cx="5.5" cy="0" r="0.95" />
+  </g>
+  <g style="fill:none;stroke:#AFAFAF;stroke-width:0.1;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1">
+    <path d="m -7.5,-7.5 v 15" />
+    <path d="m -7.5,7.5 h 15" />
+    <path d="m 7.5,-7.5 h -15" />
+    <path d="m 7.5,7.5 v -15" />
+  </g>
+</svg>
