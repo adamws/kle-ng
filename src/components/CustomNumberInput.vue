@@ -36,7 +36,7 @@
         :title="`Increase by ${step}`"
         tabindex="-1"
       >
-        <i class="bi bi-chevron-up"></i>
+        <BiChevronUp style="width: 0.8em; height 0.8em;" />
       </button>
       <button
         type="button"
@@ -47,7 +47,7 @@
         :title="`Decrease by ${step}`"
         tabindex="-1"
       >
-        <i class="bi bi-chevron-down"></i>
+        <BiChevronDown style="width: 0.8em; height 0.8em;" />
       </button>
     </div>
     <div v-if="$slots.suffix" ref="suffixRef" class="input-suffix">
@@ -59,6 +59,8 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, watch, onMounted } from 'vue'
 import { D } from '@/utils/decimal-math'
+import BiChevronDown from 'bootstrap-icons/icons/chevron-down.svg'
+import BiChevronUp from 'bootstrap-icons/icons/chevron-up.svg'
 
 /**
  * Props for the CustomNumberInput component
@@ -489,8 +491,7 @@ watch([() => props.disabled, () => props.min, () => props.max], () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
-  line-height: 1;
+  min-height: 0;
   transition: all 0.15s ease;
   user-select: none;
   position: relative;
@@ -529,18 +530,6 @@ watch([() => props.disabled, () => props.min, () => props.max], () => {
 }
 
 /* Size variants */
-.custom-number-input input.form-control-sm {
-  padding-right: 28px;
-}
-
-.custom-number-input input.form-control-sm ~ .spinner-buttons {
-  width: 26px;
-  height: 32px;
-}
-
-.custom-number-input input.form-control-sm ~ .spinner-buttons .spinner-btn {
-  font-size: 9px;
-}
 
 .custom-number-input.size-default input {
   height: 32px;
@@ -553,7 +542,6 @@ watch([() => props.disabled, () => props.min, () => props.max], () => {
 .custom-number-input.size-default .spinner-buttons {
   width: 30px !important;
   height: 32px !important;
-  font-size: 10px;
 }
 
 .custom-number-input.size-default .input-suffix {
@@ -582,7 +570,6 @@ watch([() => props.disabled, () => props.min, () => props.max], () => {
   height: 24px !important;
   top: 0px !important;
   right: 0px !important;
-  font-size: 7px;
   line-height: 1;
   border-top-right-radius: var(--bs-border-radius-sm);
   border-bottom-right-radius: var(--bs-border-radius-sm);
@@ -594,15 +581,5 @@ watch([() => props.disabled, () => props.min, () => props.max], () => {
   height: 22px;
   line-height: 22px;
   padding: 0 6px;
-}
-
-/* Override form-control-sm rules for compact variant */
-.custom-number-input.size-compact input.form-control-sm ~ .spinner-buttons {
-  width: 18px !important;
-  height: 24px !important;
-}
-
-.custom-number-input.size-compact input.form-control-sm ~ .spinner-buttons .spinner-btn {
-  font-size: 7px !important;
 }
 </style>

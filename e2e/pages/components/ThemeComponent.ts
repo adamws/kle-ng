@@ -75,15 +75,6 @@ export class ThemeComponent {
   }
 
   /**
-   * Assert that the theme icon is visible
-   * @param iconClass - Bootstrap icon class (e.g., 'bi-moon-stars-fill')
-   */
-  async expectThemeIcon(iconClass: string) {
-    const icon = this.themeToggleButton.locator(`i.${iconClass}`)
-    await expect(icon).toBeVisible()
-  }
-
-  /**
    * Assert that the theme toggle button is visible
    */
   async expectToggleVisible() {

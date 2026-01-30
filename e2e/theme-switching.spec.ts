@@ -26,12 +26,12 @@ test.describe('Theme switching functionality', () => {
     await theme.expectToggleVisible()
 
     // Should show some theme icon
-    const themeIcon = theme.getToggleButton().locator('i')
+    const themeIcon = theme.getToggleButton().locator('svg')
     await expect(themeIcon).toBeVisible()
   })
 
   test('should default to auto theme', async () => {
-    await theme.expectThemeIcon('bi-circle-half')
+    await theme.expectButtonShowsTheme('auto')
 
     // HTML element should have data-bs-theme set to light or dark based on system preference when in auto mode
     const dataBsTheme = await theme.getHtmlElement().getAttribute('data-bs-theme')
@@ -48,7 +48,6 @@ test.describe('Theme switching functionality', () => {
     // Verify theme is applied
     await theme.expectCurrentTheme('dark')
     await theme.expectButtonShowsTheme('dark')
-    await theme.expectThemeIcon('bi-moon-stars-fill')
   })
 
   test('should switch to light theme', async () => {
@@ -61,7 +60,6 @@ test.describe('Theme switching functionality', () => {
     // Verify theme is applied
     await theme.expectCurrentTheme('light')
     await theme.expectButtonShowsTheme('light')
-    await theme.expectThemeIcon('bi-sun-fill')
   })
 
   test('should persist theme preference after reload', async ({ page }) => {

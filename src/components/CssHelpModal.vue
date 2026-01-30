@@ -2,7 +2,7 @@
   <BaseHelpModal :is-visible="isVisible" title="CSS Metadata - Help" @close="close">
     <div class="help-section">
       <h6 class="help-section-title">
-        <i class="bi bi-info-circle"></i>
+        <BiInfoCircle />
         What is CSS Metadata?
       </h6>
       <div class="help-content">
@@ -25,7 +25,7 @@
 
     <div class="help-section">
       <h6 class="help-section-title">
-        <i class="bi bi-lightbulb"></i>
+        <BiLightbulb />
         Supported CSS Features
       </h6>
       <div class="help-content">
@@ -48,6 +48,8 @@
 
 <script setup lang="ts">
 import BaseHelpModal from './BaseHelpModal.vue'
+import BiInfoCircle from 'bootstrap-icons/icons/info-circle.svg'
+import BiLightbulb from 'bootstrap-icons/icons/lightbulb.svg'
 
 interface Props {
   isVisible: boolean

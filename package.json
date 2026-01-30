@@ -65,6 +65,7 @@
     "typescript": "~5.9.3",
     "vite": "^7.2.6",
     "vite-plugin-vue-devtools": "^8.0.5",
+    "vite-svg-loader": "^5.1.0",
     "vitest": "^4.0.15",
     "vue-tsc": "^3.1.5"
   }

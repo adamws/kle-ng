@@ -2,6 +2,8 @@
 import { computed } from 'vue'
 import { usePcbGeneratorStore } from '@/stores/pcbGenerator'
 import { storeToRefs } from 'pinia'
+import BiExclamationTriangleFill from 'bootstrap-icons/icons/exclamation-triangle-fill.svg'
+import BiClockFill from 'bootstrap-icons/icons/clock-fill.svg'
 
 const pcbStore = usePcbGeneratorStore()
 const { downloadTimeRemaining, isDownloadExpired, isDownloadAvailable } = storeToRefs(pcbStore)
@@ -29,13 +31,6 @@ const alertClass = computed(() => {
   } else {
     return 'alert-info' // Blue when plenty of time
   }
-})
-
-const iconClass = computed(() => {
-  if (isDownloadExpired.value) {
-    return 'bi-exclamation-triangle-fill'
-  }
-  return 'bi-clock-fill'
 })
 
 const messageTitle = computed(() => {
@@ -67,7 +62,10 @@ const shouldShowMessage = computed(() => {
   <div v-if="shouldShowMessage" class="download-expiration-notice mt-3">
     <div class="alert py-2" :class="alertClass" role="status" aria-live="polite" aria-atomic="true">
       <div class="d-flex align-items-start gap-2">
-        <i class="bi flex-shrink-0" :class="iconClass" aria-hidden="true"></i>
+        <span class="notice-icon flex-shrink-0" aria-hidden="true">
+          <BiExclamationTriangleFill v-if="isDownloadExpired" />
+          <BiClockFill v-else />
+        </span>
         <div class="flex-grow-1">
           <strong class="d-block">{{ messageTitle }}</strong>
           <small>{{ messageText }}</small>
@@ -87,7 +85,7 @@ const shouldShowMessage = computed(() => {
   font-size: 0.875rem;
 }
 
-.alert i {
+.notice-icon {
   font-size: 1rem;
   margin-top: 0.125rem;
 }

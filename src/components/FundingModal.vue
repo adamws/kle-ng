@@ -1,7 +1,7 @@
 <template>
   <BaseHelpModal :is-visible="isVisible" title="Funding" :full-height="true" @close="close">
     <template #icon>
-      <i class="bi bi-coin"></i>
+      <BiCoin />
     </template>
     <div class="funding-section">
       <p>All tools on this site are and will remain free and open source.</p>
@@ -20,6 +20,7 @@
 
 <script setup lang="ts">
 import BaseHelpModal from './BaseHelpModal.vue'
+import BiCoin from 'bootstrap-icons/icons/coin.svg'
 
 interface Props {
   isVisible: boolean

@@ -10,8 +10,8 @@
     <div class="panel-content">
       <div class="panel-header" @mousedown="handleHeaderMouseDown">
         <div class="panel-title">
-          <i class="bi bi-grip-vertical me-2 drag-handle"></i>
-          <i class="bi bi-arrow-repeat me-2"></i>
+          <BiGripVertical class="me-2 drag-handle" />
+          <BiArrowRepeat class="me-2" />
           Rotate Selection
         </div>
         <button
@@ -27,20 +27,20 @@
         <!-- Rotation info - different content based on whether anchor is selected -->
         <div class="rotation-info mb-3" data-testid="modal-rotation-info">
           <div v-if="!rotationOrigin" class="text-center">
-            <div class="mb-2">
-              <i class="bi bi-crosshair2 text-warning" style="font-size: 1.5rem"></i>
+            <div class="text-warning mb-1">
+              <BiCrosshair2 style="width: 24px; height: 24px" />
             </div>
-            <div class="text-muted">
-              <strong>Select rotation anchor point</strong><br />
-              <small>Click on a key corner or center to choose rotation origin</small>
+            <div>
+              <p><b>Select rotation anchor point</b></p>
+              <p class="small text-muted">
+                Click on a key corner or center to choose rotation origin
+              </p>
             </div>
           </div>
           <div v-else>
-            <div class="d-flex justify-content-between align-items-center">
-              <small class="text-muted">
-                <i class="bi bi-crosshair2 me-1"></i>
-                Origin: ({{ formatNumber(rotationOrigin.x) }}, {{ formatNumber(rotationOrigin.y) }})
-              </small>
+            <div class="small d-flex align-items-center gap-2">
+              <BiCrosshair2 />
+              Origin: ({{ formatNumber(rotationOrigin.x) }}, {{ formatNumber(rotationOrigin.y) }})
             </div>
           </div>
         </div>
@@ -78,22 +78,22 @@
       <div class="panel-footer">
         <button
           type="button"
-          class="btn btn-secondary btn-sm"
+          class="btn btn-secondary btn-sm d-flex align-items-center gap-1"
           @click="handleCancel"
           @mousedown.stop
         >
-          <i class="bi bi-x-circle me-1"></i>
+          <BiXCircle />
           Cancel
         </button>
         <button
           v-if="rotationOrigin"
           type="button"
-          class="btn btn-primary btn-sm"
+          class="btn btn-primary btn-sm d-flex align-items-center gap-1"
           :disabled="!rotationOrigin"
           @click="handleApply"
           @mousedown.stop
         >
-          <i class="bi bi-check-circle me-1"></i>
+          <BiCheckCircle />
           Apply
         </button>
       </div>
@@ -105,6 +105,11 @@
 import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useDraggablePanel } from '@/composables/useDraggablePanel'
 import CustomNumberInput from './CustomNumberInput.vue'
+import BiGripVertical from 'bootstrap-icons/icons/grip-vertical.svg'
+import BiArrowRepeat from 'bootstrap-icons/icons/arrow-repeat.svg'
+import BiCrosshair2 from 'bootstrap-icons/icons/crosshair2.svg'
+import BiXCircle from 'bootstrap-icons/icons/x-circle.svg'
+import BiCheckCircle from 'bootstrap-icons/icons/check-circle.svg'
 
 // Props
 interface Props {

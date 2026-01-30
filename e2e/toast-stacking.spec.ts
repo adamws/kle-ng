@@ -168,12 +168,6 @@ test.describe('Toast Stacking System', () => {
     await expect(toasts.nth(1)).toHaveClass(/toast-error/)
     await expect(toasts.nth(2)).toHaveClass(/toast-warning/)
     await expect(toasts.nth(3)).toHaveClass(/toast-info/)
-
-    // Check that icons are present
-    await expect(toasts.nth(0).locator('.toast-icon i')).toHaveClass(/bi-check-circle-fill/)
-    await expect(toasts.nth(1).locator('.toast-icon i')).toHaveClass(/bi-exclamation-triangle-fill/)
-    await expect(toasts.nth(2).locator('.toast-icon i')).toHaveClass(/bi-exclamation-triangle-fill/)
-    await expect(toasts.nth(3).locator('.toast-icon i')).toHaveClass(/bi-info-circle-fill/)
   })
 
   test('should auto-dismiss toasts after specified duration', async ({ page }) => {

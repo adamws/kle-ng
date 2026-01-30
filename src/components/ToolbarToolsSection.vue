@@ -7,7 +7,7 @@
         @click="$emit('set-mode', 'select')"
         title="Selection Mode - Left click to select, middle drag to move"
       >
-        <i class="bi bi-cursor"></i>
+        <BiCursor />
       </button>
 
       <button
@@ -17,7 +17,7 @@
         @click="$emit('set-mode', 'move-exactly')"
         title="Move Exactly - Move selected keys by exact X/Y values"
       >
-        <i class="bi bi-arrows-move"></i>
+        <BiArrowsMove />
       </button>
 
       <button
@@ -27,7 +27,7 @@
         @click="$emit('set-mode', 'rotate')"
         title="Rotate Selection"
       >
-        <i class="bi bi-arrow-repeat"></i>
+        <BiArrowRepeat />
       </button>
 
       <!-- Mirror Button Group -->
@@ -43,7 +43,7 @@
           @click="$emit('set-mode', 'mirror-v')"
           title="Mirror Vertical"
         >
-          <i class="bi bi-symmetry-vertical"></i>
+          <BiSymmetryVertical />
         </button>
         <button
           ref="mirrorDropdownBtnRef"
@@ -52,7 +52,7 @@
           @click="$emit('toggle-mirror-dropdown')"
           title="Mirror Options"
         >
-          <i class="bi bi-chevron-down"></i>
+          <BiChevronDown />
         </button>
       </div>
 
@@ -70,7 +70,7 @@
           :class="{ active: canvasMode === 'mirror-v' }"
           title="Mirror keys across a vertical line"
         >
-          <i class="bi bi-symmetry-vertical"></i>
+          <BiSymmetryVertical />
           Mirror Vertical
         </button>
         <button
@@ -79,7 +79,7 @@
           :class="{ active: canvasMode === 'mirror-h' }"
           title="Mirror keys across a horizontal line"
         >
-          <i class="bi bi-symmetry-horizontal"></i>
+          <BiSymmetryHorizontal />
           Mirror Horizontal
         </button>
       </div>
@@ -92,7 +92,7 @@
           @click="$emit('toggle-extra-tools')"
           title="Extra Tools"
         >
-          <i class="bi bi-tools"></i>
+          <BiTools />
         </button>
       </div>
     </div>
@@ -120,6 +120,13 @@
 </template>
 
 <script setup lang="ts">
+import BiCursor from 'bootstrap-icons/icons/cursor.svg'
+import BiArrowsMove from 'bootstrap-icons/icons/arrows-move.svg'
+import BiArrowRepeat from 'bootstrap-icons/icons/arrow-repeat.svg'
+import BiSymmetryVertical from 'bootstrap-icons/icons/symmetry-vertical.svg'
+import BiSymmetryHorizontal from 'bootstrap-icons/icons/symmetry-horizontal.svg'
+import BiChevronDown from 'bootstrap-icons/icons/chevron-down.svg'
+import BiTools from 'bootstrap-icons/icons/tools.svg'
 import { ref } from 'vue'
 
 interface ExtraTool {

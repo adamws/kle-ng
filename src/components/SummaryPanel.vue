@@ -38,7 +38,7 @@
           </div>
 
           <div v-if="totalKeys === 0" class="text-muted text-center py-3">
-            <i class="bi bi-grid-3x3"></i>
+            <BiGrid3x3 />
             <p class="mb-0 small">No keys</p>
           </div>
 
@@ -230,7 +230,7 @@
 
           <!-- Show empty state if no physical keys -->
           <div v-else class="text-muted text-center py-3">
-            <i class="bi bi-grid-3x3"></i>
+            <BiGrid3x3 />
             <p class="mb-0 small">No keys</p>
           </div>
         </div>
@@ -245,6 +245,7 @@ import { useKeyboardStore, Key } from '@/stores/keyboard'
 import { calculateKeyboardDimensions } from '@/utils/keyboard-dimensions'
 import { isIsoEnter, isBigAssEnter, isNonRectangular } from '@/utils/key-utils'
 import KeyCentersTable from './KeyCentersTable.vue'
+import BiGrid3x3 from 'bootstrap-icons/icons/grid-3x3.svg'
 
 const keyboardStore = useKeyboardStore()
 

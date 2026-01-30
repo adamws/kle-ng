@@ -96,12 +96,12 @@
             </li>
             <li>
               <a
-                class="dropdown-item"
+                class="dropdown-item d-flex icon-link align-items-baseline"
                 data-testid="export-ergogen-web-gui"
                 href="#"
                 @click.prevent="exportToErgogenWebGui"
               >
-                Edit in Ergogen Web GUI <i class="bi bi-box-arrow-up-right"></i>
+                Edit in Ergogen Web GUI <BiBoxArrowUpRight class="bi" aria-hidden="true" />
               </a>
             </li>
           </ul>
@@ -192,6 +192,8 @@ import { stringifyWithRounding } from '@/utils/serialization'
 import { decodeLayoutFromUrl, fetchGistLayout, loadErgogenKeyboard } from '@/utils/url-sharing'
 import { parseErgogenConfig, encodeKeyboardToErgogenUrl } from '@/utils/ergogen-converter'
 import LZString from 'lz-string'
+
+import BiBoxArrowUpRight from 'bootstrap-icons/icons/box-arrow-up-right.svg'
 
 // Store
 const keyboardStore = useKeyboardStore()

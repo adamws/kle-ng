@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { usePcbGeneratorStore } from '@/stores/pcbGenerator'
 import { storeToRefs } from 'pinia'
+import BiDownload from 'bootstrap-icons/icons/download.svg'
 
 const pcbStore = usePcbGeneratorStore()
 const { isTaskSuccess, isDownloadAvailable } = storeToRefs(pcbStore)
@@ -27,7 +28,7 @@ function handleDownload() {
     <button
       v-if="isTaskSuccess && getDownloadUrl()"
       type="button"
-      class="btn btn-sm w-100"
+      class="btn btn-sm w-100 d-flex align-items-center justify-content-center gap-2"
       :class="isDownloadAvailable ? 'btn-primary' : 'btn-secondary'"
       :disabled="!isDownloadAvailable"
       @click="handleDownload"
@@ -35,7 +36,7 @@ function handleDownload() {
         isDownloadAvailable ? 'Download generated PCB project as ZIP file' : 'Download link expired'
       "
     >
-      <i class="bi bi-download me-1" aria-hidden="true"></i>
+      <BiDownload aria-hidden="true" />
       {{ isDownloadAvailable ? 'Download ZIP' : 'Download Expired' }}
     </button>
   </div>

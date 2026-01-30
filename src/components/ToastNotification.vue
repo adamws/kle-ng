@@ -8,10 +8,10 @@
   >
     <div class="toast-content">
       <div v-if="showIcon" class="toast-icon">
-        <i v-if="type === 'success'" class="bi bi-check-circle-fill"></i>
-        <i v-else-if="type === 'error'" class="bi bi-exclamation-triangle-fill"></i>
-        <i v-else-if="type === 'warning'" class="bi bi-exclamation-triangle-fill"></i>
-        <i v-else class="bi bi-info-circle-fill"></i>
+        <BiCheckCircleFill v-if="type === 'success'" />
+        <BiExclamationTriangleFill v-else-if="type === 'error'" />
+        <BiExclamationTriangleFill v-else-if="type === 'warning'" />
+        <BiInfoCircleFill v-else />
       </div>
       <div class="toast-message">
         <div v-if="title" class="toast-title">{{ title }}</div>
@@ -24,7 +24,7 @@
         type="button"
         aria-label="Close notification"
       >
-        <i class="bi bi-x"></i>
+        <BiX />
       </button>
     </div>
   </div>
@@ -32,6 +32,10 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+import BiCheckCircleFill from 'bootstrap-icons/icons/check-circle-fill.svg'
+import BiExclamationTriangleFill from 'bootstrap-icons/icons/exclamation-triangle-fill.svg'
+import BiInfoCircleFill from 'bootstrap-icons/icons/info-circle-fill.svg'
+import BiX from 'bootstrap-icons/icons/x.svg'
 
 export interface ToastProps {
   message: string

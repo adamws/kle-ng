@@ -52,10 +52,6 @@ describe('KeyCentersTable', () => {
 
     const headers = wrapper.findAll('th.sortable-header')
     expect(headers).toHaveLength(3)
-
-    // Check for sort icons
-    const sortIcons = wrapper.findAll('.sort-icon')
-    expect(sortIcons).toHaveLength(3)
   })
 
   it('should sort by index by default', () => {

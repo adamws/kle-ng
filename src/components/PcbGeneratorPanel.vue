@@ -7,6 +7,7 @@ import PcbGeneratorSettings from './PcbGeneratorSettings.vue'
 import PcbGeneratorControls from './PcbGeneratorControls.vue'
 import PcbGeneratorResults from './PcbGeneratorResults.vue'
 import PcbDownloadButton from './PcbDownloadButton.vue'
+import BiExclamationTriangle from 'bootstrap-icons/icons/exclamation-triangle.svg'
 
 const pcbStore = usePcbGeneratorStore()
 const backendConfigured = isBackendConfigured()
@@ -26,9 +27,7 @@ onUnmounted(() => {
       role="alert"
       data-testid="pcb-backend-warning"
     >
-      <h5 class="alert-heading">
-        <i class="bi bi-exclamation-triangle"></i> Backend Not Configured
-      </h5>
+      <h5 class="alert-heading"><BiExclamationTriangle /> Backend Not Configured</h5>
       <p class="mb-0">
         The PCB Generator requires a backend server. Please configure the
         <code>VITE_BACKEND_URL</code> environment variable and rebuild the application.

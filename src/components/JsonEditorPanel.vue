@@ -2,26 +2,28 @@
   <fieldset :disabled="isDisabled" :class="{ 'opacity-50': isDisabled }">
     <div class="mb-2">
       <div class="d-flex justify-content-between align-items-center">
-        <small class="text-muted"> Edit the JSON directly </small>
-        <div v-if="hasJsonError" class="text-danger small">
-          <i class="bi bi-exclamation-triangle"></i> Invalid JSON
+        <span class="small">Edit the JSON directly</span>
+        <div v-if="hasJsonError" class="text-danger small d-flex align-items-center gap-1">
+          <BiExclamationTriangle /> Invalid JSON
         </div>
         <div
           v-else-if="hasChanges"
-          class="text-warning small"
+          class="text-warning small d-flex align-items-center gap-1"
           data-testid="unsaved-changes-indicator"
         >
-          <i class="bi bi-pencil"></i> Unsaved changes
+          <BiPencil /> Unsaved changes
         </div>
-        <div v-else class="text-success small"><i class="bi bi-check"></i> Valid JSON</div>
+        <div v-else class="text-success small d-flex align-items-center gap-1">
+          <BiCheck /> Valid JSON
+        </div>
         <div class="d-flex gap-2">
           <button
             @click="clearJson"
-            class="btn btn-outline-danger btn-sm"
+            class="btn btn-outline-danger btn-sm d-flex align-items-center"
             :disabled="isDisabled"
             title="Clear all"
           >
-            <i class="bi bi-trash"></i>
+            <BiTrash />
           </button>
           <button
             @click="formatJson"
@@ -78,6 +80,10 @@ import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { useKeyboardStore } from '@/stores/keyboard'
 import { parseJsonString } from '@/utils/serialization'
 import { D } from '@/utils/decimal-math'
+import BiExclamationTriangle from 'bootstrap-icons/icons/exclamation-triangle.svg'
+import BiPencil from 'bootstrap-icons/icons/pencil.svg'
+import BiCheck from 'bootstrap-icons/icons/check.svg'
+import BiTrash from 'bootstrap-icons/icons/trash.svg'
 
 // Store
 const keyboardStore = useKeyboardStore()

@@ -9,7 +9,7 @@
         :disabled="!canUndo"
         title="Undo"
       >
-        <i class="bi bi-arrow-counterclockwise"></i>
+        <BiArrowCounterclockwise />
       </button>
 
       <button
@@ -19,13 +19,16 @@
         :disabled="!canRedo"
         title="Redo"
       >
-        <i class="bi bi-arrow-clockwise"></i>
+        <BiArrowClockwise />
       </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import BiArrowCounterclockwise from 'bootstrap-icons/icons/arrow-counterclockwise.svg'
+import BiArrowClockwise from 'bootstrap-icons/icons/arrow-clockwise.svg'
+
 defineProps<{
   canUndo: boolean
   canRedo: boolean

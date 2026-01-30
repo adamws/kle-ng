@@ -67,14 +67,14 @@ export class GitHubStarPopupHelper {
    * Get the close button icon locator.
    */
   getCloseIcon(): Locator {
-    return this.page.locator('.close-btn i.bi-x')
+    return this.page.locator('.close-btn')
   }
 
   /**
    * Get the GitHub icon in star button locator.
    */
   getGitHubIcon(): Locator {
-    return this.page.locator('.star-button i.bi-github')
+    return this.page.locator('.star-button')
   }
 
   // ============================================================================

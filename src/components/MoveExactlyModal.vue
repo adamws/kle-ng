@@ -9,8 +9,8 @@
     <div class="panel-content">
       <div class="panel-header" @mousedown="handleHeaderMouseDown">
         <div class="panel-title">
-          <i class="bi bi-grip-vertical me-2 drag-handle"></i>
-          <i class="bi bi-arrows-move me-2"></i>
+          <BiGripVertical class="me-2 drag-handle" />
+          <BiArrowsMove class="me-2" />
           Move Exactly
         </div>
         <button
@@ -123,14 +123,18 @@
       <div class="panel-footer">
         <button
           type="button"
-          class="btn btn-secondary btn-sm"
+          class="btn btn-secondary btn-sm d-flex align-items-center gap-1"
           @mousedown.prevent.stop="handleCancel"
         >
-          <i class="bi bi-x-circle me-1"></i>
+          <BiXCircle />
           Cancel
         </button>
-        <button type="button" class="btn btn-primary btn-sm" @mousedown.prevent.stop="handleApply">
-          <i class="bi bi-check-circle me-1"></i>
+        <button
+          type="button"
+          class="btn btn-primary btn-sm d-flex align-items-center gap-1"
+          @mousedown.prevent.stop="handleApply"
+        >
+          <BiCheckCircle />
           Apply
         </button>
       </div>
@@ -142,6 +146,10 @@
 import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useDraggablePanel } from '@/composables/useDraggablePanel'
 import CustomNumberInput from './CustomNumberInput.vue'
+import BiGripVertical from 'bootstrap-icons/icons/grip-vertical.svg'
+import BiArrowsMove from 'bootstrap-icons/icons/arrows-move.svg'
+import BiXCircle from 'bootstrap-icons/icons/x-circle.svg'
+import BiCheckCircle from 'bootstrap-icons/icons/check-circle.svg'
 
 // Props
 interface Props {

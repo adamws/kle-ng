@@ -10,8 +10,8 @@
     <div class="panel-content">
       <div class="panel-header" @mousedown="handleHeaderMouseDown">
         <div class="panel-title" data-testid="panel-title">
-          <i class="bi bi-grip-vertical me-2 drag-handle" data-testid="drag-handle"></i>
-          <i class="bi bi-wrench me-2"></i>
+          <BiGripVertical class="me-2 drag-handle" data-testid="drag-handle" />
+          <BiWrench class="me-2" />
           Legend Tools
         </div>
         <button
@@ -146,7 +146,7 @@
                   :data-testid="`category-button-${category.id}`"
                 >
                   <span>{{ category.label }}</span>
-                  <i class="bi bi-trash"></i>
+                  <BiTrash />
                 </button>
               </div>
             </div>
@@ -195,7 +195,7 @@
                 title="Move legends"
               >
                 <span class="me-1">Move</span>
-                <i class="bi bi-arrow-right"></i>
+                <BiArrowRight />
               </button>
             </div>
 
@@ -236,6 +236,11 @@ import { useKeyboardStore, type Key } from '@/stores/keyboard'
 import { useDraggablePanel } from '@/composables/useDraggablePanel'
 import LabelPositionPicker from './LabelPositionPicker.vue'
 import AlignmentPicker from './AlignmentPicker.vue'
+
+import BiGripVertical from 'bootstrap-icons/icons/grip-vertical.svg'
+import BiWrench from 'bootstrap-icons/icons/wrench.svg'
+import BiTrash from 'bootstrap-icons/icons/trash.svg'
+import BiArrowRight from 'bootstrap-icons/icons/arrow-right.svg'
 
 // Props
 interface Props {
