@@ -2,7 +2,7 @@
   <BaseHelpModal :is-visible="isVisible" title="VIA Metadata - Help" @close="close">
     <div class="help-section">
       <h6 class="help-section-title">
-        <i class="bi bi-info-circle"></i>
+        <BiInfoCircle />
         What is VIA Metadata?
       </h6>
       <div class="help-content">
@@ -33,7 +33,7 @@
 
     <div class="help-section">
       <h6 class="help-section-title">
-        <i class="bi bi-box-arrow-in-down"></i>
+        <BiBoxArrowInDown />
         Importing VIA Layouts
       </h6>
       <div class="help-content">
@@ -52,7 +52,7 @@
 
     <div class="help-section">
       <h6 class="help-section-title">
-        <i class="bi bi-box-arrow-up"></i>
+        <BiBoxArrowUp />
         Exporting to VIA Format
       </h6>
       <div class="help-content">
@@ -76,7 +76,7 @@
 
     <div class="help-section">
       <h6 class="help-section-title">
-        <i class="bi bi-code-square"></i>
+        <BiCodeSquare />
         Editing VIA Metadata
       </h6>
       <div class="help-content">
@@ -86,8 +86,8 @@
         </p>
 
         <div class="warning-box">
-          <div class="d-flex align-items-start gap-2">
-            <i class="bi bi-exclamation-triangle-fill text-warning flex-shrink-0"></i>
+          <div class="d-flex align-items-center gap-2">
+            <BiExclamationTriangleFill class="text-warning" />
             <div>
               <small>
                 kle-ng does not validate the <b>content</b> of JSON. It is your responsibility to
@@ -104,7 +104,7 @@
 
     <div class="help-section">
       <h6 class="help-section-title">
-        <i class="bi bi-lightbulb"></i>
+        <BiLightbulb />
         Tips
       </h6>
       <div class="help-content">
@@ -123,6 +123,12 @@
 
 <script setup lang="ts">
 import BaseHelpModal from './BaseHelpModal.vue'
+import BiInfoCircle from 'bootstrap-icons/icons/info-circle.svg'
+import BiBoxArrowInDown from 'bootstrap-icons/icons/box-arrow-in-down.svg'
+import BiBoxArrowUp from 'bootstrap-icons/icons/box-arrow-up.svg'
+import BiCodeSquare from 'bootstrap-icons/icons/code-square.svg'
+import BiExclamationTriangleFill from 'bootstrap-icons/icons/exclamation-triangle-fill.svg'
+import BiLightbulb from 'bootstrap-icons/icons/lightbulb.svg'
 
 interface Props {
   isVisible: boolean

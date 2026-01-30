@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import BiZoomIn from 'bootstrap-icons/icons/zoom-in.svg'
+import BiZoomOut from 'bootstrap-icons/icons/zoom-out.svg'
 
 interface Props {
   frontSvg: string | null
@@ -127,13 +129,13 @@ const containerBackgroundClass = computed(() => {
       <!-- Zoom Controls -->
       <div class="btn-group ms-2" role="group">
         <button type="button" class="btn btn-sm btn-outline-primary" @click="zoomOut">
-          <i class="bi bi-zoom-out"></i>
+          <BiZoomOut />
         </button>
         <button type="button" class="btn btn-sm btn-outline-primary" @click="resetView">
           Reset
         </button>
         <button type="button" class="btn btn-sm btn-outline-primary" @click="zoomIn">
-          <i class="bi bi-zoom-in"></i>
+          <BiZoomIn />
         </button>
       </div>
     </div>

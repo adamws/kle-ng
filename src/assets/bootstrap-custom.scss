@@ -5,6 +5,9 @@ $warning: #d29922;
 
 $input-focus-border-color: $primary;
 
+$link-decoration: none;
+$link-hover-decoration: underline;
+
 @import 'bootstrap/scss/bootstrap';
 
 :root {
@@ -19,4 +22,11 @@ $input-focus-border-color: $primary;
 textarea.form-control:focus {
   border-color: var(--input-focus-border-color);
   box-shadow: 0 0 0 2px var(--input-focus-border-color);
+}
+
+.btn-sm {
+  /* results with 20px line-height for font-size .875rem
+  (when 16px root font) which changes default's 31px height to 30px,
+  which fixes svg off by 1 centering problem */
+  line-height: 1.4286;
 }

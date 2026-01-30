@@ -6,7 +6,7 @@
       @click="toggleModal"
       title="Debug Geometry Tools"
     >
-      <i class="bi bi-bug"></i>
+      <BiBug />
     </button>
 
     <DebugActionsModal
@@ -22,6 +22,7 @@
 import { ref } from 'vue'
 import { type Key } from '@/stores/keyboard'
 import DebugActionsModal from './DebugActionsModal.vue'
+import BiBug from 'bootstrap-icons/icons/bug.svg'
 
 interface DebugOverlayRef {
   drawDebugLine: (lineData: {

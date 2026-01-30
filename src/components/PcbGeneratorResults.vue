@@ -4,6 +4,8 @@ import { storeToRefs } from 'pinia'
 import PcbRenderViewer from './PcbRenderViewer.vue'
 import FootprintPreview from './FootprintPreview.vue'
 import DownloadExpirationNotice from './DownloadExpirationNotice.vue'
+import BiExclamationTriangleFill from 'bootstrap-icons/icons/exclamation-triangle-fill.svg'
+import BiInfoCircle from 'bootstrap-icons/icons/info-circle.svg'
 
 const pcbStore = usePcbGeneratorStore()
 const { renders, isTaskSuccess, isTaskFailed, taskStatus, isTaskActive } = storeToRefs(pcbStore)
@@ -76,7 +78,7 @@ function getProgressPercentage(): number {
     <!-- Failed State -->
     <div v-else-if="isTaskFailed" class="alert alert-danger py-2" role="alert">
       <div class="d-flex align-items-start gap-2">
-        <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+        <BiExclamationTriangleFill />
         <div>
           <strong class="d-block">Task Failed</strong>
           <small>{{
@@ -88,7 +90,7 @@ function getProgressPercentage(): number {
 
     <!-- No Results State -->
     <div v-else-if="isTaskSuccess && !hasRenders()" class="text-muted text-center py-3">
-      <i class="bi bi-info-circle d-block mb-2"></i>
+      <BiInfoCircle class="d-block mb-2" />
       <small>Task completed but no renders are available.</small>
     </div>
 

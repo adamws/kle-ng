@@ -1,43 +1,45 @@
 <template>
   <div class="dropdown">
     <button
-      class="btn btn-outline-secondary dropdown-toggle"
+      class="btn btn-outline-secondary dropdown-toggle d-flex align-items-center"
       data-testid="theme-toggle-button"
       type="button"
       data-bs-toggle="dropdown"
       aria-expanded="false"
       :title="`Current theme: ${theme}`"
     >
-      <i :class="themeIcon"></i>
+      <BiSunFill v-if="theme === 'light'" />
+      <BiMoonStarsFill v-else-if="theme === 'dark'" />
+      <BiCircleHalf v-else />
     </button>
     <ul class="dropdown-menu dropdown-menu-end" data-testid="theme-dropdown-menu">
       <li>
         <button
-          class="dropdown-item d-flex align-items-center"
+          class="dropdown-item d-flex align-items-center gap-2"
           :class="{ active: theme === 'light' }"
           @click="setTheme('light')"
         >
-          <i class="bi bi-sun-fill me-2"></i>
+          <BiSunFill />
           Light
         </button>
       </li>
       <li>
         <button
-          class="dropdown-item d-flex align-items-center"
+          class="dropdown-item d-flex align-items-center gap-2"
           :class="{ active: theme === 'dark' }"
           @click="setTheme('dark')"
         >
-          <i class="bi bi-moon-stars-fill me-2"></i>
+          <BiMoonStarsFill />
           Dark
         </button>
       </li>
       <li>
         <button
-          class="dropdown-item d-flex align-items-center"
+          class="dropdown-item d-flex align-items-center gap-2"
           :class="{ active: theme === 'auto' }"
           @click="setTheme('auto')"
         >
-          <i class="bi bi-circle-half me-2"></i>
+          <BiCircleHalf />
           Auto
         </button>
       </li>
@@ -46,21 +48,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useTheme } from '@/composables/useTheme'
+import BiSunFill from 'bootstrap-icons/icons/sun-fill.svg'
+import BiMoonStarsFill from 'bootstrap-icons/icons/moon-stars-fill.svg'
+import BiCircleHalf from 'bootstrap-icons/icons/circle-half.svg'
 
 const { theme, setTheme } = useTheme()
-
-const themeIcon = computed(() => {
-  switch (theme.value) {
-    case 'light':
-      return 'bi bi-sun-fill'
-    case 'dark':
-      return 'bi bi-moon-stars-fill'
-    default:
-      return 'bi bi-circle-half'
-  }
-})
 </script>
 
 <style scoped>

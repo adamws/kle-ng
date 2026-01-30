@@ -1,12 +1,12 @@
 <template>
   <BaseHelpModal :is-visible="isVisible" title="PCB Generator - Help" @close="close">
     <template #icon>
-      <i class="bi bi-cpu"></i>
+      <BiCpu />
     </template>
 
     <div class="help-section">
       <h6 class="help-section-title">
-        <i class="bi bi-info-circle"></i>
+        <BiInfoCircle />
         What is PCB Generator?
       </h6>
       <div class="help-content">
@@ -21,7 +21,7 @@
 
     <div class="help-section">
       <h6 class="help-section-title">
-        <i class="bi bi-exclamation-triangle"></i>
+        <BiExclamationTriangle />
         Prerequisites
       </h6>
       <div class="help-content">
@@ -43,12 +43,10 @@
           </li>
         </ul>
         <div class="info-box">
-          <div class="d-flex align-items-start gap-2">
-            <i class="bi bi-lightbulb-fill text-info flex-shrink-0"></i>
-            <div>
-              <small>
-                Matrix coordinates determine how switches are wired in the keyboard matrix.
-              </small>
+          <div class="d-flex align-items-center gap-2">
+            <BiLightbulb class="text-info" />
+            <div class="small">
+              Matrix coordinates determine how switches are wired in the keyboard matrix.
             </div>
           </div>
         </div>
@@ -57,7 +55,7 @@
 
     <div class="help-section">
       <h6 class="help-section-title">
-        <i class="bi bi-gear"></i>
+        <BiGear />
         Generating a PCB
       </h6>
       <div class="help-content">
@@ -81,11 +79,9 @@
           </li>
         </ol>
         <div class="warning-box">
-          <div class="d-flex align-items-start gap-2">
-            <i class="bi bi-exclamation-triangle-fill text-warning flex-shrink-0"></i>
-            <div>
-              <small> Preview does not support displaying traces. </small>
-            </div>
+          <div class="d-flex align-items-center gap-2">
+            <BiExclamationTriangle class="text-warning" />
+            <div class="small">Preview does not support displaying traces.</div>
           </div>
         </div>
       </div>
@@ -93,7 +89,7 @@
 
     <div class="help-section">
       <h6 class="help-section-title">
-        <i class="bi bi-lightbulb"></i>
+        <BiLightbulb />
         Tips
       </h6>
       <div class="help-content">
@@ -120,6 +116,12 @@
 
 <script setup lang="ts">
 import BaseHelpModal from './BaseHelpModal.vue'
+
+import BiCpu from 'bootstrap-icons/icons/cpu.svg'
+import BiExclamationTriangle from 'bootstrap-icons/icons/exclamation-triangle.svg'
+import BiGear from 'bootstrap-icons/icons/gear.svg'
+import BiInfoCircle from 'bootstrap-icons/icons/info-circle.svg'
+import BiLightbulb from 'bootstrap-icons/icons/lightbulb.svg'
 
 interface Props {
   isVisible: boolean

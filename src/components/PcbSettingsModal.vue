@@ -19,11 +19,11 @@
               />
               <button
                 type="button"
-                class="btn btn-outline-secondary"
+                class="btn btn-outline-secondary d-flex align-items-center gap-2"
                 @click="resetToDefault"
                 title="Reset to default"
               >
-                <i class="bi bi-arrow-counterclockwise"></i>
+                <BiArrowCounterclockwise />
                 Reset
               </button>
             </div>
@@ -32,7 +32,7 @@
                 Using default URL from environment
               </span>
               <span v-else class="text-info">
-                <i class="bi bi-info-circle"></i>
+                <BiInfoCircle />
                 Custom URL (session only)
               </span>
             </div>
@@ -50,6 +50,8 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { usePcbGeneratorStore } from '@/stores/pcbGenerator'
 import { getDefaultBackendUrl } from '@/config/api'
+import BiArrowCounterclockwise from 'bootstrap-icons/icons/arrow-counterclockwise.svg'
+import BiInfoCircle from 'bootstrap-icons/icons/info-circle.svg'
 
 interface Props {
   isVisible: boolean

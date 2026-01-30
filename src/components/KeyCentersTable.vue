@@ -26,7 +26,7 @@ Events:
 <template>
   <div class="key-centers-table-container">
     <div v-if="keyCenters.length === 0" class="text-muted text-center py-3">
-      <i class="bi bi-grid-3x3"></i>
+      <BiGrid3x3 />
       <p class="mb-0 small">No keys</p>
     </div>
 
@@ -40,8 +40,10 @@ Events:
               :class="{ sorted: sortColumn === 'index' }"
             >
               <div class="d-flex align-items-center justify-content-between">
-                <span>#</span>
-                <i :class="['bi', getSortIcon('index')]" class="sort-icon"></i>
+                <span class="fw-semibold">#</span>
+                <BiArrowDownUp v-if="sortColumn !== 'index'" />
+                <BiSortNumericDown v-else-if="sortDirection === 'asc'" />
+                <BiSortNumericUp v-else />
               </div>
             </th>
             <th
@@ -50,8 +52,10 @@ Events:
               :class="{ sorted: sortColumn === 'x' }"
             >
               <div class="d-flex align-items-center justify-content-between">
-                <span>X ({{ units }})</span>
-                <i :class="['bi', getSortIcon('x')]" class="sort-icon"></i>
+                <span class="fw-semibold">X ({{ units }})</span>
+                <BiArrowDownUp v-if="sortColumn !== 'x'" />
+                <BiSortNumericDown v-else-if="sortDirection === 'asc'" />
+                <BiSortNumericUp v-else />
               </div>
             </th>
             <th
@@ -60,8 +64,10 @@ Events:
               :class="{ sorted: sortColumn === 'y' }"
             >
               <div class="d-flex align-items-center justify-content-between">
-                <span>Y ({{ units }})</span>
-                <i :class="['bi', getSortIcon('y')]" class="sort-icon"></i>
+                <span class="fw-semibold">Y ({{ units }})</span>
+                <BiArrowDownUp v-if="sortColumn !== 'y'" />
+                <BiSortNumericDown v-else-if="sortDirection === 'asc'" />
+                <BiSortNumericUp v-else />
               </div>
             </th>
           </tr>
@@ -93,6 +99,10 @@ import { computed, ref } from 'vue'
 import { useKeyboardStore, type Key } from '@/stores/keyboard'
 import { getKeyCenter } from '@/utils/keyboard-geometry'
 import { D } from '@/utils/decimal-math'
+import BiGrid3x3 from 'bootstrap-icons/icons/grid-3x3.svg'
+import BiArrowDownUp from 'bootstrap-icons/icons/arrow-down-up.svg'
+import BiSortNumericDown from 'bootstrap-icons/icons/sort-numeric-down.svg'
+import BiSortNumericUp from 'bootstrap-icons/icons/sort-numeric-up.svg'
 
 // Sorting types
 type SortColumn = 'index' | 'x' | 'y'
@@ -127,16 +137,6 @@ const handleSort = (column: SortColumn) => {
     sortColumn.value = column
     sortDirection.value = 'asc'
   }
-}
-
-/**
- * Get sort icon for a column
- */
-const getSortIcon = (column: SortColumn): string => {
-  if (sortColumn.value !== column) {
-    return 'bi-arrow-down-up' // Neutral sort icon
-  }
-  return sortDirection.value === 'asc' ? 'bi-sort-numeric-down' : 'bi-sort-numeric-up'
 }
 
 /**
@@ -277,31 +277,10 @@ const handleRowLeave = () => {
   background-color: var(--bs-primary-bg-subtle);
 }
 
-/* Sort icon styles */
-.sort-icon {
-  font-size: 0.75rem;
-  opacity: 0.6;
-  transition: opacity 0.15s ease;
-  min-width: 12px;
-}
-
-.sortable-header.sorted .sort-icon {
-  opacity: 1;
-}
-
-.sortable-header:hover .sort-icon {
-  opacity: 0.8;
-}
-
 /* Responsive adjustments */
 @media (max-width: 576px) {
   .table-wrapper {
     max-height: 300px;
-  }
-
-  /* Hide sort icons on very small screens to save space */
-  .sort-icon {
-    display: none;
   }
 }
 </style>

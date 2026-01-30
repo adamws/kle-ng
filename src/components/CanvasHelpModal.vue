@@ -14,14 +14,14 @@
           <h6 class="section-title">Mouse Controls</h6>
           <div class="controls-list">
             <div class="control-item">
-              <i class="bi bi-mouse control-icon"></i>
+              <BiMouse class="control-icon" />
               <div>
                 <strong>Left Click</strong>
                 <div>Select keys, drag for multi-select</div>
               </div>
             </div>
             <div class="control-item">
-              <i class="bi bi-mouse control-icon"></i>
+              <BiMouse class="control-icon" />
               <div>
                 <strong>Middle Click and Drag</strong>
                 <div>Move selected keys</div>
@@ -35,7 +35,7 @@
           <h6 class="section-title">Tips & Hints</h6>
           <div class="tips-grid">
             <div class="tip-item">
-              <i class="bi bi-book control-icon text-primary"></i>
+              <BiBook class="control-icon text-primary" />
               <div>
                 <strong>Detailed Documentation</strong>
                 <div>
@@ -44,23 +44,23 @@
                     href="https://github.com/adamws/kle-ng"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="github-link"
+                    class="icon-link align-items-baseline"
                   >
                     GitHub repository
-                    <i class="bi bi-box-arrow-up-right"></i>
+                    <BiBoxArrowUpRight class="bi" aria-hidden="true" />
                   </a>
                 </div>
               </div>
             </div>
             <div class="tip-item">
-              <i class="bi bi-lightbulb control-icon text-warning"></i>
+              <BiLightbulb class="control-icon text-warning" />
               <div>
                 <strong>Export Resolution</strong>
                 <div>Zoom in on the canvas to increase PNG export resolution</div>
               </div>
             </div>
             <div class="tip-item">
-              <i class="bi bi-clipboard-plus control-icon text-info"></i>
+              <BiClipboardPlus class="control-icon text-info" />
               <div>
                 <strong>Cross-Instance Copy & Paste</strong>
                 <div>
@@ -69,7 +69,7 @@
               </div>
             </div>
             <div class="tip-item">
-              <i class="bi bi-image control-icon text-success"></i>
+              <BiImage class="control-icon text-success" />
               <div>
                 <strong>Image & SVG Labels</strong>
                 <div>
@@ -171,6 +171,12 @@
 
 <script setup lang="ts">
 import BaseHelpModal from './BaseHelpModal.vue'
+import BiMouse from 'bootstrap-icons/icons/mouse.svg'
+import BiBook from 'bootstrap-icons/icons/book.svg'
+import BiLightbulb from 'bootstrap-icons/icons/lightbulb.svg'
+import BiClipboardPlus from 'bootstrap-icons/icons/clipboard-plus.svg'
+import BiImage from 'bootstrap-icons/icons/image.svg'
+import BiBoxArrowUpRight from 'bootstrap-icons/icons/box-arrow-up-right.svg'
 
 interface Props {
   isVisible: boolean
@@ -258,25 +264,6 @@ const close = () => {
   font-family: monospace;
   border: 1px solid var(--bs-border-color);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-/* GitHub link styling */
-.github-link {
-  color: var(--bs-link-color);
-  text-decoration: none;
-  font-weight: 500;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.github-link:hover {
-  text-decoration: underline;
-  color: var(--bs-link-hover-color);
-}
-
-.github-link i {
-  font-size: 0.875rem;
 }
 
 /* Responsive adjustments */

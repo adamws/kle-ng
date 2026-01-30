@@ -26,6 +26,8 @@ import {
   calculateCompositeViewBox,
   calculateElementCenter,
 } from '@/utils/footprintUtils'
+import BiInfoCircle from 'bootstrap-icons/icons/info-circle.svg'
+import BiExclamationTriangle from 'bootstrap-icons/icons/exclamation-triangle.svg'
 
 // Constants for footprint positioning
 const CONTAINER_PADDING = 2.0 // mm
@@ -425,7 +427,7 @@ onUnmounted(() => {
       <!-- Fallback warning overlay -->
       <div v-if="isFallback" class="preview-warning">
         <small>
-          <i class="bi bi-info-circle"></i>
+          <BiInfoCircle />
           Using Cherry MX preview (exact footprint SVG not yet available)
         </small>
       </div>
@@ -441,7 +443,7 @@ onUnmounted(() => {
 
     <!-- Error State Overlay -->
     <div v-else-if="error" class="preview-overlay">
-      <i class="bi bi-exclamation-triangle text-warning fs-3"></i>
+      <BiExclamationTriangle class="text-warning fs-3" />
       <p class="text-muted mt-2">{{ error }}</p>
     </div>
   </div>

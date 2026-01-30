@@ -10,8 +10,8 @@
     <div class="panel-content">
       <div class="panel-header" @mousedown="handleHeaderMouseDown">
         <div class="panel-title">
-          <i class="bi bi-grip-vertical me-2 drag-handle"></i>
-          <i class="bi bi-grid-3x3 me-2"></i>
+          <BiGripVertical class="me-2 drag-handle" />
+          <BiGrid3x3 class="me-2" />
           Add Switch Matrix Coordinates
         </div>
         <button
@@ -31,8 +31,8 @@
             v-if="keyboardStore.isViaAnnotated && !keyboardStore.hasInvalidMatrixDuplicates"
             class="alert alert-success mb-3"
           >
-            <div class="d-flex align-items-start gap-3">
-              <i class="bi bi-check-circle-fill text-success" style="font-size: 1.5rem"></i>
+            <div class="d-flex align-items-center gap-3">
+              <BiCheckCircleFill class="text-success" style="min-width: 16px" />
               <div class="flex-grow-1">
                 <h6 class="mb-2 text-success fw-bold">Layout Already Annotated</h6>
                 <p class="mb-2 small">
@@ -40,7 +40,7 @@
                   "row,column" annotations in the top-left position.
                 </p>
                 <p class="mb-0 small">
-                  <i class="bi bi-eye me-1"></i>
+                  <BiEye class="me-1" />
                   The matrix overlay is currently visible on the canvas showing the existing row and
                   column connections.
                 </p>
@@ -53,8 +53,8 @@
             v-if="keyboardStore.isViaAnnotated && keyboardStore.hasInvalidMatrixDuplicates"
             class="alert alert-warning mb-3"
           >
-            <div class="d-flex align-items-start gap-3">
-              <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 1.5rem"></i>
+            <div class="d-flex align-items-center gap-3">
+              <BiExclamationTriangleFill class="text-warning" style="min-width: 16px" />
               <div class="flex-grow-1">
                 <h6 class="mb-2 text-warning fw-bold">Layout Annotated with Warnings</h6>
                 <p class="mb-2 small">
@@ -72,7 +72,7 @@
                   "0,1") to distinguish layout variants.
                 </p>
                 <p class="mb-0 small">
-                  <i class="bi bi-info-circle me-1"></i>
+                  <BiInfoCircle class="me-1" />
                   Either add option,choice labels to duplicate keys, or re-annotate to assign unique
                   positions.
                 </p>
@@ -82,9 +82,9 @@
 
           <!-- Information Section -->
           <div class="info-section mb-3">
-            <div class="d-flex align-items-start gap-3">
-              <i class="bi bi-info-circle text-primary" style="font-size: 1.5rem"></i>
-              <div class="flex-grow-1">
+            <div class="d-flex align-items-center gap-3">
+              <BiInfoCircle class="text-primary" style="min-width: 16px" />
+              <div>
                 <p class="mb-2 small">
                   Matrix coordinates map the physical layout to the electrical switch matrix,
                   enabling proper key mapping in VIA configurator.
@@ -99,10 +99,10 @@
                     href="https://www.caniusevia.com/docs/layouts"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="text-decoration-none"
+                    class="icon-link align-items-baseline"
                   >
                     VIA Documentation
-                    <i class="bi bi-box-arrow-up-right ms-1"></i>
+                    <BiBoxArrowUpRight aria-hidden="true" />
                   </a>
                 </p>
               </div>
@@ -111,9 +111,9 @@
 
           <!-- Warning Message -->
           <div class="alert alert-warning mb-0">
-            <div class="d-flex align-items-start gap-3">
-              <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 1.5rem"></i>
-              <div class="flex-grow-1">
+            <div class="d-flex align-items-center gap-3">
+              <BiExclamationTriangleFill class="text-warning" style="min-width: 16px" />
+              <div>
                 <h6 class="mb-2 text-warning fw-bold">
                   {{ isPartiallyAnnotated ? 'Continue Matrix Annotation' : 'Important Notice' }}
                 </h6>
@@ -148,8 +148,8 @@
                 <div class="flex-grow-1">
                   <div class="progress-info">
                     <div class="progress-item">
-                      <div class="progress-label">
-                        <i class="bi bi-diagram-3 me-1 text-primary"></i>
+                      <div class="progress-label gap-1">
+                        <BiDiagram3 class="text-primary" />
                         <span class="fw-bold">Rows:</span>
                         <span class="ms-1">{{ rows.length }} defined</span>
                       </div>
@@ -157,14 +157,14 @@
                         <span v-if="keysLeftForRows > 0" class="text-muted small">
                           {{ keysLeftForRows }} keys left
                         </span>
-                        <span v-else class="text-success small">
-                          <i class="bi bi-check-circle-fill me-1"></i>Complete
+                        <span v-else class="text-success small d-flex align-items-center gap-1">
+                          <BiCheckCircleFill />Complete
                         </span>
                       </div>
                     </div>
                     <div class="progress-item">
-                      <div class="progress-label">
-                        <i class="bi bi-diagram-2 me-1 text-success"></i>
+                      <div class="progress-label gap-1">
+                        <BiDiagram2 class="text-success" />
                         <span class="fw-bold">Columns:</span>
                         <span class="ms-1">{{ cols.length }} defined</span>
                       </div>
@@ -172,8 +172,8 @@
                         <span v-if="keysLeftForColumns > 0" class="text-muted small">
                           {{ keysLeftForColumns }} keys left
                         </span>
-                        <span v-else class="text-success small">
-                          <i class="bi bi-check-circle-fill me-1"></i>Complete
+                        <span v-else class="text-success small d-flex align-items-center gap-1">
+                          <BiCheckCircleFill />Complete
                         </span>
                       </div>
                     </div>
@@ -192,8 +192,8 @@
               class="alert alert-success mb-3"
             >
               <!-- Already Annotated (opened with existing annotations) -->
-              <div v-if="isShowingExistingAnnotation" class="d-flex align-items-start gap-3">
-                <i class="bi bi-check-circle-fill text-success" style="font-size: 1.5rem"></i>
+              <div v-if="isShowingExistingAnnotation" class="d-flex align-items-center gap-3">
+                <BiCheckCircleFill class="text-success" style="min-width: 16px" />
                 <div class="flex-grow-1">
                   <h6 class="mb-2 text-success fw-bold">Layout Already Annotated</h6>
                   <p class="mb-2 small">
@@ -201,15 +201,15 @@
                     "row,column" annotations in the top-left position.
                   </p>
                   <p class="mb-0 small">
-                    <i class="bi bi-eye me-1"></i>
+                    <BiEye class="me-1" />
                     The matrix overlay is currently visible on the canvas showing the existing row
                     and column connections.
                   </p>
                 </div>
               </div>
               <!-- Just Completed Annotation -->
-              <div v-else class="d-flex align-items-center gap-2">
-                <i class="bi bi-check-circle-fill" style="font-size: 1.2rem"></i>
+              <div v-else class="d-flex align-items-center gap-3">
+                <BiCheckCircleFill style="min-width: 16px" />
                 <div class="flex-grow-1">
                   <strong>Annotation Complete!</strong>
                   <p class="mb-0 small">
@@ -229,11 +229,8 @@
               "
               class="alert alert-warning mb-3"
             >
-              <div class="d-flex align-items-start gap-3">
-                <i
-                  class="bi bi-exclamation-triangle-fill text-warning"
-                  style="font-size: 1.5rem"
-                ></i>
+              <div class="d-flex align-items-center gap-3">
+                <BiExclamationTriangleFill class="text-warning" style="min-width: 16px" />
                 <div class="flex-grow-1">
                   <h6 class="mb-2 text-warning fw-bold">Duplicate Matrix Positions Detected</h6>
                   <p class="mb-2 small">
@@ -255,11 +252,8 @@
 
             <!-- Duplicate Warning Message (from automatic annotation) -->
             <div v-if="annotationIssues" class="alert alert-warning mb-3">
-              <div class="d-flex align-items-start gap-3">
-                <i
-                  class="bi bi-exclamation-triangle-fill text-warning"
-                  style="font-size: 1.5rem"
-                ></i>
+              <div class="d-flex align-items-center gap-3">
+                <BiExclamationTriangleFill class="text-warning" style="min-width: 16px" />
                 <div class="flex-grow-1">
                   <h6 class="mb-2 text-warning fw-bold">
                     Automatic Annotation Complete with Issues
@@ -301,12 +295,12 @@
             <div class="mb-3">
               <button
                 type="button"
-                class="btn btn-outline-primary btn-sm w-100"
+                class="btn btn-outline-primary btn-sm w-100 d-flex align-items-center justify-content-center gap-1"
                 @click="handleAutomaticAnnotation"
                 @mousedown.stop
                 title="Automatically assign matrix coordinates based on key positions"
               >
-                <i class="bi bi-magic me-1"></i>
+                <BiMagic class="me-1" />
                 Annotate Automatically
               </button>
             </div>
@@ -317,35 +311,35 @@
               <div class="btn-group w-100" role="group" aria-label="Drawing type selector">
                 <button
                   type="button"
-                  class="btn btn-sm btn-primary-outline"
+                  class="btn btn-sm btn-primary-outline d-flex align-items-center justify-content-center gap-1"
                   :class="drawingType === 'row' ? 'btn-draw-rows' : 'btn-outline-secondary'"
                   @click="setDrawingType('row')"
                   @mousedown.stop
                   title="Draw rows"
                 >
-                  <i class="bi bi-diagram-3 me-1"></i>
+                  <BiDiagram3 />
                   Draw Rows
                 </button>
                 <button
                   type="button"
-                  class="btn btn-sm btn-primary-outline"
+                  class="btn btn-sm btn-primary-outline d-flex align-items-center justify-content-center gap-1"
                   :class="drawingType === 'column' ? 'btn-draw-columns' : 'btn-outline-secondary'"
                   @click="setDrawingType('column')"
                   @mousedown.stop
                   title="Draw columns"
                 >
-                  <i class="bi bi-diagram-2 me-1"></i>
+                  <BiDiagram2 />
                   Draw Columns
                 </button>
                 <button
                   type="button"
-                  class="btn btn-sm"
+                  class="btn btn-sm d-flex align-items-center justify-content-center gap-1"
                   :class="drawingType === 'remove' ? 'btn-danger' : 'btn-outline-secondary'"
                   @click="setDrawingType('remove')"
                   @mousedown.stop
                   title="Remove elements"
                 >
-                  <i class="bi bi-trash me-1"></i>
+                  <BiTrash />
                   Remove
                 </button>
               </div>
@@ -355,12 +349,12 @@
             <div class="mb-3">
               <button
                 type="button"
-                class="btn btn-outline-danger btn-sm w-100"
+                class="btn btn-outline-danger btn-sm w-100 d-flex align-items-center justify-content-center gap-1"
                 @click="clearDrawings"
                 @mousedown.stop
                 :disabled="!hasDrawings"
               >
-                <i class="bi bi-trash me-1"></i>
+                <BiTrash />
                 Clear All Drawings
               </button>
             </div>
@@ -368,7 +362,7 @@
             <!-- Drawing Instructions -->
             <div class="info-section-light mb-0">
               <h6 class="small fw-bold mb-2">
-                <i class="bi bi-info-circle me-1"></i>
+                <BiInfoCircle class="me-1" />
                 Instructions
               </h6>
               <ul class="small mb-0 ps-3">
@@ -405,12 +399,12 @@
         <button
           v-if="step === 'draw'"
           type="button"
-          class="btn btn-secondary btn-sm"
+          class="btn btn-secondary btn-sm d-flex align-items-center gap-1"
           @click="handleClose"
           @mousedown.stop
           aria-label="Close"
         >
-          <i class="bi bi-x-circle me-1"></i>
+          <BiXCircle />
           Close
         </button>
 
@@ -418,12 +412,12 @@
         <button
           v-if="step === 'warning' && !isPartiallyAnnotated"
           type="button"
-          class="btn btn-primary btn-sm"
+          class="btn btn-primary btn-sm d-flex align-items-center gap-1"
           @click="acceptWarning"
           @mousedown.stop
           aria-label="Ok"
         >
-          <i class="bi bi-check-circle me-1"></i>
+          <BiCheckCircle />
           OK (clear all labels)
         </button>
 
@@ -431,12 +425,12 @@
         <button
           v-if="step === 'warning' && isPartiallyAnnotated"
           type="button"
-          class="btn btn-primary btn-sm"
+          class="btn btn-primary btn-sm d-flex align-items-center gap-1"
           @click="proceedWithoutClearing"
           @mousedown.stop
           aria-label="Continue"
         >
-          <i class="bi bi-arrow-right-circle me-1"></i>
+          <BiArrowRightCircle />
           Continue
         </button>
 
@@ -448,7 +442,7 @@
           @mousedown.stop
           aria-label="Start over"
         >
-          <i class="bi bi-arrow-right-circle me-1"></i>
+          <BiArrowRightCircle class="me-1" />
           Start over
         </button>
 
@@ -456,12 +450,12 @@
         <button
           v-if="step === 'warning'"
           type="button"
-          class="btn btn-secondary btn-sm"
+          class="btn btn-secondary btn-sm d-flex align-items-center gap-1"
           @click="handleCancel"
           @mousedown.stop
           aria-label="Cancel"
         >
-          <i class="bi bi-x-circle me-1"></i>
+          <BiXCircle />
           Cancel
         </button>
       </div>
@@ -484,6 +478,21 @@ import {
   restoreOriginalRotation,
   parseViaLabelWithPartial,
 } from '@/utils/matrix-utils'
+
+import BiGripVertical from 'bootstrap-icons/icons/grip-vertical.svg'
+import BiGrid3x3 from 'bootstrap-icons/icons/grid-3x3.svg'
+import BiCheckCircleFill from 'bootstrap-icons/icons/check-circle-fill.svg'
+import BiEye from 'bootstrap-icons/icons/eye.svg'
+import BiExclamationTriangleFill from 'bootstrap-icons/icons/exclamation-triangle-fill.svg'
+import BiInfoCircle from 'bootstrap-icons/icons/info-circle.svg'
+import BiDiagram3 from 'bootstrap-icons/icons/diagram-3.svg'
+import BiDiagram2 from 'bootstrap-icons/icons/diagram-2.svg'
+import BiMagic from 'bootstrap-icons/icons/magic.svg'
+import BiTrash from 'bootstrap-icons/icons/trash.svg'
+import BiXCircle from 'bootstrap-icons/icons/x-circle.svg'
+import BiCheckCircle from 'bootstrap-icons/icons/check-circle.svg'
+import BiArrowRightCircle from 'bootstrap-icons/icons/arrow-right-circle.svg'
+import BiBoxArrowUpRight from 'bootstrap-icons/icons/box-arrow-up-right.svg'
 
 // Props
 interface Props {

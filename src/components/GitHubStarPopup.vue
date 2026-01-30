@@ -6,7 +6,7 @@
       type="button"
       aria-label="Close"
     >
-      <i class="bi bi-x"></i>
+      <BiX />
     </button>
     <div class="popup-content">
       <div class="popup-message">
@@ -23,7 +23,7 @@
         class="star-button"
         @click="handleStarClick"
       >
-        <i class="bi bi-github"></i>
+        <BiGithub />
         Star on GitHub
       </a>
     </div>
@@ -32,6 +32,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+import BiX from 'bootstrap-icons/icons/x.svg'
+import BiGithub from 'bootstrap-icons/icons/github.svg'
 
 const STORAGE_KEY = 'kle-ng-github-star-popup-dismissed'
 const VISIT_TIME_KEY = 'kle-ng-first-visit-time'

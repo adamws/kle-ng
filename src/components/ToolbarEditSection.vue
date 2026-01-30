@@ -10,7 +10,7 @@
           @click="$emit('add-key')"
           title="Add Standard Key"
         >
-          <i class="bi bi-plus-circle"></i>
+          <BiPlusCircle />
         </button>
         <button
           ref="dropdownBtnRef"
@@ -18,7 +18,7 @@
           @click="$emit('toggle-special-keys')"
           title="Add Special Key"
         >
-          <i class="bi bi-chevron-down"></i>
+          <BiChevronDown />
         </button>
       </div>
 
@@ -48,7 +48,7 @@
         :disabled="!canDelete"
         title="Delete Keys"
       >
-        <i class="bi bi-trash"></i>
+        <BiTrash />
       </button>
     </div>
   </div>
@@ -57,6 +57,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { type SpecialKeyTemplate } from '@/data/specialKeys'
+import BiPlusCircle from 'bootstrap-icons/icons/plus-circle.svg'
+import BiChevronDown from 'bootstrap-icons/icons/chevron-down.svg'
+import BiTrash from 'bootstrap-icons/icons/trash.svg'
 
 defineProps<{
   showSpecialKeysDropdown: boolean

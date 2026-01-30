@@ -104,15 +104,15 @@
                   ></textarea>
                 </div>
                 <div class="flex-grow-1 d-flex flex-column">
-                  <div class="d-flex justify-content-between">
-                    <label class="form-label small mb-1">CSS</label>
+                  <div class="d-flex align-items-center justify-content-between mb-1">
+                    <label class="form-label small mb-0">CSS</label>
                     <button
                       @click="showCssHelp"
-                      style="margin-top: -2px"
-                      class="btn btn-sm btn-outline-secondary css-help-btn"
+                      class="btn btn-sm btn-outline-secondary help-btn"
                       title="Help"
+                      type="button"
                     >
-                      <i class="bi bi-question-circle"></i>
+                      <BiQuestionCircle />
                     </button>
                   </div>
                   <textarea
@@ -136,20 +136,20 @@
         <div class="property-group d-flex flex-column">
           <div class="d-flex justify-content-between mb-2">
             <h6 class="property-group-title mb-0">VIA Metadata</h6>
-            <div class="d-flex align-items-center gap-2">
+            <div>
               <div v-if="viaJsonError" class="text-danger small">
-                <i class="bi bi-exclamation-triangle"></i> Invalid JSON
+                <BiExclamationTriangle /> Invalid JSON
               </div>
               <div v-else-if="viaMetadataJson.trim()" class="text-success small">
-                <i class="bi bi-check"></i> Valid JSON
+                <BiCheck /> Valid JSON
               </div>
               <button
                 @click="showViaHelp"
-                style="margin-top: -4px"
                 class="btn btn-sm btn-outline-secondary help-btn"
+                style="margin: -4px 1px"
                 title="Help"
               >
-                <i class="bi bi-question-circle"></i>
+                <BiQuestionCircle />
               </button>
             </div>
           </div>
@@ -199,6 +199,9 @@ import CustomNumberInput from './CustomNumberInput.vue'
 import CssHelpModal from './CssHelpModal.vue'
 import ViaHelpModal from './ViaHelpModal.vue'
 import LZString from 'lz-string'
+import BiQuestionCircle from 'bootstrap-icons/icons/question-circle.svg'
+import BiExclamationTriangle from 'bootstrap-icons/icons/exclamation-triangle.svg'
+import BiCheck from 'bootstrap-icons/icons/check.svg'
 
 const keyboardStore = useKeyboardStore()
 const fontStore = useFontStore()
@@ -468,30 +471,10 @@ const updateBackcolor = () => {
 .help-btn {
   font-size: 0.875rem;
   line-height: 1;
-  width: 20px;
-  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: none;
-}
-
-.help-btn i {
-  font-size: 1rem;
-}
-
-.css-help-btn {
-  font-size: 0.875rem;
-  line-height: 1;
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-}
-
-.css-help-btn i {
-  font-size: 1rem;
+  padding: 4px;
 }
 </style>

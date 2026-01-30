@@ -1,7 +1,11 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, computed } from 'vue'
 import { usePcbGeneratorStore } from '@/stores/pcbGenerator'
 import { storeToRefs } from 'pinia'
+import BiXCircleFill from 'bootstrap-icons/icons/x-circle-fill.svg'
+import BiArrowClockwise from 'bootstrap-icons/icons/arrow-clockwise.svg'
+import BiCheckCircleFill from 'bootstrap-icons/icons/check-circle-fill.svg'
+import BiExclamationTriangleFill from 'bootstrap-icons/icons/exclamation-triangle-fill.svg'
 
 const pcbStore = usePcbGeneratorStore()
 const { workerStatus, workerStatusError } = storeToRefs(pcbStore)
@@ -50,13 +54,7 @@ function getStatusColor(): string {
   return workerStatus.value.idle_capacity > 0 ? 'success' : 'warning'
 }
 
-function getStatusIcon(): string {
-  if (workerStatusError.value) return 'bi-x-circle-fill'
-  if (!workerStatus.value) return 'bi-question-circle'
-  return workerStatus.value.idle_capacity > 0
-    ? 'bi-check-circle-fill'
-    : 'bi-exclamation-circle-fill'
-}
+const hasIdleCapacity = computed(() => workerStatus.value && workerStatus.value.idle_capacity > 0)
 </script>
 
 <template>
@@ -72,7 +70,7 @@ function getStatusIcon(): string {
       <div class="d-flex align-items-center justify-content-between gap-2">
         <div class="d-flex align-items-center gap-3 flex-grow-1 min-w-0">
           <div class="status-badge flex-shrink-0">
-            <i class="bi bi-x-circle-fill" aria-hidden="true"></i>
+            <BiXCircleFill aria-hidden="true" />
           </div>
           <div class="status-info-inline">
             <span class="info-item">{{ workerStatusError }}</span>
@@ -86,11 +84,7 @@ function getStatusIcon(): string {
           title="Retry connection"
           aria-label="Retry backend connection"
         >
-          <i
-            class="bi bi-arrow-clockwise"
-            :class="{ spinning: isRefreshing }"
-            aria-hidden="true"
-          ></i>
+          <BiArrowClockwise :class="{ spinning: isRefreshing }" aria-hidden="true" />
         </button>
       </div>
     </div>
@@ -107,7 +101,8 @@ function getStatusIcon(): string {
       <div class="d-flex align-items-center justify-content-between gap-2">
         <div class="d-flex align-items-center gap-3 flex-grow-1 min-w-0">
           <div class="status-badge flex-shrink-0">
-            <i class="bi" :class="getStatusIcon()" aria-hidden="true"></i>
+            <BiCheckCircleFill v-if="hasIdleCapacity" aria-hidden="true" />
+            <BiExclamationTriangleFill v-else aria-hidden="true" />
           </div>
           <div class="status-info-inline">
             <span class="info-item">
@@ -124,11 +119,7 @@ function getStatusIcon(): string {
           title="Refresh status"
           aria-label="Refresh backend worker status"
         >
-          <i
-            class="bi bi-arrow-clockwise"
-            :class="{ spinning: isRefreshing }"
-            aria-hidden="true"
-          ></i>
+          <BiArrowClockwise :class="{ spinning: isRefreshing }" aria-hidden="true" />
         </button>
       </div>
     </div>

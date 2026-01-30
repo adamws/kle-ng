@@ -12,7 +12,7 @@
         <div class="modal-header">
           <h5 class="modal-title">
             <slot name="icon">
-              <i class="bi bi-question-circle"></i>
+              <BiQuestionCircle />
             </slot>
             {{ title }}
           </h5>
@@ -33,6 +33,7 @@
 
 <script setup lang="ts">
 import { watch, onMounted, onUnmounted } from 'vue'
+import BiQuestionCircle from 'bootstrap-icons/icons/question-circle.svg'
 
 interface Props {
   isVisible: boolean

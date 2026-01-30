@@ -9,8 +9,8 @@
     <div class="panel-content">
       <div class="panel-header" @mousedown="handleHeaderMouseDown">
         <div class="panel-title">
-          <i class="bi bi-grip-vertical me-2 drag-handle"></i>
-          <i class="bi bi-arrow-repeat me-2"></i>
+          <BiGripVertical class="me-2 drag-handle" />
+          <BiArrowRepeat class="me-2" />
           Move Rotation Origins
         </div>
         <button
@@ -25,7 +25,7 @@
       <div class="panel-body">
         <!-- Info banner -->
         <div class="info-banner mb-3">
-          <i class="bi bi-info-circle me-2"></i>
+          <BiInfoCircle class="me-2" />
           <span v-if="selectedKeysCount === 0">
             No keys selected - will affect <strong>all keys</strong>
           </span>
@@ -81,7 +81,7 @@
           </div>
 
           <div v-if="!useKeyCenters" class="small text-muted mt-2">
-            <i class="bi bi-lightbulb"></i>
+            <BiLightbulb />
             Enter coordinates for a shared rotation origin point
           </div>
         </div>
@@ -89,7 +89,7 @@
         <!-- Preview section -->
         <div v-if="hasPreview" class="preview-section mb-3">
           <div class="preview-indicator">
-            <i class="bi bi-eye me-1"></i>
+            <BiEye class="me-1" />
             Preview active - rotate keys to see changes
           </div>
         </div>
@@ -97,8 +97,10 @@
         <!-- Action buttons -->
         <div class="action-buttons">
           <button type="button" class="btn btn-secondary btn-sm flex-fill" @click="handleCancel">
-            <i class="bi bi-x-circle me-1"></i>
-            Cancel
+            <span class="d-flex align-items-center justify-content-center gap-1">
+              <BiXCircle />
+              Cancel
+            </span>
           </button>
           <button
             type="button"
@@ -106,8 +108,10 @@
             @click="handleApply"
             :disabled="!canApply"
           >
-            <i class="bi bi-check-circle me-1"></i>
-            Apply
+            <span class="d-flex align-items-center justify-content-center gap-1">
+              <BiCheckCircle />
+              Apply
+            </span>
           </button>
         </div>
 
@@ -130,6 +134,13 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import { useKeyboardStore } from '@/stores/keyboard'
 import { useDraggablePanel } from '@/composables/useDraggablePanel'
+import BiGripVertical from 'bootstrap-icons/icons/grip-vertical.svg'
+import BiArrowRepeat from 'bootstrap-icons/icons/arrow-repeat.svg'
+import BiInfoCircle from 'bootstrap-icons/icons/info-circle.svg'
+import BiLightbulb from 'bootstrap-icons/icons/lightbulb.svg'
+import BiEye from 'bootstrap-icons/icons/eye.svg'
+import BiXCircle from 'bootstrap-icons/icons/x-circle.svg'
+import BiCheckCircle from 'bootstrap-icons/icons/check-circle.svg'
 
 // Props
 interface Props {

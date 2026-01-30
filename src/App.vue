@@ -20,6 +20,13 @@ import GitHubStarPopup from './components/GitHubStarPopup.vue'
 import { useKeyboardStore } from '@/stores/keyboard'
 import { useTheme } from '@/composables/useTheme'
 
+import BiChevronDown from 'bootstrap-icons/icons/chevron-down.svg'
+import BiChevronUp from 'bootstrap-icons/icons/chevron-up.svg'
+import BiCoin from 'bootstrap-icons/icons/coin.svg'
+import BiGear from 'bootstrap-icons/icons/gear.svg'
+import BiGripVertical from 'bootstrap-icons/icons/grip-vertical.svg'
+import BiQuestionCircle from 'bootstrap-icons/icons/question-circle.svg'
+
 const canvasRef = ref<InstanceType<typeof KeyboardCanvas>>()
 
 const keyboardStore = useKeyboardStore()
@@ -344,9 +351,7 @@ const stopResize = () => {
               <KeyboardToolbar />
             </div>
             <!-- Theme toggle grouped with toolbar buttons on small screens -->
-            <div class="d-flex align-items-center flex-shrink-0">
-              <ThemeToggle />
-            </div>
+            <ThemeToggle />
           </nav>
         </div>
       </div>
@@ -411,55 +416,54 @@ const stopResize = () => {
               <button
                 v-if="section.id === 'canvas'"
                 @click.stop="showHelp"
-                class="btn btn-sm btn-outline-secondary help-btn"
+                class="btn btn-outline-secondary help-btn"
                 title="Help"
               >
-                <i class="bi bi-question-circle"></i>
+                <BiQuestionCircle />
               </button>
               <!-- Funding button only for Layout Editor section -->
               <button
                 v-if="section.id === 'canvas'"
                 @click.stop="showFunding"
-                class="btn btn-sm btn-outline-secondary help-btn"
+                class="btn btn-outline-secondary help-btn"
                 title="Funding"
               >
-                <i class="bi bi-coin"></i>
+                <BiCoin />
               </button>
               <!-- Help button for PCB Generator section -->
               <button
                 v-if="section.id === 'pcb'"
                 @click.stop="showPcbHelp"
-                class="btn btn-sm btn-outline-secondary help-btn"
+                class="btn btn-outline-secondary help-btn"
                 title="Help"
               >
-                <i class="bi bi-question-circle"></i>
+                <BiQuestionCircle />
               </button>
               <!-- Settings button only for PCB Generator section (debug/preview mode only) -->
               <button
                 v-if="section.id === 'pcb' && !isProduction"
                 @click.stop="showPcbSettings"
-                class="btn btn-sm btn-outline-secondary settings-btn"
+                class="btn btn-outline-secondary settings-btn"
                 title="Settings"
               >
-                <i class="bi bi-gear"></i>
+                <BiGear />
               </button>
               <button
                 @click.stop="toggleSectionCollapse(section.id)"
-                class="btn btn-sm btn-outline-secondary collapse-btn"
+                class="btn btn-outline-secondary collapse-btn"
                 :title="collapsedSections[section.id] ? 'Expand' : 'Collapse'"
                 :aria-expanded="!collapsedSections[section.id]"
                 :aria-controls="`section-content-${section.id}`"
               >
-                <i
-                  :class="collapsedSections[section.id] ? 'bi bi-chevron-down' : 'bi bi-chevron-up'"
-                ></i>
+                <BiChevronDown v-if="collapsedSections[section.id]" />
+                <BiChevronUp v-if="!collapsedSections[section.id]" />
               </button>
               <span
                 class="drag-grip"
                 title="Drag to reorder"
                 @mousedown="startSectionDrag($event, section.id)"
-                ><i class="bi bi-grip-vertical"></i
-              ></span>
+                ><BiGripVertical />
+              </span>
             </div>
           </div>
 

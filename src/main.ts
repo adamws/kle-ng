@@ -1,5 +1,4 @@
 import './assets/bootstrap-custom.scss'
-import 'bootstrap-icons/font/bootstrap-icons.css'
 import 'bootstrap/dist/js/bootstrap.bundle.min.js'
 import './assets/main.css'
 
