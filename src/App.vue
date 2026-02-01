@@ -614,7 +614,6 @@ const stopResize = () => {
 .section-title {
   font-size: 0.9rem;
   font-weight: 600;
-  color: var(--bs-secondary-color);
 }
 
 .collapse-btn,

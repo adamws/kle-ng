@@ -44,10 +44,8 @@
                     href="https://github.com/adamws/kle-ng"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="icon-link align-items-baseline"
                   >
                     GitHub repository
-                    <BiBoxArrowUpRight class="bi" aria-hidden="true" />
                   </a>
                 </div>
               </div>
@@ -176,7 +174,6 @@ import BiBook from 'bootstrap-icons/icons/book.svg'
 import BiLightbulb from 'bootstrap-icons/icons/lightbulb.svg'
 import BiClipboardPlus from 'bootstrap-icons/icons/clipboard-plus.svg'
 import BiImage from 'bootstrap-icons/icons/image.svg'
-import BiBoxArrowUpRight from 'bootstrap-icons/icons/box-arrow-up-right.svg'
 
 interface Props {
   isVisible: boolean

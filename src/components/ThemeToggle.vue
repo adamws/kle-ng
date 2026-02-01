@@ -61,6 +61,10 @@ const { theme, setTheme } = useTheme()
   border-width: 2px;
 }
 
+.dropdown-item.active:hover {
+  background-color: var(--bs-dropdown-link-active-bg) !important;
+}
+
 /* Responsive sizing to match KeyboardToolbar buttons */
 @media (max-width: 575.98px) {
   .btn-outline-secondary {
