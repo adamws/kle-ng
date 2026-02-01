@@ -70,6 +70,7 @@ jobs:
 
       - name: Run e2e tests
         run: npx playwright test --project=${{ matrix.project }}
+        timeout-minutes: 25
 
   deploy:
     runs-on: ubuntu-latest
