@@ -232,6 +232,12 @@ export const usePlateGeneratorStore = defineStore('plateGenerator', () => {
           customHoles: {
             ...defaultSettings.customHoles,
             ...parsed.customHoles,
+            holes: (parsed.customHoles?.holes || []).map((hole: any) => ({
+              type: 'hole' as const,
+              endOffsetX: 0,
+              endOffsetY: 0,
+              ...hole,
+            })),
           },
         }
         if (typeof parsed.autoRefresh === 'boolean') {

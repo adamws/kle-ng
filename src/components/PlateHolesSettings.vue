@@ -14,9 +14,12 @@ function generateHoleId(): string {
 function addCustomHole(): void {
   const newHole: CustomHole = {
     id: generateHoleId(),
+    type: 'hole',
     diameter: 3,
     offsetX: 0,
     offsetY: 0,
+    endOffsetX: 0,
+    endOffsetY: 0,
   }
   settings.value.customHoles.holes.push(newHole)
 }
@@ -107,7 +110,7 @@ function removeAllCustomHoles(): void {
               type="checkbox"
             />
             <label class="form-check-label form-label-sm" for="enableCustomHoles"
-              >Custom Holes</label
+              >Custom Holes &amp; Slots</label
             >
           </div>
           <div class="custom-holes-buttons">
@@ -129,7 +132,7 @@ function removeAllCustomHoles(): void {
             </button>
           </div>
         </div>
-        <div class="form-text small">Add holes at arbitrary positions</div>
+        <div class="form-text small">Add holes and slots at arbitrary positions</div>
       </div>
 
       <!-- Custom Holes List -->
@@ -139,7 +142,18 @@ function removeAllCustomHoles(): void {
         :class="{ disabled: !settings.customHoles.enabled }"
       >
         <div v-for="hole in settings.customHoles.holes" :key="hole.id" class="custom-hole-item">
-          <div class="hole-inputs">
+          <div class="hole-header-row">
+            <div class="hole-input-group">
+              <label class="form-label form-label-sm sub-label">Type</label>
+              <select
+                v-model="hole.type"
+                class="form-select form-select-sm compact-select"
+                :disabled="!settings.customHoles.enabled"
+              >
+                <option value="hole">Hole</option>
+                <option value="slot">Slot</option>
+              </select>
+            </div>
             <div class="hole-input-group">
               <label class="form-label form-label-sm sub-label">Diameter</label>
               <CustomNumberInput
@@ -154,6 +168,71 @@ function removeAllCustomHoles(): void {
                 <template #suffix>mm</template>
               </CustomNumberInput>
             </div>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-danger remove-hole-btn"
+              :disabled="!settings.customHoles.enabled"
+              title="Remove this item"
+              @click="removeCustomHole(hole.id)"
+            >
+              &times;
+            </button>
+          </div>
+          <div v-if="hole.type === 'slot'" class="slot-inputs">
+            <div class="hole-input-group">
+              <label class="form-label form-label-sm sub-label">Start X</label>
+              <CustomNumberInput
+                v-model="hole.offsetX"
+                :step="0.25"
+                :disabled="!settings.customHoles.enabled"
+                class="form-control form-control-sm"
+                size="compact"
+                title="Start X in keyboard units (U)"
+              >
+                <template #suffix>U</template>
+              </CustomNumberInput>
+            </div>
+            <div class="hole-input-group">
+              <label class="form-label form-label-sm sub-label">Start Y</label>
+              <CustomNumberInput
+                v-model="hole.offsetY"
+                :step="0.25"
+                :disabled="!settings.customHoles.enabled"
+                class="form-control form-control-sm"
+                size="compact"
+                title="Start Y in keyboard units (U)"
+              >
+                <template #suffix>U</template>
+              </CustomNumberInput>
+            </div>
+            <div class="hole-input-group">
+              <label class="form-label form-label-sm sub-label">End X</label>
+              <CustomNumberInput
+                v-model="hole.endOffsetX"
+                :step="0.25"
+                :disabled="!settings.customHoles.enabled"
+                class="form-control form-control-sm"
+                size="compact"
+                title="End X in keyboard units (U)"
+              >
+                <template #suffix>U</template>
+              </CustomNumberInput>
+            </div>
+            <div class="hole-input-group">
+              <label class="form-label form-label-sm sub-label">End Y</label>
+              <CustomNumberInput
+                v-model="hole.endOffsetY"
+                :step="0.25"
+                :disabled="!settings.customHoles.enabled"
+                class="form-control form-control-sm"
+                size="compact"
+                title="End Y in keyboard units (U)"
+              >
+                <template #suffix>U</template>
+              </CustomNumberInput>
+            </div>
+          </div>
+          <div v-else class="hole-inputs">
             <div class="hole-input-group">
               <label class="form-label form-label-sm sub-label">X Offset</label>
               <CustomNumberInput
@@ -180,15 +259,6 @@ function removeAllCustomHoles(): void {
                 <template #suffix>U</template>
               </CustomNumberInput>
             </div>
-            <button
-              type="button"
-              class="btn btn-sm btn-outline-danger remove-hole-btn"
-              :disabled="!settings.customHoles.enabled"
-              title="Remove this hole"
-              @click="removeCustomHole(hole.id)"
-            >
-              &times;
-            </button>
           </div>
         </div>
       </div>
@@ -277,11 +347,32 @@ function removeAllCustomHoles(): void {
   padding-top: 0;
 }
 
-.hole-inputs {
+.hole-header-row {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr auto;
+  grid-template-columns: 1fr 1fr auto;
   gap: 0.5rem;
   align-items: end;
+}
+
+.hole-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  align-items: end;
+  margin-top: 0.35rem;
+}
+
+.slot-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 0.5rem;
+  align-items: end;
+  margin-top: 0.35rem;
+}
+
+.compact-select {
+  font-size: 0.8rem;
+  padding: 0.2rem 0.4rem;
 }
 
 .hole-input-group {

@@ -282,9 +282,17 @@ function createCustomHoles(
     // Y axis is inverted in maker.js (positive Y is up)
     const y = -hole.offsetY * spacingY
 
-    const holeModel = new makerjs.models.Ellipse(holeRadius, holeRadius)
-    holeModel.origin = [x, y]
-    holes[`customHole_${hole.id}`] = holeModel
+    if (hole.type === 'slot') {
+      const endX = hole.endOffsetX * spacingX
+      const endY = -hole.endOffsetY * spacingY
+      const slotModel = new makerjs.models.Slot([x, y], [endX, endY], holeRadius)
+      holes[`customHole_${hole.id}`] = slotModel
+    } else {
+      // 'hole' or undefined (backward compat)
+      const holeModel = new makerjs.models.Ellipse(holeRadius, holeRadius)
+      holeModel.origin = [x, y]
+      holes[`customHole_${hole.id}`] = holeModel
+    }
   }
 
   return holes

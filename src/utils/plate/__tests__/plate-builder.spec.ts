@@ -674,3 +674,176 @@ describe('Plate Builder – DXF stabilizer cutouts', () => {
     expect(d0).toBeCloseTo(d1, 6)
   })
 })
+
+// ---------------------------------------------------------------------------
+// Custom slot tests
+// ---------------------------------------------------------------------------
+
+describe('Plate Builder – custom slots', () => {
+  it('debug: compare SVG output for slot vs hole', async () => {
+    const keys = [createKey({ x: 0, y: 0, width: 1, height: 1 })]
+
+    // Generate with a slot
+    const slotResult = await buildPlate(keys, {
+      cutoutType: 'cherry-mx-basic',
+      customHoles: {
+        enabled: true,
+        holes: [
+          {
+            id: 'slot1',
+            type: 'slot',
+            diameter: 3,
+            offsetX: 2,
+            offsetY: 0,
+            endOffsetX: 3,
+            endOffsetY: 0,
+          },
+        ],
+      },
+    })
+
+    // Generate with a hole at same position
+    const holeResult = await buildPlate(keys, {
+      cutoutType: 'cherry-mx-basic',
+      customHoles: {
+        enabled: true,
+        holes: [
+          {
+            id: 'hole1',
+            type: 'hole',
+            diameter: 3,
+            offsetX: 2,
+            offsetY: 0,
+            endOffsetX: 0,
+            endOffsetY: 0,
+          },
+        ],
+      },
+    })
+
+    console.log('=== SLOT SVG ===')
+    console.log(slotResult.svgPreview)
+    console.log('=== HOLE SVG ===')
+    console.log(holeResult.svgPreview)
+    console.log('=== SLOT DXF (first 500 chars) ===')
+    console.log(slotResult.dxfContent.substring(0, 500))
+  })
+
+  it('custom slot produces wider-than-tall shape', async () => {
+    const keys = [createKey({ x: 0, y: 0, width: 1, height: 1 })]
+    const options: PlateBuilderOptions = {
+      cutoutType: 'cherry-mx-basic',
+      customHoles: {
+        enabled: true,
+        holes: [
+          {
+            id: 'slot1',
+            type: 'slot',
+            diameter: 3,
+            offsetX: 0,
+            offsetY: 0,
+            endOffsetX: 1,
+            endOffsetY: 0,
+          },
+        ],
+      },
+    }
+
+    const result = await buildPlate(keys, options)
+    const polylines = parseDxfPolylines(result.dxfContent)
+
+    // 1 switch cutout + 1 slot polyline
+    expect(polylines.length).toBeGreaterThanOrEqual(2)
+
+    // Find the slot polyline — it should be non-square (the switch cutout is 14x14)
+    const slotPoly = polylines.find((p) => {
+      const dims = polylineDimensions(p)
+      return Math.abs(dims.width - 14) > 1 || Math.abs(dims.height - 14) > 1
+    })
+    expect(slotPoly).toBeDefined()
+
+    // Slot from (0,0) to (1U,0) with 3mm diameter (1.5mm radius):
+    // The polyline vertices span 0..19.05 in X, ±1.5 in Y.
+    // The semicircular arcs (bulge) extend 1.5mm beyond each endpoint,
+    // giving a true bounding box of ~22.05 x 3mm.
+    // The vertex-based bounding box is 19.05 x 3mm.
+    const dims = polylineDimensions(slotPoly!)
+    expect(dims.width).toBeCloseTo(19.05, 1)
+    expect(dims.height).toBeCloseTo(3, 1)
+    // Verify wider-than-tall shape
+    expect(dims.width).toBeGreaterThan(dims.height)
+  })
+
+  it('custom hole still works with type field', async () => {
+    const keys = [createKey({ x: 0, y: 0, width: 1, height: 1 })]
+    const options: PlateBuilderOptions = {
+      cutoutType: 'cherry-mx-basic',
+      customHoles: {
+        enabled: true,
+        holes: [
+          {
+            id: 'hole1',
+            type: 'hole',
+            diameter: 4,
+            offsetX: 2,
+            offsetY: 0,
+            endOffsetX: 0,
+            endOffsetY: 0,
+          },
+        ],
+      },
+    }
+
+    const result = await buildPlate(keys, options)
+    const polylines = parseDxfPolylines(result.dxfContent)
+
+    // 1 switch cutout + 1 circular hole
+    expect(polylines.length).toBeGreaterThanOrEqual(2)
+
+    // The hole should be roughly circular (equal width and height)
+    const holePoly = polylines.find((p) => {
+      const dims = polylineDimensions(p)
+      return Math.abs(dims.width - dims.height) < 0.01 && Math.abs(dims.width - 4) < 0.1
+    })
+    expect(holePoly).toBeDefined()
+
+    const dims = polylineDimensions(holePoly!)
+    expect(dims.width).toBeCloseTo(4, 1)
+    expect(dims.height).toBeCloseTo(4, 1)
+  })
+
+  it('backward compat — item without type field produces circular hole', async () => {
+    const keys = [createKey({ x: 0, y: 0, width: 1, height: 1 })]
+    const options: PlateBuilderOptions = {
+      cutoutType: 'cherry-mx-basic',
+      customHoles: {
+        enabled: true,
+        holes: [
+          {
+            id: 'legacy1',
+            diameter: 5,
+            offsetX: 3,
+            offsetY: 0,
+          } as any,
+        ],
+      },
+    }
+
+    const result = await buildPlate(keys, options)
+    const polylines = parseDxfPolylines(result.dxfContent)
+
+    // 1 switch cutout + 1 circular hole
+    expect(polylines.length).toBeGreaterThanOrEqual(2)
+
+    // The hole should be roughly circular with diameter 5mm
+    const holePoly = polylines.find((p) => {
+      const dims = polylineDimensions(p)
+      return Math.abs(dims.width - dims.height) < 0.01 && Math.abs(dims.width - 5) < 0.1
+    })
+    expect(holePoly).toBeDefined()
+
+    const dims = polylineDimensions(holePoly!)
+    expect(dims.width).toBeCloseTo(5, 1)
+    expect(dims.height).toBeCloseTo(5, 1)
+  })
+})

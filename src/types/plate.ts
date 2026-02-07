@@ -60,17 +60,23 @@ export interface MountingHolesSettings {
 }
 
 /**
- * Definition for a single custom hole
+ * Definition for a single custom hole or slot
  */
 export interface CustomHole {
   /** Unique identifier for the hole */
   id: string
-  /** Hole diameter in mm */
+  /** 'hole' (circle) or 'slot' (stadium shape) */
+  type: 'hole' | 'slot'
+  /** Hole/slot diameter in mm */
   diameter: number
-  /** X offset from origin in keyboard units (U) */
+  /** For holes: center X. For slots: start endpoint X. Keyboard units (U). */
   offsetX: number
-  /** Y offset from origin in keyboard units (U) */
+  /** For holes: center Y. For slots: start endpoint Y. Keyboard units (U). */
   offsetY: number
+  /** Slot end endpoint X in keyboard units (U). Only meaningful when type is 'slot'. */
+  endOffsetX: number
+  /** Slot end endpoint Y in keyboard units (U). Only meaningful when type is 'slot'. */
+  endOffsetY: number
 }
 
 /**
