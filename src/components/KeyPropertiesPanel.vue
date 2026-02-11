@@ -3,9 +3,10 @@
     <!-- Four-column layout for better space utilization -->
     <div>
       <fieldset :disabled="isDisabled" :class="{ 'opacity-50': isDisabled }">
-        <div class="row g-3">
+        <div ref="overflowWrapperRef" class="columns-overflow-wrapper" :class="{ 'is-paginated': isPaginated }">
+        <div class="columns-viewport" :style="trackStyle">
           <!-- Column 1: Position and Rotation -->
-          <div class="col-lg-3 col-md-6">
+          <div class="panel-column" :style="columnStyle">
             <div class="property-group position-rotation-container">
               <div class="d-flex justify-content-between mb-2">
                 <h6 class="property-group-title mb-0">
@@ -381,7 +382,7 @@
           </div>
 
           <!-- Column 2: Labels and Colors -->
-          <div class="col-lg-3 col-md-6">
+          <div class="panel-column" :style="columnStyle">
             <div class="property-group">
               <h6 class="property-group-title">Labels and Colors</h6>
 
@@ -680,7 +681,7 @@
           </div>
 
           <!-- Column 3: Text Size and Options -->
-          <div class="col-lg-3 col-md-6">
+          <div class="panel-column" :style="columnStyle">
             <div class="property-group">
               <h6 class="property-group-title">Text Size and Options</h6>
 
@@ -921,13 +922,29 @@
             </div>
           </div>
         </div>
+        </div>
       </fieldset>
+      <!-- Pagination controls — outside fieldset so always interactive -->
+      <div v-if="isPaginated" class="pagination-controls">
+        <button @click="prevPage" :disabled="currentPage === 0" class="pagination-arrow" aria-label="Previous">&#8249;</button>
+        <div class="pagination-dots">
+          <button
+            v-for="page in totalPages"
+            :key="page"
+            class="pagination-dot"
+            :class="{ active: page - 1 === currentPage }"
+            @click="currentPage = page - 1"
+            :aria-label="`Page ${page}`"
+          />
+        </div>
+        <button @click="nextPage" :disabled="currentPage >= totalPages - 1" class="pagination-arrow" aria-label="Next">&#8250;</button>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useKeyboardStore } from '@/stores/keyboard'
 import ColorPicker from './ColorPicker.vue'
 import CustomNumberInput from './CustomNumberInput.vue'
@@ -1608,18 +1625,172 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
     })
   }
 }
+
+// === Responsive Pagination ===
+const overflowWrapperRef = ref<HTMLElement | null>(null)
+const containerWidth = ref(0)
+const MIN_COLUMN_WIDTH = 340
+const COLUMN_GAP = 16
+const TOTAL_COLUMNS = 3
+let resizeObserver: ResizeObserver | null = null
+
+onMounted(() => {
+  if (overflowWrapperRef.value) {
+    containerWidth.value = overflowWrapperRef.value.clientWidth
+    resizeObserver = new ResizeObserver((entries) => {
+      containerWidth.value = entries[0].contentRect.width
+    })
+    resizeObserver.observe(overflowWrapperRef.value)
+  }
+})
+
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect()
+})
+
+const visibleCount = computed(() => {
+  if (containerWidth.value === 0) return TOTAL_COLUMNS
+  const count = Math.floor(
+    (containerWidth.value + COLUMN_GAP) / (MIN_COLUMN_WIDTH + COLUMN_GAP),
+  )
+  return Math.max(1, Math.min(TOTAL_COLUMNS, count))
+})
+
+const isPaginated = computed(() => visibleCount.value < TOTAL_COLUMNS)
+const totalPages = computed(() => TOTAL_COLUMNS - visibleCount.value + 1)
+const currentPage = ref(0)
+
+watch(visibleCount, () => {
+  if (currentPage.value >= totalPages.value) {
+    currentPage.value = Math.max(0, totalPages.value - 1)
+  }
+})
+
+const columnWidth = computed(() => {
+  if (!isPaginated.value || containerWidth.value === 0) return undefined
+  return (containerWidth.value - (visibleCount.value - 1) * COLUMN_GAP) / visibleCount.value
+})
+
+const columnStyle = computed(() => {
+  if (!isPaginated.value) return {}
+  return {
+    flex: `0 0 ${columnWidth.value}px`,
+    minWidth: `${columnWidth.value}px`,
+    maxWidth: `${columnWidth.value}px`,
+  }
+})
+
+const trackStyle = computed(() => {
+  if (!isPaginated.value) return {}
+  const colW = columnWidth.value || MIN_COLUMN_WIDTH
+  const offset = currentPage.value * (colW + COLUMN_GAP)
+  return {
+    transform: `translateX(-${offset}px)`,
+  }
+})
+
+const prevPage = () => {
+  if (currentPage.value > 0) currentPage.value--
+}
+
+const nextPage = () => {
+  if (currentPage.value < totalPages.value - 1) currentPage.value++
+}
+
 </script>
 
 <style scoped>
-/* Override Bootstrap's responsive column behavior - use flexbox for responsive wrapping */
-.key-properties-panel .col-lg-3.col-md-6 {
+/* Columns layout - paginated when viewport is narrow */
+.columns-overflow-wrapper {
+  position: relative;
+}
+
+.columns-overflow-wrapper.is-paginated {
+  overflow: hidden;
+}
+
+.columns-viewport {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  transition: transform 0.3s ease;
+}
+
+.columns-overflow-wrapper.is-paginated .columns-viewport {
+  flex-wrap: nowrap;
+}
+
+.panel-column {
   flex: 1 1 340px;
   max-width: 500px;
+  min-width: 0;
+}
+
+/* Pagination controls — bottom right */
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.pagination-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--bs-border-color);
+  background: var(--bs-tertiary-bg);
+  border-radius: 4px;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--bs-body-color);
+  padding: 0;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.pagination-arrow:hover:not(:disabled) {
+  background: var(--bs-secondary-bg);
+  border-color: var(--input-focus-border-color);
+}
+
+.pagination-arrow:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.pagination-dots {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.pagination-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid var(--bs-border-color);
+  background: var(--bs-tertiary-bg);
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.pagination-dot.active {
+  background: var(--input-focus-border-color);
+  border-color: var(--input-focus-border-color);
+}
+
+.pagination-dot:hover:not(.active) {
+  border-color: var(--input-focus-border-color);
 }
 
 /* On very small screens, allow property groups to be full width and remove padding */
 @media (max-width: 575.98px) {
-  .key-properties-panel .col-lg-3.col-md-6 {
+  .panel-column {
     padding-left: 0px;
     padding-right: 0px;
   }
@@ -1700,7 +1871,7 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
 }
 
 @media (max-width: 767.98px) {
-  .key-properties-panel .col-lg-3.col-md-6 {
+  .panel-column {
     max-width: 100%;
   }
 
