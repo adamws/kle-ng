@@ -25,13 +25,17 @@ const defaultSettings: PlateSettings = {
   customCutoutHeight: 14,
   mergeCutouts: false,
   outline: {
-    enabled: false,
+    type: 'none',
     marginTop: 5,
     marginBottom: 5,
     marginLeft: 5,
     marginRight: 5,
     mergeWithCutouts: true,
     filletRadius: 1,
+    custom: {
+      segments: [],
+      gridSize: 0.25,
+    },
   },
   mountingHoles: {
     enabled: false,
@@ -47,6 +51,15 @@ const defaultSettings: PlateSettings = {
 export const usePlateGeneratorStore = defineStore('plateGenerator', () => {
   // Settings state
   const settings = ref<PlateSettings>({ ...defaultSettings })
+
+  // Non-persisted UI state: which corner ID is currently hovered (synced between overlay and sidebar)
+  const hoveredCornerId = ref<string | null>(null)
+
+  // Non-persisted UI state: true while the Outline settings tab is mounted/visible
+  const outlineTabActive = ref(false)
+
+  // Non-persisted UI state: true while a corner is being dragged on the overlay
+  const isDraggingCorner = ref(false)
 
   // Auto-refresh state (persisted separately from plate settings)
   const autoRefresh = ref(false)
@@ -311,6 +324,10 @@ export const usePlateGeneratorStore = defineStore('plateGenerator', () => {
           outline: {
             ...defaultSettings.outline,
             ...parsed.outline,
+            custom: {
+              ...defaultSettings.outline.custom,
+              ...(parsed.outline?.custom ?? {}),
+            },
           },
           mountingHoles: {
             ...defaultSettings.mountingHoles,
@@ -320,6 +337,27 @@ export const usePlateGeneratorStore = defineStore('plateGenerator', () => {
             ...defaultSettings.customHoles,
             ...parsed.customHoles,
           },
+        }
+
+        // Migrate legacy `enabled: boolean` → `type` field
+        const loadedOutline = parsed.outline as Record<string, unknown> | undefined
+        if (loadedOutline && 'enabled' in loadedOutline && !('type' in loadedOutline)) {
+          settings.value.outline.type = loadedOutline.enabled ? 'rectangle' : 'none'
+        }
+
+        // Remove phantom `enabled` property left over from migration or old saves
+        if ('enabled' in (settings.value.outline as Record<string, unknown>)) {
+          delete (settings.value.outline as Record<string, unknown>).enabled
+        }
+
+        // Discard corrupt or legacy move-type segment entries from localStorage
+        settings.value.outline.custom.segments = settings.value.outline.custom.segments.filter(
+          (s) => s.id && typeof s.x === 'number' && typeof s.y === 'number',
+        )
+
+        // Clamp gridSize to minimum 0.25 (free snapping no longer supported)
+        if (settings.value.outline.custom.gridSize < 0.25) {
+          settings.value.outline.custom.gridSize = 0.25
         }
       } catch (error) {
         console.warn('Failed to load plate settings:', error)
@@ -357,17 +395,26 @@ export const usePlateGeneratorStore = defineStore('plateGenerator', () => {
       if (validateCustomCutoutDimension(cw, 'width')) return true
       if (validateCustomCutoutDimension(ch, 'height')) return true
     }
+    if (s.outline.type === 'custom') {
+      if (s.outline.custom.segments.length < 2) return true
+    }
     return false
   }
 
   // Auto-refresh: regenerate plate when cutout settings change (only if already generated)
   const debouncedRegenerate = useDebounceFn(() => {
+    if (isDraggingCorner.value) return
     const status = generationState.value.status
     if ((status === 'success' || status === 'generating') && !hasSettingsErrors()) {
       generatePlate()
     }
   }, 300)
   watch(settings, debouncedRegenerate, { deep: true })
+
+  // When drag ends, fire one deferred regeneration (the per-settings watch was suppressed during drag)
+  watch(isDraggingCorner, (dragging) => {
+    if (!dragging) debouncedRegenerate()
+  })
 
   // Persist autoRefresh changes and trigger generation when enabled
   watch(autoRefresh, (enabled) => {
@@ -406,6 +453,9 @@ export const usePlateGeneratorStore = defineStore('plateGenerator', () => {
 
   return {
     settings,
+    hoveredCornerId,
+    outlineTabActive,
+    isDraggingCorner,
     autoRefresh,
     generationState,
     generatePlate,

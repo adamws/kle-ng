@@ -15,6 +15,7 @@ import type {
   OutlineSettings,
   MountingHolesSettings,
   CustomHolesSettings,
+  CustomOutlineSettings,
 } from '@/types/plate'
 import { getMakerJs } from '@/utils/makerjs-loader'
 import { getKeyCenterMm } from '@/utils/keyboard-geometry'
@@ -209,6 +210,51 @@ function createOutlineModel(
   outlineModel.origin = [bounds.minX - margins.left, bounds.minY - margins.bottom]
 
   return outlineModel
+}
+
+/**
+ * Create a custom polygon outline model from explicitly defined corner points.
+ *
+ * Coordinate conventions:
+ * - User input: positions in keyboard units (U), +X right, +Y down
+ * - Maker.js: positions in mm, +X right, +Y up (Y is negated)
+ *
+ * @param makerjs - The maker.js module
+ * @param custom - Custom outline settings (corner positions in keyboard units)
+ * @param spacingX - Horizontal mm per keyboard unit
+ * @param spacingY - Vertical mm per keyboard unit
+ * @returns Closed polygon model
+ */
+function createCustomOutlineModel(
+  makerjs: typeof MakerJs,
+  custom: CustomOutlineSettings,
+  spacingX: number,
+  spacingY: number,
+): MakerJs.IModel {
+  // Convert each corner: U → mm, flip Y for maker.js (+Y up)
+  const points: MakerJs.IPoint[] = custom.segments.map((seg) => [
+    seg.x * spacingX,
+    -seg.y * spacingY,
+  ])
+
+  // ConnectTheDots(isClosed=true, points) auto-closes the shape
+  return new makerjs.models.ConnectTheDots(true, points)
+}
+
+/**
+ * Validate custom outline settings, throwing PlateBuilderError for invalid configs.
+ */
+function validateCustomOutline(custom: CustomOutlineSettings): void {
+  if (custom.segments.length < 2) {
+    throw new PlateBuilderError(
+      'Custom outline requires at least 2 corner points to form a closed shape.',
+    )
+  }
+  for (const seg of custom.segments) {
+    if (!isFinite(seg.x) || !isFinite(seg.y)) {
+      throw new PlateBuilderError('Custom outline corner contains invalid coordinates.')
+    }
+  }
 }
 
 /**
@@ -495,22 +541,47 @@ export async function buildPlate(
       }
     : { top: 0, bottom: 0, left: 0, right: 0 }
 
+  // Create outline model (must happen before mounting holes so we know the outline bounds)
+  let outlineModel: MakerJs.IModel | null = null
+  if (outline?.type === 'rectangle') {
+    outlineModel = createOutlineModel(makerjs, bounds, outlineMargins, outline.filletRadius)
+  } else if (outline?.type === 'custom' && outline.custom) {
+    validateCustomOutline(outline.custom)
+    outlineModel = createCustomOutlineModel(makerjs, outline.custom, spacingX, spacingY)
+  }
+
   // Add corner mounting holes to cutouts (requires outline to determine corners)
-  if (mountingHoles?.enabled && outline?.enabled) {
-    const holeModels = createCornerMountingHoles(makerjs, bounds, outlineMargins, mountingHoles)
-    Object.assign(plateModel.models!, holeModels)
+  if (mountingHoles?.enabled && outline?.type !== 'none') {
+    if (outline?.type === 'rectangle') {
+      // For rectangle outlines, derive hole positions from cutout bounds + margins
+      const holeModels = createCornerMountingHoles(makerjs, bounds, outlineMargins, mountingHoles)
+      Object.assign(plateModel.models!, holeModels)
+    } else if (outlineModel) {
+      // For custom outlines, derive hole positions from the actual outline model extents
+      const outlineExtents = makerjs.measure.modelExtents(outlineModel)
+      if (!outlineExtents) {
+        throw new PlateBuilderError('Cannot calculate outline bounds for custom outline model.')
+      }
+      const customBounds: CutoutBounds = {
+        minX: outlineExtents.low[0]!,
+        minY: outlineExtents.low[1]!,
+        maxX: outlineExtents.high[0]!,
+        maxY: outlineExtents.high[1]!,
+      }
+      const holeModels = createCornerMountingHoles(
+        makerjs,
+        customBounds,
+        { top: 0, bottom: 0, left: 0, right: 0 },
+        mountingHoles,
+      )
+      Object.assign(plateModel.models!, holeModels)
+    }
   }
 
   // Add custom holes
   if (customHoles?.enabled && customHoles.holes.length > 0) {
     const customHoleModels = createCustomHoles(makerjs, customHoles, spacingX, spacingY)
     Object.assign(plateModel.models!, customHoleModels)
-  }
-
-  // Create outline model if enabled
-  let outlineModel: MakerJs.IModel | null = null
-  if (outline?.enabled) {
-    outlineModel = createOutlineModel(makerjs, bounds, outlineMargins, outline.filletRadius)
   }
 
   // Add origin cross marker to the preview model (not included in exports)
@@ -542,6 +613,17 @@ export async function buildPlate(
       }
     }
   }
+
+  // Compute the SVG-space position of the maker.js origin (0,0).
+  // maker.js's toSVG auto-shifts content so its bounding box starts at SVG (0,0).
+  // This means maker.js (mx, my) → SVG (mx − extents.low[0], extents.high[1] − my).
+  // For (0,0): svgOriginX = −extents.low[0], svgOriginY = extents.high[1].
+  const previewExtents = makerjs.measure.modelExtents(previewModel)
+  if (!previewExtents) {
+    throw new PlateBuilderError('Cannot calculate extents for preview model.')
+  }
+  const svgOriginX = -previewExtents.low[0]
+  const svgOriginY = previewExtents.high[1]
 
   // Generate SVG for preview
   const svgPreviewRaw = makerjs.exporter.toSVG(previewModel, {
@@ -576,7 +658,6 @@ export async function buildPlate(
   })
 
   // Generate outline exports if enabled
-  let outlineSvgPreview: string | undefined
   let outlineSvgDownload: string | undefined
   let outlineDxfContent: string | undefined
   let mergedSvgDownload: string | undefined
@@ -631,10 +712,11 @@ export async function buildPlate(
     svgPreview,
     svgDownload,
     dxfContent,
-    outlineSvgPreview,
     outlineSvgDownload,
     outlineDxfContent,
     mergedSvgDownload,
     mergedDxfContent,
+    svgOriginX,
+    svgOriginY,
   }
 }

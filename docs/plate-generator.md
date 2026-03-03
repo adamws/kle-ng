@@ -109,7 +109,7 @@ result as stale and sets `pendingRegeneration` so regeneration proceeds after th
 | `PlateGeneratorPanel.vue`    | Root container. Tabbed two-column layout (controls left, preview right). Three tabs: Cutouts, Holes, Outline. Preloads maker.js on mount via `requestIdleCallback`. |
 | `PlateGeneratorSettings.vue` | [Cutouts tab] Form controls for cutout type, stabilizer type, fillet radius, size adjustment, custom dimensions, and merge cutouts toggle. Validates inputs.        |
 | `PlateHolesSettings.vue`     | [Holes tab] Corner mounting holes (require outline) and custom holes at arbitrary positions with configurable diameter and X/Y offsets in keyboard units.           |
-| `PlateOutlineSettings.vue`   | [Outline tab] Outline generation settings: enable toggle, independent margins (top/bottom/left/right), fillet radius, and merge-with-cutouts option.                |
+| `PlateOutlineSettings.vue`   | [Outline tab] Outline mode selector (None/Rectangle/Custom), rectangle margins and fillet, custom outline segment editor, and merge-with-cutouts option.            |
 | `PlateGeneratorControls.vue` | "Generate Plate" button with loading state, auto-refresh checkbox, error alerts, and empty-layout warnings.                                                         |
 | `PlateGeneratorResults.vue`  | Renders the SVG preview on success, or idle instructions before first generation. During regeneration, shows the previous result dimmed with a spinner overlay. Shows both cutouts and outline layers. |
 | `PlateDownloadButtons.vue`   | SVG and DXF download buttons, visible only after successful generation. Handles separate vs. merged exports based on settings.                                      |
@@ -160,7 +160,7 @@ Main orchestration module. `buildPlate(keys, options)` is the entry point. Calle
 2. **Transform coordinates** — Converts KLE layout coordinates to maker.js coordinates (see Coordinate System below).
 3. **Create cutouts** — For each key, creates a switch cutout model and optionally a stabilizer model. Per-key `switchRotation` and `stabRotation` are applied on top of the layout rotation.
 4. **Merge cutouts** (optional) — When `mergeCutouts` is enabled, combines overlapping cutouts into simplified paths.
-5. **Create outline** (optional) — When `outline.enabled` is true, generates a rectangular outline with configurable margins and rounded corners.
+5. **Create outline** (optional) — When `outline.type` is `'rectangle'`, generates a rectangular outline with configurable margins and rounded corners. When `'custom'`, builds a closed polygon from user-defined segments using `createCustomOutlineModel()`.
 6. **Add mounting holes** (optional) — When `mountingHoles.enabled` is true (and outline is enabled), adds circular holes at the four corners.
 7. **Export** — Uses maker.js to produce SVG (preview and download variants) and DXF output.
 
@@ -357,19 +357,56 @@ preview while the new result is being computed.
 
 ## Plate Outline
 
-The plate outline feature generates a rectangular border around all cutouts, useful for defining the plate's outer boundary.
+The plate outline feature generates a border around all cutouts, useful for defining the plate's outer boundary.
+Three modes are available: **None** (no outline), **Rectangle** (axis-aligned rectangle with margins and fillet),
+and **Custom** (arbitrary closed polygon defined by segments).
 
 ### Settings
 
-| Setting             | Default | Description                                                    |
-|---------------------|---------|----------------------------------------------------------------|
-| `enabled`           | `false` | Enable outline generation.                                     |
-| `marginTop`         | `5`     | Distance from topmost cutout to top edge (mm).                 |
-| `marginBottom`      | `5`     | Distance from bottommost cutout to bottom edge (mm).           |
-| `marginLeft`        | `5`     | Distance from leftmost cutout to left edge (mm).               |
-| `marginRight`       | `5`     | Distance from rightmost cutout to right edge (mm).             |
-| `filletRadius`      | `1`     | Corner radius for rounded outline corners (mm). 0 = sharp.     |
-| `mergeWithCutouts`  | `true`  | When downloading, combine outline and cutouts into one file.   |
+| Setting             | Default  | Description                                                           |
+|---------------------|----------|-----------------------------------------------------------------------|
+| `type`              | `'none'` | Outline mode: `'none'`, `'rectangle'`, or `'custom'`.                 |
+| `marginTop`         | `5`      | Distance from topmost cutout to top edge (mm). Rectangle mode only.   |
+| `marginBottom`      | `5`      | Distance from bottommost cutout to bottom edge (mm). Rectangle only.  |
+| `marginLeft`        | `5`      | Distance from leftmost cutout to left edge (mm). Rectangle mode only. |
+| `marginRight`       | `5`      | Distance from rightmost cutout to right edge (mm). Rectangle only.    |
+| `filletRadius`      | `1`      | Corner radius for rounded outline corners (mm). Rectangle mode only.  |
+| `mergeWithCutouts`  | `true`   | When downloading, combine outline and cutouts into one file.          |
+| `custom`            | —        | Custom outline definition (see below). Custom mode only.              |
+
+**Persistence / Migration:** Settings are loaded from `localStorage`. When loading older saved settings that
+have `outline.enabled: boolean` (without `type`), the store automatically migrates: `enabled: true` → `type: 'rectangle'`,
+`enabled: false` → `type: 'none'`. The legacy `enabled` property is then deleted.
+
+### Custom Outline
+
+The `custom` field contains:
+
+| Field      | Default | Description                                         |
+|------------|---------|-----------------------------------------------------|
+| `segments` | `[]`    | Ordered list of corner points defining the polygon. |
+
+Each corner (`OutlineSegment`) has:
+
+| Property | Description                                              |
+|----------|----------------------------------------------------------|
+| `id`     | Unique identifier (used for Vue reactivity).             |
+| `x`      | X position in keyboard units (U). +X right.             |
+| `y`      | Y position in keyboard units (U). +Y down (KLE convention). |
+
+**Coordinate system:**
+- Origin: center of the first key.
+- Positions in keyboard units (U), converted to mm via `spacingX` / `spacingY`.
+- +X right, +Y down (KLE convention).
+
+**Auto-close:** The last corner connects back to the first automatically (maker.js `ConnectTheDots`).
+
+**Validation:** Custom mode requires at least 2 corners. Checked by `hasSettingsErrors()` in the store
+(prevents auto-refresh errors) and `validateCustomOutline()` in the plate builder
+(throws a user-facing `PlateBuilderError`).
+
+**Mounting holes with custom outline:** Corner mounting holes are positioned at each corner of the
+custom outline's bounding box, offset inward by `edgeDistance`.
 
 ### Merge With Cutouts
 
@@ -395,7 +432,7 @@ The mounting holes feature adds circular holes at the four corners of the plate 
 
 ### Dependencies
 
-Mounting holes require the outline to be enabled. The holes are positioned relative to the outline corners, so without an outline there's no reference for hole placement. When outline is disabled, the mounting holes controls are automatically disabled in the UI.
+Mounting holes require the outline to be set to Rectangle or Custom mode. The holes are positioned relative to the outline corners, so without an outline there's no reference for hole placement. When outline mode is None, the mounting holes controls are automatically disabled in the UI.
 
 ## Custom Holes
 

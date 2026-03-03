@@ -36,8 +36,8 @@
             arbitrary positions.
           </li>
           <li>
-            <strong>Outline</strong> - Generate a rectangular border around cutouts with
-            configurable margins and corner radius.
+            <strong>Outline</strong> - Choose between no outline, a rectangular border with
+            configurable margins and corner radius, or a custom polygon defined by segments.
           </li>
         </ul>
       </div>
@@ -77,7 +77,7 @@
         <ul class="tips-list">
           <li>
             <strong>Corner Mounting Holes</strong> - Option to place holes at each plate corner at a
-            specified distance. Requires outline generation to be enabled.
+            specified distance. Requires outline to be set to Rectangle or Custom mode.
           </li>
           <li>
             <strong>Custom Holes</strong> - Positions use keyboard units (U), not millimeters.
@@ -91,16 +91,26 @@
       <h6 class="help-section-title">Outline Settings</h6>
       <div class="help-content">
         <ul class="tips-list">
+          <li><strong>None</strong> - No outline is generated.</li>
+          <li>
+            <strong>Rectangle</strong> - A rectangular outline around all cutouts with configurable
+            margins and fillet (corner rounding) radius.
+          </li>
+          <li>
+            <strong>Custom</strong> - A closed polygon defined by an explicit list of corner points
+            in keyboard units (U). +X right, +Y down relative to the first key center. The shape
+            auto-closes (last corner connects back to the first).
+          </li>
           <li>
             <strong>Merge with Cutouts</strong> - Place cutouts and outline in a single file,
             otherwise use separate files. Outline file, if separate, has the same <em>(0,0)</em>
             origin point for easier CAD/CAM handling.
           </li>
           <li>
-            <strong>Margins</strong> - Distance from cutout bounds to outline edge. Both switch and
-            stabilizer cutouts are considered, but holes are not.
+            <strong>Margins</strong> (Rectangle) - Distance from cutout bounds to outline edge. Both
+            switch and stabilizer cutouts are considered, but holes are not.
           </li>
-          <li><strong>Fillet Radius</strong> - Rounds corners of the outline.</li>
+          <li><strong>Fillet Radius</strong> (Rectangle) - Rounds corners of the outline.</li>
         </ul>
       </div>
     </div>

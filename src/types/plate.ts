@@ -28,23 +28,47 @@ export type StabilizerType =
   | 'none'
 
 /**
+ * A corner point in a custom outline polygon.
+ * Positions are in keyboard units (U), relative to the plate origin.
+ */
+export interface OutlineSegment {
+  id: string
+  /** X position in keyboard units (U). +X right. */
+  x: number
+  /** Y position in keyboard units (U). +Y down (KLE convention). */
+  y: number
+}
+
+/**
+ * Settings for a custom (user-defined polygon) outline
+ */
+export interface CustomOutlineSettings {
+  /** Ordered list of corner points in keyboard units (U). Shape auto-closes. */
+  segments: OutlineSegment[]
+  /** Snap grid size in keyboard units (U). 0 = no snap. Default 0.25. */
+  gridSize: number
+}
+
+/**
  * Settings for plate outline generation
  */
 export interface OutlineSettings {
-  /** Whether outline generation is enabled */
-  enabled: boolean
-  /** Top margin in mm */
+  /** Outline mode: none (disabled), rectangle, or custom polygon */
+  type: 'none' | 'rectangle' | 'custom'
+  /** Top margin in mm (rectangle mode) */
   marginTop: number
-  /** Bottom margin in mm */
+  /** Bottom margin in mm (rectangle mode) */
   marginBottom: number
-  /** Left margin in mm */
+  /** Left margin in mm (rectangle mode) */
   marginLeft: number
-  /** Right margin in mm */
+  /** Right margin in mm (rectangle mode) */
   marginRight: number
   /** Merge outline with cutouts into a single file on download */
   mergeWithCutouts: boolean
-  /** Fillet (corner rounding) radius in mm for outline corners. 0 = sharp corners. */
+  /** Fillet (corner rounding) radius in mm for outline corners. 0 = sharp corners. (rectangle mode) */
   filletRadius: number
+  /** Custom outline definition (custom mode) */
+  custom: CustomOutlineSettings
 }
 
 /**
@@ -136,8 +160,6 @@ export interface PlateGenerationResult {
   svgDownload: string
   /** DXF content as a string */
   dxfContent: string
-  /** SVG content for outline preview (optional, only when outline enabled) */
-  outlineSvgPreview?: string
   /** SVG content for outline download (optional, only when outline enabled) */
   outlineSvgDownload?: string
   /** DXF content for outline (optional, only when outline enabled) */
@@ -146,6 +168,14 @@ export interface PlateGenerationResult {
   mergedSvgDownload?: string
   /** DXF content for merged cutouts + outline (optional, only when outline enabled and merge enabled) */
   mergedDxfContent?: string
+  /**
+   * X position of the maker.js coordinate origin (0,0) in the preview SVG coordinate space (mm).
+   * maker.js shifts all content so the bounding box starts at SVG (0,0), placing its own
+   * origin at SVG (−extents.low[0], extents.high[1]).
+   */
+  svgOriginX: number
+  /** Y position of the maker.js coordinate origin (0,0) in the preview SVG coordinate space (mm). */
+  svgOriginY: number
 }
 
 /**
