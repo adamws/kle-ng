@@ -10,11 +10,13 @@ It exports to SVG, DXF, STL, and JSCAD formats for use in manufacturing workflow
 PlateGeneratorPanel.vue            ← Entry point, tabbed 2-column layout
 ├── PlateGeneratorSettings.vue     ← [Cutouts tab] Switch/stab type, fillet, kerf
 ├── PlateHolesSettings.vue         ← [Holes tab] Corner mounting holes
-├── PlateOutlineSettings.vue       ← [Outline tab] Outline margins, fillets, thickness
+├── PlateOutlineSettings.vue       ← [Outline tab] Outline type, margins, fillet
+├── Plate3DSettings.vue            ← [3D tab] Plate thickness, backside cut depth, backside features
 ├── PlateJsonView.vue              ← [JSON tab] CodeMirror JSON editor for direct settings editing
 ├── PlateGeneratorControls.vue     ← Generate button, auto-refresh toggle
-├── PlateGeneratorResults.vue      ← 2D SVG preview / 3D preview tab switcher
-│   └── Plate3DPreview.vue         ← Interactive Three.js WebGL 3D viewer
+├── PlateGeneratorResults.vue      ← 2D SVG / 3D / JSCAD sub-tab switcher
+│   ├── Plate3DPreview.vue         ←   Interactive Three.js WebGL 3D viewer (solid/wireframe)
+│   └── PlateJscadPreview.vue      ←   Read-only CodeMirror viewer for the generated JSCAD script
 └── PlateDownloadButtons.vue       ← SVG / DXF / STL / JSCAD download
 
 stores/plateGenerator.ts           ← State management (Pinia)
@@ -24,11 +26,12 @@ utils/plate/cutout-generator.ts    ← Switch & stabilizer cutout shapes (maker.
 utils/plate/plate-dimensions.ts    ← Shared stabilizer spacing & dimension constants
 utils/plate/plate-settings-validator.ts ← JSON settings validation; returns PlateSettingsJson on success
 utils/plate/plate-settings-serializer.ts ← Converts between PlateSettings and PlateSettingsJson (serialize/deserialize)
-utils/plate/jscad-cutouts/         ← JSCAD Geom2 geometry modules
-│   ├── geom-utils.ts              ←   Geom2 type alias, placeGeom2, extractGeom2Points, formatting helpers
+utils/plate/jscad-cutouts/         ← JSCAD Geom2 / Geom3 geometry modules
+│   ├── geom-utils.ts              ←   Geom2 type alias, placeGeom2, extractGeom2Points, ScriptShapeRegistry, formatting helpers
 │   ├── switch-cutouts.ts          ←   Switch cutout geometry (rectangle, openable)
 │   ├── stabilizer-cutouts.ts      ←   Stabilizer cutout geometry (MX basic/spec, Alps)
 │   ├── hole-cutouts.ts            ←   Circular hole geometry
+│   ├── backside-features.ts       ←   3D back-face cuts (snap notches, stabilizer clearance pockets)
 │   └── index.ts                   ←   Barrel export
 utils/makerjs-loader.ts            ← Lazy-loads maker.js library
 utils/three-loader.ts              ← Lazy-loads Three.js + STLLoader + OrbitControls
@@ -75,6 +78,8 @@ types/plate.ts                     ← Type definitions
 │  • Merge cutouts         │
 │  • Generate outline      │
 │  • Add mounting holes    │
+│  • Build backside cuts   │
+│    (3D-only Geom3)       │
 └────────────┬─────────────┘
              ▼
 ┌──────────────────────────┐
@@ -120,14 +125,16 @@ result as stale and sets `pendingRegeneration` so regeneration proceeds after th
 
 | File                         | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PlateGeneratorPanel.vue`    | Root container. Tabbed two-column layout (controls left, preview right). Four tabs: Cutouts, Holes, Outline, JSON. Because four tabs exceed the fixed-width bar, the tab track is scrollable with prev/next chevron buttons; only three tabs are visible at a time (`VISIBLE_TABS = 3`) and the track scrolls via JS on tab selection. Preloads maker.js and Three.js on mount via `requestIdleCallback`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `PlateGeneratorPanel.vue`    | Root container. Tabbed two-column layout (controls left, preview right). Five tabs: Cutouts, Holes, Outline, 3D, JSON. Because five tabs exceed the fixed-width bar, the tab track is scrollable with prev/next chevron buttons; only three tabs are visible at a time (`VISIBLE_TABS = 3`) and the track scrolls via JS on tab selection. Preloads maker.js and Three.js on mount via `requestIdleCallback`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `PlateJsonView.vue`          | [JSON tab] CodeMirror-based JSON editor (lazy-loaded) showing the current plate settings as formatted JSON. Provides real-time validation as the user types, an **Apply** button (also triggered by Ctrl+Enter) that calls `plateStore.applySettings()`, a **Reset** button that reverts the editor to the canonical store state, a **Download** button that saves the current settings as `plate-settings.json`, and an **Upload** button that loads a JSON file and either applies it immediately (valid) or loads it into the editor dirty for correction (invalid). A drag handle below the editor allows resizing. A status bar shows `In sync`, `Modified`, or `Error` state. The editor rebuilds on theme change (light ↔ dark) via a `MutationObserver`. When the store settings change externally (e.g., a form field is updated), the editor syncs only if it has no uncommitted edits. |
 | `PlateGeneratorSettings.vue` | [Cutouts tab] Form controls for cutout type, stabilizer type, fillet radius, size adjustment, custom dimensions, and merge cutouts toggle. Validates inputs.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `PlateHolesSettings.vue`     | [Holes tab] Corner mounting holes (require outline) and custom holes at arbitrary positions with configurable diameter and X/Y offsets in keyboard units.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| `PlateOutlineSettings.vue`   | [Outline tab] Outline generation settings: enable toggle, outline type dropdown (None / Rectangular / Tight), per-mode margin controls, shared fillet radius, merge-with-cutouts option, and plate thickness for 3D export.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `PlateOutlineSettings.vue`   | [Outline tab] Outline generation settings: outline type dropdown (None / Rectangular / Tight), per-mode margin controls, shared fillet radius, and merge-with-cutouts option. Plate thickness now lives on the 3D tab.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `Plate3DSettings.vue`        | [3D tab] Settings that affect only STL/JSCAD output: plate thickness, shared backside `Cut Depth`, and per-feature backside toggles (currently `Cherry MX Snap Notch`). All inputs are disabled when outline is `none`. The depth max is computed as `max(0, thickness − 1)` and `0` disables every backside cut while still allowing 2D export.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `PlateGeneratorControls.vue` | "Generate Plate" button with loading state, auto-refresh checkbox, error alerts, and empty-layout warnings.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| `PlateGeneratorResults.vue`  | Segmented 2D/3D tab bar above the preview area. 2D tab renders the SVG preview (with dimmed previous result + spinner during regeneration). 3D tab hosts `Plate3DPreview`. Shows idle instructions before first generation.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| `Plate3DPreview.vue`         | Interactive Three.js WebGL viewer for the generated STL. Lazy-loads Three.js on mount. Renders the plate mesh with `MeshPhongMaterial` colored by the active Bootstrap theme. Supports OrbitControls (click-to-activate, click-outside-to-deactivate). Reset view button restores the initial camera. Updates mesh and background colors when the website theme changes. Pauses the render loop when the 3D tab is hidden.                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `PlateGeneratorResults.vue`  | Segmented 2D / 3D / JSCAD sub-tab bar above the preview area. 2D renders the SVG preview (with dimmed previous result + spinner during regeneration). 3D hosts `Plate3DPreview`. JSCAD hosts `PlateJscadPreview` and is shown only when `result.jscadScript` is present. Shows idle instructions before first generation.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `Plate3DPreview.vue`         | Interactive Three.js WebGL viewer for the generated STL. Lazy-loads Three.js on mount. Renders the plate as a `MeshPhongMaterial` solid; a Solid/Wireframe radio toggle (next to the reset-view button) switches between the solid mesh and an `EdgesGeometry`-based `LineSegments` overlay built with a 10° threshold so coplanar STL triangulation is hidden while structural edges (outline, cutout perimeters, fillet arcs) are preserved. Supports OrbitControls (click-to-activate, click-outside-to-deactivate). Reset view button restores the initial camera. Updates mesh, edge, and background colors when the website theme changes. Pauses the render loop when the 3D tab is hidden, and preserves the user's current camera position and target across regenerations (see [Scene Persistence](#scene-persistence) below).                                                          |
+| `PlateJscadPreview.vue`      | Read-only CodeMirror editor displaying the generated JSCAD script. Lazy-loads CodeMirror, rebuilds the editor on theme change, exposes a clipboard-copy button with a 2-second "Copied!" confirmation, and an expand button that opens the script in `JsonExpandModal` (with `readOnly: true`) for full-screen reading. Updates incrementally via `cm.updateContent()` when `props.jscadScript` changes.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | `PlateDownloadButtons.vue`   | SVG, DXF, STL, and JSCAD download buttons, visible only after successful generation. STL and JSCAD buttons appear only when outline is enabled (required for 3D export). Handles separate vs. merged SVG/DXF exports based on settings.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 
 ### Store
@@ -136,9 +143,11 @@ result as stale and sets `pendingRegeneration` so regeneration proceeds after th
 
 **State:**
 
-- `settings: PlateSettings` — Current configuration including cutouts, outline, mounting holes, and plate thickness settings.
+- `settings: PlateSettings` — Current configuration including cutouts, outline, mounting holes, plate thickness, and backside-feature settings (`backsideFeatures: BacksideFeature[]` and shared `backsideDepth: number`).
 - `autoRefresh: boolean` — Whether to regenerate on layout changes.
 - `generationState: GenerationState` — Status (`idle` | `generating` | `success` | `error`), result, and error message.
+
+The default `backsideFeatures` array contains a single disabled `cherry-mx-snap-notch` entry. `backsideDepth` defaults to `0`, which disables every backside cut (snap notches and stabilizer clearance pockets alike) regardless of feature enable flags.
 
 Note: the `GenerationStatus` type definition still includes `'loading'` for backward compatibility, but the store never sets it. Components that check for `'loading'` do so defensively.
 
@@ -184,8 +193,9 @@ Main orchestration module. `buildPlate(keys, options)` is the entry point. Calle
 4. **Merge cutouts** (optional) — When `mergeCutouts` is enabled, combines overlapping cutouts into simplified paths.
 5. **Create outline** (optional) — When `outline.enabled` is true, generates a rectangular outline with configurable margins and rounded corners.
 6. **Add mounting holes** (optional) — When `mountingHoles.enabled` is true (and outline is enabled), adds circular holes at the four corners.
-7. **Build 3D model** (optional) — When outline is enabled, clones a clean (layer-tag-free) version of the outline and cutout models into a combined `model3D`. This is done before layer-tagging so that path layers do not interfere with JSCAD chain containment checks.
-8. **Export** — Uses maker.js to produce SVG (preview and download variants), DXF, and optionally JSCAD script and ASCII STL.
+7. **Build backside cuts** (3D only) — When outline is enabled and `backsideDepth > 0`, builds 3D `Geom3` solids for the back face: stabilizer clearance pockets (always emitted whenever a stab cutout is created) and any enabled `backsideFeatures` (currently the Cherry MX snap notch). These never appear in 2D output.
+8. **Build 3D model** (optional) — When outline is enabled, the outline maker.js model is cloned, layer tags stripped, and converted to a JSCAD `Geom2` via `outlineToGeom2()`. Cutouts are paired with their `Geom2` geometry as `JscadNamedGeom` entries — the same objects feed both STL booleans and the script emitter.
+9. **Export** — Uses maker.js to produce SVG (preview and download variants) and DXF, and uses `@jscad/modeling` to produce the JSCAD script and ASCII STL.
 
 The preview SVG includes an origin crosshair (red line) and 1mm padding. Outline is rendered in blue (#0066cc). The download SVG uses black strokes and mm units. DXF output uses POLYLINE entities.
 
@@ -193,14 +203,22 @@ The preview SVG includes an origin crosshair (red line) and 1mm padding. Outline
 
 An internal interface in `plate-builder.ts` that binds three things together: the JSCAD variable name used in the generated script (e.g. `'switch_0'`), the actual `Geom2` object used for boolean operations, and optional script lines to emit for that shape. When `scriptLines` is absent, the script falls back to extracting polygon points from the `Geom2` directly. Using the same `Geom2` for both script and STL output is what guarantees they are always identical.
 
+**`BacksideCut3D` interface:**
+
+A parallel structure used for 3D-only back-face cuts. Like `JscadNamedGeom` it carries a `varName` and `scriptLines`, but the geometry is a `Geom3` (placed cuboid) rather than a `Geom2`. Backside cuts never enter the 2D path: they are subtracted from the extruded plate inside `buildStl()` and emitted under a `// --- Backside features ---` comment block in `buildJscadScript()`.
+
+**Shared shape registry (`ScriptShapeRegistry`):**
+
+Exported from `jscad-cutouts/geom-utils.ts`. When the same primitive expression would otherwise be inlined many times in the generated script (e.g. one `cuboid({ size: [7, 17, 1] })` per Cherry MX key, or identical stabilizer clearance pockets), the cutout builders pass a registry instance and call `getOrCreate(key, hint, expression)`. The registry deduplicates by `key`, returns the variable name (`snap_notch_shape`, `stab_backside_shape`, …) suffixing on collision, and accumulates the `const ... = ...` definitions for `getDefinitionLines()`. `buildJscadScript()` emits these under a `// --- Shared shapes ---` comment, then references them via `translate(...)` / `rotateZ(...)` per instance, producing significantly smaller scripts for large layouts.
+
 **3D Export (JSCAD / STL):**
 
 When outline is enabled, `buildPlate()` produces two additional outputs using `@jscad/modeling` v2 booleans. All cutout geometry is pre-built as `Geom2` objects from the `jscad-cutouts/` modules and wrapped in `JscadNamedGeom` entries, so both outputs are derived from the **same geometry objects**, guaranteeing they are always identical. The plate outline itself is converted from the maker.js tight-outline chain using `outlineToGeom2()`, which calls `makerjs.chain.toKeyPoints` with 0.5mm arc facet precision — this is the one remaining maker.js usage in the JSCAD geometry path.
 
-- **JSCAD script** (`buildJscadScript()`) — Emits an OpenJSCAD v2 script using parametric primitives (`rectangle`, `roundedRectangle`, `circle`, `polygon`) and boolean operations (`union`, `subtract`, `extrudeLinear`). Can be opened directly in [OpenJSCAD](https://openjscad.xyz/).
-- **STL** (`buildStl()`) — Performs `subtract(outline, union(cutouts))`, extrudes with `extrudeLinear({ height: thickness })`, and serializes to ASCII STL via `@jscad/stl-serializer`. STL generation is wrapped in a try/catch; if it fails, a warning is logged and `stlData` is omitted from the result rather than failing the entire generation.
+- **JSCAD script** (`buildJscadScript()`) — Emits an OpenJSCAD v2 script using parametric primitives (`rectangle`, `roundedRectangle`, `circle`, `polygon`, plus `cuboid` + `translate` / `rotateZ` for backside cuts) and boolean operations (`union`, `subtract`, `extrudeLinear`). The import list at the top of the script is built dynamically by scanning the assembled lines so unused primitives and transforms are not pulled in. Can be opened directly in [OpenJSCAD](https://openjscad.xyz/).
+- **STL** (`buildStl()`) — Performs `subtract(outline, union(cutouts))` to get the 2D plate, extrudes with `extrudeLinear({ height: thickness })`, and then if any backside `Geom3` cuts are present subtracts them from the extruded solid before serializing to ASCII STL via `@jscad/stl-serializer`. STL generation is wrapped in a try/catch; if it fails, a warning is logged and `stlData` is omitted from the result rather than failing the entire generation.
 
-Both outputs are `undefined` when outline is disabled. The `thickness` option defaults to 1.5mm and is set via the Outline tab in the UI.
+Both outputs are `undefined` when outline is disabled. The `thickness` option defaults to 1.5mm and is set via the **3D tab** in the UI; `backsideDepth` defaults to `0` (disabled).
 
 **Merge Cutouts:**
 
@@ -347,19 +365,21 @@ Handles conversion between the internal `PlateSettings` type and the `PlateSetti
 - `holes` — `mounting` key (presence implies `mountingHoles.enabled = true`), `custom` array (presence implies `customHoles.enabled = true`; each entry has `diameter`, `offsetX`, `offsetY` — no internal `id` field). The entire `holes` section is omitted when both mounting and custom holes are disabled.
 - `outline` — discriminated union on `outlineType`: `'none'` | `'rectangular'` (with margin/fillet fields) | `'tight'` (with `tightMargin`/fillet).
 - `thickness` — top-level number.
+- `threed` — always emitted. Contains `backsideDepth: number` (always written so the value is preserved even when no feature is enabled, since stab clearance pockets depend on it), and an optional `backsideFeatures: { type }[]` array listing only the **enabled** features. Mere presence of a feature entry implies `enabled: true`; defaults that are not enabled are omitted.
 
-**`serializePlateSettings(s: PlateSettings): PlateSettingsJson`** — Converts store settings to the JSON format. Omits `stabilizerFilletRadius` when stab type is `none`. Omits the `holes` section entirely when both mounting holes and custom holes are disabled. Custom hole entries strip the internal `id` field.
+**`serializePlateSettings(s: PlateSettings): PlateSettingsJson`** — Converts store settings to the JSON format. Omits `stabilizerFilletRadius` when stab type is `none`. Omits the `holes` section entirely when both mounting holes and custom holes are disabled. Custom hole entries strip the internal `id` field. Always emits a `threed` section with the current `backsideDepth`.
 
-**`deserializePlateSettings(json: PlateSettingsJson, defaults: PlateSettings): PlateSettings`** — Applies JSON fields on top of `defaults`. Restores `enabled = true` for the `mountingHoles` and `customHoles` sub-settings when the corresponding key is present in the JSON. Assigns stable index-based IDs (`hole_0`, `hole_1`, …) to deserialized custom holes.
+**`deserializePlateSettings(json: PlateSettingsJson, defaults: PlateSettings): PlateSettings`** — Applies JSON fields on top of `defaults`. Restores `enabled = true` for the `mountingHoles` and `customHoles` sub-settings when the corresponding key is present in the JSON. Assigns stable index-based IDs (`hole_0`, `hole_1`, …) to deserialized custom holes. For `threed.backsideFeatures`, merges JSON entries over `defaults.backsideFeatures`: any feature present in JSON is enabled; any default feature missing from JSON keeps its default `enabled` value; any new JSON feature type not in defaults is appended (forward compatibility). A legacy migration path also reads a per-feature `depth` from the first feature entry as a fallback when `threed.backsideDepth` is absent.
 
 #### `plate/jscad-cutouts/`
 
 Modules providing `Geom2` geometry objects and corresponding JSCAD script builders for all cutout types. Both the STL and JSCAD script outputs in `plate-builder.ts` consume the same `Geom2` objects from these modules.
 
-- **`geom-utils.ts`** — `Geom2` type alias (re-exported from `@jscad/modeling`), `placeGeom2(geom, x, y, angle)` for positioning geometry, `extractGeom2Points(geom)` for polygon point extraction, and formatting helpers (`fmt`, `fmtVec2`, `formatPoints`) used when emitting JSCAD script literals.
+- **`geom-utils.ts`** — `Geom2` type alias (re-exported from `@jscad/modeling`), `placeGeom2(geom, x, y, angle)` for positioning geometry, `extractGeom2Points(geom)` for polygon point extraction, formatting helpers (`fmt`, `fmtVec2`, `formatPoints`) used when emitting JSCAD script literals, and the `ScriptShapeRegistry` class for deduplicating shared primitive expressions in the script output.
 - **`switch-cutouts.ts`** — `createRectangleSwitchGeom` / `buildRectangleSwitchScript` (handles all rectangle-based switch types including Cherry MX basic, Alps, Choc, and custom), `createCherryMxOpenableGeom` / `buildCherryMxOpenableScript`, and `isRectangleSwitchType` predicate.
 - **`stabilizer-cutouts.ts`** — `createStabGeoms` / `buildStabScript` (dispatcher), `createMxBasicStabGeoms` / `buildMxBasicStabScript`, `createMxSpecStabGeoms` / `buildMxSpecStabScript`, `createAlpsStabGeoms` / `buildAlpsStabScript`.
 - **`hole-cutouts.ts`** — `createCircleHoleGeom` / `buildCircleHoleScript` for circular mounting and custom holes.
+- **`backside-features.ts`** — 3D `Geom3` cuts subtracted from the extruded plate during STL/JSCAD export only. Exposes `createCherryMxSnapNotchCuts` (rectangular snap notch sized `7 × (14 + 2 × 1.5) mm` centered on each switch), `createStabBacksideCut` (stabilizer clearance pocket whose dimensions are derived from the actual stab geometry's measured bounding box plus per-type overhang), the `STAB_BACKSIDE_OVERHANGS` lookup table, and the `BacksideCut3D` / `Geom3` types. Both builders accept an optional `ScriptShapeRegistry` so repeated shapes are emitted once.
 - **`index.ts`** — Barrel export for all of the above.
 
 #### `makerjs-loader.ts`
@@ -406,8 +426,9 @@ The worker imports `buildPlate` and `PlateBuilderError` from `plate-builder.ts`.
 ### Cache
 
 A `Map<string, PlateGenerationResult>` caches previously generated results. The cache key is the JSON-stringified
-settings object (cutout type, stabilizer type, fillet radii, size adjust, outline, holes, spacing) -- it does **not**
-include the layout keys. This means the cache is only valid for the current layout.
+settings object (cutout type, stabilizer type, fillet radii, size adjust, outline, holes, thickness, backside
+features and depth, spacing) -- it does **not** include the layout keys. This means the cache is only valid for
+the current layout.
 
 - **Cache hit:** Returns instantly. Increments `generationId` to invalidate any in-flight worker response, since the
   result is already available.
@@ -470,7 +491,7 @@ The plate outline feature generates a border around all cutouts, useful for defi
 | `filletRadius`     | `rectangular`, `tight` | `1`             | Corner radius for rounded outline corners (mm). 0 = sharp. Shared by both non-none modes. |
 | `mergeWithCutouts` | all                    | `true`          | When downloading, combine outline and cutouts into one file.                              |
 
-The `thickness` setting lives on the top-level `PlateSettings` (not inside `OutlineSettings`) and is exposed in the Outline tab:
+The `thickness` setting lives on the top-level `PlateSettings` (not inside `OutlineSettings`) and, as of `v0.36.0`, is exposed in the **3D tab** alongside the backside-feature controls (it used to live under Outline):
 
 | Setting     | Default | Description                                             |
 | ----------- | ------- | ------------------------------------------------------- |
@@ -531,6 +552,68 @@ In the Holes tab, use the **Add** button to create new holes. Each hole appears 
 
 Custom hole positions use keyboard units (U) relative to the origin (the center of the first key). Positive X moves right, positive Y moves down (matching KLE coordinates). The position is converted to millimeters using the keyboard's spacing settings (default: 19.05mm per unit).
 
+## Plate Backside Features (3D only)
+
+Backside features are 3D solids subtracted from the back face of the extruded plate during STL/JSCAD generation. They never appear in the 2D SVG/DXF outputs and never affect the cutout / outline / mounting hole geometry. All backside cuts share a single `backsideDepth` value (in mm, measured from the back face upward) so that thin plates can disable the entire feature category at once by setting depth to `0`.
+
+### Settings
+
+| Setting            | Default                                              | Description                                                                                                                                                                                          |
+| ------------------ | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `backsideDepth`    | `0`                                                  | Cut depth in mm from the back face. Applies to **all** backside features and stabilizer clearance pockets. Maximum allowed value in the UI is `max(0, thickness − 1)`. Setting to `0` disables them. |
+| `backsideFeatures` | `[{ type: 'cherry-mx-snap-notch', enabled: false }]` | List of feature toggles. Currently only `cherry-mx-snap-notch` exists.                                                                                                                               |
+
+The 3D tab disables both inputs when `outline.outlineType === 'none'`, since backside cuts only make sense in conjunction with STL/JSCAD output.
+
+### Cherry MX Snap Notch
+
+Configured in `jscad-cutouts/backside-features.ts`. A rectangle centered on each switch cutout, dimensioned as:
+
+| Constant              | Value (mm)        | Notes                                          |
+| --------------------- | ----------------- | ---------------------------------------------- |
+| `SNAP_NOTCH_WIDTH`    | `7`               | Notch width.                                   |
+| `MX_CUTOUT_HEIGHT`    | `14`              | Cherry MX switch cutout height.                |
+| `SNAP_NOTCH_OVERHANG` | `1.5`             | Overhang past the top/bottom of the cutout.    |
+| `SNAP_NOTCH_HEIGHT`   | `MX + 2×overhang` | Computed = `17`. Total span across the switch. |
+
+The notch follows the per-key rotation (layout `rotation_angle`), rather than `switchRotation`, since it tracks the switch body geometry inserted from below. It is only emitted for keys that pass `filterCutoutKeys`.
+
+### Stabilizer Clearance Pockets
+
+When `backsideDepth > 0` and a key has a stabilizer cutout, `createStabBacksideCut()` is called with the **measured bounding box** of the actual stab `Geom2` (`jscadModeling.measurements.measureBoundingBox` of the unioned left + right pads) and a per-type overhang from `STAB_BACKSIDE_OVERHANGS`:
+
+| Stabilizer type    | Left | Right | Top  | Bottom |
+| ------------------ | ---- | ----- | ---- | ------ |
+| `mx-basic`         | 0    | 0     | 3.5  | 1.75   |
+| `mx-tight`         | 0    | 0     | 3.5  | 1.75   |
+| `mx-bidirectional` | 0    | 0     | 1.75 | 1.75   |
+| `mx-spec`          | 0    | 0     | 1.31 | 3      |
+| `mx-spec-narrow`   | 0    | 0     | 1.31 | 3      |
+| `alps-aek`         | 0    | 0     | 0    | 0      |
+| `alps-at101`       | 0    | 0     | 0    | 0      |
+
+Driving the rectangle off the measured bbox keeps the pocket synchronized with the visible stab cutout when stab geometry is tweaked. Stabilizer clearances are emitted **unconditionally** whenever a stab cutout exists and `backsideDepth > 0` — there is no separate user toggle.
+
+### JSCAD Script Output
+
+In the generated script the cuts appear after the cutout sections under a dedicated comment block, and are subtracted in a final boolean step:
+
+```js
+// --- Backside features ---
+const snap_notch_shape = translate([0, 0, …], cuboid({ size: [7, 17, …] }))
+const stab_backside_shape = translate([…], cuboid({ … }))
+const snap_notch_0 = translate([cx0, cy0, 0], snap_notch_shape)
+…
+// --- Assembly ---
+const allCutouts = union(…)
+const plate2d = subtract(outline, allCutouts)
+const plate3d = extrudeLinear({ height: THICKNESS }, plate2d)
+const allBacksideCuts = union(snap_notch_0, …, stab_backside_0, …)
+const finalPlate = subtract(plate3d, allBacksideCuts)
+```
+
+The `_shape` constants come from `ScriptShapeRegistry` and are emitted once per unique parametric form.
+
 ## Coordinate System
 
 The plate builder transforms between two coordinate systems:
@@ -587,24 +670,47 @@ Files are created as in-memory blobs and downloaded via a temporary anchor eleme
 
 ## 3D Preview
 
-When a plate has been generated with outline enabled, a **3D tab** appears in the preview panel alongside the existing 2D tab. The 3D tab hosts the `Plate3DPreview` component, which renders the plate STL in an interactive WebGL viewport using Three.js.
+When a plate has been generated with outline enabled, a **3D sub-tab** appears in the results pane alongside the existing **2D** sub-tab (and a **JSCAD** sub-tab when `result.jscadScript` is present). The 3D sub-tab hosts the `Plate3DPreview` component, which renders the plate STL in an interactive WebGL viewport using Three.js.
 
 ### Scene Setup
 
-- **Renderer:** `THREE.WebGLRenderer` with antialiasing. Created lazily once the container has non-zero dimensions (tracked via `ResizeObserver`). Disposed and recreated whenever `stlData` changes.
-- **Camera:** `PerspectiveCamera` (45° FOV). Auto-positioned to fit the bounding box of the loaded geometry at `maxDim * 1.5` distance along the Z axis.
+- **Renderer:** `THREE.WebGLRenderer` with antialiasing. Created lazily once the container has non-zero dimensions (tracked via `ResizeObserver`). Disposed and recreated whenever the scene has to be rebuilt (see [Scene Persistence](#scene-persistence)).
+- **Camera:** `PerspectiveCamera` (45° FOV). Auto-positioned to fit the bounding box of the loaded geometry at `maxDim * 1.5` distance along the Z axis on first load.
 - **Lights:** Ambient (0.6 intensity) + directional key light (1.2, position [1, 2, 3]) + fill light (0.3, position [-2, -1, -1]).
 - **Mesh:** Plate geometry parsed from ASCII STL with `STLLoader`. Material is `MeshPhongMaterial` colored by the active Bootstrap theme's `--bs-primary` CSS variable, with a specular highlight at 35% brightness.
+- **Edges (wireframe view):** A `THREE.LineSegments` built from `new EdgesGeometry(mesh.geometry, 10)` and `LineBasicMaterial`. The 10° threshold angle skips coplanar STL triangulation but keeps real structural edges (plate outline, switch cutout perimeters, fillet arc segments). Created lazily on first switch to wireframe view and toggled via `mesh.visible` / `edgeLines.visible` afterwards.
 - **Background:** Set to the container element's resolved `background-color` (read from computed styles, not a CSS variable, to get the actual RGB value).
+
+### View Mode (Solid / Wireframe)
+
+A segmented Solid / Wireframe radio toggle sits in the bottom-right `canvas-controls` group, next to the reset-view button. Selecting **Wireframe** hides the solid mesh and shows the cached `EdgesGeometry` line overlay; selecting **Solid** restores the mesh. The previous implementation used `MeshPhongMaterial.wireframe = true` which exposed every internal STL triangulation edge — `EdgesGeometry` with the 10° threshold was introduced in commit `f3582b4c` to give a clean, structural wireframe.
+
+`applyThemeColors()` updates the line material color alongside the mesh color so wireframe view follows light / dark theme changes too.
 
 ### Controls
 
-`OrbitControls` are disabled by default to avoid hijacking page scroll. A "Click to navigate" hint overlay is shown until the user clicks the canvas. Clicking outside the preview container deactivates controls, restoring normal page scroll. The reset view button (bottom-right corner) restores the camera to its initial auto-fitted position and target.
+`OrbitControls` are disabled by default to avoid hijacking page scroll. A "Click to navigate" hint overlay is shown until the user clicks the canvas. Clicking outside the preview container deactivates controls, restoring normal page scroll. The reset view button restores the camera to its initial auto-fitted position and target. View mode and reset all live in the same `.canvas-controls` button group.
+
+### Scene Persistence
+
+`setupScene()` snapshots `camera.position`, `controls.target`, and `controlsActive` **before** disposing the existing scene, then restores them after the new scene has been built. This keeps the user's current navigation when a regeneration produces a new STL — settings tweaks no longer reset the camera back to the auto-fit view, which made it awkward to compare iterations.
+
+The scene is disposed (rather than reused in place) because the underlying STL geometry changes and Three.js does not allow swapping a `BufferGeometry` while the mesh is still attached. The `visible` prop separately gates the render loop:
+
+- **Visible → Visible:** RAF runs, scene rebuilt only when STL data actually changed.
+- **Hidden → Visible (scene present):** just resume RAF.
+- **Hidden → Visible (no scene because STL changed while hidden):** trigger a full rebuild via `waitForNonZeroSize()`. To keep this branch reliable, the `stlData` watcher proactively calls `disposeScene()` when STL data changes while the tab is hidden — otherwise the next show would resume RAF on a stale scene.
 
 ### Theme Adaptation
 
-A `MutationObserver` watches the `data-bs-theme` attribute on `<html>`. When the website theme changes (light ↔ dark), `applyThemeColors()` re-reads the resolved CSS colors and updates the renderer clear color and mesh material colors on the next animation frame.
+A `MutationObserver` watches the `data-bs-theme` attribute on `<html>`. When the website theme changes (light ↔ dark), `applyThemeColors()` re-reads the resolved CSS colors on the next animation frame and updates the renderer clear color, mesh `MeshPhongMaterial` (color + specular), and the wireframe edge `LineBasicMaterial`.
 
 ### Lifecycle
 
-Three.js modules are preloaded via `preloadThreeModule()` on `PlateGeneratorPanel` mount. The render loop (`requestAnimationFrame`) is paused when the 3D tab is not active (driven by the `visible` prop from `PlateGeneratorResults`) and resumed when it becomes visible again. All Three.js objects (renderer, geometry, material, controls, observers) are fully disposed on component unmount.
+Three.js modules are preloaded via `preloadThreeModule()` on `PlateGeneratorPanel` mount. The render loop (`requestAnimationFrame`) is paused when the 3D tab is not active (driven by the `visible` prop from `PlateGeneratorResults`) and resumed when it becomes visible again. All Three.js objects (renderer, geometry, material, edge LineSegments, controls, observers) are fully disposed on component unmount via `disposeScene()` → `disposeMesh()`.
+
+## JSCAD Script Preview
+
+`PlateJscadPreview.vue` renders the generated `result.jscadScript` in a read-only CodeMirror editor inside the **JSCAD** sub-tab. CodeMirror is lazy-loaded through `getCodeMirror()` and rebuilt on theme change via a `MutationObserver` on `data-bs-theme`. Subsequent script updates after the editor is ready use `cm.updateContent()` rather than recreating the editor.
+
+The toolbar exposes a copy-to-clipboard button (with a 2-second "Copied!" confirmation) and an expand button. Clicking expand opens the script in `JsonExpandModal` with `readOnly: true` — the same modal used by the JSON settings editor — for full-screen reading. The expand button is positioned absolutely over the bottom-right of the editor with a hover-driven opacity transition so it does not overlap the code while still being discoverable.
