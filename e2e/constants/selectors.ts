@@ -198,6 +198,17 @@ export const SELECTORS = {
     CLOSE_BUTTON: '[aria-label="Close search"]',
   },
   /**
+   * Layout option toolbar (alternative layouts preview)
+   */
+  LAYOUT_OPTIONS: {
+    TOOLBAR: '[data-testid="layout-option-toolbar"]',
+    ALL_BUTTON: '[data-testid="layout-option-all"]',
+    CHOICE_BUTTON: '[data-testid="layout-option-choice"]',
+    PREVIEW_HINT: '[data-testid="layout-option-preview-hint"]',
+    OPTION_GROUP: '[data-testid="layout-option-group"]',
+  },
+
+  /**
    * Plate Generator panel
    */
   PLATE_GENERATOR: {

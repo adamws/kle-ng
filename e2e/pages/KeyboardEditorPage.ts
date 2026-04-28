@@ -5,6 +5,8 @@ import { CanvasComponent } from './components/CanvasComponent'
 import { RotationToolComponent } from './components/RotationToolComponent'
 import { MatrixModalComponent } from './components/MatrixModalComponent'
 import { PropertiesPanelComponent } from './components/PropertiesPanelComponent'
+import { LayoutOptionToolbarComponent } from './components/LayoutOptionToolbarComponent'
+import { WaitHelpers } from '../helpers/wait-helpers'
 import { SELECTORS } from '../constants/selectors'
 
 /**
@@ -28,6 +30,7 @@ export class KeyboardEditorPage extends BasePage {
   readonly rotation: RotationToolComponent
   readonly matrix: MatrixModalComponent
   readonly properties: PropertiesPanelComponent
+  readonly layoutOptions: LayoutOptionToolbarComponent
 
   private readonly keysCounter: Locator
   private readonly selectedCounter: Locator
@@ -35,11 +38,13 @@ export class KeyboardEditorPage extends BasePage {
 
   constructor(page: Page) {
     super(page)
+    const waitHelpers = new WaitHelpers(page)
     this.toolbar = new ToolbarComponent(page)
     this.canvas = new CanvasComponent(page)
     this.rotation = new RotationToolComponent(page)
     this.matrix = new MatrixModalComponent(page)
     this.properties = new PropertiesPanelComponent(page)
+    this.layoutOptions = new LayoutOptionToolbarComponent(page, waitHelpers)
 
     // Initialize locators for counters and indicators
     this.keysCounter = page.locator(SELECTORS.COUNTERS.KEYS)

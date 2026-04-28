@@ -50,23 +50,33 @@ function handleChoiceClick(option: number, choice: number) {
 </script>
 
 <template>
-  <div v-if="groups.length > 0" class="layout-option-toolbar">
+  <div v-if="groups.length > 0" class="layout-option-toolbar" data-testid="layout-option-toolbar">
     <button
       class="bubble-btn"
       :class="{ active: !keyboardStore.isLayoutPreviewMode }"
       title="Show all layout options"
+      data-testid="layout-option-all"
       @click="keyboardStore.setDisplayLayoutChoices(null)"
     >
       <span class="bubble-label all-label">all</span>
     </button>
 
-    <div v-for="group in groups" :key="group.option" class="option-group">
+    <div
+      v-for="group in groups"
+      :key="group.option"
+      class="option-group"
+      data-testid="layout-option-group"
+      :data-option="group.option"
+    >
       <button
         v-for="choice in group.choices"
         :key="choice"
         class="bubble-btn"
         :class="{ active: isChoiceActive(group.option, choice) }"
         :title="resolveChoiceTitle(group, choice)"
+        data-testid="layout-option-choice"
+        :data-option="group.option"
+        :data-choice="choice"
         @click="handleChoiceClick(group.option, choice)"
       >
         <span class="bubble-label diag-fraction">
@@ -77,7 +87,11 @@ function handleChoiceClick(option: number, choice: number) {
       </button>
     </div>
 
-    <span v-if="keyboardStore.isLayoutPreviewMode" class="preview-hint">
+    <span
+      v-if="keyboardStore.isLayoutPreviewMode"
+      class="preview-hint"
+      data-testid="layout-option-preview-hint"
+    >
       Layout preview mode (<em class="text-warning">readonly</em>) — switch to
       <strong>all</strong> to edit
     </span>
