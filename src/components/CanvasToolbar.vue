@@ -148,47 +148,50 @@ interface ExtraTool {
   action: () => void
 }
 
-const extraTools = computed((): ExtraTool[] => [
-  {
-    id: 'legend-tools',
-    name: 'Legend Tools',
-    description: 'Remove, align, and move legends on keys',
-    disabled: false,
-    action: () => {
-      showLegendToolsPanel.value = true
+const extraTools = computed((): ExtraTool[] => {
+  const isPreview = keyboardStore.isLayoutPreviewMode
+  return [
+    {
+      id: 'legend-tools',
+      name: 'Legend Tools',
+      description: 'Remove, align, and move legends on keys',
+      disabled: isPreview,
+      action: () => {
+        showLegendToolsPanel.value = true
+      },
     },
-  },
-  {
-    id: 'add-matrix-coordinates',
-    name: 'Add Switch Matrix Coordinates',
-    description: 'Assign matrix coordinates for VIA - automatic or manual drawing',
-    disabled: false,
-    action: () => {
-      showMatrixModal.value = true
+    {
+      id: 'add-matrix-coordinates',
+      name: 'Add Switch Matrix Coordinates',
+      description: 'Assign matrix coordinates for VIA - automatic or manual drawing',
+      disabled: isPreview,
+      action: () => {
+        showMatrixModal.value = true
+      },
     },
-  },
-  {
-    id: 'move-rotation-origins',
-    name: 'Move Rotation Origins',
-    description:
-      keyboardStore.selectedKeys.length === 0
-        ? 'Move rotation origins for all keys'
-        : 'Move rotation origins for selected keys',
-    disabled: false,
-    action: () => {
-      showRotationOriginsPanel.value = true
+    {
+      id: 'move-rotation-origins',
+      name: 'Move Rotation Origins',
+      description:
+        keyboardStore.selectedKeys.length === 0
+          ? 'Move rotation origins for all keys'
+          : 'Move rotation origins for selected keys',
+      disabled: isPreview,
+      action: () => {
+        showRotationOriginsPanel.value = true
+      },
     },
-  },
-  {
-    id: 'theme-tools',
-    name: 'Theme Tools',
-    description: 'Apply color themes to keys',
-    disabled: false,
-    action: () => {
-      showThemeToolsPanel.value = true
+    {
+      id: 'theme-tools',
+      name: 'Theme Tools',
+      description: 'Apply color themes to keys',
+      disabled: isPreview,
+      action: () => {
+        showThemeToolsPanel.value = true
+      },
     },
-  },
-])
+  ]
+})
 
 // Computed properties from store
 const canvasMode = computed(() => keyboardStore.canvasMode)
@@ -222,11 +225,13 @@ const setMode = (mode: 'select' | 'mirror-h' | 'mirror-v' | 'rotate' | 'move-exa
 
 // Key editing functions
 const addKey = () => {
+  if (keyboardStore.isLayoutPreviewMode) return
   keyboardStore.addKey()
   requestCanvasFocus()
 }
 
 const addSpecialKey = (specialKey: SpecialKeyTemplate) => {
+  if (keyboardStore.isLayoutPreviewMode) return
   keyboardStore.addKey(specialKey.data)
   requestCanvasFocus()
 }

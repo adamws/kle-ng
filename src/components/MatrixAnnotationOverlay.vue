@@ -385,6 +385,7 @@ const detectHover = (canvasX: number, canvasY: number) => {
 
 // Mouse move handler - show preview of next segment and detect hover
 const handleMouseMove = (event: MouseEvent) => {
+  if (keyboardStore.isLayoutPreviewMode) return
   // Track Ctrl/Cmd key state
   const previousCtrlState = ctrlKeyPressed.value
   ctrlKeyPressed.value = event.ctrlKey || event.metaKey
@@ -493,6 +494,7 @@ const handleMouseMove = (event: MouseEvent) => {
 
 // Click handler - add keys to sequence or finish sequence
 const handleClick = (event: MouseEvent) => {
+  if (keyboardStore.isLayoutPreviewMode) return
   if (!matrixDrawingStore.isDrawing || !props.renderer) return
 
   // Capture Ctrl/Cmd state at click time
@@ -658,6 +660,7 @@ const handleClick = (event: MouseEvent) => {
 
 // Right-click handler - cancel drawing while actively drawing
 const handleRightClick = () => {
+  if (keyboardStore.isLayoutPreviewMode) return
   // If actively drawing, cancel the current sequence
   const isActivelyDrawing =
     matrixDrawingStore.isDrawing && matrixDrawingStore.currentSequence.length > 0

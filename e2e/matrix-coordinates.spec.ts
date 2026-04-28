@@ -500,7 +500,7 @@ test.describe('Matrix Coordinates Tool', () => {
     await expect(page.getByTestId('counter-selected')).toContainText('Selected: 1')
   })
 
-  test('should show matrix preview for already annotated Default 60% (VIA) preset', async ({
+  test('should show matrix preview for already annotated Multilayout 60% (VIA) preset', async ({
     page,
     browserName,
   }) => {
@@ -518,20 +518,20 @@ test.describe('Matrix Coordinates Tool', () => {
       timeout: 5000,
     })
 
-    // Click the Default 60% (VIA) preset item
+    // Click the Multilayout 60% (VIA) preset item
     const viaItem = page.locator('.preset-dropdown .dropdown-item', {
-      hasText: 'Default 60% (VIA)',
+      hasText: 'Multilayout 60% (VIA)',
     })
     await viaItem.click()
 
-    // Wait for layout to load - Default 60% has 61 keys
+    // Wait for layout to load - Multilayout 60% has 83 keys
     await expect
       .poll(
         async () => {
           const keysCounter = await page.getByTestId('counter-keys').textContent()
           if (!keysCounter) return false
           const match = keysCounter.match(/Keys: (\d+)/)
-          return match ? parseInt(match[1]) === 61 : false
+          return match ? parseInt(match[1]) === 83 : false
         },
         { timeout: 10000 },
       )
@@ -562,7 +562,7 @@ test.describe('Matrix Coordinates Tool', () => {
     await expect(canvas).toBeVisible()
 
     // Take screenshot and compare with baseline
-    await expect(canvas).toHaveScreenshot('default-60-via-matrix-preview.png')
+    await expect(canvas).toHaveScreenshot('multilayout-60-via-matrix-preview.png')
   })
 
   test('should present choice when opening partially annotated layout', async ({ page }) => {

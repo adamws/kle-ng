@@ -112,6 +112,9 @@
       <div v-if="canvasFeedback" class="canvas-feedback">
         {{ canvasFeedback }}
       </div>
+
+      <!-- Layout option toolbar — sits in flow directly below the canvas element -->
+      <LayoutOptionToolbar @mousedown.stop @click.stop />
     </div>
 
     <!-- Link URL preview (shown at bottom when hovering over links) -->
@@ -155,6 +158,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useKeyboardStore, type Key, type KeyboardMetadata } from '@/stores/keyboard'
+import { collapseToLayoutChoices } from '@/utils/layout-options'
 import { useMatrixDrawingStore } from '@/stores/matrix-drawing'
 import { useFontStore } from '@/stores/font'
 import { useLayoutEditorSettingsStore } from '@/stores/layoutEditorSettings'
@@ -174,6 +178,7 @@ import DebugOverlay from '@/components/DebugOverlay.vue'
 import DebugControlButton from '@/components/DebugControlButton.vue'
 import KeySelectionPopup from '@/components/KeySelectionPopup.vue'
 import CanvasSearchBar from '@/components/CanvasSearchBar.vue'
+import LayoutOptionToolbar from '@/components/LayoutOptionToolbar.vue'
 import BiSearch from 'bootstrap-icons/icons/search.svg'
 import BiGear from 'bootstrap-icons/icons/gear.svg'
 import { useKeySearch } from '@/composables/useKeySearch'
@@ -252,6 +257,12 @@ const hoveredRotationPointId = ref<string | null>(null)
 const hoveredLinkHref = ref<string | null>(null)
 
 const zoom = ref(1)
+
+const keysForRender = computed(() =>
+  keyboardStore.displayLayoutChoices
+    ? collapseToLayoutChoices(keyboardStore.keys, keyboardStore.displayLayoutChoices)
+    : keyboardStore.keys,
+)
 
 const rectSelectionOccurred = ref(false)
 const keyDragOccurred = ref(false)
@@ -528,6 +539,14 @@ watch(
   async () => {
     await nextTick()
     updateCanvasSize()
+    renderScheduler.schedule(renderKeyboard)
+  },
+)
+
+// Re-render when entering or exiting layout preview mode (keysForRender changes)
+watch(
+  () => keyboardStore.displayLayoutChoices,
+  () => {
     renderScheduler.schedule(renderKeyboard)
   },
 )
@@ -895,13 +914,17 @@ const renderKeyboard = (options?: { skipContainerBackground?: boolean }) => {
         return shouldUseTempKeys ? keyboardStore.tempSelectedKeys : keyboardStore.selectedKeys
       })()
 
-      const searchMatchKeys = keySearch.isSearchOpen.value ? keySearch.matchingKeys.value : []
+      const isPreview = keyboardStore.isLayoutPreviewMode
+      const searchMatchKeys =
+        !isPreview && keySearch.isSearchOpen.value ? keySearch.matchingKeys.value : []
       renderer.value.render(
-        keyboardStore.keys,
-        keysToHighlight,
+        keysForRender.value,
+        isPreview ? [] : keysToHighlight,
         keyboardStore.metadata,
         false,
-        keyboardStore.canvasMode === 'rotate' && keyboardStore.selectedKeys.length > 0,
+        !isPreview &&
+          keyboardStore.canvasMode === 'rotate' &&
+          keyboardStore.selectedKeys.length > 0,
         hoveredRotationPointId.value || undefined,
         keyboardStore.rotationOrigin,
         keyboardStore.popupHoveredKey,
@@ -954,6 +977,8 @@ const getCanvasPosition = (event: MouseEvent) => {
 }
 
 const handleContainerClick = (event: MouseEvent) => {
+  if (keyboardStore.isLayoutPreviewMode) return
+
   // If the click is on the canvas itself, let the canvas handler manage it
   if (event.target === canvasRef.value) {
     return
@@ -999,6 +1024,8 @@ const handleContainerMouseDown = (event: MouseEvent) => {
   // Close any open Bootstrap dropdowns (e.g., toolbar dropdowns)
   closeOpenDropdowns()
 
+  if (keyboardStore.isLayoutPreviewMode) return
+
   // If the mousedown is on the canvas itself, let the canvas handler manage it
   if (event.target === canvasRef.value) {
     return
@@ -1023,6 +1050,7 @@ const handleContainerMouseUp = (event: MouseEvent) => {
 
 const handleCanvasClick = (event: MouseEvent) => {
   if (!renderer.value) return
+  if (keyboardStore.isLayoutPreviewMode) return
 
   // Handle rotation mode - ONLY allow rotation point clicks, disable all other interactions
   if (keyboardStore.canvasMode === 'rotate') {
@@ -1129,6 +1157,7 @@ const handleCanvasClick = (event: MouseEvent) => {
 
 const handleMouseDown = (event: MouseEvent) => {
   if (!renderer.value) return
+  if (keyboardStore.isLayoutPreviewMode) return
 
   // Close popup when starting any drag operation
   if (keyboardStore.keySelectionPopup.visible) {
@@ -1295,6 +1324,8 @@ const handleMouseMove = (event: MouseEvent) => {
 
 // Shared mouse move handler for both canvas and global events
 const handleMouseMoveShared = (event: MouseEvent) => {
+  if (keyboardStore.isLayoutPreviewMode) return
+
   // Handle key dragging
   if (keyboardStore.mouseDragMode === 'key-move') {
     const pos = getCanvasPosition(event)
@@ -1394,6 +1425,8 @@ const handleMouseUp = () => {
 
 // Shared mouse up handler for both canvas and global events
 const handleMouseUpShared = () => {
+  if (keyboardStore.isLayoutPreviewMode) return
+
   // Clear mousedown info on mouse up (click without drag)
   mouseDownOnKey.value = null
 
@@ -1527,24 +1560,26 @@ const handleKeyDown = async (event: KeyboardEvent) => {
     return
   }
 
+  const isPreview = keyboardStore.isLayoutPreviewMode
+
   // Handle keyboard shortcuts
   if (event.ctrlKey || event.metaKey) {
     switch (event.key.toLowerCase()) {
       case 'a':
         event.preventDefault()
-        keyboardStore.selectAll()
+        if (!isPreview) keyboardStore.selectAll()
         break
       case 'c':
         event.preventDefault()
-        await keyboardStore.copy()
+        if (!isPreview) await keyboardStore.copy()
         break
       case 'x':
         event.preventDefault()
-        await keyboardStore.cut()
+        if (!isPreview) await keyboardStore.cut()
         break
       case 'v':
         event.preventDefault()
-        await keyboardStore.paste()
+        if (!isPreview) await keyboardStore.paste()
         break
       case 'z':
         event.preventDefault()
@@ -1560,47 +1595,49 @@ const handleKeyDown = async (event: KeyboardEvent) => {
         break
     }
   } else if (event.shiftKey) {
-    // Shift + arrow keys for width/height adjustment
-    switch (event.key) {
-      case 'ArrowLeft':
-        event.preventDefault()
-        adjustSelectedKeysSize('width', -keyboardStore.moveStep)
-        break
-      case 'ArrowRight':
-        event.preventDefault()
-        adjustSelectedKeysSize('width', keyboardStore.moveStep)
-        break
-      case 'ArrowUp':
-        event.preventDefault()
-        adjustSelectedKeysSize('height', -keyboardStore.moveStep)
-        break
-      case 'ArrowDown':
-        event.preventDefault()
-        adjustSelectedKeysSize('height', keyboardStore.moveStep)
-        break
-      case 'M':
-        event.preventDefault()
-        if (keyboardStore.selectedKeys.length === 0) {
-          showCanvasFeedback('Select keys first to use Move Exactly')
-        } else {
-          keyboardStore.setCanvasMode('move-exactly')
-        }
-        break
-      case 'R':
-        event.preventDefault()
-        if (keyboardStore.selectedKeys.length === 0) {
-          showCanvasFeedback('Select keys first to use Rotate Selection')
-        } else {
-          keyboardStore.setCanvasMode('rotate')
-        }
-        break
+    if (!isPreview) {
+      // Shift + arrow keys for width/height adjustment
+      switch (event.key) {
+        case 'ArrowLeft':
+          event.preventDefault()
+          adjustSelectedKeysSize('width', -keyboardStore.moveStep)
+          break
+        case 'ArrowRight':
+          event.preventDefault()
+          adjustSelectedKeysSize('width', keyboardStore.moveStep)
+          break
+        case 'ArrowUp':
+          event.preventDefault()
+          adjustSelectedKeysSize('height', -keyboardStore.moveStep)
+          break
+        case 'ArrowDown':
+          event.preventDefault()
+          adjustSelectedKeysSize('height', keyboardStore.moveStep)
+          break
+        case 'M':
+          event.preventDefault()
+          if (keyboardStore.selectedKeys.length === 0) {
+            showCanvasFeedback('Select keys first to use Move Exactly')
+          } else {
+            keyboardStore.setCanvasMode('move-exactly')
+          }
+          break
+        case 'R':
+          event.preventDefault()
+          if (keyboardStore.selectedKeys.length === 0) {
+            showCanvasFeedback('Select keys first to use Rotate Selection')
+          } else {
+            keyboardStore.setCanvasMode('rotate')
+          }
+          break
+      }
     }
   } else {
     switch (event.key) {
       case 'Delete':
       case 'Backspace':
         event.preventDefault()
-        keyboardStore.deleteKeys()
+        if (!isPreview) keyboardStore.deleteKeys()
         break
       case '/':
         event.preventDefault()
@@ -1614,34 +1651,34 @@ const handleKeyDown = async (event: KeyboardEvent) => {
         event.preventDefault()
         if (keySearch.isSearchOpen.value) {
           closeCanvasSearch()
-        } else {
+        } else if (!isPreview) {
           keyboardStore.unselectAll()
         }
         break
       case 'Insert':
         event.preventDefault()
-        keyboardStore.addKey()
+        if (!isPreview) keyboardStore.addKey()
         break
       case 'a':
       case 'A':
         event.preventDefault()
-        keyboardStore.addKey()
+        if (!isPreview) keyboardStore.addKey()
         break
       case 'ArrowUp':
         event.preventDefault()
-        moveSelectedKeys(0, -keyboardStore.moveStep)
+        if (!isPreview) moveSelectedKeys(0, -keyboardStore.moveStep)
         break
       case 'ArrowDown':
         event.preventDefault()
-        moveSelectedKeys(0, keyboardStore.moveStep)
+        if (!isPreview) moveSelectedKeys(0, keyboardStore.moveStep)
         break
       case 'ArrowLeft':
         event.preventDefault()
-        moveSelectedKeys(-keyboardStore.moveStep, 0)
+        if (!isPreview) moveSelectedKeys(-keyboardStore.moveStep, 0)
         break
       case 'ArrowRight':
         event.preventDefault()
-        moveSelectedKeys(keyboardStore.moveStep, 0)
+        if (!isPreview) moveSelectedKeys(keyboardStore.moveStep, 0)
         break
     }
   }
@@ -1693,6 +1730,8 @@ const handleDragLeave = (event: DragEvent) => {
 const handleDrop = async (event: DragEvent) => {
   dragCounter.value = 0
   isDragOver.value = false
+
+  if (keyboardStore.isLayoutPreviewMode) return
 
   // Only handle file drops, let other drag operations (section reordering) pass through
   if (!isFileDragEvent(event)) {

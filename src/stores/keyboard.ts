@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import type { Ref } from 'vue'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { Key, KeyboardMetadata, Keyboard, Serial } from '@adamws/kle-serial'
 import { D } from '../utils/decimal-math'
 import { toast } from '../composables/useToast'
@@ -34,6 +34,7 @@ import { svgCache } from '../utils/caches/SVGCache'
 import { parseCache } from '../utils/caches/ParseCache'
 import { imageCache } from '../utils/caches/ImageCache'
 import { validateMatrixDuplicates } from '../utils/matrix-validation'
+import { getLayoutOptionGroups } from '../utils/layout-options'
 
 export { Key, Keyboard, KeyboardMetadata, type Array12 } from '@adamws/kle-serial'
 
@@ -1373,6 +1374,52 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     })
   })
 
+  // Layout preview mode — non-null means we're previewing a per-option choice combination
+  const displayLayoutChoices = ref<Map<number, number> | null>(null)
+
+  const isLayoutPreviewMode = computed(() => displayLayoutChoices.value !== null)
+
+  const setDisplayLayoutChoices = (choices: Map<number, number> | null) => {
+    displayLayoutChoices.value = choices
+    if (choices !== null) {
+      selectedKeys.value = []
+      tempSelectedKeys.value = []
+      canvasMode.value = 'select'
+    }
+  }
+
+  // Invalidate displayLayoutChoices when keys change — fall back invalid choices to 0, drop gone options
+  watch(
+    keys,
+    () => {
+      const choices = displayLayoutChoices.value
+      if (!choices) return
+      const groups = getLayoutOptionGroups(keys.value)
+      const groupMap = new Map(groups.map((g) => [g.option, g]))
+      const newChoices = new Map<number, number>()
+      for (const [option, choice] of choices) {
+        const group = groupMap.get(option)
+        if (!group) continue
+        newChoices.set(option, group.choices.includes(choice) ? choice : 0)
+      }
+      if (newChoices.size === 0) {
+        displayLayoutChoices.value = null
+        return
+      }
+      let changed = newChoices.size !== choices.size
+      if (!changed) {
+        for (const [opt, ch] of newChoices) {
+          if (choices.get(opt) !== ch) {
+            changed = true
+            break
+          }
+        }
+      }
+      if (changed) displayLayoutChoices.value = newChoices
+    },
+    { deep: true },
+  )
+
   // Validate matrix duplicate positions
   // Per VIA spec, keys sharing a matrix position must have option,choice labels
   const matrixDuplicateValidation = computed(() => {
@@ -1596,5 +1643,10 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     isViaAnnotated,
     matrixDuplicateValidation,
     hasInvalidMatrixDuplicates,
+
+    // Layout preview mode
+    displayLayoutChoices,
+    isLayoutPreviewMode,
+    setDisplayLayoutChoices,
   }
 })

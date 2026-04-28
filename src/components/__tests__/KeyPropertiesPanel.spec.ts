@@ -719,4 +719,25 @@ describe('KeyPropertiesPanel', () => {
       })
     })
   })
+
+  describe('layout preview mode disabling', () => {
+    it('fieldset is disabled in preview mode even when keys are selected', async () => {
+      store.addKey()
+      const wrapper = mount(KeyPropertiesPanel, {
+        global: { plugins: [pinia] },
+      })
+      await wrapper.vm.$nextTick()
+
+      // Fieldset should be enabled with a key selected
+      const fieldset = wrapper.find('fieldset')
+      expect(fieldset.attributes('disabled')).toBeUndefined()
+
+      // Enter preview mode
+      store.setDisplayLayoutChoices(new Map([[0, 1]]))
+      await wrapper.vm.$nextTick()
+
+      // Fieldset should now be disabled
+      expect(fieldset.attributes('disabled')).toBeDefined()
+    })
+  })
 })

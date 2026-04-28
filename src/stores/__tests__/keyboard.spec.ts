@@ -1490,4 +1490,71 @@ describe('Keyboard Store', () => {
       expect(store.dirty).toBe(false)
     })
   })
+
+  describe('displayLayoutChoices', () => {
+    const makeAltLayoutKey = (matrix: string, optionChoice: string, x = 0, y = 0): Key => {
+      const key = new Key()
+      key.labels[0] = matrix
+      key.labels[8] = optionChoice
+      key.x = x
+      key.y = y
+      return key
+    }
+
+    it('starts as null', () => {
+      expect(store.displayLayoutChoices).toBeNull()
+      expect(store.isLayoutPreviewMode).toBe(false)
+    })
+
+    it('setDisplayLayoutChoices with a Map enters preview mode', () => {
+      store.setDisplayLayoutChoices(new Map([[0, 1]]))
+      expect(store.displayLayoutChoices?.get(0)).toBe(1)
+      expect(store.isLayoutPreviewMode).toBe(true)
+    })
+
+    it('setDisplayLayoutChoices(null) exits preview mode', () => {
+      store.setDisplayLayoutChoices(new Map([[0, 1]]))
+      store.setDisplayLayoutChoices(null)
+      expect(store.displayLayoutChoices).toBeNull()
+      expect(store.isLayoutPreviewMode).toBe(false)
+    })
+
+    it('setting non-null clears selectedKeys and tempSelectedKeys', () => {
+      store.addKey()
+      expect(store.selectedKeys.length).toBeGreaterThan(0)
+      store.setDisplayLayoutChoices(new Map([[0, 1]]))
+      expect(store.selectedKeys).toHaveLength(0)
+      expect(store.tempSelectedKeys).toHaveLength(0)
+    })
+
+    it('invalidation watcher resets to null when all option groups removed from keys', async () => {
+      store.keys.push(
+        makeAltLayoutKey('0,0', '', 0, 0),
+        makeAltLayoutKey('0,1', '0,0', 14, 0),
+        makeAltLayoutKey('0,2', '0,1', 13, 0),
+      )
+      store.setDisplayLayoutChoices(new Map([[0, 1]]))
+      expect(store.isLayoutPreviewMode).toBe(true)
+
+      // Remove all alt-layout keys → watcher should reset
+      store.keys.splice(0, store.keys.length, makeAltLayoutKey('0,0', '', 0, 0))
+
+      await new Promise((r) => setTimeout(r, 0))
+
+      expect(store.displayLayoutChoices).toBeNull()
+    })
+
+    it('invalidation watcher falls back invalid choice to 0', async () => {
+      store.keys.push(makeAltLayoutKey('0,1', '0,0', 14, 0), makeAltLayoutKey('0,2', '0,1', 13, 0))
+      store.setDisplayLayoutChoices(new Map([[0, 1]]))
+
+      // Remove the choice-1 key, leaving only choice-0
+      store.keys.splice(1, 1)
+
+      await new Promise((r) => setTimeout(r, 0))
+
+      expect(store.displayLayoutChoices?.get(0)).toBe(0)
+      expect(store.isLayoutPreviewMode).toBe(true)
+    })
+  })
 })

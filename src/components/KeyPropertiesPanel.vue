@@ -931,7 +931,8 @@ const isDisabled = computed(() => {
     selectedKeys.value.length === 0 ||
     keyboardStore.canvasMode === 'rotate' ||
     keyboardStore.canvasMode === 'mirror-h' ||
-    keyboardStore.canvasMode === 'mirror-v'
+    keyboardStore.canvasMode === 'mirror-v' ||
+    keyboardStore.isLayoutPreviewMode
   )
 })
 const moveStep = computed(() => keyboardStore.moveStep)
