@@ -26,6 +26,14 @@
 - [Performance Optimization](#performance-optimization)
 - [Implementation Details](#implementation-details)
 - [Troubleshooting](#troubleshooting)
+- [Alternative Layouts Preview](#alternative-layouts-preview)
+  - [Overview](#alt-layouts-overview)
+  - [Architecture](#alt-layouts-architecture)
+  - [layout-options.ts](#layout-optionsts)
+  - [Store State](#store-state)
+  - [LayoutOptionToolbar.vue](#layoutoptiontoolbarvue)
+  - [Canvas Wiring](#canvas-wiring)
+  - [Read-Only Gating](#read-only-gating)
 - [Recent Improvements](#recent-improvements)
 
 ---
@@ -42,6 +50,7 @@ The kle-ng canvas rendering pipeline is a modular, high-performance system for r
 - **Asynchronous image loading** with progressive rendering
 - **Overlapping key disambiguation** with interactive popup selection
 - **Canvas text search** with amber highlight overlays and prev/next navigation
+- **Alternative layouts preview** for VIA-annotated keyboards with `option,choice` keys
 
 The system is designed with **separation of concerns**, where each component has a single, well-defined responsibility.
 
@@ -2294,6 +2303,222 @@ Prior to commit `595127f`, the RenderScheduler used an array to store callbacks,
 
 ---
 
+---
+
+## Alternative Layouts Preview
+
+<a name="alt-layouts-overview"></a>
+
+### Overview
+
+VIA-annotated keyboards often contain alternative-layout keys — keys that exist in multiple physical variants for the same logical position (for example, a split spacebar, or ISO vs ANSI Enter). The VIA spec encodes this via `labels[8]`, which is set to the string `"option,choice"` for every key that belongs to an option group.
+
+The Alternative Layouts Preview feature lets users select a specific combination of layout variants and see immediately how the assembled keyboard looks. The canvas switches to a read-only preview that renders only the keys relevant to the chosen choices; all editing interactions are suppressed until the user returns to "all" mode.
+
+---
+
+<a name="alt-layouts-architecture"></a>
+
+### Architecture
+
+The data flow is:
+
+```
+LayoutOptionToolbar.vue
+    │  calls keyboardStore.setDisplayLayoutChoices(map)
+    ▼
+keyboard.ts store
+    │  displayLayoutChoices ref updated
+    │  setDisplayLayoutChoices() clears selection, resets canvasMode
+    ▼
+KeyboardCanvas.vue
+    │  keysForRender computed: collapseToLayoutChoices(keys, choices)
+    │  dedicated watch on displayLayoutChoices → schedules re-render
+    ▼
+CanvasRenderer.render(keysForRender, ...)
+    (renderer signature unchanged)
+```
+
+Two key design decisions shape the implementation:
+
+1. **Toolbar placement inside the canvas container element, not in `App.vue`**. `LayoutOptionToolbar` is mounted as a sibling of the `<canvas>` element inside `KeyboardCanvas.vue`'s container div. It receives `@mousedown.stop @click.stop` to prevent the canvas focus-management handlers (`handleContainerMouseDown`, `handleContainerClick`) from firing, which keeps it accessible without disturbing canvas focus.
+
+2. **No changes to the `CanvasRenderer.render()` signature**. The filtering of keys for the preview is done entirely at the call site in `KeyboardCanvas.vue` via the `keysForRender` computed. The renderer always receives a plain key array and knows nothing about layout preview mode.
+
+---
+
+<a name="layout-optionsts"></a>
+
+### `layout-options.ts`
+
+**Location**: `src/utils/layout-options.ts`
+
+**Purpose**: Pure utilities for discovering and collapsing alternative layout groups from a key array.
+
+#### `LayoutOptionGroup` interface
+
+```typescript
+interface LayoutOptionGroup {
+  option: number // VIA option index (the second number in "option,choice")
+  choices: number[] // All choice indices present in the key array, always includes 0
+  groupLabel?: string // From VIA layouts.labels — human-readable group name
+  choiceLabels?: string[] // From VIA layouts.labels — per-choice human-readable names
+}
+```
+
+#### `getLayoutOptionGroups(keys, viaLabels?)`
+
+Scans the key array for keys whose `labels[8]` matches the `"option,choice"` format (delegating to `parseOptionChoice` from `matrix-validation.ts`). Groups the results by option index and sorts them. Ghost and decal keys are skipped.
+
+The optional `viaLabels` argument is the raw `layouts.labels` value from a VIA definition. It is typed as `unknown` and parsed defensively — malformed or absent input silently degrades to groups without label metadata.
+
+VIA `layouts.labels` supports two entry shapes:
+
+- A plain string `"Name"` → `groupLabel` only
+- An array `["Name", "Choice A", "Choice B"]` → `groupLabel` + `choiceLabels`
+
+v1 constraint: only `labels[8]` is used as the option/choice discriminator. Keys that store option/choice at other label indices are not detected.
+
+#### `collapseToLayoutChoices(keys, choices: Map<number, number>)`
+
+Returns a new key array representing the keyboard as it looks with the given choice selected for each option group. The function:
+
+1. Deep-clones the input via `JSON.parse(JSON.stringify(keys))` — the source array is never mutated.
+2. Collects all keys that have no `option,choice` annotation (always included).
+3. For each option group in `choices`: selects the target choice (falls back to choice 0 if the requested index is absent).
+4. For non-zero choices, translates the chosen keys to overlay the choice-0 anchor:
+   - `anchor` = `minXY` of choice-0 keys
+   - `groupAnchor` = `minXY` of chosen-choice keys
+   - applies `(anchor − groupAnchor)` as a `(dx, dy)` offset to each chosen key
+5. Deduplicates the result by `(labels[0], rotated-center-x, rotated-center-y, decal)`.
+
+The `Map<number, number>` approach allows all option groups to be resolved in a single call, matching the multi-group selection the toolbar exposes.
+
+Ghost and decal keys are excluded from the alternative-variant set, matching the behaviour of kbplacer's `MatrixAnnotatedKeyboard.collapse()` from which this algorithm is ported.
+
+---
+
+<a name="store-state"></a>
+
+### Store State
+
+Three additions to `src/stores/keyboard.ts`:
+
+```typescript
+// Non-null while previewing; null = "all" / normal edit mode
+const displayLayoutChoices = ref<Map<number, number> | null>(null)
+
+// Convenience computed used as the preview-mode guard
+const isLayoutPreviewMode = computed(() => displayLayoutChoices.value !== null)
+
+// Setter — entering preview clears selection and resets canvasMode
+const setDisplayLayoutChoices = (choices: Map<number, number> | null) => {
+  displayLayoutChoices.value = choices
+  if (choices !== null) {
+    selectedKeys.value = []
+    tempSelectedKeys.value = []
+    canvasMode.value = 'select'
+  }
+}
+```
+
+**Invalidation watcher**: A `watch(keys, { deep: true })` runs whenever the key list changes while preview is active. It re-evaluates each chosen `(option, choice)` pair against the current groups:
+
+- If the chosen choice index no longer exists in a group, that group falls back to choice 0.
+- If an option group disappears entirely, it is dropped from the map.
+- If the resulting map is empty, `displayLayoutChoices` resets to `null` (exits preview).
+- The map is only written back if something actually changed, avoiding unnecessary re-renders.
+
+All three (`displayLayoutChoices`, `isLayoutPreviewMode`, `setDisplayLayoutChoices`) are exported from the store.
+
+---
+
+<a name="layoutoptiontoolbarvue"></a>
+
+### `LayoutOptionToolbar.vue`
+
+**Location**: `src/components/LayoutOptionToolbar.vue`
+
+**Visibility gate**: The toolbar element renders only when `groups.length > 0`. It is not gated on `isViaAnnotated`; a VIA-annotated layout with no `option,choice` keys correctly shows nothing.
+
+**UI structure**:
+
+- One **"all" bubble button** — always visible when the toolbar is shown; active (filled) when `displayLayoutChoices === null`. Clicking it calls `setDisplayLayoutChoices(null)` to exit preview.
+- Per group: one circular bubble button per choice index (including 0), labelled as a diagonal fraction `choice ⁄ option` (e.g. `0⁄0`, `1⁄0`). The `:title` tooltip uses `resolveChoiceTitle`.
+- When in preview mode: an inline `preview-hint` span reads "Layout preview mode (readonly) — switch to **all** to edit".
+
+**`resolveChoiceTitle(group, choice)` priority**:
+
+1. `group.choiceLabels[choice]` if present
+2. Otherwise: `"${group.groupLabel ?? 'Option N'} · Choice M"`
+
+**Click behaviour**:
+
+- If not currently in preview (`displayLayoutChoices === null`): initialises all groups to choice 0, sets the clicked choice, then calls `setDisplayLayoutChoices`.
+- If already in preview: copies the current map, updates the clicked group's choice, calls `setDisplayLayoutChoices` with the updated map.
+
+VIA labels are accessed by decompressing `_kleng_via_data` from keyboard metadata using LZString directly in the component's `viaLabels` computed — no shared `extractViaMetadata` helper is called.
+
+---
+
+<a name="canvas-wiring"></a>
+
+### Canvas Wiring
+
+**`keysForRender` computed** (`src/components/KeyboardCanvas.vue`):
+
+```typescript
+const keysForRender = computed(() =>
+  keyboardStore.displayLayoutChoices
+    ? collapseToLayoutChoices(keyboardStore.keys, keyboardStore.displayLayoutChoices)
+    : keyboardStore.keys,
+)
+```
+
+This computed is passed as the first argument to `renderer.value.render(...)` in place of `keyboardStore.keys`.
+
+**Dedicated re-render watch**:
+
+```typescript
+watch(
+  () => keyboardStore.displayLayoutChoices,
+  () => {
+    renderScheduler.schedule(renderKeyboard)
+  },
+)
+```
+
+This watch triggers a re-render whenever the preview mode changes or the choice map is updated. It is separate from the `keys-modified` event listener so that entering/exiting preview always produces a fresh frame even when no key data changed.
+
+**Interaction guards**: Every mutating handler returns early when `isLayoutPreviewMode` is true:
+
+- `handleContainerClick`, `handleContainerMouseDown` — canvas focus management still runs (pan/zoom continue to work); key selection is blocked.
+- `handleCanvasClick`, `handleMouseDown`, `handleMouseUpShared`, `handleMouseMoveShared` (mutation branches) — drag, selection, and key-move are all suppressed.
+- `handleKeyDown` mutation paths — keyboard shortcuts that modify the layout (delete, duplicate, arrow-move, etc.) are suppressed.
+- `handleDrop` — file/section drops are ignored.
+
+**What remains enabled in preview mode**:
+
+- Pan and zoom (trackpad/scroll wheel, grab-drag).
+- Canvas text search (`/` shortcut). The search composable's `setKeys` watcher receives `keysForRender` so searches operate against the collapsed key set.
+- Link hover and click in key labels.
+- `MatrixAnnotationOverlay` remains visible; its draw gestures are gated separately.
+
+---
+
+<a name="read-only-gating"></a>
+
+### Read-Only Gating
+
+The following components check `isLayoutPreviewMode` and disable themselves accordingly:
+
+- **`KeyPropertiesPanel.vue`**: The `isDisabled` computed includes `|| keyboardStore.isLayoutPreviewMode`. All form fields and the wrapping `<fieldset>` are disabled, giving the standard browser dimming treatment.
+- **`KeyboardToolbar.vue`**: The Presets and Import buttons receive `:disabled="keyboardStore.isLayoutPreviewMode"` directly.
+- **`CanvasToolbar.vue`**: Extra tool buttons and add-key / add-special-key actions are gated with the same flag.
+- **`MatrixAnnotationOverlay.vue`**: Draw gestures (mousedown, mousemove handlers that modify annotation state) return early when preview is active; the overlay itself stays rendered.
+
+---
+
 ## Recent Improvements
 
 ### Canvas Text Search (Commit 8512b55)
@@ -2480,6 +2705,35 @@ Added comprehensive code review documentation analyzing the RenderScheduler bug 
 This documentation guided the implementation of the deduplication fix in commit 595127f.
 
 **Location**: `/dev/active/renderer-drag-lag-investigation/renderer-drag-lag-investigation-code-review.md`
+
+---
+
+### Alternative Layouts Preview (Commits 8ab28f2, 62e4d6d)
+
+Added a read-only layout preview mode for VIA-annotated keyboards that contain `option,choice` keys (`labels[8]`), along with end-to-end tests.
+
+**New files**:
+
+- `src/utils/layout-options.ts` — `getLayoutOptionGroups` and `collapseToLayoutChoices` pure utilities; TypeScript port of kbplacer's `MatrixAnnotatedKeyboard.collapse()`
+- `src/components/LayoutOptionToolbar.vue` — bubble-button toolbar that appears below the canvas when alt-layout groups are detected; mounted inside `KeyboardCanvas.vue`'s container with `@mousedown.stop @click.stop`
+
+**Modified files**:
+
+- `src/stores/keyboard.ts` — `displayLayoutChoices` ref, `isLayoutPreviewMode` computed, `setDisplayLayoutChoices` action, invalidation watcher
+- `src/components/KeyboardCanvas.vue` — `keysForRender` computed, dedicated `watch(displayLayoutChoices)` for re-render, `isLayoutPreviewMode` early-return guards in all mutating handlers
+- `src/components/KeyPropertiesPanel.vue` — `isDisabled` extended to include `isLayoutPreviewMode`
+- `src/components/KeyboardToolbar.vue`, `src/components/CanvasToolbar.vue` — Presets, Import, and add-key actions disabled in preview mode
+- `src/components/MatrixAnnotationOverlay.vue` — draw gestures gated; overlay remains visible
+
+**Key design decisions**:
+
+1. **Renderer signature unchanged** — key filtering for preview is done entirely in the `keysForRender` computed in `KeyboardCanvas.vue`. `CanvasRenderer.render()` receives a plain key array and has no awareness of preview mode.
+
+2. **Focus trap compatibility** — `LayoutOptionToolbar` mounts inside the canvas container and uses `@mousedown.stop @click.stop` to opt out of the container's focus-management handlers, mirroring the pattern used by `CanvasSearchBar`.
+
+3. **Multi-group `Map` approach** — `collapseToLayoutChoices` accepts `Map<number, number>` so all option groups are resolved in one call, and clicking any bubble in the toolbar updates only the affected group while preserving other groups' choices.
+
+4. **Invalidation watcher in the store** — when the key array changes while preview is active, invalid choices fall back to 0 and gone option groups are dropped. If nothing remains, the store exits preview automatically, preventing stale display state after edits.
 
 ---
 
