@@ -543,8 +543,9 @@ export const useKeyboardStore = defineStore('keyboard', () => {
 
   const updateSelectedKeys = (property: keyof Key, value: unknown) => {
     selectedKeys.value.forEach((key) => {
-      updateKeyProperty(key, property, value)
+      ;(key as unknown as Record<string, unknown>)[property] = value
     })
+    saveState()
   }
 
   /**
@@ -555,7 +556,14 @@ export const useKeyboardStore = defineStore('keyboard', () => {
    * @param keyboard - The keyboard layout to load
    * @throws {Error} If the layout cannot be loaded
    */
+  const MAX_KEYS = 1000
+
   const loadKeyboard = (keyboard: Keyboard) => {
+    if (keyboard.keys.length > MAX_KEYS) {
+      throw new Error(
+        `Layout contains ${keyboard.keys.length} keys, which exceeds the maximum of ${MAX_KEYS}.`,
+      )
+    }
     try {
       keys.value = JSON.parse(JSON.stringify(keyboard.keys))
       // Merge with defaults to ensure all standard properties exist
@@ -676,31 +684,27 @@ export const useKeyboardStore = defineStore('keyboard', () => {
 
   // Initialize with a sample layout for development/demo (not in tests)
   const initWithSample = async () => {
-    // Skip sample initialization if we're in test environment
+    // Always process URL-based layouts first — this must run even in test/webdriver
+    // environments because e2e tests use #share= and #url= hashes for specific scenarios.
+    if (loadFromShareUrl()) {
+      return
+    }
+    if (await loadFromUrlHash()) {
+      return
+    }
+    if (await loadFromGistUrl()) {
+      return
+    }
+
+    // Skip the default sample keyboard in test environments (unit tests and e2e via webdriver).
     if (
       import.meta.env.MODE === 'test' ||
       typeof (globalThis as Record<string, unknown>).describe !== 'undefined' ||
       (typeof navigator !== 'undefined' && navigator.webdriver)
     ) {
-      // Initialize empty state for tests
       saveState()
       updateBaseline()
       return
-    }
-
-    // Check if there's a shared layout in the URL
-    if (loadFromShareUrl()) {
-      return // Successfully loaded from share URL
-    }
-
-    // Check for #url= or #gist= formats (both are valid, #gist= is preferred for gists)
-    if (await loadFromUrlHash()) {
-      return // Successfully loaded from URL hash
-    }
-
-    // Direct #gist=ID format (shorter, preferred for gists)
-    if (await loadFromGistUrl()) {
-      return // Successfully loaded from gist URL
     }
 
     const sampleLayout = [
@@ -1058,6 +1062,9 @@ export const useKeyboardStore = defineStore('keyboard', () => {
       return false
     } catch (error) {
       console.error('Error loading layout from share URL:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load shared layout'
+      toast.showError(errorMessage, 'Load Failed')
+      clearShareFromUrl()
       return false
     }
   }

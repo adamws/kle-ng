@@ -172,16 +172,10 @@ describe('url-sharing', () => {
       expect(extracted).toBeNull()
     })
 
-    it('should return null and log error for invalid share data', () => {
+    it('should throw for invalid share data', () => {
       mockLocation.hash = '#share=invalid-data'
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-      const extracted = extractLayoutFromCurrentUrl()
-
-      expect(extracted).toBeNull()
-      expect(consoleSpy).toHaveBeenCalled()
-
-      consoleSpy.mockRestore()
+      expect(() => extractLayoutFromCurrentUrl()).toThrow()
     })
   })
 

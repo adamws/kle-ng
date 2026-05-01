@@ -77,12 +77,9 @@ export function getLayoutOptionGroups(keys: Key[], viaLabels?: unknown): LayoutO
  * @returns New key array with only the relevant keys, positions adjusted
  */
 export function collapseToLayoutChoices(keys: Key[], choices: Map<number, number>): Key[] {
-  // Deep-clone — matches codebase idiom (saveState, undo, redo, clipboard all use this)
-  const cloned: Key[] = JSON.parse(JSON.stringify(keys))
-
-  // Build option→choice→keys map
+  // Build option→choice→keys map against originals (no upfront clone needed)
   const optionGroups = new Map<number, Map<number, Key[]>>()
-  for (const key of cloned) {
+  for (const key of keys) {
     const oc = parseOptionChoice(key)
     if (!oc) continue
     if (!optionGroups.has(oc.option)) optionGroups.set(oc.option, new Map())
@@ -91,19 +88,20 @@ export function collapseToLayoutChoices(keys: Key[], choices: Map<number, number
     choiceMap.get(oc.choice)!.push(key)
   }
 
-  // Always include keys with no option,choice
+  // Always include keys with no option,choice.
+  // Shallow-clone each key so callers can't mutate the store's objects through the result.
   const activeKeys: Key[] = []
-  for (const key of cloned) {
+  for (const key of keys) {
     if (!key.ghost && !key.decal && parseOptionChoice(key) === null) {
-      activeKeys.push(key)
+      activeKeys.push({ ...key })
     }
   }
 
-  // For each option group pick the right choice and translate non-zero choices
+  // For each option group pick the right choice and translate non-zero choices.
+  // Shallow-copy is sufficient: this function only modifies x/y (scalar properties).
   for (const [option, choiceMap] of optionGroups) {
     const targetChoice = choices.get(option) ?? 0
     const choiceKeys = choiceMap.get(targetChoice) ?? choiceMap.get(0) ?? []
-    activeKeys.push(...choiceKeys)
 
     if (targetChoice !== 0) {
       const choice0Keys = choiceMap.get(0) ?? []
@@ -112,11 +110,12 @@ export function collapseToLayoutChoices(keys: Key[], choices: Map<number, number
       if (anchor && groupAnchor) {
         const dx = anchor.x - groupAnchor.x
         const dy = anchor.y - groupAnchor.y
-        for (const key of choiceKeys) {
-          key.x += dx
-          key.y += dy
-        }
+        activeKeys.push(...choiceKeys.map((key) => ({ ...key, x: key.x + dx, y: key.y + dy })))
+      } else {
+        activeKeys.push(...choiceKeys.map((key) => ({ ...key })))
       }
+    } else {
+      activeKeys.push(...choiceKeys.map((key) => ({ ...key })))
     }
   }
 

@@ -28,11 +28,17 @@ export function encodeLayoutToUrl(keyboard: Keyboard): string {
 /**
  * Decode a compressed URL string back to layout data
  */
+const MAX_DECOMPRESSED_SIZE = 1_000_000 // 1 MB — generous for any realistic layout
+
 export function decodeLayoutFromUrl(encodedData: string): Keyboard {
   try {
     const decompressed = LZString.decompressFromEncodedURIComponent(encodedData)
     if (!decompressed) {
       throw new Error('Failed to decompress data')
+    }
+
+    if (decompressed.length > MAX_DECOMPRESSED_SIZE) {
+      throw new Error('Layout data exceeds maximum allowed size.')
     }
 
     const kleData = JSON.parse(decompressed)
@@ -65,18 +71,13 @@ export function generateShareableUrl(keyboard: Keyboard, baseUrl?: string): stri
  * Extract layout data from current URL if present
  */
 export function extractLayoutFromCurrentUrl(): Keyboard | null {
-  try {
-    const hash = window.location.hash
-    if (!hash.startsWith('#share=')) {
-      return null
-    }
-
-    const encodedData = hash.substring(7) // Remove '#share='
-    return decodeLayoutFromUrl(encodedData)
-  } catch (error) {
-    console.error('Error extracting layout from URL:', error)
+  const hash = window.location.hash
+  if (!hash.startsWith('#share=')) {
     return null
   }
+  // Hash is present — let decode errors propagate so callers can surface them to the user
+  const encodedData = hash.substring(7) // Remove '#share='
+  return decodeLayoutFromUrl(encodedData)
 }
 
 /**
