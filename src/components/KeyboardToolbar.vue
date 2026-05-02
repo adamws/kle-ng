@@ -52,6 +52,9 @@
             <li>
               <a class="dropdown-item" href="#" @click.prevent="openUrlImportModal"> From URL </a>
             </li>
+            <li>
+              <a class="dropdown-item" href="#" @click.prevent="openQmkImportModal"> From QMK </a>
+            </li>
           </ul>
         </div>
 
@@ -228,6 +231,78 @@
         </div>
       </div>
     </div>
+
+    <!-- QMK Import Modal -->
+    <div
+      v-if="showQmkImportModal"
+      class="modal fade show d-block"
+      tabindex="-1"
+      @click.self="closeQmkImportModal"
+    >
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Import from QMK</h5>
+            <button
+              type="button"
+              class="btn-close"
+              @click="closeQmkImportModal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <input
+              id="qmkSearchInput"
+              v-model="qmkSearchQuery"
+              type="text"
+              class="form-control mb-3"
+              placeholder="Search keyboards (e.g. dactyl 4x5)…"
+              autocomplete="off"
+            />
+            <div v-if="qmkListLoading" class="text-center text-muted py-3">
+              <span class="spinner-border spinner-border-sm me-2"></span>Loading keyboard list…
+            </div>
+            <div v-else-if="qmkListError" class="alert alert-danger">{{ qmkListError }}</div>
+            <div v-else class="qmk-keyboard-list">
+              <button
+                v-for="kb in filteredQmkKeyboards"
+                :key="kb"
+                type="button"
+                class="qmk-keyboard-item"
+                :class="{ selected: qmkSelectedKeyboard === kb }"
+                @click="qmkSelectedKeyboard = kb"
+                @dblclick="importFromQmkBrowser"
+              >
+                {{ kb }}
+              </button>
+              <p v-if="!filteredQmkKeyboards.length" class="text-muted fst-italic text-center py-3">
+                No keyboards match your search
+              </p>
+            </div>
+            <div class="form-text mt-2">
+              {{
+                qmkSearchQuery.trim()
+                  ? `${filteredQmkKeyboards.length} result(s)`
+                  : `${qmkKeyboardList.length} keyboards available`
+              }}
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" @click="closeQmkImportModal">
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              @click="importFromQmkBrowser"
+              :disabled="!qmkSelectedKeyboard"
+            >
+              Import
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -269,6 +344,24 @@ const fileInput = ref<HTMLInputElement>()
 // URL Import modal state
 const showUrlImportModal = ref(false)
 const urlImportInput = ref('')
+
+// QMK Import modal state
+const showQmkImportModal = ref(false)
+const qmkKeyboardList = ref<string[]>([])
+const qmkSearchQuery = ref('')
+const qmkSelectedKeyboard = ref<string | null>(null)
+const qmkListLoading = ref(false)
+const qmkListError = ref<string | null>(null)
+
+const filteredQmkKeyboards = computed(() => {
+  const words = qmkSearchQuery.value.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  const source = qmkKeyboardList.value
+  if (!words.length) return source
+  return source.filter((k) => {
+    const t = k.toLowerCase()
+    return words.every((w) => t.includes(w))
+  })
+})
 
 // Load presets on mount
 onMounted(() => {
@@ -732,17 +825,29 @@ const createCanvasWithRoundedBackground = (
 }
 
 // URL Import functions
+const fetchQmkKeyboardList = async () => {
+  if (qmkKeyboardList.value.length > 0) return
+  qmkListLoading.value = true
+  qmkListError.value = null
+  try {
+    const resp = await fetch('https://keyboards.qmk.fm/v1/keyboard_list.json')
+    if (!resp.ok) throw new Error(`Failed to fetch keyboard list: ${resp.status}`)
+    const data = await resp.json()
+    qmkKeyboardList.value = data.keyboards ?? []
+  } catch (e) {
+    qmkListError.value = e instanceof Error ? e.message : 'Failed to fetch keyboard list'
+  } finally {
+    qmkListLoading.value = false
+  }
+}
+
 const openUrlImportModal = () => {
   showUrlImportModal.value = true
   urlImportInput.value = ''
   document.body.classList.add('modal-open')
-
-  // Focus the input field after modal opens
   nextTick(() => {
     const urlInput = document.getElementById('urlInput') as HTMLInputElement
-    if (urlInput) {
-      urlInput.focus()
-    }
+    if (urlInput) urlInput.focus()
   })
 }
 
@@ -752,24 +857,68 @@ const closeUrlImportModal = () => {
   document.body.classList.remove('modal-open')
 }
 
-// Close modal on Escape key
+const openQmkImportModal = () => {
+  showQmkImportModal.value = true
+  qmkSearchQuery.value = ''
+  qmkSelectedKeyboard.value = null
+  document.body.classList.add('modal-open')
+  fetchQmkKeyboardList()
+  nextTick(() => {
+    const searchInput = document.getElementById('qmkSearchInput') as HTMLInputElement
+    if (searchInput) searchInput.focus()
+  })
+}
+
+const closeQmkImportModal = () => {
+  showQmkImportModal.value = false
+  qmkSearchQuery.value = ''
+  qmkSelectedKeyboard.value = null
+  document.body.classList.remove('modal-open')
+}
+
+// Close whichever modal is open on Escape
 const handleKeyDown = (event: KeyboardEvent) => {
-  if (event.key === 'Escape' && showUrlImportModal.value) {
-    closeUrlImportModal()
+  if (event.key === 'Escape') {
+    if (showUrlImportModal.value) closeUrlImportModal()
+    if (showQmkImportModal.value) closeQmkImportModal()
   }
 }
 
-// Add/remove escape key listener when modal visibility changes
-watch(
-  () => showUrlImportModal.value,
-  (visible) => {
-    if (visible) {
-      document.addEventListener('keydown', handleKeyDown)
-    } else {
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  },
-)
+watch([() => showUrlImportModal.value, () => showQmkImportModal.value], ([url, qmk]) => {
+  if (url || qmk) {
+    document.addEventListener('keydown', handleKeyDown)
+  } else {
+    document.removeEventListener('keydown', handleKeyDown)
+  }
+})
+
+// Clear selection when user changes the search query
+watch(qmkSearchQuery, () => {
+  qmkSelectedKeyboard.value = null
+})
+
+const importFromQmkBrowser = async () => {
+  if (!qmkSelectedKeyboard.value) return
+  const name = qmkSelectedKeyboard.value
+  const url = `https://keyboards.qmk.fm/v1/keyboards/${name}/info.json`
+  try {
+    const resp = await fetch(url)
+    if (!resp.ok) throw new Error(`Failed to fetch: ${resp.status} ${resp.statusText}`)
+    const data = await resp.json()
+    const keyboardData = data.keyboards?.[name]
+    if (!keyboardData) throw new Error(`Keyboard data not found for "${name}"`)
+    const keyboard = convertQmkToKle(keyboardData)
+    keyboardStore.loadKeyboard(keyboard)
+    keyboardStore.filename = name.replace(/\//g, '-')
+    keyboardStore.updateBaseline()
+    toast.showSuccess(`QMK keyboard "${name}" imported`, 'Import Successful')
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to import QMK keyboard'
+    toast.showError(errorMessage, 'Import Failed')
+  } finally {
+    closeQmkImportModal()
+  }
+}
 
 /**
  * Convert GitHub blob URLs to raw URLs for direct file access
@@ -1187,5 +1336,41 @@ const shareLayout = async () => {
 /* Modal Styles */
 .modal {
   background: rgba(0, 0, 0, 0.5);
+}
+
+/* QMK keyboard list */
+.qmk-keyboard-list {
+  max-height: 360px;
+  overflow-y: auto;
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius);
+}
+
+.qmk-keyboard-item {
+  display: block;
+  width: 100%;
+  padding: 0.4rem 0.75rem;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--bs-border-color);
+  font-family: var(--bs-font-monospace);
+  font-size: 0.875rem;
+  color: var(--bs-body-color);
+  cursor: pointer;
+  transition: background-color 0.1s;
+}
+
+.qmk-keyboard-item:last-child {
+  border-bottom: none;
+}
+
+.qmk-keyboard-item:hover {
+  background-color: var(--bs-tertiary-bg);
+}
+
+.qmk-keyboard-item.selected {
+  background-color: var(--bs-primary);
+  color: #fff;
 }
 </style>
