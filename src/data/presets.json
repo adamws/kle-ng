@@ -6,10 +6,9 @@
     { "name": "Default 60%", "file": "default-60.json" },
     { "name": "Multilayout 60% (VIA)", "file": "multilayout-60-via.json" },
     { "name": "ISO 60%", "file": "iso-60.json" },
-    { "name": "JD40 (QMK)", "file": "jd40.json" },
     { "name": "ErgoDox", "file": "ergodox.json" },
     { "name": "Absolem (ergogen)", "file": "absolem.json" },
-    { "name": "Planck", "file": "planck.json" },
+    { "name": "Ortho 4x12 (QMK)", "file": "ortho-4-12-qmk.json" },
     { "name": "Keychron Q1", "file": "keychron-q1.json" },
     { "name": "Symbolics Space Cadet", "file": "symbolics-spacecadet.json" }
   ]

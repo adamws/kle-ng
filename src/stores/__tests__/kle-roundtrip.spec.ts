@@ -5,7 +5,7 @@ import { readFileSync } from 'fs'
 import { resolve } from 'path'
 
 const TEST_CASES = [
-  ['planck.json', 'planck-internal.json'],
+  ['ortho-4-12-qmk.json', 'ortho-4-12-qmk-internal.json'],
   ['ansi-104-big-ass-enter.json', 'ansi-104-big-ass-enter-internal.json'],
   ['ansi-104.json', 'ansi-104-internal.json'],
   ['atreus.json', 'atreus-internal.json'],
@@ -89,7 +89,7 @@ describe('KLE Round-trip Compatibility Tests', () => {
 
   describe('Array Shrinking Validation', () => {
     it('should shrink arrays with only default values to empty arrays', () => {
-      const testFile = resolve(__dirname, '../../../public/data/presets/planck.json')
+      const testFile = resolve(__dirname, '../../../public/data/presets/ortho-4-12-qmk.json')
       const layout = JSON.parse(readFileSync(testFile, 'utf-8'))
 
       store.loadKLELayout(layout)

@@ -262,7 +262,7 @@ test.describe('Summary Tab Tests', () => {
 
   test('should sort by index (default sort)', async ({ page }) => {
     // Load a preset
-    await preset.selectPreset('JD40 (QMK)')
+    await preset.selectPreset('Ortho 4x12 (QMK)')
 
     // Wait for keys to load
     await editor.canvas.waitForRender()
