@@ -11,8 +11,6 @@
     { "name": "Absolem (ergogen)", "file": "absolem.json" },
     { "name": "Planck", "file": "planck.json" },
     { "name": "Keychron Q1", "file": "keychron-q1.json" },
-    { "name": "Keycool 84", "file": "keycool-84.json" },
-    { "name": "Leopold FC660m", "file": "leopold-fc660m.json" },
     { "name": "Symbolics Space Cadet", "file": "symbolics-spacecadet.json" }
   ]
 }
