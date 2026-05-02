@@ -178,9 +178,37 @@ export function getKeyChoice(key: Key): number | null {
 }
 
 /**
+ * Returns true when all keys in the group have non-empty, pairwise-disjoint
+ * labels[9] QMK membership sets (semicolon-separated layout indices).
+ * Disjoint means no layout index appears in more than one key — a given QMK
+ * layout can only contain one physical configuration per matrix position.
+ */
+function allHaveDisjointQmkMembership(keys: Key[]): boolean {
+  const memberships = keys.map((k) => {
+    const v = k.labels[9]
+    if (!v || v.trim() === '') return null
+    const parts = v.split(';').map((s) => parseInt(s.trim(), 10))
+    if (parts.some(isNaN)) return null
+    return new Set(parts)
+  })
+  if (memberships.some((m) => m === null)) return false
+  for (let i = 0; i < memberships.length; i++) {
+    for (let j = i + 1; j < memberships.length; j++) {
+      for (const idx of memberships[i]!) {
+        if (memberships[j]!.has(idx)) return false
+      }
+    }
+  }
+  return true
+}
+
+/**
  * Validate that all duplicate matrix positions have proper option,choice labels
  * Per VIA spec, keys sharing a matrix position must have option,choice labels
  * to distinguish which layout variant they belong to.
+ *
+ * QMK-imported keyboards use labels[9] (semicolon-separated layout indices)
+ * instead — those are also accepted as valid discriminators.
  *
  * @param keys - Array of keys to validate
  * @returns Validation result with invalid duplicates and valid layout options
@@ -214,11 +242,9 @@ export function validateMatrixDuplicates(keys: Key[]): DuplicateValidationResult
     // Check if ALL keys at this position have valid option,choice
     const allHaveOption = keysAtPosition.every((key) => hasOptionChoice(key))
 
-    if (allHaveOption) {
-      // Valid layout options - all keys have option,choice
+    if (allHaveOption || allHaveDisjointQmkMembership(keysAtPosition)) {
       validLayoutOptions.push({ position, keys: keysAtPosition })
     } else {
-      // Invalid - at least one key is missing option,choice
       duplicatesWithoutOption.push({ position, keys: keysAtPosition })
     }
   })

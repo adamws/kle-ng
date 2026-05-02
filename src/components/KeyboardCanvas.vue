@@ -115,6 +115,7 @@
 
       <!-- Layout option toolbar — sits in flow directly below the canvas element -->
       <LayoutOptionToolbar @mousedown.stop @click.stop />
+      <QmkLayoutToolbar @mousedown.stop @click.stop />
     </div>
 
     <!-- Link URL preview (shown at bottom when hovering over links) -->
@@ -159,6 +160,7 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useKeyboardStore, type Key, type KeyboardMetadata } from '@/stores/keyboard'
 import { collapseToLayoutChoices } from '@/utils/layout-options'
+import { collapseToQmkLayout } from '@/utils/qmk-layout-options'
 import { useMatrixDrawingStore } from '@/stores/matrix-drawing'
 import { useFontStore } from '@/stores/font'
 import { useLayoutEditorSettingsStore } from '@/stores/layoutEditorSettings'
@@ -179,6 +181,7 @@ import DebugControlButton from '@/components/DebugControlButton.vue'
 import KeySelectionPopup from '@/components/KeySelectionPopup.vue'
 import CanvasSearchBar from '@/components/CanvasSearchBar.vue'
 import LayoutOptionToolbar from '@/components/LayoutOptionToolbar.vue'
+import QmkLayoutToolbar from '@/components/QmkLayoutToolbar.vue'
 import BiSearch from 'bootstrap-icons/icons/search.svg'
 import BiGear from 'bootstrap-icons/icons/gear.svg'
 import { useKeySearch } from '@/composables/useKeySearch'
@@ -258,11 +261,15 @@ const hoveredLinkHref = ref<string | null>(null)
 
 const zoom = ref(1)
 
-const keysForRender = computed(() =>
-  keyboardStore.displayLayoutChoices
-    ? collapseToLayoutChoices(keyboardStore.keys, keyboardStore.displayLayoutChoices)
-    : keyboardStore.keys,
-)
+const keysForRender = computed(() => {
+  if (keyboardStore.displayLayoutChoices) {
+    return collapseToLayoutChoices(keyboardStore.keys, keyboardStore.displayLayoutChoices)
+  }
+  if (keyboardStore.displayQmkLayout !== null) {
+    return collapseToQmkLayout(keyboardStore.keys, keyboardStore.displayQmkLayout)
+  }
+  return keyboardStore.keys
+})
 
 const rectSelectionOccurred = ref(false)
 const keyDragOccurred = ref(false)
@@ -546,6 +553,13 @@ watch(
 // Re-render when entering or exiting layout preview mode (keysForRender changes)
 watch(
   () => keyboardStore.displayLayoutChoices,
+  () => {
+    renderScheduler.schedule(renderKeyboard)
+  },
+)
+
+watch(
+  () => keyboardStore.displayQmkLayout,
   () => {
     renderScheduler.schedule(renderKeyboard)
   },

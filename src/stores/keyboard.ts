@@ -1384,11 +1384,27 @@ export const useKeyboardStore = defineStore('keyboard', () => {
   // Layout preview mode — non-null means we're previewing a per-option choice combination
   const displayLayoutChoices = ref<Map<number, number> | null>(null)
 
-  const isLayoutPreviewMode = computed(() => displayLayoutChoices.value !== null)
+  // QMK layout preview — non-null means we're previewing a specific named QMK layout
+  const displayQmkLayout = ref<number | null>(null)
+
+  const isLayoutPreviewMode = computed(
+    () => displayLayoutChoices.value !== null || displayQmkLayout.value !== null,
+  )
 
   const setDisplayLayoutChoices = (choices: Map<number, number> | null) => {
     displayLayoutChoices.value = choices
+    displayQmkLayout.value = null
     if (choices !== null) {
+      selectedKeys.value = []
+      tempSelectedKeys.value = []
+      canvasMode.value = 'select'
+    }
+  }
+
+  const setDisplayQmkLayout = (layoutIndex: number | null) => {
+    displayQmkLayout.value = layoutIndex
+    displayLayoutChoices.value = null
+    if (layoutIndex !== null) {
       selectedKeys.value = []
       tempSelectedKeys.value = []
       canvasMode.value = 'select'
@@ -1423,6 +1439,20 @@ export const useKeyboardStore = defineStore('keyboard', () => {
         }
       }
       if (changed) displayLayoutChoices.value = newChoices
+    },
+    { deep: true },
+  )
+
+  // Exit QMK layout preview when keys no longer carry membership tags
+  watch(
+    keys,
+    () => {
+      if (displayQmkLayout.value === null) return
+      const hasQmk = keys.value.some((k) => {
+        const v = k.labels[9]
+        return typeof v === 'string' && v !== '' && /^\d+(;\d+)*$/.test(v)
+      })
+      if (!hasQmk) displayQmkLayout.value = null
     },
     { deep: true },
   )
@@ -1655,5 +1685,9 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     displayLayoutChoices,
     isLayoutPreviewMode,
     setDisplayLayoutChoices,
+
+    // QMK layout preview mode
+    displayQmkLayout,
+    setDisplayQmkLayout,
   }
 })

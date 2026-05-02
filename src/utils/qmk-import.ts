@@ -120,12 +120,14 @@ export function extractQmkMetadata(qmkData: unknown): Partial<KeyboardMetadata> 
 }
 
 /**
- * Create a key identity string for deduplication
- * Keys are considered identical if they have the same position and properties
- * (except for layout option label)
+ * Create a key identity string for deduplication.
+ * Two keys are considered the same physical key if they share matrix position
+ * and all geometric properties. Labels[8] and labels[9] are excluded because
+ * they carry metadata, not physical identity.
  */
-function getKeyIdentity(key: Key, excludeLayoutOption = true): string {
-  const props = {
+function getKeyIdentity(key: Key): string {
+  return JSON.stringify({
+    matrix: key.labels[0],
     x: key.x,
     y: key.y,
     width: key.width,
@@ -133,25 +135,24 @@ function getKeyIdentity(key: Key, excludeLayoutOption = true): string {
     rotation_angle: key.rotation_angle,
     rotation_x: key.rotation_x,
     rotation_y: key.rotation_y,
-    matrix: key.labels[0], // Matrix position
-    // Exclude labels[8] (layout option) from identity comparison if requested
-    layoutOption: excludeLayoutOption ? undefined : key.labels[8],
-  }
-  return JSON.stringify(props)
+  })
 }
 
 /**
- * Convert QMK info.json format to KLE Keyboard object
+ * Convert QMK info.json format to KLE Keyboard object.
  *
  * Process:
  * 1. Iterate through all layouts in qmkData.layouts
- * 2. For each key in each layout:
- *    - Create Key object with x, y, width, height, rotation properties
- *    - Store matrix coordinates in labels[0] as "row,col" string
- *    - Store layout option index in labels[8] as "0,layoutIndex"
- * 3. Deduplicate keys across layouts (same position, same properties except label[8])
+ * 2. For each unique (matrix, physical) key combination, track which layout
+ *    indices include it using a membership map
+ * 3. Assign labels[9] as semicolon-separated layout indices for layout-specific
+ *    keys; shared keys (in every layout) get labels[9] = ''
  * 4. Sort keys by matrix position
  * 5. Return Keyboard object with metadata populated from QMK fields
+ *
+ * labels[9] uses the format "0", "1;2", "0;1;2", or "" (shared).
+ * This does NOT use labels[8], so the VIA alternative-layouts toolbar is
+ * never activated for QMK-imported keyboards.
  */
 export function convertQmkToKle(qmkData: unknown): Keyboard {
   if (!isQmkFormat(qmkData)) {
@@ -166,13 +167,10 @@ export function convertQmkToKle(qmkData: unknown): Keyboard {
   if (meta.name) keyboard.meta.name = meta.name
   if (meta.author) keyboard.meta.author = meta.author
 
-  // Collect all keys from all layouts
-  const allKeys: Key[] = []
+  // Collect all layouts, building a membership map:
+  //   key identity → { key object, set of layout indices that include it }
   const layoutNames = Object.keys(data.layouts)
-
-  // Track keys by matrix position for deduplication
-  // Key: "row,col", Value: array of keys at that position
-  const keysByMatrix: Map<string, Key[]> = new Map()
+  const membershipMap = new Map<string, { key: Key; indices: Set<number> }>()
 
   layoutNames.forEach((layoutName, layoutIndex) => {
     const layout = data.layouts[layoutName]
@@ -181,7 +179,6 @@ export function convertQmkToKle(qmkData: unknown): Keyboard {
     }
 
     layout.layout.forEach((item) => {
-      // Validate required fields
       if (
         !Array.isArray(item.matrix) ||
         item.matrix.length !== 2 ||
@@ -195,25 +192,20 @@ export function convertQmkToKle(qmkData: unknown): Keyboard {
       const [row, col] = item.matrix
       const matrixPos = `${row},${col}`
 
-      // Create KLE key
       const key = new Key()
       key.x = item.x
       key.y = item.y
 
-      // Set dimensions - QMK only supports rectangular keys
-      // Set secondary dimensions equal to primary to ensure rectangular keys
-      // and avoid unnecessary w2/h2 in serialized output
       if (item.w !== undefined && item.w !== 1) {
         key.width = item.w
       }
       if (item.h !== undefined && item.h !== 1) {
         key.height = item.h
       }
-      // Ensure keys are rectangular (QMK doesn't support stepped/ISO-style keys)
+      // QMK doesn't support stepped/ISO-style keys
       key.width2 = key.width
       key.height2 = key.height
 
-      // Set optional rotation
       if (item.r !== undefined && item.r !== 0) {
         key.rotation_angle = item.r
       }
@@ -224,65 +216,31 @@ export function convertQmkToKle(qmkData: unknown): Keyboard {
         key.rotation_y = item.ry
       }
 
-      // Initialize labels array
       key.labels = createEmptyLabels()
-
-      // Store matrix coordinates in label position 0
       key.labels[0] = matrixPos
 
-      // Store layout option in label position 8
-      // Format: "option,choice" where option is always 0 for QMK imports
-      // and choice is the layout index
-      if (layoutNames.length > 1) {
-        key.labels[8] = `0,${layoutIndex}`
+      const identity = getKeyIdentity(key)
+      const existing = membershipMap.get(identity)
+      if (existing) {
+        existing.indices.add(layoutIndex)
+      } else {
+        membershipMap.set(identity, { key, indices: new Set([layoutIndex]) })
       }
-
-      // Add to collection by matrix position
-      if (!keysByMatrix.has(matrixPos)) {
-        keysByMatrix.set(matrixPos, [])
-      }
-      keysByMatrix.get(matrixPos)!.push(key)
     })
   })
 
-  // Deduplicate keys
-  // Keys at the same matrix position that are identical (except layout option) should be merged
-  keysByMatrix.forEach((keysAtPosition) => {
-    if (keysAtPosition.length === 1) {
-      // Single key at this position - clear layout option label since no variants
-      const key = keysAtPosition[0]
-      if (key) {
-        key.labels[8] = ''
-        allKeys.push(key)
-      }
-    } else {
-      // Multiple keys at this position - deduplicate
-      const uniqueKeys: Map<string, Key> = new Map()
-
-      keysAtPosition.forEach((key) => {
-        const identity = getKeyIdentity(key, true) // Exclude layout option from identity
-
-        if (!uniqueKeys.has(identity)) {
-          // First occurrence of this key configuration
-          uniqueKeys.set(identity, key)
-        }
-        // If we already have this key configuration, skip (deduplicate)
-      })
-
-      // If after deduplication we have only one unique key, clear the layout option
-      if (uniqueKeys.size === 1) {
-        const key = uniqueKeys.values().next().value
-        if (key) {
-          key.labels[8] = ''
-          allKeys.push(key)
-        }
-      } else {
-        // Multiple unique configurations - keep all with their layout options
-        uniqueKeys.forEach((key) => {
-          allKeys.push(key)
-        })
-      }
+  // Assign labels[9] = semicolon-separated layout indices for layout-specific keys.
+  // Shared keys (present in every layout) get labels[9] = '' (no tag needed).
+  // Single-layout QMK files also leave labels[9] empty (no membership ambiguity).
+  const totalLayouts = layoutNames.length
+  const allKeys: Key[] = []
+  membershipMap.forEach(({ key, indices }) => {
+    if (totalLayouts > 1 && indices.size < totalLayouts) {
+      key.labels[9] = Array.from(indices)
+        .sort((a, b) => a - b)
+        .join(';')
     }
+    allKeys.push(key)
   })
 
   // Sort keys by matrix position (row first, then column)

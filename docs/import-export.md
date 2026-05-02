@@ -74,6 +74,8 @@ See [VIA & Vial Format](./via-and-metadata) for detailed information.
 
 [QMK](https://qmk.fm/) `info.json` files can be imported directly. kle-ng converts key positions, dimensions, and matrix coordinates into KLE format.
 
+#### Single-Layout Import
+
 Imported keys receive:
 
 - Positions from `x`, `y` values
@@ -114,6 +116,64 @@ Imported keys receive:
 </td>
 </tr></tbody>
 </table>
+
+#### Why QMK and VIA represent layout alternatives differently
+
+VIA and QMK use fundamentally different models for keyboards that support multiple physical configurations — and automatic conversion between them is not possible.
+
+**VIA** defines layout alternatives as _options_ and _choices_. Each option is an independent physical variable (e.g., "Backspace style"), and each choice is one variant of that variable (choice 0 = regular 2u, choice 1 = split 1u+1u). Options are independent: the user picks one choice per option, and VIA handles all combinations implicitly.
+
+**QMK** defines complete, named layout configurations. Each layout — `LAYOUT_ansi`, `LAYOUT_iso`, etc. — is a standalone list of physical key positions. The firmware author decides which specific combinations to ship; there is no structural information linking layouts back to option/choice groups.
+
+**Example.** A keyboard supports two independent options: backspace style (regular or split) and enter style (ANSI or ISO). That gives up to four combinations. Its QMK `info.json` might define only three:
+
+```json
+"layouts": {
+  "LAYOUT_ansi":       { "layout": [ ...2u backspace + ANSI enter... ] },
+  "LAYOUT_iso":        { "layout": [ ...2u backspace + ISO enter...  ] },
+  "LAYOUT_split_ansi": { "layout": [ ...split backspace + ANSI enter... ] }
+}
+```
+
+Reading those three layouts there is no structural information that says "the backspace difference is one independent option and the enter difference is another." The VIA option/choice tree cannot be recovered from a QMK file — and conversely, a QMK file may define only a subset of all possible combinations, so the VIA tree cannot be automatically flattened to QMK either.
+
+#### The `labels[9]` membership tag (kle-ng internal)
+
+Because automatic conversion between QMK layouts and VIA option/choice is impossible, kle-ng uses a dedicated mechanism for QMK round-trips: a **layout membership tag** stored in `labels[9]` (the bottom-left legend position).
+
+When kle-ng imports a QMK file with multiple layouts it tags each key with the set of QMK layout indices that contain it, using a semicolon-separated list:
+
+| `labels[9]` value | Meaning                          |
+| ----------------- | -------------------------------- |
+| `""` or absent    | Shared — appears in every layout |
+| `"0"`             | Belongs to QMK layout 0 only     |
+| `"1;2"`           | Belongs to QMK layouts 1 and 2   |
+
+This tag has no equivalent in either QMK or VIA — it is a kle-ng invention used solely to make QMK import → edit → export round-trips accurate. It is deliberately different from the VIA `option,choice` scheme (which uses a comma-separated `N,M` pair and is read from `labels[8]` by default), so QMK-imported keyboards are never treated as VIA keyboards.
+
+#### Multi-Layout Import
+
+When a QMK file declares multiple layouts, kle-ng imports **all physically distinct key configurations from all layouts into a single flat view**. This preserves the complete superset of physical switch positions:
+
+- **Shared keys** — Keys that are physically identical across every layout (same matrix position, x, y, width, height, rotation) are imported once with no tag. These keys will appear in every layout when exported.
+- **Layout-specific keys** — Keys that appear in only some layouts, or keys at the same matrix position with different dimensions in different layouts, receive a small label indicator showing which layout indices they belong to. This tag appears in the `labels[9]` position (the bottom-left area of the key label).
+  - Format: `"0"` for layout 0, `"1;2"` for layouts 1 and 2, `"0;1;2"` for all three, etc.
+  - Users see this as a small number or fraction on the key cap (e.g., a key tagged `"1;2"` shows as appearing in layouts 1 and 2 only).
+
+::: tip
+When a QMK file has multiple layouts, kle-ng imports all physical switch positions into a single flat view — equivalent to a `LAYOUT_all` superset. A QMK layout preview toolbar appears below the canvas, letting you preview individual layouts. Layout-specific keys are tagged with their layout indices so the export can reconstruct the original named layouts accurately.
+:::
+
+#### QMK Layout Preview Toolbar
+
+When a multi-layout QMK file is loaded, a **QMK Layout Preview toolbar** appears below the canvas:
+
+- An **"all" button** — shows all imported keys in the flat editable view
+- **Numbered buttons** — one per QMK layout (0, 1, 2 …). Hover over a button to see the full layout name (e.g., `LAYOUT_iso`)
+
+Click a numbered button to enter **preview mode** for that layout. In preview mode only keys belonging to that layout are shown, the canvas is read-only, and a hint reads _"QMK layout preview (readonly) — switch to all to edit"_. Click **"all"** to return to the normal editable view.
+
+The toolbar is hidden for single-layout keyboards and for keyboards without QMK membership tags.
 
 After importing a QMK layout, you can use the [PCB Generator](./pcb-generator) immediately since matrix coordinates are already assigned.
 
@@ -257,25 +317,36 @@ When you export to QMK format:
 3. Original QMK metadata (processor, USB config, url, etc.) is preserved from the imported `_kleng_qmk_data` if available
 4. Key positions are rounded to 6 decimal places to remove floating-point noise
 
-### Alternative Layouts
+### Multi-Layout Export
 
-If your layout has **alternative layouts**, they are detected by scanning for option/choice labels (format `option,choice`):
+**QMK-imported keyboards** automatically use the layout membership mechanism:
 
-- **Shared keys** — Keys without an option/choice label appear in all layouts
-- **Layout-specific keys** — Keys with label `0,0` go in the first layout; label `0,1` in the second layout, etc.
-- **Layout names** — Names are preserved from the original QMK `info.json` if available; otherwise auto-generated as `LAYOUT`, `LAYOUT_0`, `LAYOUT_1`, etc.
+When you import a QMK file with multiple layouts, keys are tagged with layout membership in the `labels[9]` position (bottom-left legend area). On export, kle-ng uses these tags to reconstruct the original named layouts:
 
-The option number is ignored, so keys marked `1,0` and `5,0` are both grouped into choice 0 and appear in the same layout.
+- **Shared keys** — Keys with empty `labels[9]` appear in every reconstructed layout
+- **Layout-specific keys** — Keys with `labels[9]` containing semicolon-separated layout indices (e.g., `"0"`, `"1;2"`, `"0;1;2"`) appear only in the layouts listed
+- **Layout names** — Preserved from the original QMK `info.json` import
+
+::: info
+The layout membership tags in `labels[9]` are set automatically during QMK import. You can manually edit or add these tags if you need to reorganize layouts after import. Simply edit the key's label (position 9) with the layout indices you want it to belong to, using semicolon-separated values (e.g., `"0;1"` for layouts 0 and 1).
+:::
+
+**VIA/Vial keyboards** use a different, independent mechanism:
+
+VIA and Vial layouts encode layout alternatives as `option,choice` labels (e.g., `0,0`, `0,1`) at one of the key label positions. kle-ng detects this scheme automatically and generates one QMK layout per distinct choice. The option number groups related choices; the choice number selects the variant. This is the native VIA format — it is not related to the QMK membership path above; both are fully supported.
 
 ### Example
 
-Suppose you imported a QMK file with two layouts (ISO and ANSI). After editing:
+Suppose you imported a QMK file with two layouts: `LAYOUT_iso` (index 0) and `LAYOUT_ansi` (index 1). In the flat view:
 
-- Keys at matrix [0,0] through [4,11] have no option label → appear in both layouts
-- Keys at matrix [3,12] through [4,14] have label `0,0` (ISO variant) → appear only in ISO layout
-- Keys at matrix [3,12] through [4,14] have label `0,1` (ANSI variant) → appear only in ANSI layout
+- Keys at matrix [0,0] through [4,11] have `labels[9] = ""` (empty) → shared, appear in both layouts
+- Keys at matrix [3,12] through [4,14] have `labels[9] = "0"` → ISO variant only
+- Keys at matrix [3,12] through [4,14] have `labels[9] = "1"` → ANSI variant only
 
-When exported, you get two separate layout definitions in the QMK `info.json`, each with all shared keys plus their specific variant keys.
+When exported, the QMK `info.json` contains two separate layout definitions:
+
+- `LAYOUT_iso`: all shared keys + keys tagged with layout 0
+- `LAYOUT_ansi`: all shared keys + keys tagged with layout 1
 
 ## Troubleshooting Import/Export Issues
 

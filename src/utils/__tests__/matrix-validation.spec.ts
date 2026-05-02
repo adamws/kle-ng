@@ -266,6 +266,37 @@ describe('Matrix Validation', () => {
       expect(result.duplicatesWithoutOption).toHaveLength(0)
       expect(result.validLayoutOptions).toHaveLength(0)
     })
+
+    it('should treat disjoint QMK membership labels[9] as valid', () => {
+      // Two keys at the same matrix position, each tagged to a different QMK layout
+      const keyA = new Key()
+      keyA.labels[0] = '0,0'
+      keyA.labels[9] = '0' // belongs to layout 0 only
+
+      const keyB = new Key()
+      keyB.labels[0] = '0,0'
+      keyB.labels[9] = '1;2' // belongs to layouts 1 and 2
+
+      const result = validateMatrixDuplicates([keyA, keyB])
+      expect(result.isValid).toBe(true)
+      expect(result.validLayoutOptions).toHaveLength(1)
+      expect(result.duplicatesWithoutOption).toHaveLength(0)
+    })
+
+    it('should reject overlapping QMK membership labels[9]', () => {
+      // Both keys claim layout 1 — invalid for same matrix position
+      const keyA = new Key()
+      keyA.labels[0] = '0,0'
+      keyA.labels[9] = '0;1'
+
+      const keyB = new Key()
+      keyB.labels[0] = '0,0'
+      keyB.labels[9] = '1;2'
+
+      const result = validateMatrixDuplicates([keyA, keyB])
+      expect(result.isValid).toBe(false)
+      expect(result.duplicatesWithoutOption).toHaveLength(1)
+    })
   })
 
   describe('getDefaultLayoutKeys', () => {

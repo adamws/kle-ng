@@ -231,13 +231,13 @@ describe('QMK Import', () => {
 
       const keyboard = convertQmkToKle(qmkData)
 
-      // Should have only 1 key after deduplication
+      // Should have only 1 key (shared across both layouts)
       expect(keyboard.keys).toHaveLength(1)
-      // Layout option should be cleared since only one unique key
-      expect(keyboard.keys[0]?.labels[8]).toBe('')
+      // Shared key has no membership tag
+      expect(keyboard.keys[0]?.labels[9] ?? '').toBe('')
     })
 
-    it('should keep different keys at same matrix position with layout options', () => {
+    it('should keep both keys when same matrix position has different sizes across layouts', () => {
       const qmkData = {
         layouts: {
           LAYOUT_ansi: {
@@ -251,11 +251,57 @@ describe('QMK Import', () => {
 
       const keyboard = convertQmkToKle(qmkData)
 
-      // Should have 2 keys with different widths
+      // Both physical configurations must be preserved
       expect(keyboard.keys).toHaveLength(2)
-      // Both should have layout options
-      expect(keyboard.keys[0]?.labels[8]).toBeTruthy()
-      expect(keyboard.keys[1]?.labels[8]).toBeTruthy()
+      // Neither should use labels[8] (no VIA option/choice)
+      expect(keyboard.keys[0]?.labels[8] ?? '').toBe('')
+      expect(keyboard.keys[1]?.labels[8] ?? '').toBe('')
+      // Each must carry a labels[9] membership tag
+      expect(keyboard.keys[0]?.labels[9]).toBeTruthy()
+      expect(keyboard.keys[1]?.labels[9]).toBeTruthy()
+    })
+
+    it('should assign correct layout membership in labels[9]', () => {
+      // 3 layouts: key [0,0] identical in all; key [0,1] differs between 0 and 1+2
+      const qmkData = {
+        layouts: {
+          LAYOUT_a: {
+            layout: [
+              { matrix: [0, 0], x: 0, y: 0 }, // shared
+              { matrix: [0, 1], x: 1, y: 0, w: 2 }, // layout 0 only
+            ],
+          },
+          LAYOUT_b: {
+            layout: [
+              { matrix: [0, 0], x: 0, y: 0 }, // shared
+              { matrix: [0, 1], x: 1, y: 0, w: 1 }, // layouts 1 and 2
+            ],
+          },
+          LAYOUT_c: {
+            layout: [
+              { matrix: [0, 0], x: 0, y: 0 }, // shared
+              { matrix: [0, 1], x: 1, y: 0, w: 1 }, // layouts 1 and 2
+              { matrix: [0, 2], x: 2, y: 0 }, // layout 2 only
+            ],
+          },
+        },
+      }
+
+      const keyboard = convertQmkToKle(qmkData)
+
+      expect(keyboard.keys).toHaveLength(4) // [0,0] shared + [0,1] w=2 + [0,1] w=1 + [0,2]
+
+      const shared = keyboard.keys.find((k) => k.labels[0] === '0,0')
+      expect(shared?.labels[9] ?? '').toBe('')
+
+      const wide = keyboard.keys.find((k) => k.labels[0] === '0,1' && k.width === 2)
+      expect(wide?.labels[9]).toBe('0')
+
+      const narrow = keyboard.keys.find((k) => k.labels[0] === '0,1' && k.width === 1)
+      expect(narrow?.labels[9]).toBe('1;2')
+
+      const extra = keyboard.keys.find((k) => k.labels[0] === '0,2')
+      expect(extra?.labels[9]).toBe('2')
     })
 
     it('should throw error for invalid format', () => {
