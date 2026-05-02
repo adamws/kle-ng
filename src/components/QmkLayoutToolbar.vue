@@ -67,7 +67,6 @@ function handleLayoutClick(index: number) {
   align-items: center;
   gap: 4px;
   padding: 4px 8px;
-  border-top: 1px solid var(--bs-border-color, #dee2e6);
 }
 
 .layout-group {
