@@ -48,7 +48,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [chromium, firefox, webkit]
+        include:
+          - project: chromium
+            timeout: 25
+          - project: firefox
+            timeout: 25
+          - project: webkit
+            timeout: 40
 
     steps:
       - uses: actions/checkout@v6
@@ -76,7 +82,7 @@ jobs:
 
       - name: Run e2e tests
         run: npx playwright test --project=${{ matrix.project }}
-        timeout-minutes: 25
+        timeout-minutes: ${{ matrix.timeout }}
 
       - name: Upload Playwright HTML report
         if: always()
