@@ -39,6 +39,7 @@
     "bootstrap-icons": "^1.13.1",
     "decimal.js": "^10.6.0",
     "ergogen": "^4.2.1",
+    "fuse.js": "^7.3.0",
     "js-yaml": "^4.1.1",
     "json5": "^2.2.3",
     "lz-string": "^1.5.0",

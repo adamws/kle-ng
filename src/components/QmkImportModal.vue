@@ -9,28 +9,31 @@
         <div class="modal-body">
           <input
             id="qmkSearchInput"
+            ref="searchInputRef"
             v-model="qmkSearchQuery"
             type="text"
             class="form-control mb-3"
             placeholder="Search keyboards (e.g. dactyl 4x5)…"
             autocomplete="off"
+            @keydown.down.prevent="focusListItem(0)"
           />
           <div v-if="qmkListLoading" class="text-center text-muted py-3">
             <span class="spinner-border spinner-border-sm me-2"></span>Loading keyboard list…
           </div>
           <div v-else-if="qmkListError" class="alert alert-danger">{{ qmkListError }}</div>
-          <div v-else class="qmk-keyboard-list">
+          <div v-else ref="listRef" class="qmk-keyboard-list">
             <button
-              v-for="kb in filteredQmkKeyboards"
-              :key="kb"
+              v-for="(result, index) in filteredQmkKeyboards"
+              :key="result.item"
               type="button"
               class="qmk-keyboard-item"
-              :class="{ selected: qmkSelectedKeyboard === kb }"
-              @click="qmkSelectedKeyboard = kb"
+              :class="{ selected: qmkSelectedKeyboard === result.item }"
+              @click="qmkSelectedKeyboard = result.item"
               @dblclick="importFromQmkBrowser"
-            >
-              {{ kb }}
-            </button>
+              @focus="qmkSelectedKeyboard = result.item"
+              @keydown="handleListKeydown($event, index)"
+              v-html="result.html"
+            ></button>
             <p v-if="!filteredQmkKeyboards.length" class="text-muted fst-italic text-center py-3">
               No keyboards match your search
             </p>
@@ -60,10 +63,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, shallowRef, nextTick, onMounted, onUnmounted } from 'vue'
+import Fuse from 'fuse.js'
 import { useKeyboardStore } from '@/stores/keyboard'
 import { toast } from '@/composables/useToast'
 import { convertQmkToKle } from '@/utils/qmk-import'
+import { highlightMatches } from '@/utils/fuse-highlight'
 
 interface Props {
   isVisible: boolean
@@ -73,30 +78,84 @@ interface Emits {
   (e: 'close'): void
 }
 
+interface QmkSearchResult {
+  item: string
+  html: string
+}
+
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const keyboardStore = useKeyboardStore()
+
+const searchInputRef = ref<HTMLInputElement | null>(null)
+const listRef = ref<HTMLElement | null>(null)
 
 const qmkKeyboardList = ref<string[]>([])
 const qmkSearchQuery = ref('')
 const qmkSelectedKeyboard = ref<string | null>(null)
 const qmkListLoading = ref(false)
 const qmkListError = ref<string | null>(null)
+const fuseInstance = shallowRef<Fuse<string> | null>(null)
 
-const filteredQmkKeyboards = computed(() => {
-  const words = qmkSearchQuery.value.trim().toLowerCase().split(/\s+/).filter(Boolean)
+watch(qmkKeyboardList, (list) => {
+  if (!list.length) return
+  fuseInstance.value = new Fuse(list, {
+    includeScore: true,
+    includeMatches: true,
+    threshold: 0.4,
+    ignoreLocation: true,
+    minMatchCharLength: 2,
+    distance: 200,
+  })
+})
+
+const filteredQmkKeyboards = computed<QmkSearchResult[]>(() => {
+  const query = qmkSearchQuery.value.trim()
   const source = qmkKeyboardList.value
-  if (!words.length) return source
-  return source.filter((k) => {
-    const t = k.toLowerCase()
-    return words.every((w) => t.includes(w))
+
+  if (!query) {
+    return source.map((item) => ({ item, html: item }))
+  }
+
+  const fuse = fuseInstance.value
+  if (!fuse) return []
+
+  return fuse.search(query).map(({ item, matches }) => {
+    const indices = matches?.[0]?.indices ?? []
+    return { item, html: highlightMatches(item, indices) }
   })
 })
 
 watch(qmkSearchQuery, () => {
   qmkSelectedKeyboard.value = null
 })
+
+function listItems(): HTMLButtonElement[] {
+  return listRef.value
+    ? Array.from(listRef.value.querySelectorAll<HTMLButtonElement>('.qmk-keyboard-item'))
+    : []
+}
+
+function focusListItem(index: number) {
+  listItems()[index]?.focus()
+}
+
+function handleListKeydown(event: KeyboardEvent, index: number) {
+  if (event.key === 'ArrowDown') {
+    event.preventDefault()
+    focusListItem(index + 1)
+  } else if (event.key === 'ArrowUp') {
+    event.preventDefault()
+    if (index === 0) {
+      searchInputRef.value?.focus()
+    } else {
+      focusListItem(index - 1)
+    }
+  } else if (event.key === 'Enter') {
+    importFromQmkBrowser()
+  }
+}
 
 const close = () => {
   qmkSearchQuery.value = ''
@@ -132,8 +191,7 @@ watch(
       document.body.classList.add('modal-open')
       fetchQmkKeyboardList()
       nextTick(() => {
-        const searchInput = document.getElementById('qmkSearchInput') as HTMLInputElement
-        if (searchInput) searchInput.focus()
+        searchInputRef.value?.focus()
       })
     } else {
       document.removeEventListener('keydown', handleKeyDown)
@@ -184,7 +242,7 @@ const importFromQmkBrowser = async () => {
 }
 
 .qmk-keyboard-list {
-  max-height: 360px;
+  height: 360px;
   overflow-y: auto;
   border: 1px solid var(--bs-border-color);
   border-radius: var(--bs-border-radius);
@@ -215,6 +273,22 @@ const importFromQmkBrowser = async () => {
 
 .qmk-keyboard-item.selected {
   background-color: var(--bs-primary);
+  color: #fff;
+}
+
+.qmk-keyboard-item:focus-visible {
+  outline: none;
+}
+
+.qmk-keyboard-item mark {
+  background-color: #ffe066;
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+.qmk-keyboard-item.selected mark {
+  background-color: rgba(255, 255, 255, 0.35);
   color: #fff;
 }
 </style>

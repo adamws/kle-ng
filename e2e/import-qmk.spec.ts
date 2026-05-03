@@ -164,15 +164,14 @@ test.describe('Import from QMK', () => {
       await expect(page.locator(QMK_COUNT_HINT)).toContainText('1 result(s)')
     })
 
-    test('TC-QMK-011 — multi-word search uses AND semantics across path segments', async ({
-      page,
-    }) => {
+    test('TC-QMK-011 — fuzzy search surfaces the most relevant result', async ({ page }) => {
       await page.fill('#qmkSearchInput', 'dactyl 4x5')
 
-      await expect(page.locator('.qmk-keyboard-item')).toHaveCount(1)
-      await expect(page.locator('.qmk-keyboard-item')).toContainText(
-        'handwired/dactyl_manuform/4x5',
-      )
+      await expect(
+        page.locator('.qmk-keyboard-item:has-text("handwired/dactyl_manuform/4x5")'),
+      ).toBeVisible()
+      const count = await page.locator('.qmk-keyboard-item').count()
+      expect(count).toBeGreaterThanOrEqual(1)
     })
 
     test('TC-QMK-012 — search is case-insensitive', async ({ page }) => {
@@ -516,12 +515,12 @@ test.describe('Import from QMK', () => {
       await expect(page.locator(QMK_COUNT_HINT)).toContainText('5 keyboards available')
     })
 
-    test('TC-QMK-071 — multi-word AND search: all words must match', async ({ page }) => {
-      // "dactyl" alone matches 2 results; "dactyl 5x6" matches none
+    test('TC-QMK-071 — fuzzy search returns dactyl results for "dactyl 5x6"', async ({ page }) => {
+      // "5x6" is not an exact substring, but "dactyl" is a strong match —
+      // fuzzy search surfaces the dactyl boards regardless
       await page.fill('#qmkSearchInput', 'dactyl 5x6')
 
-      await expect(page.locator('.qmk-keyboard-item')).toHaveCount(0)
-      await expect(page.locator('.qmk-keyboard-list p.text-muted')).toBeVisible()
+      await expect(page.locator('.qmk-keyboard-item:has-text("dactyl")').first()).toBeVisible()
     })
   })
 
