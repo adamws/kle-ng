@@ -167,12 +167,12 @@ test.describe('Alternative Layouts Preview', () => {
       await editor.expectSelectedCount(0)
     })
 
-    test('should disable the Preset dropdown button in preview mode', async () => {
-      await expect(presets.getDropdownButton()).toBeDisabled()
+    test('should keep the Preset dropdown button enabled in preview mode', async () => {
+      await expect(presets.getDropdownButton()).toBeEnabled()
     })
 
-    test('should disable the Import dropdown button in preview mode', async ({ page }) => {
-      await expect(page.locator(SELECTORS.IMPORT_EXPORT.IMPORT_BUTTON)).toBeDisabled()
+    test('should keep the Import dropdown button enabled in preview mode', async ({ page }) => {
+      await expect(page.locator(SELECTORS.IMPORT_EXPORT.IMPORT_BUTTON)).toBeEnabled()
     })
 
     test('should not add keys when Add Key is clicked in preview mode', async ({ page }) => {

@@ -11,7 +11,6 @@
           type="button"
           data-bs-toggle="dropdown"
           aria-expanded="false"
-          :disabled="keyboardStore.isLayoutPreviewMode"
         >
           {{ selectedPresetName || 'Choose Preset...' }}
         </button>
@@ -34,7 +33,6 @@
             aria-expanded="false"
             style="border-right-width: 0px"
             type="button"
-            :disabled="keyboardStore.isLayoutPreviewMode"
           >
             Import
           </button>
