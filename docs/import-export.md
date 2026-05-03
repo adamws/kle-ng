@@ -74,6 +74,10 @@ See [VIA & Vial Format](./via-and-metadata) for detailed information.
 
 [QMK](https://qmk.fm/) `info.json` files can be imported directly. kle-ng converts key positions, dimensions, and matrix coordinates into KLE format.
 
+::: warning
+QMK `info.json` files often do not convey exact physical key positions, particularly rotations. QMK imports may not be suitable for PCB or plate generation without careful verification of key positions. Always check rotation and positioning thoroughly before using the output for manufacturing.
+:::
+
 #### Single-Layout Import
 
 Imported keys receive:
