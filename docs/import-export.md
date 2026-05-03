@@ -248,6 +248,8 @@ Click the **Import** button in the toolbar and select:
 - Ergogen share link (`https://ergogen.xyz/#...`)
 - Existing kle-ng share link
 
+**From QMK** — Search and import any keyboard directly from the [QMK keyboard database](https://keyboards.qmk.fm/). A searchable list of all available keyboards is loaded from `keyboards.qmk.fm`. Type to filter with fuzzy search, select a keyboard, and click **Import** (or double-click an entry). The keyboard's `info.json` is fetched and converted to KLE format automatically — no file download required. This is equivalent to downloading a keyboard's `info.json` and using **From File**, but without the manual steps.
+
 ### Drag and Drop
 
 Drag layout files directly onto the canvas area.
