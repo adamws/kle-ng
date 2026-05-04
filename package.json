@@ -23,7 +23,8 @@
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
     "lint": "eslint . --fix",
-    "format": "prettier --log-level silent --write src/ e2e/ docs/"
+    "format": "prettier --log-level silent --write src/ e2e/ docs/",
+    "bench": "node bench/run.mjs"
   },
   "dependencies": {
     "@adamws/kle-serial": "github:adamws/kle-serial2#v0.19.0",
