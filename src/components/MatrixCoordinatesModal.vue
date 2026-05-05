@@ -534,7 +534,7 @@ import {
   parseViaLabelWithPartial,
 } from '@/utils/matrix-utils'
 import {
-  currentAnnotationAlgorithm,
+  clusterAnnotationAlgorithm,
   buildRowsColsFromResult,
   type MatrixItem,
 } from '@/utils/matrix-annotation'
@@ -785,7 +785,7 @@ const showDuplicateWarning = (duplicates: { position: string; keys: Key[] }[]) =
 const handleAutomaticAnnotation = () => {
   isShowingExistingAnnotation.value = false
 
-  const result = currentAnnotationAlgorithm.annotate(keyboardStore.keys)
+  const result = clusterAnnotationAlgorithm.annotate(keyboardStore.keys)
 
   const { rows: newRows, cols: newCols } = buildRowsColsFromResult(result, keyboardStore.keys)
   rows.value = newRows
