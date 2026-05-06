@@ -7,15 +7,20 @@ coordinates are applied to keys.
 
 **Relevant source files:**
 
-| File                                         | Role                                                    |
-| -------------------------------------------- | ------------------------------------------------------- |
-| `src/components/MatrixCoordinatesModal.vue`  | Modal UI, automatic annotation orchestration            |
-| `src/utils/matrix-utils.ts`                  | Rotation grouping, de-rotation, label parsing           |
-| `src/utils/matrix-validation.ts`             | Coordinate parsing, duplicate validation, option/choice |
-| `src/stores/matrix-drawing.ts`               | Drawing store (sequences, completed wires, editing)     |
-| `src/utils/keyboard-geometry.ts`             | `getKeyCenter` -- rotation-aware center calculation     |
-| `src/utils/line-intersection.ts`             | `findKeysAlongLine` -- line sweep for manual drawing    |
-| `src/components/MatrixAnnotationOverlay.vue` | Canvas overlay that renders wires and handles input     |
+| File                                              | Role                                                                                                                             |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `src/components/MatrixCoordinatesModal.vue`       | Modal UI, automatic annotation orchestration                                                                                     |
+| `src/utils/matrix-annotation/types.ts`            | Interfaces: `AnnotationAlgorithm`, `AnnotationResult`, `AnnotationWarning`, `AssignmentStatus`, `MatrixItem`, `RowColAssignment` |
+| `src/utils/matrix-annotation/cluster.ts`          | Base cluster algorithm — rounds centers, shifts collisions, selects world vs de-rotated variant                                  |
+| `src/utils/matrix-annotation/cluster-symmetry.ts` | Symmetry-aware wrapper: detects mirror symmetry and enforces it on cluster output                                                |
+| `src/utils/matrix-annotation/build-matrix.ts`     | `buildRowsColsFromResult()` — converts `AnnotationResult` to `MatrixItem[]` with live key references                             |
+| `src/utils/matrix-annotation/index.ts`            | Barrel export                                                                                                                    |
+| `src/utils/matrix-utils.ts`                       | Rotation grouping, de-rotation, label parsing                                                                                    |
+| `src/utils/matrix-validation.ts`                  | Coordinate parsing, duplicate validation, option/choice                                                                          |
+| `src/stores/matrix-drawing.ts`                    | Drawing store (sequences, completed wires, editing)                                                                              |
+| `src/utils/keyboard-geometry.ts`                  | `getKeyCenter` -- rotation-aware center calculation                                                                              |
+| `src/utils/line-intersection.ts`                  | `findKeysAlongLine` -- line sweep for manual drawing                                                                             |
+| `src/components/MatrixAnnotationOverlay.vue`      | Canvas overlay that renders wires and handles input                                                                              |
 
 ---
 
@@ -118,218 +123,274 @@ This check uses `validateMatrixDuplicates` from `matrix-validation.ts`.
 ## 3. Automatic Annotation Algorithm
 
 The "Annotate Automatically" button triggers `handleAutomaticAnnotation()`.
-The core idea: use each key's visual center position (in layout units) to
-derive integer row and column indices.
+The implementation delegates entirely to `clusterSymmetryAnnotationAlgorithm`
+from `src/utils/matrix-annotation/`, which is a two-pass pipeline: a cluster
+pass (`cluster.ts`) followed by a symmetry-enforcement pass
+(`cluster-symmetry.ts`).
 
-### 3.1 Key Center Calculation (`getKeyCenter`)
+### 3.1 Entry Point and `toRaw` Requirement
 
-Located in `keyboard-geometry.ts`, this function computes the center of a key
-in layout coordinate space. For an unrotated 1u key at position `(x, y)`, the
-center is simply `(x + 0.5, y + 0.5)`.
-
-For rotated keys the function applies the rotation transformation:
-
-```
-1. centerX = key.x + key.width / 2
-   centerY = key.y + key.height / 2
-
-2. Translate center relative to rotation origin:
-     relX = centerX - originX
-     relY = centerY - originY
-
-3. Apply 2D rotation matrix:
-     rotatedX = relX * cos(angle) - relY * sin(angle)
-     rotatedY = relX * sin(angle) + relY * cos(angle)
-
-4. Translate back:
-     finalX = originX + rotatedX
-     finalY = originY + rotatedY
+```ts
+const handleAutomaticAnnotation = () => {
+  const rawKeys = keyboardStore.keys.map((k) => toRaw(k))
+  const result = clusterSymmetryAnnotationAlgorithm.annotate(rawKeys)
+  const { rows: newRows, cols: newCols } = buildRowsColsFromResult(result, keyboardStore.keys)
+  rows.value = newRows
+  cols.value = newCols
+  // ... load into drawing store ...
+  applyCoordinatesToKeys()
+  keyboardStore.saveState()
+}
 ```
 
-If `rotation_x` / `rotation_y` are undefined, the center itself is used as
-the rotation origin (which makes the rotation a no-op for the center point).
+`toRaw(k)` strips the Vue reactive `Proxy` wrapper before passing keys to the
+algorithm. This is required because `structuredClone` (used inside `cluster.ts`
+to snapshot keys before mutation) cannot clone Proxy objects and throws
+otherwise. `buildRowsColsFromResult` receives the original reactive
+`keyboardStore.keys` array so the `MatrixItem.keySequence` arrays hold live
+references for the drawing store. `keyboardStore.saveState()` is called
+unconditionally after every automatic annotation.
 
-### 3.2 The `runAutomaticAnnotation` Inner Function
+### 3.2 Cluster Pass (`cluster.ts`)
 
-This function takes a list of keys and builds a `Map<string, Key[]>` that maps
-`"row,col"` strings to the keys occupying that position:
+The cluster algorithm is exposed as `clusterAnnotationAlgorithm` and called
+internally by the symmetry wrapper.
 
-```
-for each key (excluding ghost/decal):
-    center = getKeyCenter(key)
-    row = Math.round(center.y)     // vertical position -> row
-    col = Math.round(center.x)     // horizontal position -> column
-    matrixMap["row,col"] -> append key
-```
-
-The integer rounding means that keys whose centers are within 0.5 units of
-each other vertically will land on the same row, and likewise for columns.
-
-**Example -- standard staggered layout:**
+**Center calculation.** For each regular key (non-ghost, non-decal),
+`getKeyCenter` (in `keyboard-geometry.ts`) computes the key's center in layout
+coordinate space. For an unrotated 1u key at `(x, y)` the center is
+`(x + 0.5, y + 0.5)`. For rotated keys the function applies the full 2D
+rotation transform around `(rotation_x, rotation_y)`:
 
 ```
-    Physical layout (1u keys):       Center positions:     Rounded:
+centerX = key.x + key.width / 2
+centerY = key.y + key.height / 2
 
-    +---+---+---+---+                (0.5,0.5) (1.5,0.5)  row=1,col=1  row=1,col=2 ...
-    | Q | W | E | R |                (2.5,0.5) (3.5,0.5)
-    +---+---+---+---+
-      +---+---+---+---+              (0.75,1.5) (1.75,1.5)  row=2,col=1  row=2,col=2 ...
-      | A | S | D | F |              (2.75,1.5) (3.75,1.5)
-      +---+---+---+---+
+relX = centerX - originX
+relY = centerY - originY
 
-    (Stagger shifts x by 0.25u but rounding absorbs it)
+rotatedX = relX * cos(angle) - relY * sin(angle)
+rotatedY = relX * sin(angle) + relY * cos(angle)
+
+finalX = originX + rotatedX
+finalY = originY + rotatedY
 ```
 
-### 3.3 Building Rows and Columns from the Matrix Map
+**Rounding and per-row collision shifting.** `Math.round(center.y)` gives the
+tentative row, `Math.round(center.x)` the tentative column. Keys in the same
+tentative row are sorted by their tentative column (ties broken by world X).
+Each key is assigned its tentative column if it is free; if the slot is already
+taken, the key is shifted to the next free column (`while (used.has(c)) c++`).
+No key is ever dropped. The algorithm records the number of shifts as
+`collisions` and emits a warning when nonzero.
 
-After `runAutomaticAnnotation` produces the map, `buildMatrixFromMap` extracts
-the unique row/column indices from all keys in the map, sorts them, and
-creates sequential `MatrixItem` arrays:
+After shifting, `denseReindex` re-maps both row and column values to
+`0, 1, 2, ...` based on sorted order, so sparse integer ranges (e.g., rows
+0, 1, 3) become contiguous (0, 1, 2).
+
+**World vs de-rotated variant selection.** The cluster pass evaluates two
+variants:
+
+- **Variant A** (world): operates on key centers as-is.
+- **Variant B** (de-rotated): only considered when at least one rotation group
+  has `|angle| > 1e-6` and `≥ 2 keys`. The keys are `structuredClone`d, then
+  `deRotateLayoutGroups` zeroes out `rotation_angle` on each group. The clone
+  is annotated with world centers now computed in the "de-rotated" space.
+
+Each variant is scored by the tuple `(matrixMax, matrixSum, wireLength)` where
+`matrixMax = max(numRows, numCols)`, `matrixSum = numRows + numCols`, and
+`wireLength` is the sum of consecutive Euclidean gaps within each row (sorted
+by world X) and each column (sorted by world Y). Lower is better at every
+level; `matrixMax` dominates, `matrixSum` breaks ties, `wireLength` breaks
+remaining ties. The better variant's assignments are written into the
+`AnnotationResult`.
+
+**Staggered layout example:**
 
 ```
-1. Collect all unique row indices from map keys  -> sort ascending
-2. Collect all unique column indices             -> sort ascending
-3. For each unique row index (in sorted order):
-     - Gather all keys with that row index
-     - Sort them by x position (left to right)
-     - Assign sequential row number (0, 1, 2, ...)
-4. For each unique column index (in sorted order):
-     - Gather all keys with that column index
-     - Sort them by y position (top to bottom)
-     - Assign sequential column number (0, 1, 2, ...)
+Physical layout (1u keys):       Center positions:     Rounded:
+
++---+---+---+---+                (0.5,0.5) (1.5,0.5)  row=1,col=1  row=1,col=2 ...
+| Q | W | E | R |
++---+---+---+---+
+  +---+---+---+---+              (0.75,1.5) (1.75,1.5)  row=2,col=1  row=2,col=2 ...
+  | A | S | D | F |
+  +---+---+---+---+
+
+(Stagger shifts x by 0.25u but rounding absorbs it; no collisions)
 ```
 
-The important distinction: the **original** row/col values from `Math.round`
-may be non-sequential (e.g., rows 0, 1, 3 if there is a gap). The
-`buildMatrixFromMap` function re-indexes them to 0, 1, 2, ... based on sorted
-order.
+### 3.3 Symmetry Pass (`cluster-symmetry.ts`)
 
-### 3.4 Decision Path
+`clusterSymmetryAnnotationAlgorithm` wraps the cluster pass with a
+left-right mirror-symmetry detection and enforcement step.
 
-The full algorithm follows this decision tree:
+**Symmetry detection** (`detectSymmetry`). The bounding-box midline of all
+regular-key centers is used as the candidate symmetry axis. For every regular
+key the algorithm attempts to find a mirror twin:
+
+- A key is "on the axis" (self-paired) if `|2*axis - cx - cx| < 0.05u`. A
+  self-paired key must have `|rotation_angle| ≤ 0.5°`, otherwise the layout
+  is rejected as asymmetric.
+- Otherwise the expected mirror position is `(2*axis - cx, cy)`. A twin is
+  accepted if `|twin.x - mirrorX| ≤ 0.05u`, `|twin.y - cy| ≤ 0.05u`, and
+  the rotations satisfy `|rj + ri| ≤ 0.5°` (mirror keys should have equal
+  and opposite angles).
+
+If any regular key has no valid twin, `detectSymmetry` returns `null` and the
+layout is not considered symmetric. Partial symmetry is not accepted.
+
+**Symmetry enforcement** (`enforceSymmetry`). When symmetry is detected, every
+right-side key in each pair is overwritten:
 
 ```
-handleAutomaticAnnotation()
-   |
-   v
-shouldUseRotationAwareAnnotation()?
-   |                    |
-  YES                  NO
-   |                    |
-   v                    v
-Split by rotation    runAutomaticAnnotation(regularKeys)
-De-rotate keys           |
-Run annotation on        +-- duplicates? --+-- no --> buildMatrixFromMap
-  de-rotated keys        |                 |
-   |                     v                 v
-   +-- duplicates? -+  Remove dupes    buildMatrixFromMap
-   |                |  (keep first)
-  YES              NO  buildMatrixFromMap
-   |                |  + warn user
-   v                v
-Restore rotation  buildMatrixFromMap
-Fall back to      Restore rotation
-original layout   Done
-   |
-   v
-runAutomaticAnnotation(originalKeys)
-   |
-   +-- duplicates? --+-- no --> buildMatrixFromMap
-   |                 |
-   v                 v
-Remove dupes    buildMatrixFromMap
-buildMatrixFromMap
-+ warn user
+rows[rightIdx] = rows[leftIdx]
+cols[rightIdx] = totalCols - 1 - cols[leftIdx]
 ```
+
+After rewriting, `densify` re-maps row and column values to `0, 1, 2, ...`
+because the overwrite may introduce gaps. Center keys (those on the axis) are
+validated first: their column must already satisfy `col == totalCols - 1 - col`
+(i.e., `totalCols` is odd and the key sits on the middle column). If a center
+key fails this check, enforcement returns `null` and the algorithm falls back
+to the cluster output.
+
+**Fallback conditions.** The symmetry pass falls back to returning the cluster
+output unchanged when:
+
+| `meta.symmetryFallbackReason` | Cause                                                                  |
+| ----------------------------- | ---------------------------------------------------------------------- |
+| `'base-not-success'`          | Cluster pass did not return `status: 'success'`                        |
+| `'no-regular-keys'`           | No regular keys with assigned row/col in cluster result                |
+| `'unpaired-key'`              | `detectSymmetry` returned `null` (at least one key has no mirror twin) |
+| `'center-conflict'`           | `enforceSymmetry` returned `null` (center key not on symmetry column)  |
+
+When fallback occurs, `meta.symmetry` is set to `'fallback'`. When enforcement
+succeeds, `meta.symmetry` is `'enforced'` and `meta.symmetryAxis`,
+`meta.symmetryPairs`, and `meta.symmetryCenterKeys` are populated.
+
+### 3.4 Result Structure and Drawing Store Bridge
+
+`AnnotationResult` is defined in `types.ts`:
+
+```ts
+interface AnnotationResult {
+  assignments: (RowColAssignment | null)[] // index-aligned with input keys
+  status: AssignmentStatus // 'success' | 'partial' | 'disqualified'
+  warnings: AnnotationWarning[]
+  meta?: Record<string, unknown>
+}
+
+interface RowColAssignment {
+  row: number | null
+  col: number | null
+}
+```
+
+`assignments` has the same length as the input key array. Ghost and decal
+keys receive `null`; regular keys receive a `RowColAssignment` object.
+
+`buildRowsColsFromResult` (in `build-matrix.ts`) converts `AnnotationResult`
+into the `MatrixItem[]` arrays expected by the modal and drawing store. It
+iterates `result.assignments`, groups the original reactive key references
+(passed separately) into `rowMap` and `colMap` by row/column number, sorts
+each group (rows by `key.x`, columns by `key.y`), and builds `MatrixItem`
+objects with stable `id` strings and sequential `index` values:
+
+```ts
+const { rows, cols } = buildRowsColsFromResult(result, keyboardStore.keys)
+```
+
+The live key references are necessary because the drawing store's
+`completedRows` and `completedColumns` maps hold `Key[]` arrays that the
+overlay canvas renders and that `applyCoordinatesToKeys` reads back.
 
 ---
 
 ## 4. Rotation-Aware Annotation
 
 Many keyboard layouts include rotated key clusters (e.g., thumb clusters on
-ergonomic boards). When keys are rotated, their visual centers shift in ways
-that can cause `Math.round(center.y)` to map different keys to the same row
-even though they are on different logical rows.
+ergonomic boards). When keys are rotated, their world-coordinate centers shift
+in ways that can cause `Math.round(center.y)` to map different keys to the same
+row even though they are on different logical rows within the cluster.
 
-### 4.1 Activation Condition
+Rotation awareness is handled entirely inside `cluster.ts`. There is no
+temporary mutation of `keyboardStore.keys` and no two-step if/else in the
+modal.
 
-`shouldUseRotationAwareAnnotation()` returns `true` when there is at least one
-rotation group whose `rotationAngle` is non-zero (|angle| > 1e-6) **and** that
-group has at least two keys.
+### 4.1 Detection
 
-### 4.2 `splitLayoutByRotation`
+Before evaluating variant B, the cluster algorithm calls
+`shouldUseRotationAware(regularClones)` on the clone set. This function calls
+`splitLayoutByRotation` and returns `true` when any resulting group has
+`|rotationAngle| > 1e-6` **and** at least two keys. If no such group exists,
+only variant A is evaluated and the de-rotation code path is skipped entirely.
 
-Groups keys by three rotation properties: `rotation_angle`, `rotation_x`, and
-`rotation_y`. Two keys belong to the same group if and only if all three
-properties match within floating-point tolerance (1e-6).
+### 4.2 De-Rotation for Variant B
 
-```
-Input:  [key_A(angle=0), key_B(angle=0), key_C(angle=15, rx=3, ry=5), key_D(angle=15, rx=3, ry=5)]
+When rotation awareness is triggered, a second `structuredClone` of the key
+array is created (separate from the variant-A clone). `splitLayoutByRotation`
+groups the clone's regular keys, and `deRotateLayoutGroups` zeroes out
+`rotation_angle` on each group with a non-zero angle. The clone is never
+written back to the store; it exists only for the duration of the scoring
+comparison.
 
-Output: [
-  RotationGroup { angle: 0,  rx: undefined, ry: undefined, keys: [A, B] },
-  RotationGroup { angle: 15, rx: 3,         ry: 5,         keys: [C, D] },
-]
-```
+With rotation zeroed, `getKeyCenter` computes centers in the key's "local"
+coordinate frame, putting keys within the same cluster onto aligned Y values
+that round to the same row index. This typically produces a more compact
+`(matrixMax, matrixSum)` score than world centers when a cluster is rotated
+relative to the main key field.
 
-The return type is `RotationGroup[]` -- see `matrix-utils.ts` for the
-interface definition.
+### 4.3 Variant Selection and Score
 
-### 4.3 `deRotateLayoutGroups`
-
-For each group with a non-zero rotation angle, this function:
-
-1. Stores the original angle in `key.labels[6]` as `"DEROTATE:<angle>"`.
-2. Sets `key.rotation_angle = 0`.
-
-Keys in the zero-rotation group are passed through unchanged.
-
-After this step, `getKeyCenter` will compute centers **without** any rotation
-transform, which puts keys back into their "local" coordinate space. The
-intent is that keys within a rotated cluster will now have aligned Y
-coordinates that round to the same row.
-
-### 4.4 `restoreOriginalRotation`
-
-Reads the `"DEROTATE:<angle>"` marker from `labels[6]`, restores
-`key.rotation_angle` to the stored value, and clears the marker. Keys without
-the marker are left untouched.
-
-### 4.5 Fallback Strategy
-
-If the de-rotated layout still produces duplicates in the matrix map, the
-system:
-
-1. Restores the original rotation (`restoreOriginalRotation`).
-2. Falls back to running the annotation on the unmodified layout.
-3. If the fallback also has duplicates, it keeps only the first key at each
-   position and shows a warning.
+Both variants go through `annotateVariant`, which performs the same rounding,
+collision-shifting, and dense-reindexing steps. The score tuple
+`(matrixMax, matrixSum, wireLength)` is compared lexicographically; variant B
+replaces variant A only if it is strictly better. In practice, layouts without
+rotation always produce identical variants, so variant A is chosen by default
+and the result carries `meta.variant = 'world'` vs `meta.variant = 'de-rotated'`.
 
 ---
 
 ## 5. Duplicate Detection and Resolution
 
-### 5.1 What Causes Duplicates
+### 5.1 What the Cluster Algorithm Does with Collisions
 
-Two keys produce a duplicate when `Math.round(center.y)` and
-`Math.round(center.x)` yield the same values for both. This typically happens
-with:
+In the cluster pass, two keys produce a tentative collision when
+`Math.round(center.y)` and `Math.round(center.x)` yield the same values for
+both. Common causes include:
 
-- Keys that are very close together (e.g., ISO Enter occupying ~2 positions).
-- Rotated clusters where the rotation shifts centers unpredictably.
-- Unusual stagger values that cause centers to round to identical integers.
+- Keys very close together (e.g., ISO Enter spanning ~2 positions).
+- Rotated clusters where world-coordinate Y values round identically.
+- Unusual stagger values that align centers to the same integer.
 
-### 5.2 During Automatic Annotation
+Unlike the previous implementation, **no key is dropped**. The
+`annotateVariant` function sorts keys in the same row by their tentative column
+(ties broken by world X), then shifts any colliding key rightward to the next
+free column slot. The shift count is recorded as `variant.collisions`. When
+`collisions > 0`, the algorithm emits an `AnnotationWarning` of kind
+`'algorithm-specific'` describing how many collisions were resolved.
 
-The `checkForDuplicates` helper scans the matrix map and collects every
-position that maps to more than one key.
+### 5.2 Duplicate Warning Path
 
-Resolution strategy:
+The old `checkForDuplicates` + `showDuplicateWarning` flow that inspected the
+`matrixMap` no longer applies to regular key geometry. The duplicate warning
+path now flows through `result.meta?.displayDuplicates`:
 
-- **First key wins**: `cleanMatrixMap` is built by keeping only `keys[0]` at
-  each position (the first key encountered during iteration).
-- A warning banner is shown listing each duplicate position and which keys
-  were affected. The first key is labeled "(kept)" and the rest "(removed)".
+```ts
+const displayDuplicates = result.meta?.displayDuplicates as
+  | { position: string; keys: Key[] }[]
+  | undefined
+if (displayDuplicates) {
+  showDuplicateWarning(displayDuplicates)
+}
+```
+
+`displayDuplicates` is only populated in rare cases where the rotation-aware
+fallback itself found genuine duplicates — primarily from VIA option/choice
+imports that produce keys with identical positions before any option
+differentiation is applied. For normal key geometry, the collision-shifting
+guarantees `displayDuplicates` is absent and no warning is shown.
 
 ### 5.3 During Manual Drawing (`canAddKeyToSequence`)
 
@@ -576,6 +637,24 @@ but filtered out during rendering.
 | MatrixCoordinatesModal    |  (orchestration, UI, auto-annotation)
 +-------------+-------------+
               |
+              | calls annotate(), buildRowsColsFromResult()
+              v
++---------------------------+
+| matrix-annotation/        |
+|   cluster-symmetry.ts     |  clusterSymmetryAnnotationAlgorithm
+|   cluster.ts              |  clusterAnnotationAlgorithm
+|   build-matrix.ts         |  buildRowsColsFromResult
+|   types.ts                |  AnnotationResult, MatrixItem, ...
++-------------+-------------+
+              |
+              | uses
+              v
++---------------------------+     +---------------------------+
+| keyboard-geometry.ts      |     | matrix-utils.ts           |
+| - getKeyCenter            |     | - splitLayoutByRotation   |
++---------------------------+     | - deRotateLayoutGroups    |
+                                  +---------------------------+
+              |
               | reads/writes
               v
 +---------------------------+
@@ -595,14 +674,7 @@ but filtered out during rendering.
 | - getKeyCenter            |     | - findKeysAlongLine       |
 | - getKeyDistance          |     | - lineIntersectsKey       |
 +---------------------------+     +---------------------------+
-              |
-              | uses
-              v
-+---------------------------+
-| matrix-utils.ts           |  (rotation grouping, de-rotation, label parsing)
-+---------------------------+
-              |
-              v
+
 +---------------------------+
 | matrix-validation.ts      |  (coordinate parsing, duplicate validation,
 |                           |   option/choice support)

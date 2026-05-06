@@ -523,20 +523,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, toRaw } from 'vue'
 import { useDraggablePanel } from '@/composables/useDraggablePanel'
 import { useKeyboardStore, type Key } from '@/stores/keyboard'
 import { useMatrixDrawingStore } from '@/stores/matrix-drawing'
-import { getKeyCenter } from '@/utils/keyboard-geometry'
 import { createEmptyLabels } from '@/utils/array-helpers'
 import {
   extractMatrixAssignments,
   extractMatrixAssignmentsWithPartial,
-  splitLayoutByRotation,
-  deRotateLayoutGroups,
-  restoreOriginalRotation,
   parseViaLabelWithPartial,
 } from '@/utils/matrix-utils'
+import {
+  clusterSymmetryAnnotationAlgorithm,
+  buildRowsColsFromResult,
+  type MatrixItem,
+} from '@/utils/matrix-annotation'
 
 import BiGripVertical from 'bootstrap-icons/icons/grip-vertical.svg'
 import BiGrid3x3 from 'bootstrap-icons/icons/grid-3x3.svg'
@@ -578,12 +579,6 @@ const matrixDrawingStore = useMatrixDrawingStore()
 interface MatrixAssignment {
   rows: Map<number, Key[]>
   cols: Map<number, Key[]>
-}
-
-interface MatrixItem {
-  id: string
-  index: number
-  keySequence: Key[]
 }
 
 // State
@@ -788,221 +783,22 @@ const showDuplicateWarning = (duplicates: { position: string; keys: Key[] }[]) =
 }
 
 const handleAutomaticAnnotation = () => {
-  // Mark that we're NOT showing existing annotations anymore (user is creating new ones)
   isShowingExistingAnnotation.value = false
 
-  // Check if we should use rotation-aware annotation
-  const shouldUseRotationAwareAnnotation = () => {
-    // Get all regular keys (non-ghost, non-decal)
-    const regularKeys = keyboardStore.keys.filter((key) => !key.decal && !key.ghost)
+  const rawKeys = keyboardStore.keys.map((k) => toRaw(k))
+  const result = clusterSymmetryAnnotationAlgorithm.annotate(rawKeys)
+  const { rows: newRows, cols: newCols } = buildRowsColsFromResult(result, keyboardStore.keys)
+  rows.value = newRows
+  cols.value = newCols
 
-    // Split layout into rotation groups
-    const rotationGroups = splitLayoutByRotation(regularKeys)
-
-    // Check if there's at least one non-0 rotated group with at least 2 elements
-    return rotationGroups.some(
-      (group) => Math.abs(group.rotationAngle) > 1e-6 && group.keys.length >= 2,
-    )
+  const displayDuplicates = result.meta?.displayDuplicates as
+    | { position: string; keys: Key[] }[]
+    | undefined
+  if (displayDuplicates) {
+    showDuplicateWarning(displayDuplicates)
   }
 
-  // Utility function to check for duplicates and get detailed information
-  const checkForDuplicates = (matrixMap: Map<string, Key[]>) => {
-    const duplicates: { position: string; keys: Key[] }[] = []
-    let hasDuplicates = false
-
-    matrixMap.forEach((keys, position) => {
-      if (keys.length > 1) {
-        hasDuplicates = true
-        duplicates.push({ position, keys })
-      }
-    })
-
-    return { hasDuplicates, duplicates }
-  }
-
-  // Original automatic annotation algorithm
-  const runAutomaticAnnotation = (keys: Key[]) => {
-    // Create a map of matrix positions to keys
-    const matrixMap = new Map<string, Key[]>()
-
-    keys.forEach((key) => {
-      // Skip decal and ghost keys (should already be filtered)
-      if (key.decal || key.ghost) return
-
-      // For matrix coordinates, we want to use the visual center position of the key
-      // This accounts for rotation and ensures keys are assigned to the correct row/column
-      const center = getKeyCenter(key)
-
-      // Convert to integer coordinates (rounding to nearest integer)
-      const row = Math.round(center.y)
-      const col = Math.round(center.x)
-
-      // Store key in matrix map
-      const matrixKey = `${row},${col}`
-      if (!matrixMap.has(matrixKey)) {
-        matrixMap.set(matrixKey, [])
-      }
-      matrixMap.get(matrixKey)!.push(key)
-    })
-
-    const { hasDuplicates, duplicates } = checkForDuplicates(matrixMap)
-
-    return { matrixMap, hasDuplicates, duplicates }
-  }
-
-  // Build rows and columns from the matrix map
-  const buildMatrixFromMap = (matrixMap: Map<string, Key[]>) => {
-    // Extract unique row and column indices
-    const rowIndices = new Set<number>()
-    const colIndices = new Set<number>()
-
-    matrixMap.forEach((keys, matrixKey) => {
-      const parts = matrixKey.split(',').map(Number)
-      const row = parts[0]
-      const col = parts[1]
-      if (row !== undefined) rowIndices.add(row)
-      if (col !== undefined) colIndices.add(col)
-    })
-
-    // Sort indices
-    const sortedRows = Array.from(rowIndices).sort((a, b) => a - b)
-    const sortedCols = Array.from(colIndices).sort((a, b) => a - b)
-
-    // Build row items
-    rows.value = sortedRows.map((rowIndex, idx) => {
-      const keysInRow: Key[] = []
-
-      // Find all keys with this row index
-      matrixMap.forEach((keys, matrixKey) => {
-        const [row] = matrixKey.split(',').map(Number)
-        if (row === rowIndex) {
-          keysInRow.push(...keys)
-        }
-      })
-
-      // Sort keys in row by column position (x coordinate)
-      keysInRow.sort((a, b) => a.x - b.x)
-
-      return {
-        id: `row-${idx}-${Date.now()}`,
-        index: idx,
-        keySequence: keysInRow,
-      }
-    })
-
-    // Build column items
-    cols.value = sortedCols.map((colIndex, idx) => {
-      const keysInCol: Key[] = []
-
-      // Find all keys with this column index
-      matrixMap.forEach((keys, matrixKey) => {
-        const [, col] = matrixKey.split(',').map(Number)
-        if (col === colIndex) {
-          keysInCol.push(...keys)
-        }
-      })
-
-      // Sort keys in column by row position (y coordinate)
-      keysInCol.sort((a, b) => a.y - b.y)
-
-      return {
-        id: `col-${idx}-${Date.now()}`,
-        index: idx,
-        keySequence: keysInCol,
-      }
-    })
-  }
-
-  // Get all regular keys (non-ghost, non-decal)
-  const regularKeys = keyboardStore.keys.filter((key) => !key.decal && !key.ghost)
-
-  if (shouldUseRotationAwareAnnotation()) {
-    // Try rotation-aware annotation
-
-    // Split layout into rotation groups
-    const rotationGroups = splitLayoutByRotation(regularKeys)
-
-    // De-rotate the layout
-    const deRotatedKeys = deRotateLayoutGroups(rotationGroups)
-
-    // Update the store with de-rotated keys temporarily
-    keyboardStore.keys = deRotatedKeys
-
-    // Run automatic annotation on de-rotated layout
-    const { matrixMap: deRotatedMatrixMap, hasDuplicates: deRotatedHasDuplicates } =
-      runAutomaticAnnotation(keyboardStore.keys)
-
-    if (deRotatedHasDuplicates) {
-      // Fallback to original approach if duplicates found
-
-      // Restore original keys before falling back
-      const restoredKeys = restoreOriginalRotation(keyboardStore.keys)
-      keyboardStore.keys = restoredKeys
-
-      // Try original layout
-      const {
-        matrixMap: originalMatrixMap,
-        hasDuplicates: originalHasDuplicates,
-        duplicates: originalDuplicates,
-      } = runAutomaticAnnotation(regularKeys)
-
-      if (originalHasDuplicates) {
-        // Both approaches produced duplicates - remove duplicates and issue warning
-
-        // Remove duplicates by keeping only the first key in each position
-        const cleanMatrixMap = new Map<string, Key[]>()
-        originalMatrixMap.forEach((keys, position) => {
-          const firstKey = keys[0]
-          if (firstKey) {
-            cleanMatrixMap.set(position, [firstKey]) // Keep only the first key
-          }
-        })
-
-        buildMatrixFromMap(cleanMatrixMap)
-
-        // Show warning to user
-        showDuplicateWarning(originalDuplicates)
-      } else {
-        // Original layout works fine
-        buildMatrixFromMap(originalMatrixMap)
-      }
-    } else {
-      // Successfully annotated de-rotated layout, now restore original rotation
-      buildMatrixFromMap(deRotatedMatrixMap)
-
-      // Restore original rotation but keep the annotations
-      const restoredKeys = restoreOriginalRotation(keyboardStore.keys)
-
-      // Update the store with restored rotation but keep the matrix assignments
-      keyboardStore.keys = restoredKeys
-      keyboardStore.saveState()
-    }
-  } else {
-    // Use original approach
-    const { matrixMap, hasDuplicates } = runAutomaticAnnotation(regularKeys)
-
-    if (hasDuplicates) {
-      // Remove duplicates silently - this is the fallback approach
-
-      const cleanMatrixMap = new Map<string, Key[]>()
-      matrixMap.forEach((keys, position) => {
-        const firstKey = keys[0]
-        if (firstKey) {
-          cleanMatrixMap.set(position, [firstKey]) // Keep only the first key
-        }
-      })
-
-      buildMatrixFromMap(cleanMatrixMap)
-      // No warning shown here - this is expected behavior for fallback
-    } else {
-      buildMatrixFromMap(matrixMap)
-    }
-  }
-
-  // Sync to store so overlay can render the lines
   matrixDrawingStore.clearDrawings()
-
-  // Add rows - need to enable row mode first
   matrixDrawingStore.enableDrawing('row')
   rows.value.forEach((row) => {
     row.keySequence.forEach((key) => {
@@ -1010,8 +806,6 @@ const handleAutomaticAnnotation = () => {
     })
     matrixDrawingStore.completeSequence()
   })
-
-  // Switch to column mode for adding columns
   matrixDrawingStore.enableDrawing('column')
   cols.value.forEach((col) => {
     col.keySequence.forEach((key) => {
@@ -1021,8 +815,8 @@ const handleAutomaticAnnotation = () => {
   })
   matrixDrawingStore.disableDrawing()
 
-  // Apply coordinates immediately
   applyCoordinatesToKeys()
+  keyboardStore.saveState()
 }
 
 // Check whether the extracted row/column indices need normalization (non-zero-based or have gaps)
