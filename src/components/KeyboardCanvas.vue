@@ -86,6 +86,8 @@
         :zoom="zoom"
         :coordinateOffset="getCoordinateSystemOffset()"
         :renderer="renderer || null"
+        :scrollLeft="containerScrollLeft"
+        :scrollTop="containerScrollTop"
       />
 
       <!-- Debug Overlay (development mode only) -->
@@ -219,6 +221,14 @@ const canvasRef = ref<HTMLCanvasElement>()
 const containerRef = ref<HTMLDivElement>()
 const matrixOverlayRef = ref<InstanceType<typeof MatrixAnnotationOverlay>>()
 const debugOverlayRef = ref<InstanceType<typeof DebugOverlay>>()
+
+const containerScrollLeft = ref(0)
+const containerScrollTop = ref(0)
+
+const handleContainerScroll = () => {
+  containerScrollLeft.value = containerRef.value?.scrollLeft ?? 0
+  containerScrollTop.value = containerRef.value?.scrollTop ?? 0
+}
 
 const canvasWidth = ref(800)
 const canvasHeight = ref(600)
@@ -393,6 +403,8 @@ onMounted(() => {
       renderScheduler.schedule(renderKeyboard)
     })
     resizeObserver.value.observe(containerRef.value)
+
+    containerRef.value.addEventListener('scroll', handleContainerScroll)
 
     window.addEventListener('canvas-zoom', handleExternalZoom as EventListener)
     window.addEventListener('canvas-reset-view', handleExternalResetView as EventListener)
@@ -2184,6 +2196,7 @@ function handleSearchQueryChange(query: string): void {
 
 // Cleanup
 const cleanup = () => {
+  containerRef.value?.removeEventListener('scroll', handleContainerScroll)
   window.removeEventListener('resize', handleWindowResize)
   window.removeEventListener('canvas-zoom', handleExternalZoom as EventListener)
   window.removeEventListener('canvas-reset-view', handleExternalResetView as EventListener)

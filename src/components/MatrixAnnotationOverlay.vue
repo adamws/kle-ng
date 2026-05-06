@@ -1,5 +1,8 @@
 <template>
-  <div class="matrix-overlay-container">
+  <div
+    class="matrix-overlay-container"
+    :style="{ transform: `translate(${-scrollLeft}px, ${-scrollTop}px)` }"
+  >
     <canvas
       v-show="visible"
       ref="canvasRef"
@@ -31,6 +34,8 @@ interface Props {
   zoom: number
   coordinateOffset: { x: number; y: number }
   renderer: CanvasRenderer | null
+  scrollLeft: number
+  scrollTop: number
 }
 
 const props = defineProps<Props>()
