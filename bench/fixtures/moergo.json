@@ -1,0 +1,734 @@
+[
+  [
+    {
+      "x": 1,
+      "t": "#9E9E9E",
+      "a": 7,
+      "f": 5,
+      "d": true
+    },
+    "C6",
+    {
+      "d": true
+    },
+    "C5",
+    {
+      "d": true
+    },
+    "C4",
+    {
+      "d": true
+    },
+    "C3",
+    {
+      "d": true
+    },
+    "C2",
+    {
+      "d": true
+    },
+    "C1",
+    {
+      "x": 7.25,
+      "d": true
+    },
+    "C1",
+    {
+      "d": true
+    },
+    "C2",
+    {
+      "d": true
+    },
+    "C3",
+    {
+      "d": true
+    },
+    "C4",
+    {
+      "d": true
+    },
+    "C5",
+    {
+      "d": true
+    },
+    "C6"
+  ],
+  [
+    {
+      "x": 3,
+      "t": "#000000",
+      "g": true,
+      "a": 0,
+      "f": 3
+    },
+    "",
+    "",
+    "",
+    {
+      "x": 9.25
+    },
+    "",
+    "",
+    ""
+  ],
+  [
+    {
+      "y": -0.5,
+      "t": "#9E9E9E",
+      "g": false,
+      "a": 7,
+      "f": 5,
+      "d": true
+    },
+    "R1",
+    {
+      "t": "#000000",
+      "g": true,
+      "a": 0,
+      "f": 6
+    },
+    "",
+    "",
+    {
+      "x": 4,
+      "c": "#FFF3E0",
+      "g": false,
+      "a": 7,
+      "f": 9,
+      "w": 7.25,
+      "h": 1.5,
+      "d": true
+    },
+    "<b>Base Layer<br>(Enthium v13)</b>",
+    {
+      "x": 4,
+      "c": "#cccccc",
+      "g": true,
+      "a": 0,
+      "f": 3
+    },
+    "",
+    "",
+    {
+      "t": "#9E9E9E",
+      "g": false,
+      "a": 7,
+      "f": 5,
+      "d": true
+    },
+    "R1"
+  ],
+  [
+    {
+      "x": 3,
+      "y": -0.5,
+      "t": "#000000",
+      "a": 5
+    },
+    "@\n2",
+    "#\n3",
+    "$\n4",
+    "%\n5",
+    {
+      "x": 7.25
+    },
+    "^\n6",
+    "&\n7",
+    "*\n8",
+    "(\n9"
+  ],
+  [
+    {
+      "y": -0.5,
+      "t": "#9E9E9E",
+      "a": 7,
+      "d": true
+    },
+    "R2",
+    {
+      "t": "#000000",
+      "g": true,
+      "a": 0,
+      "f": 6
+    },
+    "",
+    {
+      "g": false,
+      "a": 5,
+      "f": 5
+    },
+    "!\n1",
+    {
+      "x": 4,
+      "a": 7,
+      "w": 7.25,
+      "d": true
+    },
+    "MoErgo Glove80 keyboard",
+    {
+      "x": 4,
+      "a": 5
+    },
+    ")\n0",
+    {
+      "g": true,
+      "a": 0,
+      "f": 3
+    },
+    "",
+    {
+      "t": "#9E9E9E",
+      "g": false,
+      "a": 7,
+      "f": 5,
+      "d": true
+    },
+    "R2"
+  ],
+  [
+    {
+      "x": 3,
+      "y": -0.5,
+      "t": "#000000"
+    },
+    "Y",
+    "O",
+    "U",
+    {
+      "a": 5
+    },
+    "+\n=",
+    {
+      "x": 7.25,
+      "a": 7
+    },
+    "X",
+    "L",
+    "D",
+    "P"
+  ],
+  [
+    {
+      "x": 7,
+      "y": -0.75,
+      "f": 4,
+      "w": 7.25,
+      "h": 1.5,
+      "d": true
+    },
+    "<b><a href='https://github.com/manna-harbour/miryoku'>Miryoku</a></b> layers & home row mods<br><b><a href='https://github.com/sunaku/glove80-keymaps'>Glorious Engrammer</a></b> keymap<br>See <b><a href='https://is.gd/sunaku_glove80'>is.gd/sunaku_glove80</a></b>"
+  ],
+  [
+    {
+      "y": -0.75,
+      "t": "#9E9E9E",
+      "f": 5,
+      "d": true
+    },
+    "R3",
+    {
+      "t": "#000000",
+      "g": true,
+      "a": 0,
+      "f": 6
+    },
+    "",
+    {
+      "g": false,
+      "a": 7,
+      "f": 5
+    },
+    "Q",
+    {
+      "x": 15.25
+    },
+    "Z",
+    {
+      "g": true,
+      "a": 0,
+      "f": 3
+    },
+    "",
+    {
+      "t": "#9E9E9E",
+      "g": false,
+      "a": 7,
+      "f": 5,
+      "d": true
+    },
+    "R3"
+  ],
+  [
+    {
+      "x": 3,
+      "y": -0.5,
+      "c": "#bbdefb",
+      "t": "#000000"
+    },
+    "I\n\n\n\n<i><b>Alt</b></i>",
+    {
+      "c": "#dcedc8"
+    },
+    "A\n\n\n\n<i><b>Ctrl</b></i>",
+    {
+      "c": "#ffecb3",
+      "n": true
+    },
+    "E\n\n\n\n<i><b>Shift</b></i>",
+    {
+      "c": "#cccccc",
+      "a": 5
+    },
+    "_\n-",
+    {
+      "x": 7.25,
+      "a": 7
+    },
+    "K",
+    {
+      "c": "#ffecb3",
+      "n": true
+    },
+    "H\n\n\n\n<i><b>Shift</b></i>",
+    {
+      "c": "#dcedc8"
+    },
+    "T\n\n\n\n<i><b>Ctrl</b></i>",
+    {
+      "c": "#bbdefb"
+    },
+    "N\n\n\n\n<i><b>Alt</b></i>"
+  ],
+  [
+    {
+      "y": -0.5,
+      "c": "#cccccc",
+      "t": "#9E9E9E",
+      "d": true
+    },
+    "R4",
+    {
+      "t": "#000000"
+    },
+    "B",
+    {
+      "c": "#FFCDD2"
+    },
+    "C\n\n\n\n<i><b>Win</b></i>",
+    {
+      "x": 15.25
+    },
+    "S\n\n\n\n<i><b>Win</b></i>",
+    {
+      "c": "#cccccc"
+    },
+    "W",
+    {
+      "t": "#9E9E9E",
+      "d": true
+    },
+    "R4"
+  ],
+  [
+    {
+      "x": 3,
+      "y": -0.5,
+      "t": "#000000",
+      "a": 5
+    },
+    "<\n,",
+    ">\n.",
+    {
+      "f": 4
+    },
+    "?\n/",
+    {
+      "f": 5
+    },
+    ":\n;",
+    {
+      "x": 7.25,
+      "a": 7
+    },
+    "J",
+    "M",
+    "G",
+    "F"
+  ],
+  [
+    {
+      "y": -0.5,
+      "t": "#9E9E9E",
+      "d": true
+    },
+    "R5",
+    {
+      "c": "#ffecb3",
+      "t": "#000000",
+      "a": 5,
+      "f": 3,
+      "fa": [
+        1
+      ]
+    },
+    "tap:sticky one-shot\nShift\n\n\n<i><b>Shift</b></i>",
+    {
+      "c": "#cccccc",
+      "f": 5,
+      "fa": []
+    },
+    "\"\n'",
+    {
+      "x": 15.25,
+      "a": 7
+    },
+    "V",
+    {
+      "c": "#ffecb3",
+      "a": 5,
+      "f": 3,
+      "fa": [
+        1
+      ]
+    },
+    "tap:sticky one-shot\nRShift\n\n\n<i><b>RShift</b></i>",
+    {
+      "c": "#cccccc",
+      "t": "#9E9E9E",
+      "a": 7,
+      "f": 5,
+      "fa": [],
+      "d": true
+    },
+    "R5"
+  ],
+  [
+    {
+      "x": 3,
+      "y": -0.5,
+      "t": "#000000",
+      "a": 5,
+      "f": 4
+    },
+    "{\n[",
+    "}\n]",
+    {
+      "c": "#d1c4e9"
+    },
+    "|\n\\\n\n\n<i><b>Emoji</b></i>",
+    {
+      "x": 9.25,
+      "a": 7,
+      "f": 3
+    },
+    "Page up\n\n\n\n<i><b>World</b></i>",
+    {
+      "c": "#cccccc",
+      "a": 5
+    },
+    "\nup\n\n\n\n\nScroll",
+    "\ndown\n\n\n\n\nScroll"
+  ],
+  [
+    {
+      "y": -0.5,
+      "t": "#9E9E9E",
+      "a": 7,
+      "f": 5,
+      "d": true
+    },
+    "R6",
+    {
+      "t": "#000000",
+      "f": 3
+    },
+    "Magic\n\n\n\n<i><b>Magic</b></i>",
+    {
+      "a": 5,
+      "f": 5
+    },
+    "~\n`",
+    {
+      "x": 15.25,
+      "a": 7,
+      "f": 3
+    },
+    "Page down",
+    "Magic\n\n\n\n<i><b>Magic</b></i>",
+    {
+      "t": "#9E9E9E",
+      "f": 5,
+      "d": true
+    },
+    "R6"
+  ],
+  [
+    {
+      "x": 0.9,
+      "y": 0.25,
+      "t": "#000000",
+      "a": 4,
+      "f": 3,
+      "w": 5.5,
+      "h": 4,
+      "d": true
+    },
+    "Combo T1+T4 = Shift (tap: sticky one-shot)<br>Combo T4+T5 = CapsWord on/off<br>Combo T1+T5 = CapsLock on/off<br>Combo T2+T5 = Alt+Tab menu (tap: switch)<br>Combo T3+T6 = Ctrl+Tab menu (tap: switch)<br>Combo T2+T6 = Win+Tab menu (tap: switch)<br>Combo T1+T2 = sticky RAlt (AltGr)<br>Combo T2+T3 = sticky Globe (macOS) or Win<br>Combo T5+T6 = Typing layer (key auto-repeat)<br>Combo T1+T2+T3 = unlock all, go to base layer<br>Combo C1R5+C2R6 = Gaming layer on/off",
+    {
+      "x": 8.5,
+      "w": 5.5,
+      "h": 4,
+      "d": true
+    },
+    "\n\nRShift (tap: sticky one-shot) = Combo T1+T4<br>CapsWord on/off = Combo T4+T5<br>CapsLock on/off = Combo T1+T5<br>Hyper (Win+Alt+Ctrl+Shift) = Combo T2+T5<br>Meh (Alt+Ctrl+Shift) = Combo T3+T6<br>Turbo (Ctrl+Shift) = Combo T2+T6<br>sticky RAlt (AltGr) = Combo T1+T2<br>sticky Globe (macOS) or Win = Combo T2+T3<br>Typing layer (key auto-repeat) = Combo T5+T6<br>unlock all, go to base layer = Combo T1+T2+T3<br>Typing layer on/off = Combo C1R5+C2R6"
+  ],
+  [
+    {
+      "r": 25,
+      "rx": 6.25,
+      "ry": 9,
+      "x": -0.4,
+      "y": -3.975,
+      "t": "#9E9E9E",
+      "a": 7,
+      "f": 5,
+      "d": true
+    },
+    "T1"
+  ],
+  [
+    {
+      "x": -0.4,
+      "y": -0.275,
+      "c": "#d1c4e9",
+      "t": "#000000",
+      "f": 3
+    },
+    "Escape\n\n\n\n<i><b>Function</b></i>"
+  ],
+  [
+    {
+      "x": -1,
+      "y": 0.1,
+      "n": true
+    },
+    "Space\n\n\n\n<i><b>Cursor</b></i>"
+  ],
+  [
+    {
+      "x": -1,
+      "y": -0.2,
+      "c": "#cccccc",
+      "t": "#9E9E9E",
+      "f": 5,
+      "d": true
+    },
+    "T4"
+  ],
+  [
+    {
+      "r": 35,
+      "x": 0.26,
+      "y": -3.675,
+      "d": true
+    },
+    "T2"
+  ],
+  [
+    {
+      "x": 0.25,
+      "y": -0.275,
+      "t": "#000000",
+      "a": 5,
+      "f": 4
+    },
+    "<\n("
+  ],
+  [
+    {
+      "x": -0.15,
+      "y": 0.15,
+      "c": "#d1c4e9",
+      "a": 7,
+      "f": 3
+    },
+    "Tab\n\n\n\n<i><b>Number</b></i>"
+  ],
+  [
+    {
+      "x": -0.15,
+      "y": -0.2,
+      "c": "#cccccc",
+      "t": "#9E9E9E",
+      "f": 5,
+      "d": true
+    },
+    "T5"
+  ],
+  [
+    {
+      "r": 45,
+      "x": 0.9,
+      "y": -3.825,
+      "d": true
+    },
+    "T3"
+  ],
+  [
+    {
+      "x": 0.9,
+      "y": -0.275,
+      "t": "#000000",
+      "a": 5,
+      "f": 4
+    },
+    ">\n)"
+  ],
+  [
+    {
+      "x": 0.7,
+      "y": 0.15,
+      "c": "#ffccbc",
+      "a": 7,
+      "f": 3
+    },
+    "Insert\n\n\n\n<i><b>Lower</b></i>"
+  ],
+  [
+    {
+      "x": 0.7,
+      "y": -0.2,
+      "c": "#cccccc",
+      "t": "#9E9E9E",
+      "f": 5,
+      "d": true
+    },
+    "T6"
+  ],
+  [
+    {
+      "r": -45,
+      "rx": 15,
+      "x": -1.9,
+      "y": -4.175,
+      "d": true
+    },
+    "T3"
+  ],
+  [
+    {
+      "x": -1.9,
+      "y": -0.275,
+      "t": "#000000",
+      "a": 5,
+      "f": 3,
+      "fa": [
+        1,
+        1
+      ]
+    },
+    "&nbsp;\n(⌘+Left)\n\n\n<i><b>Lower</b></i>\n\nHome"
+  ],
+  [
+    {
+      "x": -1.7,
+      "y": 0.15,
+      "c": "#ffccbc",
+      "a": 7,
+      "fa": []
+    },
+    "Delete\n\n\n\n<i><b>Lower</b></i>"
+  ],
+  [
+    {
+      "x": -1.7,
+      "y": -0.2,
+      "c": "#cccccc",
+      "t": "#9E9E9E",
+      "f": 5,
+      "d": true
+    },
+    "T6"
+  ],
+  [
+    {
+      "r": -35,
+      "x": -1.26,
+      "y": -3.525,
+      "d": true
+    },
+    "T2"
+  ],
+  [
+    {
+      "x": -1.25,
+      "y": -0.275,
+      "t": "#000000",
+      "a": 5,
+      "f": 3,
+      "fa": [
+        1,
+        1
+      ]
+    },
+    "&nbsp;\n(⌘+Right)\n\n\n\n\nEnd"
+  ],
+  [
+    {
+      "x": -0.85,
+      "y": 0.15,
+      "c": "#d1c4e9",
+      "a": 7,
+      "fa": []
+    },
+    "Back space\n\n\n\n<i><b>Mouse</b></i>"
+  ],
+  [
+    {
+      "x": -0.85,
+      "y": -0.2,
+      "c": "#cccccc",
+      "t": "#9E9E9E",
+      "f": 5,
+      "d": true
+    },
+    "T5"
+  ],
+  [
+    {
+      "r": -25,
+      "x": -0.6,
+      "y": -3.625,
+      "d": true
+    },
+    "T1"
+  ],
+  [
+    {
+      "x": -0.6,
+      "y": -0.275,
+      "c": "#d1c4e9",
+      "t": "#000000",
+      "f": 3
+    },
+    "Enter\n\n\n\n<i><b>System</b></i>"
+  ],
+  [
+    {
+      "y": 0.1,
+      "f": 5,
+      "n": true
+    },
+    "R\n\n\n\n<i><b>Symbol</b></i>"
+  ],
+  [
+    {
+      "y": -0.2,
+      "c": "#cccccc",
+      "t": "#9E9E9E",
+      "d": true
+    },
+    "T4"
+  ]
+]
