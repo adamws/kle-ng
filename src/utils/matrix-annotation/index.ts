@@ -7,6 +7,6 @@ export type {
   RowColAssignment,
 } from './types'
 
-export { computeRowsAndCols, buildRowsColsFromResult } from './build-matrix'
+export { buildRowsColsFromResult } from './build-matrix'
 export { clusterAnnotationAlgorithm } from './cluster'
 export { clusterSymmetryAnnotationAlgorithm } from './cluster-symmetry'

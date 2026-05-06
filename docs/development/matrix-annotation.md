@@ -194,8 +194,8 @@ variants:
 - **Variant A** (world): operates on key centers as-is.
 - **Variant B** (de-rotated): only considered when at least one rotation group
   has `|angle| > 1e-6` and `≥ 2 keys`. The keys are `structuredClone`d, then
-  `deRotateLayoutGroups` zeroes out `rotation_angle` on each group. The clone
-  is annotated with world centers now computed in the "de-rotated" space.
+  `rotation_angle` is zeroed on each clone in those groups. The clone is
+  annotated with world centers now computed in the "de-rotated" space.
 
 Each variant is scored by the tuple `(matrixMax, matrixSum, wireLength)` where
 `matrixMax = max(numRows, numCols)`, `matrixSum = numRows + numCols`, and
@@ -330,10 +330,9 @@ only variant A is evaluated and the de-rotation code path is skipped entirely.
 
 When rotation awareness is triggered, a second `structuredClone` of the key
 array is created (separate from the variant-A clone). `splitLayoutByRotation`
-groups the clone's regular keys, and `deRotateLayoutGroups` zeroes out
-`rotation_angle` on each group with a non-zero angle. The clone is never
-written back to the store; it exists only for the duration of the scoring
-comparison.
+groups the clone's regular keys, and `rotation_angle` is zeroed directly on
+each clone in groups with a non-zero angle. The clone is never written back to
+the store; it exists only for the duration of the scoring comparison.
 
 With rotation zeroed, `getKeyCenter` computes centers in the key's "local"
 coordinate frame, putting keys within the same cluster onto aligned Y values
@@ -652,8 +651,7 @@ but filtered out during rendering.
 +---------------------------+     +---------------------------+
 | keyboard-geometry.ts      |     | matrix-utils.ts           |
 | - getKeyCenter            |     | - splitLayoutByRotation   |
-+---------------------------+     | - deRotateLayoutGroups    |
-                                  +---------------------------+
++---------------------------+     +---------------------------+
               |
               | reads/writes
               v

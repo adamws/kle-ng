@@ -1,6 +1,6 @@
 import type { Key } from '@/stores/keyboard'
 import { getKeyCenter } from '@/utils/keyboard-geometry'
-import { splitLayoutByRotation, deRotateLayoutGroups } from '@/utils/matrix-utils'
+import { splitLayoutByRotation } from '@/utils/matrix-utils'
 import type {
   AnnotationAlgorithm,
   AnnotationResult,
@@ -188,7 +188,16 @@ export const clusterAnnotationAlgorithm: AnnotationAlgorithm = {
       clonesB.forEach((c, i) => cloneToOrigB.set(c, i))
       const regularB = clonesB.filter(isRegular)
       const groups = splitLayoutByRotation(regularB)
-      deRotateLayoutGroups(groups)
+      // Zero out rotation_angle directly on clones (no label side-channel needed).
+      // Note: this only zeros the angle — x/y/rotation_x/rotation_y are unchanged,
+      // so centers are approximate for keys rotated around a pivot (pre-existing behaviour).
+      groups.forEach((g) => {
+        if (Math.abs(g.rotationAngle) > 1e-6) {
+          g.keys.forEach((k) => {
+            k.rotation_angle = 0
+          })
+        }
+      })
       const variantB = annotateVariant(regularB)
 
       if (variantBetter(variantB, variantA)) {

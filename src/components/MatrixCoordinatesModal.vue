@@ -777,11 +777,6 @@ const applyCoordinatesToKeys = () => {
   })
 }
 
-const showDuplicateWarning = (duplicates: { position: string; keys: Key[] }[]) => {
-  // Store annotation issues for display in preview
-  annotationIssues.value = { duplicates }
-}
-
 const handleAutomaticAnnotation = () => {
   isShowingExistingAnnotation.value = false
 
@@ -790,13 +785,6 @@ const handleAutomaticAnnotation = () => {
   const { rows: newRows, cols: newCols } = buildRowsColsFromResult(result, keyboardStore.keys)
   rows.value = newRows
   cols.value = newCols
-
-  const displayDuplicates = result.meta?.displayDuplicates as
-    | { position: string; keys: Key[] }[]
-    | undefined
-  if (displayDuplicates) {
-    showDuplicateWarning(displayDuplicates)
-  }
 
   matrixDrawingStore.clearDrawings()
   matrixDrawingStore.enableDrawing('row')
