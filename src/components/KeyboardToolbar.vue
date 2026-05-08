@@ -57,6 +57,11 @@
                 From QMK
               </a>
             </li>
+            <li>
+              <a class="dropdown-item" href="#" @click.prevent="showViaImportModal = true">
+                From VIA
+              </a>
+            </li>
           </ul>
         </div>
 
@@ -185,6 +190,7 @@
     <!-- Import modals -->
     <UrlImportModal :is-visible="showUrlImportModal" @close="showUrlImportModal = false" />
     <QmkImportModal :is-visible="showQmkImportModal" @close="showQmkImportModal = false" />
+    <ViaImportModal :is-visible="showViaImportModal" @close="showViaImportModal = false" />
   </div>
 </template>
 
@@ -197,6 +203,7 @@ import { useKeyboardExport } from '@/composables/useKeyboardExport'
 import { useKeyboardImport } from '@/composables/useKeyboardImport'
 import UrlImportModal from './UrlImportModal.vue'
 import QmkImportModal from './QmkImportModal.vue'
+import ViaImportModal from './ViaImportModal.vue'
 
 import BiBoxArrowUpRight from 'bootstrap-icons/icons/box-arrow-up-right.svg'
 
@@ -264,6 +271,7 @@ const { triggerFileUpload, handleFileUpload } = useKeyboardImport(fileInput)
 // Modal visibility
 const showUrlImportModal = ref(false)
 const showQmkImportModal = ref(false)
+const showViaImportModal = ref(false)
 
 // Share
 const shareLayout = async () => {
