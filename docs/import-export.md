@@ -31,7 +31,10 @@ Zoom in on the canvas before exporting to PNG to increase the output image resol
 
 [VIA](https://www.caniusevia.com/) and [Vial](https://get.vial.today/) are keyboard configuration tools that use a special JSON format. VIA format wraps KLE layout data with additional metadata (keyboard name, vendor/product IDs, matrix configuration).
 
-**On import**, kle-ng converts VIA format to KLE format and preserves VIA-specific metadata in a `_kleng_via_data` field, maintaining full compatibility.
+**On import**, kle-ng converts VIA format to KLE format and preserves VIA-specific metadata in a `_kleng_via_data` field, maintaining full compatibility. VIA layouts can be imported in two ways:
+
+- **From File**: Browse for a VIA layout JSON file on your computer
+- **From VIA**: Search and import directly from a curated database of VIA-ready keyboards via **Import → From VIA** modal, without needing to download the JSON file manually
 
 **On export**, layouts containing `_kleng_via_data` metadata can be exported back to VIA JSON format using **Export → Download VIA JSON**.
 
@@ -253,6 +256,8 @@ Click the **Import** button in the toolbar and select:
 - Existing kle-ng share link
 
 **From QMK** — Search and import any keyboard directly from the [QMK keyboard database](https://keyboards.qmk.fm/). A searchable list of all available keyboards is loaded from `keyboards.qmk.fm`. Type to filter with fuzzy search, select a keyboard, and click **Import** (or double-click an entry). The keyboard's `info.json` is fetched and converted to KLE format automatically — no file download required. This is equivalent to downloading a keyboard's `info.json` and using **From File**, but without the manual steps.
+
+**From VIA** — Search and import any keyboard directly from a curated index of VIA-ready keyboards. A searchable list is loaded from [`https://adamws.github.io/keyboard-pcbs/keyboard_list.json`](https://adamws.github.io/keyboard-pcbs/keyboard_list.json). Type to filter with fuzzy search, select a keyboard, and click **Import** (or double-click an entry). The keyboard's VIA layout JSON is fetched from the [`the-via/keyboards` GitHub repository](https://github.com/the-via/keyboards) (`v3/` directory), converted to KLE format automatically, and VIA metadata is preserved. This is equivalent to downloading a VIA layout JSON and using **From File**, but without the manual steps.
 
 ### Drag and Drop
 
