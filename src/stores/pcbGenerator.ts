@@ -8,6 +8,7 @@ import type {
   RenderViews,
 } from '@/types/pcb'
 import { pcbApi, ApiError } from '@/utils/pcbApi'
+import { applyViaEncoderSwitchMount } from '@/utils/pcb-encoder'
 import { useKeyboardStore } from '@/stores/keyboard'
 import { useToast } from '@/composables/useToast'
 import { setCustomBackendUrl, getDefaultBackendUrl } from '@/config/api'
@@ -222,8 +223,13 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
         diodePositionY: settings.value.diodePositionY,
       }
 
+      // Mark VIA-annotated rotary encoders with sm="rot_ec11" so the backend
+      // places encoder footprints. Operates on the serialized snapshot only,
+      // leaving the user's layout untouched.
+      const backendLayout = applyViaEncoderSwitchMount(layout)
+
       const request = {
-        layout,
+        layout: backendLayout,
         settings: apiSettings,
       }
 
