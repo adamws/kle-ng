@@ -9,7 +9,7 @@ const pcbStore = usePcbGeneratorStore()
 const { taskStatus, isTaskActive, isBackendAvailable, workerStatusError } = storeToRefs(pcbStore)
 
 const keyboardStore = useKeyboardStore()
-const { isViaAnnotated, hasInvalidMatrixDuplicates, matrixDuplicateValidation } =
+const { keys, isViaAnnotated, hasInvalidMatrixDuplicates, matrixDuplicateValidation } =
   storeToRefs(keyboardStore)
 
 const errorMessage = ref<string | null>(null)
@@ -18,18 +18,28 @@ const isSubmitting = ref(false)
 // Button should show when no task is active (taskStatus is null)
 const showGenerateButton = computed(() => !taskStatus.value)
 
+// Temporary guard: kbplacer backend crashes on single-key layouts.
+// See https://github.com/adamws/kbplacer schematic_builder.py stabilizer_position
+// (ValueError: min() iterable argument is empty). Require at least 2 switches.
+const switchKeyCount = computed(() => keys.value.filter((key) => !key.decal && !key.ghost).length)
+const hasTooFewKeys = computed(() => switchKeyCount.value < 2)
+
 const isGenerateDisabled = computed(
   () =>
     isSubmitting.value ||
     isTaskActive.value ||
     !isBackendAvailable.value ||
     !isViaAnnotated.value ||
+    hasTooFewKeys.value ||
     hasInvalidMatrixDuplicates.value,
 )
 
 const buttonTooltip = computed(() => {
   if (!isViaAnnotated.value) {
     return 'Layout requires VIA annotations to generate PCB'
+  }
+  if (hasTooFewKeys.value) {
+    return 'PCB generation requires a layout with at least 2 keys'
   }
   if (hasInvalidMatrixDuplicates.value) {
     return 'Layout has duplicate matrix positions without option,choice labels'
@@ -54,6 +64,12 @@ const duplicatePositions = computed(() => {
 
 async function handleGeneratePcb() {
   errorMessage.value = null
+
+  if (hasTooFewKeys.value) {
+    errorMessage.value = 'PCB generation requires a layout with at least 2 keys.'
+    return
+  }
+
   isSubmitting.value = true
 
   try {
@@ -124,6 +140,18 @@ function handleNewTask() {
       <small>
         Layout requires VIA annotations. Use
         <strong>Tools &rarr; Add Switch Matrix Coordinates</strong> to annotate.
+      </small>
+    </div>
+
+    <!-- Too Few Keys Warning -->
+    <div
+      v-if="isViaAnnotated && hasTooFewKeys && showGenerateButton"
+      class="alert alert-warning py-2 mt-2 mb-0"
+      role="alert"
+    >
+      <small>
+        <strong>Layout too small:</strong> PCB generation requires at least 2 keys. Add more keys to
+        the layout before generating a PCB.
       </small>
     </div>
 
