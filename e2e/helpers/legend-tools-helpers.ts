@@ -153,14 +153,7 @@ export class LegendToolsHelper {
    */
   getCategoryButton(
     category:
-      | 'All'
-      | 'Alphas'
-      | 'Numbers'
-      | 'Punctuation'
-      | 'Function'
-      | 'Specials'
-      | 'Others'
-      | 'Decals',
+      'All' | 'Alphas' | 'Numbers' | 'Punctuation' | 'Function' | 'Specials' | 'Others' | 'Decals',
   ): Locator {
     const categoryId = category.toLowerCase()
     return this.page.getByTestId(`category-button-${categoryId}`)
@@ -363,14 +356,7 @@ export class LegendToolsHelper {
    */
   async removeLegendsByCategory(
     category:
-      | 'All'
-      | 'Alphas'
-      | 'Numbers'
-      | 'Punctuation'
-      | 'Function'
-      | 'Specials'
-      | 'Others'
-      | 'Decals',
+      'All' | 'Alphas' | 'Numbers' | 'Punctuation' | 'Function' | 'Specials' | 'Others' | 'Decals',
   ): Promise<void> {
     await this.getCategoryButton(category).click()
   }

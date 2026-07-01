@@ -2665,10 +2665,7 @@ this.callbacks.add(callback)  // Automatic deduplication
 ```typescript
 // This 21-line watcher was removed:
 watch(
-  () =>
-    keyboardStore.keys.map((key) => ({
-      /* position data */
-    })),
+  () => keyboardStore.keys.map((key) => ({/* position data */})),
   async () => {
     await nextTick()
     updateCanvasSize()

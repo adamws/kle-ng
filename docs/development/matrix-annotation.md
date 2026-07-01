@@ -378,8 +378,7 @@ path now flows through `result.meta?.displayDuplicates`:
 
 ```ts
 const displayDuplicates = result.meta?.displayDuplicates as
-  | { position: string; keys: Key[] }[]
-  | undefined
+  { position: string; keys: Key[] }[] | undefined
 if (displayDuplicates) {
   showDuplicateWarning(displayDuplicates)
 }

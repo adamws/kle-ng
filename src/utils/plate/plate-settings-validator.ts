@@ -7,8 +7,7 @@ import type { CutoutType, StabilizerType, BacksideFeatureType } from '@/types/pl
 import type { PlateSettingsJson } from './plate-settings-serializer'
 
 export type ValidationResult =
-  | { valid: true; json: PlateSettingsJson; warnings: string[] }
-  | { valid: false; error: string }
+  { valid: true; json: PlateSettingsJson; warnings: string[] } | { valid: false; error: string }
 
 const OUTLINE_TYPES = ['none', 'rectangular', 'tight'] as const
 

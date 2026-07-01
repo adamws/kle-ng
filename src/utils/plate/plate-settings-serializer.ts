@@ -67,9 +67,7 @@ export interface PlateSettingsJsonOutlineTight {
 }
 
 export type PlateSettingsJsonOutline =
-  | PlateSettingsJsonOutlineNone
-  | PlateSettingsJsonOutlineRectangular
-  | PlateSettingsJsonOutlineTight
+  PlateSettingsJsonOutlineNone | PlateSettingsJsonOutlineRectangular | PlateSettingsJsonOutlineTight
 
 export interface PlateSettingsJsonBacksideFeature {
   type: BacksideFeatureType
