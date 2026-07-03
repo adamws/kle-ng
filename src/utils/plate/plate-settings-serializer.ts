@@ -21,6 +21,8 @@ export interface PlateSettingsJsonCutout {
   stabilizerFilletRadius?: number
   kerf?: number
   merge?: boolean
+  /** Handwired (screw-in) rotary encoder mount. Omitted when false (PCB default). */
+  rotaryEncoderHandwired?: boolean
   /** Only present when switchType === 'custom-rectangle' */
   width?: number
   /** Only present when switchType === 'custom-rectangle' */
@@ -103,6 +105,9 @@ export function serializePlateSettings(s: PlateSettings): PlateSettingsJson {
   }
   if (s.stabilizerType !== 'none') {
     cutout.stabilizerFilletRadius = s.stabilizerFilletRadius
+  }
+  if (s.rotaryEncoderHandwired) {
+    cutout.rotaryEncoderHandwired = true
   }
   if (s.cutoutType === 'custom-rectangle') {
     cutout.width = s.customCutoutWidth
@@ -258,6 +263,7 @@ export function deserializePlateSettings(
     stabilizerFilletRadius: c?.stabilizerFilletRadius ?? defaults.stabilizerFilletRadius,
     sizeAdjust: c?.kerf ?? defaults.sizeAdjust,
     mergeCutouts: c?.merge ?? defaults.mergeCutouts,
+    rotaryEncoderHandwired: c?.rotaryEncoderHandwired ?? defaults.rotaryEncoderHandwired,
     customCutoutWidth: c?.width ?? defaults.customCutoutWidth,
     customCutoutHeight: c?.height ?? defaults.customCutoutHeight,
     thickness: json.thickness ?? defaults.thickness,

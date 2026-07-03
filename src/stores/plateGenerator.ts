@@ -35,6 +35,7 @@ const defaultSettings: PlateSettings = {
   customCutoutWidth: 14,
   customCutoutHeight: 14,
   mergeCutouts: false,
+  rotaryEncoderHandwired: false,
   thickness: 1.5,
   outline: {
     outlineType: 'none' as const,
@@ -115,6 +116,7 @@ export const usePlateGeneratorStore = defineStore('plateGenerator', () => {
       customCutoutWidth: settings.value.customCutoutWidth,
       customCutoutHeight: settings.value.customCutoutHeight,
       mergeCutouts: settings.value.mergeCutouts,
+      rotaryEncoderHandwired: settings.value.rotaryEncoderHandwired,
       thickness: settings.value.thickness,
       outline: settings.value.outline,
       mountingHoles: settings.value.mountingHoles,

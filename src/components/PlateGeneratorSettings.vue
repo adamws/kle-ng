@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { usePlateGeneratorStore } from '@/stores/plateGenerator'
 import { storeToRefs } from 'pinia'
 import {
@@ -12,9 +12,20 @@ import {
   validateCustomCutoutDimension,
 } from '@/utils/plate/cutout-generator'
 import CustomNumberInput from './CustomNumberInput.vue'
+import RotaryEncoderHelpModal from './RotaryEncoderHelpModal.vue'
+import BiQuestionCircle from 'bootstrap-icons/icons/question-circle.svg'
 
 const plateStore = usePlateGeneratorStore()
 const { settings } = storeToRefs(plateStore)
+
+// Rotary encoder mount help modal
+const isEncoderHelpVisible = ref(false)
+const showEncoderHelp = () => {
+  isEncoderHelpVisible.value = true
+}
+const closeEncoderHelp = () => {
+  isEncoderHelpVisible.value = false
+}
 
 // Get cutout options for dropdown
 const cutoutOptions = getCutoutOptions()
@@ -179,6 +190,31 @@ const customHeightInputClass = computed(() =>
         </select>
       </div>
 
+      <!-- Rotary Encoder Mount -->
+      <div class="mb-2">
+        <div class="d-flex align-items-center gap-2">
+          <div class="form-check mb-0">
+            <input
+              id="rotaryEncoderHandwired"
+              v-model="settings.rotaryEncoderHandwired"
+              class="form-check-input"
+              type="checkbox"
+            />
+            <label class="form-check-label form-label-sm" for="rotaryEncoderHandwired"
+              >Handwired rotary encoder mount</label
+            >
+          </div>
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-secondary help-btn"
+            title="Rotary encoder mount help"
+            @click="showEncoderHelp"
+          >
+            <BiQuestionCircle />
+          </button>
+        </div>
+      </div>
+
       <!-- Fillet Radius -->
       <div class="mb-2">
         <label class="form-label form-label-sm">Fillet Radius</label>
@@ -258,6 +294,8 @@ const customHeightInputClass = computed(() =>
         <div class="form-text small">Combine overlapping cutouts into simplified paths</div>
       </div>
     </div>
+
+    <RotaryEncoderHelpModal :is-visible="isEncoderHelpVisible" @close="closeEncoderHelp" />
   </div>
 </template>
 
@@ -281,6 +319,16 @@ const customHeightInputClass = computed(() =>
   font-weight: 400;
   font-size: 0.8rem;
   margin-bottom: 0.1rem;
+}
+
+.help-btn {
+  font-size: 0.875rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  padding: 4px;
 }
 
 /* Ensure consistent spacing */

@@ -123,6 +123,14 @@ export interface PlateSettings {
   customCutoutHeight: number
   /** Merge overlapping cutouts into simplified paths. */
   mergeCutouts: boolean
+  /**
+   * How rotary encoder keys (`sm === 'rot_ec11'`) are cut into the plate.
+   * `false` (default, PCB build): a standard 14×14mm rectangular through-cutout,
+   * because the encoder is soldered to the PCB and sits in a normal switch position.
+   * `true` (handwired build, no PCB): a circular screw-in cutout plus a 15×15mm
+   * backside clearance pocket, for mounting the EC11 via its threaded bushing.
+   */
+  rotaryEncoderHandwired: boolean
   /** Plate thickness in mm for 3D export. */
   thickness: number
   /** Outline generation settings */

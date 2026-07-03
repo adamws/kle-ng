@@ -277,3 +277,88 @@ describe('buildJscadScript output content', () => {
     expect(result.jscadScript).toContain('circle(')
   })
 })
+
+// ---------------------------------------------------------------------------
+// Rotary encoder cutouts (sm === 'rot_ec11')
+// ---------------------------------------------------------------------------
+
+describe('rotary encoder cutouts', () => {
+  const encoderKey = createKey({ x: 0, y: 0, width: 1, height: 1, sm: 'rot_ec11' })
+
+  it('PCB build (default): encoder emits a 14×14 rectangle, no stabilizer, no backside pocket', async () => {
+    const result = await buildPlate([encoderKey], {
+      cutoutType: 'cherry-mx-basic',
+      stabilizerType: 'mx-basic',
+      outline: RECTANGULAR_OUTLINE,
+      backsideDepth: 1,
+    })
+    expect(result.jscadScript).toBeDefined()
+    // 14×14 rectangle (registered as a shared shape), no circle, no stab, no pocket.
+    expect(result.jscadScript).toContain('rectangle({ size: [14, 14] })')
+    expect(result.jscadScript).not.toContain('circle(')
+    expect(result.jscadScript).not.toContain('stab_0')
+    expect(result.jscadScript).not.toContain('encoder_backside')
+  })
+
+  it('handwired: emits a 4mm circle switch cutout and no stabilizer, even when stab type is set', async () => {
+    const result = await buildPlate([encoderKey], {
+      cutoutType: 'cherry-mx-basic',
+      stabilizerType: 'mx-basic',
+      rotaryEncoderHandwired: true,
+      outline: RECTANGULAR_OUTLINE,
+    })
+    expect(result.jscadScript).toBeDefined()
+    expect(result.jscadScript).toContain('const switch_0 = circle({ radius: 4 })')
+    expect(result.jscadScript).not.toContain('stab_0')
+  })
+
+  it('handwired: applies kerf compensation to the circle radius (4 − sizeAdjust/2)', async () => {
+    const result = await buildPlate([encoderKey], {
+      cutoutType: 'cherry-mx-basic',
+      rotaryEncoderHandwired: true,
+      sizeAdjust: 0.5,
+      outline: RECTANGULAR_OUTLINE,
+    })
+    expect(result.jscadScript).toContain('const switch_0 = circle({ radius: 3.75 })')
+  })
+
+  it('handwired: emits a 15×15 backside pocket when backsideDepth > 0, and no snap notch', async () => {
+    const result = await buildPlate([encoderKey], {
+      cutoutType: 'cherry-mx-basic',
+      rotaryEncoderHandwired: true,
+      outline: RECTANGULAR_OUTLINE,
+      backsideDepth: 1,
+      backsideFeatures: [{ type: 'cherry-mx-snap-notch', enabled: true }],
+    })
+    expect(result.jscadScript).toContain('encoder_backside_0')
+    expect(result.jscadScript).toContain('cuboid({ size: [15, 15, 1] })')
+    expect(result.jscadScript).not.toContain('snap_notch')
+  })
+
+  it('handwired: omits the backside pocket when backsideDepth is 0', async () => {
+    const result = await buildPlate([encoderKey], {
+      cutoutType: 'cherry-mx-basic',
+      rotaryEncoderHandwired: true,
+      outline: RECTANGULAR_OUTLINE,
+      backsideDepth: 0,
+    })
+    expect(result.jscadScript).not.toContain('encoder_backside')
+  })
+
+  it('mixed handwired layout: normal switch gets a rectangle, encoder gets a circle', async () => {
+    const mixed = [
+      createKey({ x: 0, y: 0, width: 1, height: 1 }),
+      createKey({ x: 1, y: 0, width: 1, height: 1, sm: 'rot_ec11' }),
+    ]
+    const result = await buildPlate(mixed, {
+      cutoutType: 'cherry-mx-basic',
+      rotaryEncoderHandwired: true,
+      outline: RECTANGULAR_OUTLINE,
+    })
+    // The rectangle switch is registered as a shared shape; the encoder is a circle.
+    expect(result.jscadScript).toContain('rectangle({ size: [14, 14] })')
+    expect(result.jscadScript).toContain(
+      'const switch_1 = translate([19.05, 0, 0], circle({ radius: 4 }))',
+    )
+  })
+})

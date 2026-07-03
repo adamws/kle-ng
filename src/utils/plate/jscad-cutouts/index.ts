@@ -36,3 +36,9 @@ export {
   type BacksideCut3D,
   type Geom3,
 } from './backside-features'
+export {
+  createRotaryEncoderBacksideCut,
+  ENCODER_CUTOUT_RADIUS,
+  ENCODER_BACKSIDE_SIZE,
+  ENCODER_PCB_CUTOUT_SIZE,
+} from './encoder-cutouts'

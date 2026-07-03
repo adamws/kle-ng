@@ -52,7 +52,13 @@ import {
   createCherryMxSnapNotchCuts,
   createStabBacksideCut,
   STAB_BACKSIDE_OVERHANGS,
+  createRotaryEncoderBacksideCut,
+  ENCODER_CUTOUT_RADIUS,
+  ENCODER_PCB_CUTOUT_SIZE,
 } from './jscad-cutouts'
+
+/** Per-key `sm` (switch mount) value identifying an EC11 rotary encoder. */
+const ENCODER_SWITCH_MOUNT = 'rot_ec11'
 
 /**
  * Options for building a plate
@@ -78,6 +84,11 @@ export interface PlateBuilderOptions {
   customCutoutHeight?: number
   /** Merge overlapping cutouts into simplified paths (default: false) */
   mergeCutouts?: boolean
+  /**
+   * Rotary encoder mounting style. false (default) = PCB build (14×14 rectangular
+   * through-cutout); true = handwired screw-in mount (circular cutout + backside pocket).
+   */
+  rotaryEncoderHandwired?: boolean
   /** Outline generation settings */
   outline?: OutlineSettings
   /** Mounting holes settings */
@@ -787,6 +798,7 @@ export async function buildPlate(
     customCutoutWidth,
     customCutoutHeight,
     mergeCutouts = false,
+    rotaryEncoderHandwired = false,
     outline,
     mountingHoles,
     customHoles,
@@ -851,6 +863,84 @@ export async function buildPlate(
     const key = cutoutKeys[i]
     if (!position) continue
 
+    // The switch generator's width/height cancel out here, so this is the true
+    // key center regardless of the configured cutout type.
+    const keyCenterX = position.centerX + position.width / 2
+    const keyCenterY = position.centerY + position.height / 2
+
+    // --- Rotary encoder override (sm === 'rot_ec11') ---
+    // Encoders never get a stabilizer or Cherry MX snap notch. The cutout shape
+    // depends on the mounting style:
+    //  • PCB build (default): standard 14×14mm rectangular through-cutout — the
+    //    encoder is soldered to the PCB and sits in a normal switch position.
+    //  • Handwired build: circular screw-in cutout (kerf-compensated) plus a
+    //    15×15mm backside clearance pocket (added later, 3D only).
+    if (key?.sm === ENCODER_SWITCH_MOUNT) {
+      const label = sanitizeLabel(key)
+      const varName = `switch_${i}`
+
+      if (rotaryEncoderHandwired) {
+        const encoderRadius = ENCODER_CUTOUT_RADIUS - sizeAdjust / 2
+
+        // Maker.js side (SVG/DXF)
+        const encoderModel = new makerjs.models.Ellipse(encoderRadius, encoderRadius)
+        encoderModel.origin = [keyCenterX, keyCenterY]
+        cutoutModels[`cutout_${i}`] = encoderModel
+
+        // JSCAD side (STL + script) — reuse circle-hole primitives, keep switch_ prefix
+        const comment = [label ? `"${label}"` : '', 'encoder (handwired)'].filter(Boolean).join(' ')
+        namedGeoms.push({
+          varName,
+          geom: placeGeom2(createCircleHoleGeom(encoderRadius), keyCenterX, keyCenterY, 0),
+          scriptLines: buildCircleHoleScript(
+            varName,
+            encoderRadius,
+            keyCenterX,
+            keyCenterY,
+            comment,
+          ),
+        })
+      } else {
+        // PCB build: 14×14mm rectangle, cut through the full plate thickness.
+        const switchRotDeg = position.rotationAngle - (key.switchRotation || 0)
+
+        // Maker.js side (SVG/DXF) — reuse the standard 14×14 Cherry MX generator.
+        cutoutModels[`cutout_${i}`] = await positionCutout(
+          position,
+          'cherry-mx-basic',
+          filletRadius,
+          sizeAdjust,
+          undefined,
+          undefined,
+          key.switchRotation || 0,
+        )
+
+        // JSCAD side (STL + script)
+        const w = ENCODER_PCB_CUTOUT_SIZE - sizeAdjust
+        const h = ENCODER_PCB_CUTOUT_SIZE - sizeAdjust
+        const comment = [label ? `"${label}"` : '', 'encoder (PCB)'].filter(Boolean).join(' ')
+        namedGeoms.push({
+          varName,
+          geom: placeGeom2(
+            createRectangleSwitchGeom({ width: w, height: h, filletRadius }),
+            keyCenterX,
+            keyCenterY,
+            switchRotDeg,
+          ),
+          scriptLines: buildRectangleSwitchScript(
+            varName,
+            { width: w, height: h, filletRadius },
+            keyCenterX,
+            keyCenterY,
+            switchRotDeg,
+            comment,
+            scriptShapeRegistry,
+          ),
+        })
+      }
+      continue
+    }
+
     // --- Maker.js side (SVG/DXF, unchanged) ---
     const cutoutModel = await positionCutout(
       position,
@@ -867,8 +957,6 @@ export async function buildPlate(
     const gen = getCutoutGenerator(cutoutType, customCutoutWidth, customCutoutHeight)
     const w = gen.width - sizeAdjust
     const h = gen.height - sizeAdjust
-    const keyCenterX = position.centerX + position.width / 2
-    const keyCenterY = position.centerY + position.height / 2
     const switchRotDeg = position.rotationAngle - (key?.switchRotation || 0)
 
     const label = key ? sanitizeLabel(key) : ''
@@ -1272,6 +1360,8 @@ export async function buildPlate(
           for (let i = 0; i < cutoutPositions.length; i++) {
             const position = cutoutPositions[i]
             if (!position) continue
+            // Encoders are not Cherry MX switches — no snap notch.
+            if (cutoutKeys[i]?.sm === ENCODER_SWITCH_MOUNT) continue
             const keyCenterX = position.centerX + position.width / 2
             const keyCenterY = position.centerY + position.height / 2
             backsideCuts.push(
@@ -1285,6 +1375,27 @@ export async function buildPlate(
               ),
             )
           }
+        }
+      }
+
+      // Rotary encoder backside clearance pockets (15×15mm) — handwired screw-in
+      // mount only. PCB-mounted encoders use a plain through-cutout with no pocket.
+      if (rotaryEncoderHandwired) {
+        for (let i = 0; i < cutoutPositions.length; i++) {
+          const position = cutoutPositions[i]
+          if (!position) continue
+          if (cutoutKeys[i]?.sm !== ENCODER_SWITCH_MOUNT) continue
+          const keyCenterX = position.centerX + position.width / 2
+          const keyCenterY = position.centerY + position.height / 2
+          backsideCuts.push(
+            createRotaryEncoderBacksideCut(
+              i,
+              keyCenterX,
+              keyCenterY,
+              backsideDepth,
+              scriptShapeRegistry,
+            ),
+          )
         }
       }
     }

@@ -64,6 +64,19 @@ Combines overlapping shapes into single paths. Useful when stabilizer cutouts ov
 
 To adjust the orientation of individual switch or stabilizer cutouts, set the **Switch orientation** or **Stabilizer orientation** property in the **Key Properties** panel. See [Manufacturing Properties](./key-properties#switch-orientation) for details.
 
+### Rotary Encoder Mount {#rotary-encoder-mount}
+
+Keys marked as **rotary encoders** (the _Rotary Encoder_ checkbox in the **Key Properties** panel) use a dedicated EC11 cutout instead of the selected switch shape. They never receive stabilizer or snap-notch cutouts.
+
+The **Handwired rotary encoder mount** checkbox controls how these keys are cut:
+
+- **Off (default)** — For builds with a PCB. The encoder is soldered to the PCB and sits in a normal switch position, so the plate gets a standard 14 × 14 mm switch cutout.
+- **On** — For handwired builds with no PCB. The plate gets a circular screw-in cutout (plus a backside clearance pocket in STL/JSCAD exports) so the encoder can be fixed by its threaded bushing and nut.
+
+::: warning
+A screw-mounted encoder body will not fit between a plate and a PCB. Only enable this for handwired builds.
+:::
+
 ## Holes {#holes}
 
 ### Corner Mounting Holes
@@ -205,6 +218,7 @@ All sections and fields are optional — omitted fields fall back to defaults. H
 - `holes.mounting` present implies corner mounting holes are enabled
 - `holes.custom` present implies custom holes are enabled
 - `stabilizerFilletRadius` is omitted when `stabilizerType` is `"none"`
+- `cutout.rotaryEncoderHandwired` (boolean, default `false`) enables the handwired screw-in encoder mount
 - `threed` section is omitted when no backside features are enabled and `backsideDepth` is `0` (both default)
 
 **3D section fields:**

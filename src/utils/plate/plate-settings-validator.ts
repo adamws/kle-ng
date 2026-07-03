@@ -19,6 +19,7 @@ const KNOWN_CUTOUT_KEYS_BASE = new Set([
   'stabilizerFilletRadius',
   'kerf',
   'merge',
+  'rotaryEncoderHandwired',
 ])
 const KNOWN_CUTOUT_CUSTOM_KEYS = new Set(['width', 'height'])
 
@@ -110,6 +111,10 @@ export function validatePlateSettingsJson(text: string): ValidationResult {
 
     if ('merge' in cutout && typeof cutout.merge !== 'boolean') {
       return { valid: false, error: `'cutout.merge' must be a boolean` }
+    }
+
+    if ('rotaryEncoderHandwired' in cutout && typeof cutout.rotaryEncoderHandwired !== 'boolean') {
+      return { valid: false, error: `'cutout.rotaryEncoderHandwired' must be a boolean` }
     }
 
     // Validate width/height as numbers whenever present (regardless of switchType)

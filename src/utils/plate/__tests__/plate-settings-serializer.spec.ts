@@ -15,6 +15,7 @@ const baseDefaults: PlateSettings = {
   customCutoutWidth: 14,
   customCutoutHeight: 14,
   mergeCutouts: false,
+  rotaryEncoderHandwired: false,
   thickness: 1.5,
   outline: {
     outlineType: 'none',
@@ -87,6 +88,20 @@ describe('serializePlateSettings', () => {
       makeSettings({ stabilizerType: 'mx-basic', stabilizerFilletRadius: 0.3 }),
     )
     expect(json.cutout?.stabilizerFilletRadius).toBe(0.3)
+  })
+
+  it('omits rotaryEncoderHandwired when false (PCB default), includes it when true', () => {
+    const jsonPcb = serializePlateSettings(makeSettings({ rotaryEncoderHandwired: false }))
+    expect(jsonPcb.cutout?.rotaryEncoderHandwired).toBeUndefined()
+
+    const jsonHandwired = serializePlateSettings(makeSettings({ rotaryEncoderHandwired: true }))
+    expect(jsonHandwired.cutout?.rotaryEncoderHandwired).toBe(true)
+  })
+
+  it('round-trips rotaryEncoderHandwired through serialize → deserialize', () => {
+    const json = serializePlateSettings(makeSettings({ rotaryEncoderHandwired: true }))
+    const restored = deserializePlateSettings(json, baseDefaults)
+    expect(restored.rotaryEncoderHandwired).toBe(true)
   })
 
   it('includes width/height only for custom-rectangle switchType', () => {

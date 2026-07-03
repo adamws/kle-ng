@@ -674,3 +674,69 @@ describe('Plate Builder – DXF stabilizer cutouts', () => {
     expect(d0).toBeCloseTo(d1, 6)
   })
 })
+
+describe('Plate Builder – rotary encoder cutouts (sm === rot_ec11)', () => {
+  /** True when every vertex lies (approximately) on a circle of the given radius. */
+  function isCircular(vertices: { x: number; y: number }[], radius: number): boolean {
+    const c = polylineCenter(vertices)
+    return vertices.every((v) => Math.abs(Math.hypot(v.x - c.x, v.y - c.y) - radius) < 0.05)
+  }
+
+  it('PCB build (default): encoder gets a 14×14mm rectangular cutout, no stabilizer', async () => {
+    // A wide encoder key with a stab type set — must still produce ONLY a 14×14 rectangle.
+    const keys = [createKey({ x: 0, y: 0, width: 2, height: 1, sm: 'rot_ec11' })]
+    const options: PlateBuilderOptions = {
+      cutoutType: 'cherry-mx-basic',
+      stabilizerType: 'mx-basic',
+    }
+
+    const result = await buildPlate(keys, options)
+    const polylines = parseDxfPolylines(result.dxfContent)
+
+    expect(polylines).toHaveLength(1)
+    expect(polylines[0]).toHaveLength(4)
+    expect(polylineDimensions(polylines[0]!).width).toBe(14)
+    expect(polylineDimensions(polylines[0]!).height).toBe(14)
+    expect(polylineCenter(polylines[0]!).x).toBe(0)
+    expect(polylineCenter(polylines[0]!).y).toBe(0)
+  })
+
+  it('handwired: encoder gets a circular screw-in cutout (radius 4mm), no stabilizer', async () => {
+    const keys = [createKey({ x: 0, y: 0, width: 2, height: 1, sm: 'rot_ec11' })]
+    const options: PlateBuilderOptions = {
+      cutoutType: 'cherry-mx-basic',
+      stabilizerType: 'mx-basic',
+      rotaryEncoderHandwired: true,
+    }
+
+    const result = await buildPlate(keys, options)
+    const polylines = parseDxfPolylines(result.dxfContent)
+
+    // Only the single circular cutout — no stabilizer pair, not a square.
+    expect(polylines).toHaveLength(1)
+    expect(isCircular(polylines[0]!, 4)).toBe(true)
+  })
+
+  it('mixed handwired layout: normal switch is a 14mm square, encoder is a circle', async () => {
+    const keys = [
+      createKey({ x: 0, y: 0, width: 1, height: 1 }),
+      createKey({ x: 1, y: 0, width: 1, height: 1, sm: 'rot_ec11' }),
+    ]
+    const options: PlateBuilderOptions = {
+      cutoutType: 'cherry-mx-basic',
+      rotaryEncoderHandwired: true,
+    }
+
+    const result = await buildPlate(keys, options)
+    const polylines = parseDxfPolylines(result.dxfContent)
+
+    expect(polylines).toHaveLength(2)
+    const rect = polylines.find((p) => p.length === 4)
+    const circle = polylines.find((p) => p.length > 4)
+    expect(rect).toBeDefined()
+    expect(circle).toBeDefined()
+    expect(polylineDimensions(rect!).width).toBe(14)
+    expect(polylineDimensions(rect!).height).toBe(14)
+    expect(isCircular(circle!, 4)).toBe(true)
+  })
+})
