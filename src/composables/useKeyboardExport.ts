@@ -4,6 +4,7 @@ import { useMatrixDrawingStore } from '@/stores/matrix-drawing'
 import { toast } from '@/composables/useToast'
 import { parseBorderRadius, createRoundedRectanglePath } from '@/utils/border-radius'
 import { createPngWithKleLayout } from '@/utils/png-metadata'
+import { embedKleLayoutInImageData } from '@/utils/pixel-metadata'
 import { convertKleToVia } from '@/utils/via-import'
 import { convertKleToQmk, formatQmkJson } from '@/utils/qmk-export'
 import { stringifyWithRounding } from '@/utils/serialization'
@@ -131,11 +132,13 @@ export function useKeyboardExport() {
     }
   }
 
-  const downloadPng = async () => {
+  // Renders the current keyboard to a PNG blob with the embedded KLE-Layout
+  // metadata, exactly as used by Download PNG. Shared by downloadPng and
+  // copyPngToClipboard. Throws if the canvas isn't visible.
+  const generateLayoutPngBlob = async (): Promise<Blob> => {
     const canvas = document.querySelector('.keyboard-canvas') as HTMLCanvasElement
     if (!canvas) {
-      toast.showError('Please make sure the keyboard is visible.', 'Canvas not found')
-      return
+      throw new Error('Canvas not found')
     }
 
     canvas.dispatchEvent(new Event('render-for-export'))
@@ -145,30 +148,54 @@ export function useKeyboardExport() {
 
     canvas.dispatchEvent(new Event('restore-render'))
 
+    const tempCtx = tempCanvas.getContext('2d')
+
     if (matrixDrawingStore.isModalOpen) {
       const overlayCanvas = document.querySelector(
         '.matrix-annotation-overlay',
       ) as HTMLCanvasElement
-      if (overlayCanvas) {
-        const tempCtx = tempCanvas.getContext('2d')
-        if (tempCtx) {
-          tempCtx.drawImage(overlayCanvas, 0, 0)
-        }
+      if (overlayCanvas && tempCtx) {
+        tempCtx.drawImage(overlayCanvas, 0, 0)
       }
     }
 
+    const layoutData = keyboardStore.getSerializedData('kle')
+
+    // Also embed the layout in the alpha-channel LSBs so it survives a clipboard
+    // re-encode that strips the tEXt chunks (see pixel-metadata.ts). Best-effort:
+    // skipped if the canvas is too small or reading pixels fails.
+    if (tempCtx) {
+      try {
+        const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height)
+        if (embedKleLayoutInImageData(imageData, layoutData)) {
+          tempCtx.putImageData(imageData, 0, 0)
+        }
+      } catch (error) {
+        console.warn('Skipping pixel-embedded layout metadata:', error)
+      }
+    }
+
+    const basePngBlob = await new Promise<Blob>((resolve) =>
+      tempCanvas.toBlob((b) => resolve(b!), 'image/png'),
+    )
+
+    return createPngWithKleLayout(basePngBlob, layoutData, {
+      Title: keyboardStore.metadata.name || 'Keyboard Layout',
+      Author: keyboardStore.metadata.author || '',
+      Description: 'Keyboard layout created with Keyboard Layout Editor NG',
+    })
+  }
+
+  const downloadPng = async () => {
+    let pngWithMetadata: Blob
     try {
-      const basePngBlob = await new Promise<Blob>((resolve) =>
-        tempCanvas.toBlob((b) => resolve(b!), 'image/png'),
-      )
+      pngWithMetadata = await generateLayoutPngBlob()
+    } catch {
+      toast.showError('Please make sure the keyboard is visible.', 'Canvas not found')
+      return
+    }
 
-      const layoutData = keyboardStore.getSerializedData('kle')
-      const pngWithMetadata = await createPngWithKleLayout(basePngBlob, layoutData, {
-        Title: keyboardStore.metadata.name || 'Keyboard Layout',
-        Author: keyboardStore.metadata.author || '',
-        Description: 'Keyboard layout created with Keyboard Layout Editor NG',
-      })
-
+    try {
       if (typeof window.showSaveFilePicker === 'function') {
         const handle = await window.showSaveFilePicker({
           suggestedName: `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}.png`,
@@ -208,6 +235,52 @@ export function useKeyboardExport() {
         console.error('Unknown error downloading PNG:', error)
         toast.showError('Failed to save PNG image', 'Save Failed')
       }
+    }
+  }
+
+  // Copies the layout image to the clipboard. Returns true on success so the
+  // caller can render inline feedback (errors are surfaced via toast here since
+  // they need more explanation).
+  const copyPngToClipboard = async (): Promise<boolean> => {
+    if (
+      typeof navigator === 'undefined' ||
+      !navigator.clipboard ||
+      typeof ClipboardItem === 'undefined'
+    ) {
+      toast.showError(
+        'Copying images to the clipboard is not supported in this browser.',
+        'Copy Failed',
+      )
+      return false
+    }
+
+    let pngWithMetadata: Blob
+    try {
+      pngWithMetadata = await generateLayoutPngBlob()
+    } catch {
+      toast.showError('Please make sure the keyboard is visible.', 'Canvas not found')
+      return false
+    }
+
+    try {
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngWithMetadata })])
+      return true
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        if (
+          error.name === 'AbortError' ||
+          error.message.includes('aborted') ||
+          error.message.includes('cancelled')
+        ) {
+          return false
+        }
+        console.error('Error copying PNG to clipboard:', error)
+        toast.showError(`Failed to copy image: ${error.message}`, 'Copy Failed')
+      } else {
+        console.error('Unknown error copying PNG to clipboard:', error)
+        toast.showError('Failed to copy layout image', 'Copy Failed')
+      }
+      return false
     }
   }
 
@@ -316,6 +389,8 @@ export function useKeyboardExport() {
     downloadQmkJson,
     exportToErgogenWebGui,
     downloadPng,
+    copyPngToClipboard,
+    generateLayoutPngBlob,
     downloadHtmlFile,
     downloadSvgFile,
   }

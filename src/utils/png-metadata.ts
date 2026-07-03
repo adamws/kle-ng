@@ -271,7 +271,7 @@ export async function extractKleLayout(pngBlob: Blob): Promise<unknown | null> {
  * Clean null values from KLE layout data
  * The KLE serial library can't handle null values in arrays during deserialization
  */
-function cleanNullValues(data: unknown): unknown {
+export function cleanNullValues(data: unknown): unknown {
   if (data === null || data === undefined) {
     return undefined
   }

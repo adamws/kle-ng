@@ -1,7 +1,7 @@
 import type { Ref } from 'vue'
 import { useKeyboardStore } from '@/stores/keyboard'
 import { toast } from '@/composables/useToast'
-import { extractKleLayout, hasKleMetadata } from '@/utils/png-metadata'
+import { extractKleLayoutWithFallback } from '@/utils/pixel-metadata'
 import { parseErgogenConfig } from '@/utils/ergogen-loader'
 import { processJsonLayout } from '@/utils/json-layout-processor'
 
@@ -24,21 +24,14 @@ export function useKeyboardImport(fileInput: Ref<HTMLInputElement | undefined>) 
       if (file.type === 'image/png' || file.name.toLowerCase().endsWith('.png')) {
         console.log(`Checking PNG file for embedded layout: ${file.name}`)
 
-        if (await hasKleMetadata(file)) {
-          const layoutData = await extractKleLayout(file)
+        const layoutData = await extractKleLayoutWithFallback(file)
 
-          if (layoutData) {
-            console.log(`Loading layout from PNG metadata: ${file.name}`)
-            keyboardStore.loadKLELayout(layoutData)
-            keyboardStore.filename = filenameWithoutExt
-            keyboardStore.updateBaseline()
-            toast.showSuccess(
-              `Layout imported from PNG metadata: ${file.name}`,
-              'Import Successful',
-            )
-          } else {
-            toast.showError('Failed to extract layout data from PNG metadata', 'Import Failed')
-          }
+        if (layoutData) {
+          console.log(`Loading layout from PNG metadata: ${file.name}`)
+          keyboardStore.loadKLELayout(layoutData)
+          keyboardStore.filename = filenameWithoutExt
+          keyboardStore.updateBaseline()
+          toast.showSuccess(`Layout imported from PNG metadata: ${file.name}`, 'Import Successful')
         } else {
           toast.showError(
             'This PNG file does not contain layout data. Only PNG files exported from this tool contain the necessary metadata to import layouts.',

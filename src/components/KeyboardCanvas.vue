@@ -41,22 +41,34 @@
 
       <!-- Canvas search trigger button (shown when search is closed) -->
       <button
+        ref="searchButtonRef"
         type="button"
         v-show="!keySearch.isSearchOpen.value"
         class="canvas-search-trigger"
-        title="Search key labels (/)"
         aria-label="Search key labels"
         @click.stop="openCanvasSearch"
       >
         <BiSearch />
       </button>
 
+      <!-- Copy layout image to clipboard trigger button -->
+      <button
+        ref="copyImageButtonRef"
+        type="button"
+        class="canvas-copy-image-trigger"
+        data-testid="canvas-copy-image"
+        aria-label="Copy layout image to clipboard"
+        @click.stop="handleCopyImage"
+      >
+        <BiClipboard />
+      </button>
+
       <!-- Layout Editor settings trigger button -->
       <button
+        ref="settingsButtonRef"
         type="button"
         class="canvas-settings-trigger"
         :class="{ active: settingsOpen }"
-        :title="settingsOpen ? 'Close Layout Editor settings' : 'Open Layout Editor settings'"
         :aria-label="settingsOpen ? 'Close Layout Editor settings' : 'Open Layout Editor settings'"
         :aria-pressed="settingsOpen"
         @click.stop="$emit('toggle-settings')"
@@ -172,7 +184,7 @@ import { D } from '@/utils/decimal-math'
 import { keyIntersectsSelection } from '@/utils/geometry'
 import { hexToRgb } from '@/utils/color-utils'
 import { parseBorderRadius, createRoundedRectanglePath } from '@/utils/border-radius'
-import { extractKleLayout, hasKleMetadata } from '@/utils/png-metadata'
+import { extractKleLayoutWithFallback } from '@/utils/pixel-metadata'
 import { parseJsonString } from '@/utils/serialization'
 import { toast } from '@/composables/useToast'
 import RotationControlModal from '@/components/RotationControlModal.vue'
@@ -186,7 +198,10 @@ import LayoutOptionToolbar from '@/components/LayoutOptionToolbar.vue'
 import QmkLayoutToolbar from '@/components/QmkLayoutToolbar.vue'
 import BiSearch from 'bootstrap-icons/icons/search.svg'
 import BiGear from 'bootstrap-icons/icons/gear.svg'
+import BiClipboard from 'bootstrap-icons/icons/clipboard.svg'
 import { useKeySearch } from '@/composables/useKeySearch'
+import { useKeyboardExport } from '@/composables/useKeyboardExport'
+import Tooltip from 'bootstrap/js/dist/tooltip'
 
 // Visual border around rendered keycaps (in pixels)
 const CANVAS_BORDER = 9
@@ -199,6 +214,72 @@ const matrixDrawingStore = useMatrixDrawingStore()
 const fontStore = useFontStore()
 const layoutEditorSettingsStore = useLayoutEditorSettingsStore()
 const keySearch = useKeySearch()
+const { copyPngToClipboard } = useKeyboardExport()
+
+// The three canvas trigger buttons (search / copy image / settings) share a
+// consistent left-placed Bootstrap tooltip instead of the browser's native
+// title tooltip. The copy button additionally flashes "Copied" on success.
+const searchButtonRef = ref<HTMLButtonElement>()
+const copyImageButtonRef = ref<HTMLButtonElement>()
+const settingsButtonRef = ref<HTMLButtonElement>()
+
+const COPY_BUTTON_LABEL = 'Copy layout image to clipboard'
+const settingsTooltipTitle = () =>
+  props.settingsOpen ? 'Close Layout Editor settings' : 'Open Layout Editor settings'
+
+let searchTooltip: Tooltip | null = null
+let copyImageTooltip: Tooltip | null = null
+let settingsTooltip: Tooltip | null = null
+let copiedFlashTimer: ReturnType<typeof setTimeout> | null = null
+
+const createLeftTooltip = (el: HTMLElement, title: string): Tooltip =>
+  new Tooltip(el, { title, placement: 'left', trigger: 'hover', container: 'body' })
+
+const handleCopyImage = async () => {
+  const ok = await copyPngToClipboard()
+  if (!ok || !copyImageTooltip) return
+
+  if (copiedFlashTimer) clearTimeout(copiedFlashTimer)
+  copyImageTooltip.setContent({ '.tooltip-inner': 'Copied' })
+  copyImageTooltip.show()
+  copiedFlashTimer = setTimeout(() => {
+    copyImageTooltip?.hide()
+    // Restore the descriptive label for the next hover.
+    copyImageTooltip?.setContent({ '.tooltip-inner': COPY_BUTTON_LABEL })
+    copiedFlashTimer = null
+  }, 1200)
+}
+
+onMounted(() => {
+  if (searchButtonRef.value) {
+    searchTooltip = createLeftTooltip(searchButtonRef.value, 'Search key labels (/)')
+  }
+  if (copyImageButtonRef.value) {
+    copyImageTooltip = createLeftTooltip(copyImageButtonRef.value, COPY_BUTTON_LABEL)
+  }
+  if (settingsButtonRef.value) {
+    settingsTooltip = createLeftTooltip(settingsButtonRef.value, settingsTooltipTitle())
+  }
+
+  // Keep the settings tooltip label in sync with its open/closed state
+  // (recreated so the next hover shows the correct label).
+  watch(
+    () => props.settingsOpen,
+    () => {
+      if (!settingsButtonRef.value) return
+      settingsTooltip?.dispose()
+      settingsTooltip = createLeftTooltip(settingsButtonRef.value, settingsTooltipTitle())
+    },
+  )
+})
+
+onUnmounted(() => {
+  if (copiedFlashTimer) clearTimeout(copiedFlashTimer)
+  searchTooltip?.dispose()
+  copyImageTooltip?.dispose()
+  settingsTooltip?.dispose()
+  searchTooltip = copyImageTooltip = settingsTooltip = null
+})
 
 // Define a type for the internal KLE format
 interface InternalKleFormat {
@@ -1780,18 +1861,14 @@ const handleDrop = async (event: DragEvent) => {
     if (file.type === 'image/png' || file.name.toLowerCase().endsWith('.png')) {
       console.log(`Checking dropped PNG file for embedded layout: ${file.name}`)
 
-      // Check if PNG contains KLE metadata
-      if (await hasKleMetadata(file)) {
-        const layoutData = await extractKleLayout(file)
+      // Check if PNG contains KLE metadata (tEXt chunks, or pixel-embedded fallback)
+      const layoutData = await extractKleLayoutWithFallback(file)
 
-        if (layoutData) {
-          console.log(`Loading layout from dropped PNG metadata: ${file.name}`)
-          keyboardStore.loadKLELayout(layoutData)
-          keyboardStore.filename = filenameWithoutExt
-          toast.showSuccess(`Layout imported from PNG: ${file.name}`, 'Import Successful')
-        } else {
-          toast.showError('Failed to extract layout data from PNG metadata', 'Import Failed')
-        }
+      if (layoutData) {
+        console.log(`Loading layout from dropped PNG metadata: ${file.name}`)
+        keyboardStore.loadKLELayout(layoutData)
+        keyboardStore.filename = filenameWithoutExt
+        toast.showSuccess(`Layout imported from PNG: ${file.name}`, 'Import Successful')
       } else {
         toast.showError(
           'This PNG file does not contain layout data. Only PNG files exported from this tool contain the necessary metadata to import layouts.',
@@ -2251,7 +2328,7 @@ onUnmounted(() => {
   }
 })
 
-defineProps<{
+const props = defineProps<{
   settingsOpen?: boolean
 }>()
 
@@ -2407,9 +2484,29 @@ defineExpose({})
   color: var(--bs-body-color, #000);
 }
 
-.canvas-settings-trigger {
+.canvas-copy-image-trigger {
   position: absolute;
   top: 42px;
+  right: 8px;
+  z-index: 1100;
+  background: var(--bs-body-bg, #fff);
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  border-radius: 4px;
+  padding: 5px;
+  cursor: pointer;
+  color: var(--bs-secondary-color, #6c757d);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.canvas-copy-image-trigger:hover {
+  background: var(--bs-secondary-bg, #f8f9fa);
+  color: var(--bs-body-color, #000);
+}
+
+.canvas-settings-trigger {
+  position: absolute;
+  top: 76px;
   right: 8px;
   z-index: 1100;
   background: var(--bs-body-bg, #fff);
