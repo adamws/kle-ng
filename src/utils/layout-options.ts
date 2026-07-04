@@ -136,6 +136,83 @@ export function collapseToLayoutChoices(keys: Key[], choices: Map<number, number
   return result
 }
 
+/**
+ * Collapse a VIA-annotated key array into a SUPERSET physical layout: the default
+ * (choice-0 / no-option) keys PLUS every de-duplicated alternative-layout key,
+ * repositioned to overlay its true matrix location.
+ *
+ * This is the superset counterpart to collapseToLayoutChoices (which keeps only a
+ * single chosen variant). It mirrors kbplacer's MatrixAnnotatedKeyboard.collapse()
+ * (kicad-kbplacer/kbplacer/kle_serial.py, lines ~456-510) so that a generated plate
+ * physically supports every layout option — matching the PCB backend.
+ *
+ * Unlike collapseToLayoutChoices, ghost and decal keys are preserved as-is (the plate
+ * outline path relies on ghost keys). The input array is NOT mutated.
+ *
+ * See docs/development/via-layout-collapsing.md.
+ *
+ * @param keys - Source key array (not mutated)
+ * @returns New key array: default keys + repositioned, de-duplicated alternatives
+ */
+export function collapseViaLayout(keys: Key[]): Key[] {
+  // De-duplication signature: matrix coord + rotated center + decal + switch-mount.
+  const signature = (key: Key): string => {
+    const center = getKeyCenter(key)
+    const cx = Math.round(center.x * 10000) / 10000
+    const cy = Math.round(center.y * 10000) / 10000
+    return `${key.labels[0]}|${cx}|${cy}|${key.decal}|${key.sm}`
+  }
+
+  // Group keys carrying an option/choice by option → choice (choice 0 kept as anchor).
+  const optionGroups = new Map<number, Map<number, Key[]>>()
+  for (const key of keys) {
+    const oc = parseOptionChoice(key)
+    if (!oc) continue
+    if (!optionGroups.has(oc.option)) optionGroups.set(oc.option, new Map())
+    const choiceMap = optionGroups.get(oc.option)!
+    if (!choiceMap.has(oc.choice)) choiceMap.set(oc.choice, [])
+    choiceMap.get(oc.choice)!.push(key)
+  }
+
+  // Pass-through = the default layout: keys with no option/choice OR choice === 0.
+  // Ghost/decal keys are preserved here (plate outline relies on ghosts).
+  const passThrough: Key[] = []
+  for (const key of keys) {
+    const oc = parseOptionChoice(key)
+    if (!oc || oc.choice === 0) passThrough.push({ ...key })
+  }
+
+  // Seed the dedup set with every non-decal default key.
+  const seen = new Set<string>()
+  for (const key of passThrough) {
+    if (!key.decal) seen.add(signature(key))
+  }
+
+  // For each option group, reposition non-zero choices onto the choice-0 anchor
+  // and keep only keys not already present (de-duplicating coincident alternatives).
+  const alternatives: Key[] = []
+  for (const choiceMap of optionGroups.values()) {
+    const anchor = minXY(choiceMap.get(0) ?? [])
+    for (const [choice, choiceKeys] of choiceMap) {
+      if (choice === 0) continue
+      const groupAnchor = minXY(choiceKeys)
+      const dx = anchor && groupAnchor ? anchor.x - groupAnchor.x : 0
+      const dy = anchor && groupAnchor ? anchor.y - groupAnchor.y : 0
+      for (const key of choiceKeys) {
+        if (key.decal) continue // decals are never emitted as alternatives
+        const moved = { ...key, x: key.x + dx, y: key.y + dy }
+        const sig = signature(moved)
+        if (!seen.has(sig)) {
+          seen.add(sig)
+          alternatives.push(moved)
+        }
+      }
+    }
+  }
+
+  return [...passThrough, ...alternatives]
+}
+
 // --- internal helpers ---
 
 interface LabelInfo {

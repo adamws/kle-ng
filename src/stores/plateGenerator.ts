@@ -12,6 +12,7 @@ import {
   validateCustomCutoutDimension,
 } from '@/utils/plate/cutout-generator'
 import { useKeyboardStore } from '@/stores/keyboard'
+import { collapseViaLayout } from '@/utils/layout-options'
 import type { PlateWorkerResponse } from '@/utils/plate/plate-worker'
 import PlateWorker from '@/utils/plate/plate-worker?worker'
 import {
@@ -155,9 +156,17 @@ export const usePlateGeneratorStore = defineStore('plateGenerator', () => {
       result: previousResult,
     }
 
+    // Collapse VIA-annotated layouts into a superset physical layout (default keys
+    // plus repositioned, de-duplicated alternatives) so the plate supports every
+    // layout option — mirroring the PCB backend. Non-VIA layouts pass through
+    // unchanged. See utils/layout-options.ts / docs/development/via-layout-collapsing.md.
+    const sourceKeys = keyboardStore.isViaAnnotated
+      ? collapseViaLayout(keyboardStore.keys)
+      : keyboardStore.keys
+
     // Serialize reactive data to plain objects for postMessage.
     // JSON round-trip strips Vue Proxy wrappers that structuredClone cannot handle.
-    const keys = JSON.parse(JSON.stringify(keyboardStore.keys))
+    const keys = JSON.parse(JSON.stringify(sourceKeys))
     const options = JSON.parse(optionsJson)
 
     const currentId = ++generationId

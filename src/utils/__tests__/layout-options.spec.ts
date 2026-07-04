@@ -7,7 +7,11 @@
 
 import { describe, it, expect } from 'vitest'
 import { Key } from '@adamws/kle-serial'
-import { getLayoutOptionGroups, collapseToLayoutChoices } from '../layout-options'
+import {
+  getLayoutOptionGroups,
+  collapseToLayoutChoices,
+  collapseViaLayout,
+} from '../layout-options'
 import { getDefaultLayoutKeys } from '../matrix-validation'
 
 // ---------------------------------------------------------------------------
@@ -255,5 +259,80 @@ describe('collapseToLayoutChoices', () => {
     // Option 1, choice 1 shown
     expect(result.some((k) => k.labels[8] === '1,1')).toBe(true)
     expect(result.some((k) => k.labels[8] === '1,0')).toBe(false)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// collapseViaLayout (superset — matches kbplacer PCB collapse)
+// ---------------------------------------------------------------------------
+
+describe('collapseViaLayout', () => {
+  it('does not mutate the input array', () => {
+    const keys = makeAltLayoutFixture()
+    const original = JSON.stringify(keys)
+    collapseViaLayout(keys)
+    expect(JSON.stringify(keys)).toBe(original)
+  })
+
+  it('returns empty array for empty input', () => {
+    expect(collapseViaLayout([])).toEqual([])
+  })
+
+  it('returns a plain (non-VIA) layout unchanged in matrix labels and length', () => {
+    const keys = [makeKey('0,0', ''), makeKey('0,1', ''), makeKey('0,2', '')]
+    const result = collapseViaLayout(keys)
+    expect(result).toHaveLength(3)
+    expect(result.map((k) => k.labels[0]).sort()).toEqual(['0,0', '0,1', '0,2'])
+  })
+
+  it('keeps BOTH default and repositioned alternative keys (superset)', () => {
+    // Fixture: full backspace (choice 0) + split backspace (choice 1).
+    const keys = makeAltLayoutFixture()
+    const result = collapseViaLayout(keys)
+
+    // 3 base + full backspace + 2 repositioned split keys = 6
+    expect(result).toHaveLength(6)
+
+    // Default full backspace is retained at its original position.
+    const fullBs = result.find((k) => k.labels[8] === '0,0')
+    expect(fullBs).toBeDefined()
+    expect(fullBs!.x).toBe(14)
+
+    // choice-0 anchor = (14,0); choice-1 anchor = (13,0) → delta (+1,0).
+    const splitLeft = result.find((k) => k.labels[0] === '0,3' && k.labels[8] === '0,1')
+    const splitRight = result.find((k) => k.labels[0] === '0,4')
+    expect(splitLeft!.x).toBe(14)
+    expect(splitRight!.x).toBe(15)
+  })
+
+  it('de-duplicates an alternative key coincident with a default key', () => {
+    // Default group (choice 0): two 1U keys at matrix 8,0 and 8,1.
+    const d0a = makeKey('8,0', '0,0', 0, 0)
+    const d0b = makeKey('8,1', '0,0', 1, 0)
+    // Alternative group (choice 1): one key coincident with d0a, one distinct.
+    const c1a = makeKey('8,0', '0,1', 0, 0) // same matrix + center as d0a → dropped
+    const c1b = makeKey('8,2', '0,1', 1, 0) // distinct matrix → kept
+    const result = collapseViaLayout([d0a, d0b, c1a, c1b])
+
+    // d0a, d0b, and c1b — the coincident c1a is de-duplicated away.
+    expect(result).toHaveLength(3)
+    expect(result.filter((k) => k.labels[0] === '8,0')).toHaveLength(1)
+    expect(result.some((k) => k.labels[0] === '8,2')).toBe(true)
+  })
+
+  it('preserves ghost and decal keys that carry no option/choice', () => {
+    const ghost = makeKey('9,0', '', 20, 0, { ghost: true })
+    const decal = makeKey('', '', 21, 0, { decal: true })
+    const result = collapseViaLayout([...makeAltLayoutFixture(), ghost, decal])
+    expect(result.some((k) => k.ghost)).toBe(true)
+    expect(result.some((k) => k.decal)).toBe(true)
+  })
+
+  it('never emits decal keys as alternatives', () => {
+    const base = makeKey('0,0', '0,0', 0, 0)
+    const altDecal = makeKey('0,1', '0,1', 1, 0, { decal: true })
+    const result = collapseViaLayout([base, altDecal])
+    expect(result.some((k) => k.decal)).toBe(false)
+    expect(result).toHaveLength(1)
   })
 })

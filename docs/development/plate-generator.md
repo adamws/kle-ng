@@ -105,6 +105,18 @@ types/plate.ts                     ← Type definitions
 └────────────────────────────┘
 ```
 
+### VIA-Layout Collapsing
+
+Before dispatching work to the worker, `plateGeneratorStore.generatePlate()` collapses VIA-annotated
+multi-layout keyboards into a single **superset** physical layout. When `keyboardStore.isViaAnnotated`
+is true, `keyboardStore.keys` is passed through `collapseViaLayout()` (from `utils/layout-options.ts`),
+which repositions every alternative-layout key onto its true matrix position and de-duplicates
+coincident keys — producing a plate whose cutouts support **every** layout option (ISO+ANSI enter,
+split backspace, split spacebar, …), matching the PCB backend. Non-VIA layouts pass through unchanged.
+Collapsing happens in the store (not `buildPlate`), keeping the builder layout-agnostic. See
+[via-layout-collapsing.md](./via-layout-collapsing.md) for the full analysis and its relationship to
+kbplacer's `MatrixAnnotatedKeyboard.collapse()`.
+
 ### Auto-Refresh
 
 When auto-refresh is enabled, the keyboard store calls `plateGeneratorStore.requestRegenerate()` whenever the layout
