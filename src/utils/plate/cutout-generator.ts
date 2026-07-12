@@ -220,6 +220,116 @@ export class AlpsSKCMCutout extends RectangleCutout {
   readonly height = 12.8
 }
 
+/**
+ * Cherry MX / Alps Hybrid cutout: a Cherry MX (14x14mm) rectangle and an
+ * Alps SKCM/L (15.5x12.8mm) rectangle overlapping about a shared center.
+ *
+ * The union is a symmetric 12-sided "plus" shape whose overall bounding box is
+ * the Alps width (15.5mm) by the Cherry height (14mm). The Alps rectangle
+ * protrudes 0.75mm past each vertical Cherry edge; the Cherry rectangle
+ * protrudes 0.6mm past each horizontal Alps edge. Those protrusions are the
+ * smallest features, so the max fillet radius is 0.3mm (two corners share each
+ * 0.6mm protrusion edge).
+ */
+export class CherryMxAlpsHybridCutout implements CutoutGenerator {
+  // Cherry MX footprint
+  readonly cherryWidth = 14
+  readonly cherryHeight = 14
+  // Alps SKCM/L footprint
+  readonly alpsWidth = 15.5
+  readonly alpsHeight = 12.8
+
+  // Overall bounding box: Alps is wider, Cherry is taller.
+  readonly width = this.alpsWidth // 15.5
+  readonly height = this.cherryHeight // 14
+
+  get maxFilletRadius(): number {
+    // Smallest protrusion is the Cherry overhang (0.6mm) shared by two corners.
+    // Use decimal math so the result is exactly 0.3 rather than a float artifact
+    // (0.2999999999999998), which would both display poorly and wrongly reject 0.3.
+    const verticalProtrusion = D.div(D.sub(this.cherryHeight, this.alpsHeight), 2) // 0.6
+    return D.div(verticalProtrusion, 2) // 0.3
+  }
+
+  createModel(
+    makerjs: typeof MakerJs,
+    filletRadius: number,
+    sizeAdjust: number = 0,
+  ): MakerJs.IModel {
+    // Adjusted bounding box (bottom-left at origin, matching RectangleCutout).
+    const W = this.width - sizeAdjust
+    const H = this.height - sizeAdjust
+
+    // Horizontal/vertical protrusions are independent of kerf: both rectangles
+    // shrink by the same per-side amount, so the edge offsets stay constant.
+    const xInset = (this.alpsWidth - this.cherryWidth) / 2 // 0.75 (Alps past Cherry, per side)
+    const yInset = (this.cherryHeight - this.alpsHeight) / 2 // 0.6 (Cherry past Alps, per side)
+
+    const xL = xInset
+    const xR = W - xInset
+    const yB = yInset
+    const yT = H - yInset
+
+    // 12 vertices, clockwise starting at the Cherry top-left corner.
+    const p1: [number, number] = [xL, H]
+    const p2: [number, number] = [xR, H]
+    const p3: [number, number] = [xR, yT]
+    const p4: [number, number] = [W, yT]
+    const p5: [number, number] = [W, yB]
+    const p6: [number, number] = [xR, yB]
+    const p7: [number, number] = [xR, 0]
+    const p8: [number, number] = [xL, 0]
+    const p9: [number, number] = [xL, yB]
+    const p10: [number, number] = [0, yB]
+    const p11: [number, number] = [0, yT]
+    const p12: [number, number] = [xL, yT]
+
+    const model: MakerJs.IModel = {
+      paths: {
+        e1: new makerjs.paths.Line(p1, p2),
+        e2: new makerjs.paths.Line(p2, p3),
+        e3: new makerjs.paths.Line(p3, p4),
+        e4: new makerjs.paths.Line(p4, p5),
+        e5: new makerjs.paths.Line(p5, p6),
+        e6: new makerjs.paths.Line(p6, p7),
+        e7: new makerjs.paths.Line(p7, p8),
+        e8: new makerjs.paths.Line(p8, p9),
+        e9: new makerjs.paths.Line(p9, p10),
+        e10: new makerjs.paths.Line(p10, p11),
+        e11: new makerjs.paths.Line(p11, p12),
+        e12: new makerjs.paths.Line(p12, p1),
+      },
+    }
+
+    if (filletRadius > 0) {
+      const f = Math.min(filletRadius, this.maxFilletRadius)
+      const paths = model.paths!
+      const cornerPairs: [string, string, string][] = [
+        ['e1', 'e2', 'fillet_2'],
+        ['e2', 'e3', 'fillet_3'],
+        ['e3', 'e4', 'fillet_4'],
+        ['e4', 'e5', 'fillet_5'],
+        ['e5', 'e6', 'fillet_6'],
+        ['e6', 'e7', 'fillet_7'],
+        ['e7', 'e8', 'fillet_8'],
+        ['e8', 'e9', 'fillet_9'],
+        ['e9', 'e10', 'fillet_10'],
+        ['e10', 'e11', 'fillet_11'],
+        ['e11', 'e12', 'fillet_12'],
+        ['e12', 'e1', 'fillet_1'],
+      ]
+      for (const [a, b, name] of cornerPairs) {
+        const arc = makerjs.path.fillet(paths[a]!, paths[b]!, f)
+        if (arc) {
+          paths[name] = arc
+        }
+      }
+    }
+
+    return model
+  }
+}
+
 export class AlpsSKCPCutout extends RectangleCutout {
   readonly width = 16
   readonly height = 16
@@ -265,6 +375,7 @@ export class CustomRectangleCutout extends RectangleCutout {
 const cutoutGenerators: Record<string, CutoutGenerator> = {
   'cherry-mx-basic': new CherryMxBasicCutout(),
   'cherry-mx-openable': new CherryMxOpenableCutout(),
+  'cherry-mx-alps-hybrid': new CherryMxAlpsHybridCutout(),
   'alps-skcm': new AlpsSKCMCutout(),
   'alps-skcp': new AlpsSKCPCutout(),
   'kailh-choc-cpg1350': new KailhChocCPG1350(),
@@ -285,6 +396,12 @@ export function getCutoutOptions(): CutoutOption[] {
       value: 'cherry-mx-openable',
       label: 'Cherry MX Openable (14mm x 14mm)',
       description: 'Cherry MX cutout with side notches for opening switches without desoldering',
+    },
+    {
+      value: 'cherry-mx-alps-hybrid',
+      label: 'Cherry MX/Alps Hybrid (15.5mm x 14mm)',
+      description:
+        'Overlapping Cherry MX (14x14mm) and Alps SKCM/L (15.5x12.8mm) rectangles for boards mixing both switch types',
     },
     {
       value: 'alps-skcm',
@@ -330,7 +447,7 @@ export function validateFilletRadius(
   }
   const generator = getCutoutGenerator(cutoutType, customWidth, customHeight)
   if (radius > generator.maxFilletRadius) {
-    return `Fillet radius cannot exceed ${generator.maxFilletRadius}mm (half of the smallest cutout dimension).`
+    return `Fillet radius cannot exceed ${D.format(generator.maxFilletRadius)}mm (half of the smallest cutout dimension).`
   }
   return null
 }

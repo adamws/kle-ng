@@ -43,7 +43,8 @@ import {
   buildRectangleSwitchScript,
   createCherryMxOpenableGeom,
   buildCherryMxOpenableScript,
-  isRectangleSwitchType,
+  createCherryMxAlpsHybridGeom,
+  buildCherryMxAlpsHybridScript,
   createStabGeoms,
   buildStabScript,
   type StabType,
@@ -966,7 +967,38 @@ export async function buildPlate(
 
     let switchGeom: Geom2
     let scriptLines: string[]
-    if (isRectangleSwitchType(cutoutType)) {
+    if (cutoutType === 'cherry-mx-openable') {
+      switchGeom = placeGeom2(
+        createCherryMxOpenableGeom({ width: w, height: h, filletRadius, sizeAdjust }),
+        keyCenterX,
+        keyCenterY,
+        switchRotDeg,
+      )
+      scriptLines = buildCherryMxOpenableScript(
+        varName,
+        { width: w, height: h, filletRadius, sizeAdjust },
+        keyCenterX,
+        keyCenterY,
+        switchRotDeg,
+        switchComment,
+      )
+    } else if (cutoutType === 'cherry-mx-alps-hybrid') {
+      switchGeom = placeGeom2(
+        createCherryMxAlpsHybridGeom({ width: w, height: h, filletRadius }),
+        keyCenterX,
+        keyCenterY,
+        switchRotDeg,
+      )
+      scriptLines = buildCherryMxAlpsHybridScript(
+        varName,
+        { width: w, height: h, filletRadius },
+        keyCenterX,
+        keyCenterY,
+        switchRotDeg,
+        switchComment,
+      )
+    } else {
+      // rectangle-based switch types (cherry-mx-basic, alps, choc, custom, …)
       switchGeom = placeGeom2(
         createRectangleSwitchGeom({ width: w, height: h, filletRadius }),
         keyCenterX,
@@ -981,22 +1013,6 @@ export async function buildPlate(
         switchRotDeg,
         switchComment,
         scriptShapeRegistry,
-      )
-    } else {
-      // cherry-mx-openable
-      switchGeom = placeGeom2(
-        createCherryMxOpenableGeom({ width: w, height: h, filletRadius, sizeAdjust }),
-        keyCenterX,
-        keyCenterY,
-        switchRotDeg,
-      )
-      scriptLines = buildCherryMxOpenableScript(
-        varName,
-        { width: w, height: h, filletRadius, sizeAdjust },
-        keyCenterX,
-        keyCenterY,
-        switchRotDeg,
-        switchComment,
       )
     }
     namedGeoms.push({ varName, geom: switchGeom, scriptLines })

@@ -257,6 +257,18 @@ describe('buildJscadScript output content', () => {
     expect(result.jscadScript).not.toContain('subtract(switch_0_base')
   })
 
+  it('cherry-mx-alps-hybrid script unions Cherry and Alps rectangles', async () => {
+    const result = await buildPlate(keys, {
+      cutoutType: 'cherry-mx-alps-hybrid',
+      outline: RECTANGULAR_OUTLINE,
+    })
+    expect(result.jscadScript).toBeDefined()
+    // Cherry (14×14) and Alps (15.5×12.8) rectangles unioned about a shared center.
+    expect(result.jscadScript).toContain('const switch_0_cherry = rectangle({ size: [14, 14] })')
+    expect(result.jscadScript).toContain('const switch_0_alps = rectangle({ size: [15.5, 12.8] })')
+    expect(result.jscadScript).toContain('union(switch_0_cherry, switch_0_alps)')
+  })
+
   it('mx-spec stab script contains polygon({ points:', async () => {
     const result = await buildPlate(keys, {
       cutoutType: 'cherry-mx-basic',

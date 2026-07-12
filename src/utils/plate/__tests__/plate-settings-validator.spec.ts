@@ -57,6 +57,7 @@ describe('validatePlateSettingsJson', () => {
       for (const t of [
         'cherry-mx-basic',
         'cherry-mx-openable',
+        'cherry-mx-alps-hybrid',
         'alps-skcm',
         'alps-skcp',
         'kailh-choc-cpg1350',

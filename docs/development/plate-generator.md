@@ -265,15 +265,16 @@ Generates individual cutout shapes and handles validation.
 
 **Switch cutout dimensions:**
 
-| Type               | Width (mm)        | Height (mm)  |
-| ------------------ | ----------------- | ------------ |
-| Cherry MX Basic    | 14.0              | 14.0         |
-| Cherry MX Openable | 14.0 + (2 \* 0.8) | 14.0         |
-| Alps SKCM/L        | 15.5              | 12.8         |
-| Alps SKCP          | 16.0              | 16.0         |
-| Kailh Choc CPG1350 | 14.0              | 14.0         |
-| Kailh Choc CPG1232 | 13.7              | 12.7         |
-| Custom Rectangle   | User-defined      | User-defined |
+| Type                  | Width (mm)        | Height (mm)  |
+| --------------------- | ----------------- | ------------ |
+| Cherry MX Basic       | 14.0              | 14.0         |
+| Cherry MX Openable    | 14.0 + (2 \* 0.8) | 14.0         |
+| Cherry MX/Alps Hybrid | 15.5 (bbox)       | 14.0 (bbox)  |
+| Alps SKCM/L           | 15.5              | 12.8         |
+| Alps SKCP             | 16.0              | 16.0         |
+| Kailh Choc CPG1350    | 14.0              | 14.0         |
+| Kailh Choc CPG1232    | 13.7              | 12.7         |
+| Custom Rectangle      | User-defined      | User-defined |
 
 **Cherry MX Openable:**
 
@@ -283,6 +284,16 @@ The Openable cutout is a 14x14mm base with 4 symmetrical notches on the left and
 - Notch height: 3.1mm
 - Notch center offset: 4.45mm from cutout center (8.9mm between top and bottom notch centers)
 - Max fillet radius: 0.4mm (limited by notch width)
+
+**Cherry MX/Alps Hybrid:**
+
+Union of an overlapping Cherry MX (14×14mm) rectangle and an Alps SKCM/L (15.5×12.8mm) rectangle sharing a common center, for boards that mix both switch types in the same position. The result is a symmetric 12-sided "plus" shape whose overall bounding box is the Alps width (15.5mm) by the Cherry height (14mm).
+
+- Alps rectangle protrudes 0.75mm past each vertical Cherry edge.
+- Cherry rectangle protrudes 0.6mm past each horizontal Alps edge.
+- Max fillet radius: 0.3mm (two corners share each 0.6mm protrusion edge).
+
+The maker.js path (SVG/DXF) builds the 12-segment outline directly and fillets all corners; the JSCAD/STL path builds it as `union(cherryRect, alpsRect)` of two centered rectangles.
 
 **Rotary encoders (`sm === 'rot_ec11'`):**
 
@@ -408,7 +419,7 @@ Handles conversion between the internal `PlateSettings` type and the `PlateSetti
 Modules providing `Geom2` geometry objects and corresponding JSCAD script builders for all cutout types. Both the STL and JSCAD script outputs in `plate-builder.ts` consume the same `Geom2` objects from these modules.
 
 - **`geom-utils.ts`** — `Geom2` type alias (re-exported from `@jscad/modeling`), `placeGeom2(geom, x, y, angle)` for positioning geometry, `extractGeom2Points(geom)` for polygon point extraction, formatting helpers (`fmt`, `fmtVec2`, `formatPoints`) used when emitting JSCAD script literals, and the `ScriptShapeRegistry` class for deduplicating shared primitive expressions in the script output.
-- **`switch-cutouts.ts`** — `createRectangleSwitchGeom` / `buildRectangleSwitchScript` (handles all rectangle-based switch types including Cherry MX basic, Alps, Choc, and custom), `createCherryMxOpenableGeom` / `buildCherryMxOpenableScript`, and `isRectangleSwitchType` predicate.
+- **`switch-cutouts.ts`** — `createRectangleSwitchGeom` / `buildRectangleSwitchScript` (handles all rectangle-based switch types including Cherry MX basic, Alps, Choc, and custom), `createCherryMxOpenableGeom` / `buildCherryMxOpenableScript`, `createCherryMxAlpsHybridGeom` / `buildCherryMxAlpsHybridScript` (union of overlapping Cherry + Alps rectangles), and the `isRectangleSwitchType` predicate (false for the openable and hybrid types, which are built from multiple primitives).
 - **`stabilizer-cutouts.ts`** — `createStabGeoms` / `buildStabScript` (dispatcher), `createMxBasicStabGeoms` / `buildMxBasicStabScript`, `createMxSpecStabGeoms` / `buildMxSpecStabScript`, `createAlpsStabGeoms` / `buildAlpsStabScript`.
 - **`hole-cutouts.ts`** — `createCircleHoleGeom` / `buildCircleHoleScript` for circular mounting and custom holes.
 - **`backside-features.ts`** — 3D `Geom3` cuts subtracted from the extruded plate during STL/JSCAD export only. Exposes `createCherryMxSnapNotchCuts` (rectangular snap notch sized `7 × (14 + 2 × 1.5) mm` centered on each switch), `createStabBacksideCut` (stabilizer clearance pocket whose dimensions are derived from the actual stab geometry's measured bounding box plus per-type overhang), the `STAB_BACKSIDE_OVERHANGS` lookup table, and the `BacksideCut3D` / `Geom3` types. Both builders accept an optional `ScriptShapeRegistry` so repeated shapes are emitted once.

@@ -104,6 +104,34 @@ describe('Plate Builder – DXF switch cutouts', () => {
     expect(b.maxY).toBe(6.4)
   })
 
+  // Test 2b
+  it('single 1U Cherry MX/Alps Hybrid key – 12-vertex plus, 15.5x14mm bbox centered', async () => {
+    const keys = [createKey({ x: 0, y: 0, width: 1, height: 1 })]
+    const options: PlateBuilderOptions = { cutoutType: 'cherry-mx-alps-hybrid' }
+
+    const result = await buildPlate(keys, options)
+    const polylines = parseDxfPolylines(result.dxfContent)
+
+    expect(polylines).toHaveLength(1)
+    // Union of overlapping Cherry (14x14) + Alps (15.5x12.8) rectangles = 12-sided plus.
+    expect(polylines[0]).toHaveLength(12)
+
+    // Bounding box = Alps width (15.5) by Cherry height (14).
+    const dims = polylineDimensions(polylines[0]!)
+    expect(dims.width).toBe(15.5)
+    expect(dims.height).toBe(14)
+
+    const center = polylineCenter(polylines[0]!)
+    expect(center.x).toBe(0)
+    expect(center.y).toBe(0)
+
+    const b = polylineBounds(polylines[0]!)
+    expect(b.minX).toBe(-7.75)
+    expect(b.maxX).toBe(7.75)
+    expect(b.minY).toBe(-7)
+    expect(b.maxY).toBe(7)
+  })
+
   // Test 3
   it('two 1U keys side by side – default 19.05mm spacing', async () => {
     const keys = [

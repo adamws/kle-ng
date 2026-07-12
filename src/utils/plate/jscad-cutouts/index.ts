@@ -12,6 +12,8 @@ export {
   buildRectangleSwitchScript,
   createCherryMxOpenableGeom,
   buildCherryMxOpenableScript,
+  createCherryMxAlpsHybridGeom,
+  buildCherryMxAlpsHybridScript,
   isRectangleSwitchType,
   type SwitchCutoutOptions,
 } from './switch-cutouts'

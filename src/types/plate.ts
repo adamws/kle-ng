@@ -8,6 +8,7 @@
 export const CUTOUT_TYPE_VALUES = [
   'cherry-mx-basic',
   'cherry-mx-openable',
+  'cherry-mx-alps-hybrid',
   'alps-skcm',
   'alps-skcp',
   'kailh-choc-cpg1350',

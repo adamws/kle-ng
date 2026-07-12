@@ -190,13 +190,87 @@ export function buildCherryMxOpenableScript(
   return lines
 }
 
+/**
+ * Cherry MX / Alps Hybrid cutout constants.
+ * Overlapping Cherry MX (14x14) and Alps SKCM/L (15.5x12.8) rectangles sharing a
+ * center. The passed width/height are the overall bounding box (Alps width by
+ * Cherry height), already kerf-adjusted by the caller. The individual rectangle
+ * dimensions are derived from those deltas so kerf is applied consistently.
+ */
+const HYBRID_WIDTH_DELTA = 15.5 - 14 // Alps wider than Cherry
+const HYBRID_HEIGHT_DELTA = 14 - 12.8 // Cherry taller than Alps
+
+/**
+ * Create a Cherry MX / Alps Hybrid cutout geometry.
+ *
+ * Constructed as: union(cherryRect, alpsRect), both centered at the origin.
+ * The union is the same 12-sided "plus" shape produced by the maker.js
+ * CherryMxAlpsHybridCutout generator.
+ */
+export function createCherryMxAlpsHybridGeom(opts: SwitchCutoutOptions): Geom2 {
+  const { width, height, filletRadius = 0 } = opts
+  const cherryWidth = width - HYBRID_WIDTH_DELTA
+  const cherryHeight = height
+  const alpsWidth = width
+  const alpsHeight = height - HYBRID_HEIGHT_DELTA
+
+  const make = (w: number, h: number): Geom2 =>
+    filletRadius > 0
+      ? (roundedRectangle({ size: [w, h], roundRadius: filletRadius }) as Geom2)
+      : (rectangle({ size: [w, h] }) as Geom2)
+
+  return union(make(cherryWidth, cherryHeight), make(alpsWidth, alpsHeight)) as Geom2
+}
+
+/**
+ * Build JSCAD script lines for a Cherry MX / Alps Hybrid cutout.
+ * Emits a parametric union of the Cherry and Alps rectangles (no polygon array).
+ */
+export function buildCherryMxAlpsHybridScript(
+  varName: string,
+  opts: SwitchCutoutOptions,
+  centerX: number,
+  centerY: number,
+  rotationDeg: number,
+  comment?: string,
+): string[] {
+  const { width, height, filletRadius = 0 } = opts
+  const cherryWidth = width - HYBRID_WIDTH_DELTA
+  const cherryHeight = height
+  const alpsWidth = width
+  const alpsHeight = height - HYBRID_HEIGHT_DELTA
+  const roundStr = filletRadius > 0 ? `, roundRadius: ${fmt(filletRadius)}` : ''
+  const prim = filletRadius > 0 ? 'roundedRectangle' : 'rectangle'
+  const rect = (w: number, h: number): string =>
+    `${prim}({ size: [${fmt(w)}, ${fmt(h)}]${roundStr} })`
+
+  const lines: string[] = []
+  const b = varName
+  lines.push(`const ${b}_cherry = ${rect(cherryWidth, cherryHeight)}`)
+  lines.push(`const ${b}_alps = ${rect(alpsWidth, alpsHeight)}`)
+
+  let inner = `union(${b}_cherry, ${b}_alps)`
+  if (rotationDeg !== 0) {
+    inner = `rotateZ(${fmt(rotationDeg * (Math.PI / 180))}, ${inner})`
+  }
+  if (centerX !== 0 || centerY !== 0) {
+    inner = `translate(${fmtVec2(centerX, centerY)}, ${inner})`
+  }
+  const suffix = comment ? `  // ${comment}` : ''
+  lines.push(`const ${varName} = ${inner}${suffix}`)
+  return lines
+}
+
 // ---------------------------------------------------------------------------
 // Dispatch helpers
 // ---------------------------------------------------------------------------
+
+/** Cutout types built from multiple primitives rather than a single rectangle. */
+const NON_RECTANGLE_SWITCH_TYPES = new Set(['cherry-mx-openable', 'cherry-mx-alps-hybrid'])
 
 /**
  * Determine if the given cutout type uses the simple rectangle generator.
  */
 export function isRectangleSwitchType(cutoutType: string): boolean {
-  return cutoutType !== 'cherry-mx-openable'
+  return !NON_RECTANGLE_SWITCH_TYPES.has(cutoutType)
 }
