@@ -10,8 +10,9 @@ import {
   fetchGistLayout,
   clearGistFromUrl,
   extractErgogenUrlData,
+  encodeKeyboardToZmkWizardUrl,
 } from '../url-sharing'
-import { Key, KeyboardMetadata, Keyboard } from '@adamws/kle-serial'
+import { Key, KeyboardMetadata, Keyboard, Serial } from '@adamws/kle-serial'
 
 // Mock window.location
 const mockLocation = {
@@ -90,6 +91,56 @@ describe('url-sharing', () => {
       expect(() => {
         encodeLayoutToUrl(invalidKeyboard)
       }).toThrow('Failed to encode layout data')
+    })
+  })
+
+  describe('encodeKeyboardToZmkWizardUrl', () => {
+    it('should build a shield-wizard URL with a #kle= hash payload', () => {
+      const url = encodeKeyboardToZmkWizardUrl(sampleKeyboard)
+
+      expect(url.startsWith('https://shield-wizard.genteure.com/#kle=')).toBe(true)
+    })
+
+    it('should encode a payload that round-trips back to the same layout', () => {
+      const url = encodeKeyboardToZmkWizardUrl(sampleKeyboard)
+      const payload = url.split('#kle=')[1]!
+
+      const decompressed = LZString.decompressFromEncodedURIComponent(payload)
+      expect(decompressed).toBeTruthy()
+
+      const kleData = JSON.parse(decompressed!)
+      expect(Array.isArray(kleData)).toBe(true)
+
+      const roundTripped = Serial.deserialize(kleData)
+      expect(roundTripped.keys).toHaveLength(sampleKeyboard.keys.length)
+      expect(roundTripped.meta.name).toBe('Test Keyboard')
+    })
+
+    it('should skip ghost and decal keys', () => {
+      const decalKey = new Key()
+      decalKey.x = 2
+      decalKey.y = 0
+      decalKey.decal = true
+
+      const ghostKey = new Key()
+      ghostKey.x = 3
+      ghostKey.y = 0
+      ghostKey.ghost = true
+
+      const keyboard = new Keyboard()
+      keyboard.meta = sampleKeyboard.meta
+      keyboard.keys = [...sampleKeyboard.keys, decalKey, ghostKey]
+
+      const url = encodeKeyboardToZmkWizardUrl(keyboard)
+      const payload = url.split('#kle=')[1]!
+      const kleData = JSON.parse(LZString.decompressFromEncodedURIComponent(payload)!)
+      const roundTripped = Serial.deserialize(kleData)
+
+      // Only the 2 physical switches survive; decal + ghost are dropped.
+      expect(roundTripped.keys).toHaveLength(2)
+      expect(roundTripped.keys.some((k) => k.decal || k.ghost)).toBe(false)
+      // The original keyboard object is not mutated.
+      expect(keyboard.keys).toHaveLength(4)
     })
   })
 

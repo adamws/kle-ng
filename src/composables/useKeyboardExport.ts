@@ -9,6 +9,7 @@ import { convertKleToVia } from '@/utils/via-import'
 import { convertKleToQmk, formatQmkJson } from '@/utils/qmk-export'
 import { stringifyWithRounding } from '@/utils/serialization'
 import { encodeKeyboardToErgogenUrl } from '@/utils/ergogen-loader'
+import { encodeKeyboardToZmkWizardUrl } from '@/utils/url-sharing'
 import { normalizeLayoutInput, htmlLayoutRenderer, svgLayoutRenderer } from '@/utils/layout-export'
 import type { ExtendedKeyboardMetadata } from '@/utils/json-layout-processor'
 
@@ -128,6 +129,28 @@ export function useKeyboardExport() {
       console.error('Error exporting to Ergogen Web GUI:', error)
       const errorMessage =
         error instanceof Error ? error.message : 'Failed to export to Ergogen Web GUI'
+      toast.showError(errorMessage, 'Export Failed')
+    }
+  }
+
+  const exportToZmkWizard = () => {
+    try {
+      if (keyboardStore.keys.length === 0) {
+        toast.showError('Cannot export empty keyboard layout', 'Export Failed')
+        return
+      }
+
+      const keyboard = new Keyboard()
+      keyboard.keys = JSON.parse(JSON.stringify(keyboardStore.keys))
+      keyboard.meta = JSON.parse(JSON.stringify(keyboardStore.metadata))
+
+      const zmkWizardUrl = encodeKeyboardToZmkWizardUrl(keyboard)
+      window.open(zmkWizardUrl, '_blank', 'noopener,noreferrer')
+      console.log('ZMK Shield Wizard URL generated:', zmkWizardUrl)
+    } catch (error) {
+      console.error('Error exporting to ZMK Shield Wizard:', error)
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to export to ZMK Shield Wizard'
       toast.showError(errorMessage, 'Export Failed')
     }
   }
@@ -388,6 +411,7 @@ export function useKeyboardExport() {
     downloadViaJson,
     downloadQmkJson,
     exportToErgogenWebGui,
+    exportToZmkWizard,
     downloadPng,
     copyPngToClipboard,
     generateLayoutPngBlob,

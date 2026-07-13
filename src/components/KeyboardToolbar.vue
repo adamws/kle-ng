@@ -163,6 +163,16 @@
                 Edit in Ergogen Web GUI <BiBoxArrowUpRight class="bi" aria-hidden="true" />
               </a>
             </li>
+            <li>
+              <a
+                class="dropdown-item d-flex icon-link align-items-baseline"
+                data-testid="export-zmk-wizard"
+                href="#"
+                @click.prevent="exportToZmkWizard"
+              >
+                Open in Shield Wizard (ZMK) <BiBoxArrowUpRight class="bi" aria-hidden="true" />
+              </a>
+            </li>
           </ul>
         </div>
 
@@ -259,6 +269,7 @@ const {
   downloadViaJson,
   downloadQmkJson,
   exportToErgogenWebGui,
+  exportToZmkWizard,
   downloadPng,
   downloadHtmlFile,
   downloadSvgFile,

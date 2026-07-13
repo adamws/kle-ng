@@ -59,6 +59,28 @@ export function decodeLayoutFromUrl(encodedData: string): Keyboard {
 }
 
 /**
+ * Base URL for the ZMK Shield Wizard (zmk-wizard). The layout is passed in the
+ * URL hash under `#kle=` using the same compressed KLE encoding as our own share
+ * links, which the wizard decodes client-side to build a physical layout.
+ */
+const ZMK_WIZARD_BASE = 'https://shield-wizard.genteure.com'
+
+/**
+ * Encode a keyboard layout into a ZMK Shield Wizard URL.
+ * Reuses the same KLE + lz-string encoding as internal share links.
+ *
+ * Ghost and decal keys are decorative and don't represent physical switches, so
+ * they are skipped — the wizard builds a physical layout from switches only.
+ */
+export function encodeKeyboardToZmkWizardUrl(keyboard: Keyboard): string {
+  const physical = new Keyboard()
+  physical.meta = keyboard.meta
+  physical.keys = keyboard.keys.filter((key) => !key.decal && !key.ghost)
+  const encoded = encodeLayoutToUrl(physical)
+  return `${ZMK_WIZARD_BASE}/#kle=${encoded}`
+}
+
+/**
  * Generate a shareable URL with encoded layout data
  */
 export function generateShareableUrl(keyboard: Keyboard, baseUrl?: string): string {

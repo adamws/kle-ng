@@ -298,15 +298,36 @@ Click the **Export** button in the toolbar to access all export options:
 
 ### Available Export Formats
 
-| Option            | Format        | Notes                                            |
-| ----------------- | ------------- | ------------------------------------------------ |
-| Download JSON     | KLE JSON      | Standard KLE format                              |
-| Download PNG      | PNG           | Canvas-quality image with embedded layout data   |
-| Download HTML     | HTML          | Self-contained keyboard render                   |
-| Download SVG      | SVG           | Vector graphics                                  |
-| Download QMK JSON | QMK info.json | Only available when keys have matrix coordinates |
-| Download VIA JSON | VIA/Vial JSON | Only available when VIA metadata is present      |
-| Copy share link   | URL           | Generates a shareable `#share=` URL              |
+| Option                      | Format        | Notes                                                                                        |
+| --------------------------- | ------------- | -------------------------------------------------------------------------------------------- |
+| Download JSON               | KLE JSON      | Standard KLE format                                                                          |
+| Download PNG                | PNG           | Canvas-quality image with embedded layout data                                               |
+| Download HTML               | HTML          | Self-contained keyboard render                                                               |
+| Download SVG                | SVG           | Vector graphics                                                                              |
+| Download QMK JSON           | QMK info.json | Only available when keys have matrix coordinates                                             |
+| Download VIA JSON           | VIA/Vial JSON | Only available when VIA metadata is present                                                  |
+| Copy share link             | URL           | Generates a shareable `#share=` URL                                                          |
+| Edit in Ergogen Web GUI     | URL (new tab) | Opens [ergogen.xyz](https://ergogen.xyz/) with the layout preloaded                          |
+| Open in Shield Wizard (ZMK) | URL (new tab) | Opens the [ZMK Shield Wizard](https://shield-wizard.genteure.com/) with the layout preloaded |
+
+## Open in External Web Tools {#external-web-tools}
+
+Two Export options hand the current layout off to an external web app instead of producing a file. kle-ng encodes the layout into the target app's URL (compressed KLE data in the URL hash) and opens it in a new tab, so there is no file to download or paste.
+
+- **Edit in Ergogen Web GUI** — opens [ergogen.xyz](https://ergogen.xyz/) with the layout loaded as an Ergogen config.
+- **Open in Shield Wizard (ZMK)** — opens the [ZMK Shield Wizard](https://shield-wizard.genteure.com/), which builds a **physical layout** from your keys so you can configure a custom [ZMK](https://zmk.dev/) shield without writing code.
+
+### Shield Wizard (ZMK) hand-off {#zmk-wizard}
+
+When you choose **Open in Shield Wizard (ZMK)**:
+
+- Only **physical switches** are sent — **ghost and decal keys are skipped**, since they don't represent real switches.
+- The layout travels in the URL hash (`https://shield-wizard.genteure.com/#kle=…`), so it is decoded entirely in your browser; nothing is uploaded to a server.
+- The wizard opens on its **Layout** tab with the keys already placed.
+
+::: info Matrix row/col is inferred
+kle-ng sends physical geometry (positions, sizes, rotations), not matrix wiring. The Shield Wizard derives each key's **row/col from physical position** by default. If you need deterministic matrix coordinates, give every key a `row,col` legend before exporting (the same top-left `row,col` annotation used for [QMK export](#qmk-export)) — the wizard honors those legends when **all** keys have them, and otherwise falls back to geometry inference.
+:::
 
 ## QMK Export {#qmk-export}
 
