@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onUnmounted } from 'vue'
+import { onUnmounted, ref } from 'vue'
 import { usePcbGeneratorStore } from '@/stores/pcbGenerator'
 import { isBackendConfigured } from '@/config/api'
 import PcbWorkerStatus from './PcbWorkerStatus.vue'
@@ -7,10 +7,18 @@ import PcbGeneratorSettings from './PcbGeneratorSettings.vue'
 import PcbGeneratorControls from './PcbGeneratorControls.vue'
 import PcbGeneratorResults from './PcbGeneratorResults.vue'
 import PcbDownloadButton from './PcbDownloadButton.vue'
+import ScrollableTabs from './ScrollableTabs.vue'
 import BiExclamationTriangle from 'bootstrap-icons/icons/exclamation-triangle.svg'
 
 const pcbStore = usePcbGeneratorStore()
 const backendConfigured = isBackendConfigured()
+
+const tabs = [
+  { id: 'switches', label: 'Switches' },
+  { id: 'leds', label: 'LEDs' },
+] as const
+
+const activeTab = ref<(typeof tabs)[number]['id']>('switches')
 
 // Cleanup on component unmount
 onUnmounted(() => {
@@ -41,11 +49,21 @@ onUnmounted(() => {
 
     <!-- Two Column Layout: Controls | Output -->
     <div v-else class="row g-3">
-      <!-- Left Column: All Controls -->
+      <!-- Left Column: Tabbed Controls -->
       <div class="col-lg-4 settings-column">
         <!-- Settings Card -->
         <div class="settings-card">
-          <PcbGeneratorSettings />
+          <ScrollableTabs v-model="activeTab" :tabs="tabs" testid-prefix="pcb-tab">
+            <!-- Switches Tab -->
+            <template #switches>
+              <PcbGeneratorSettings />
+            </template>
+
+            <!-- LEDs Tab (empty for now) -->
+            <template #leds>
+              <div class="tab-pane-empty text-body-secondary">No LED settings yet.</div>
+            </template>
+          </ScrollableTabs>
         </div>
 
         <!-- Controls Card -->
@@ -121,5 +139,11 @@ onUnmounted(() => {
     position: static;
     min-height: 300px;
   }
+}
+
+.tab-pane-empty {
+  padding: 1.5rem 0.5rem;
+  text-align: center;
+  font-size: 0.85rem;
 }
 </style>
