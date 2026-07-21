@@ -13,22 +13,39 @@ import { useKeyboardStore } from '@/stores/keyboard'
 import { useToast } from '@/composables/useToast'
 import { setCustomBackendUrl, getDefaultBackendUrl } from '@/config/api'
 
+// Default settings — single source of truth for the initial state and for
+// merging with (potentially older) persisted settings on load.
+const DEFAULT_SETTINGS: PcbSettings = {
+  switchFootprint: 'Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_{:.2f}u',
+  stabilizerFootprint: 'Mounting_Keyboard_Stabilizer:Stabilizer_Cherry_MX_{:.2f}u',
+  diodeFootprint: 'Diode_SMD:D_SOD-123F',
+  routing: 'Full',
+  // Switch configuration
+  switchRotation: 0,
+  switchSide: 'FRONT',
+  // Diode configuration
+  diodeRotation: 90,
+  diodeSide: 'BACK',
+  diodePositionX: 5.08,
+  diodePositionY: 4.0,
+  // LED chain configuration (feature off by default)
+  createLedSchFile: false,
+  skipLedDecoupling: false,
+  ledFootprint: 'LED_SMD:LED_SK6812MINI-E_3.2x2.8mm_P1.5mm_ReverseMount',
+  ledCapacitorFootprint: 'Capacitor_SMD:C_0603_1608Metric',
+  ledRotation: 0,
+  ledSide: 'BACK',
+  ledPositionX: 0,
+  ledPositionY: 5.25,
+  ledCapacitorRotation: 0,
+  ledCapacitorSide: 'BACK',
+  ledCapacitorPositionX: 5.5,
+  ledCapacitorPositionY: 5.750,
+}
+
 export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
   // Settings state (stored as numeric values)
-  const settings = ref<PcbSettings>({
-    switchFootprint: 'Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_{:.2f}u',
-    stabilizerFootprint: 'Mounting_Keyboard_Stabilizer:Stabilizer_Cherry_MX_{:.2f}u',
-    diodeFootprint: 'Diode_SMD:D_SOD-123F',
-    routing: 'Full',
-    // Switch configuration
-    switchRotation: 0,
-    switchSide: 'FRONT',
-    // Diode configuration
-    diodeRotation: 90,
-    diodeSide: 'BACK',
-    diodePositionX: 5.08,
-    diodePositionY: 4.0,
-  })
+  const settings = ref<PcbSettings>({ ...DEFAULT_SETTINGS })
 
   // Task state
   const currentTaskId = ref<string | null>(null)
@@ -221,6 +238,28 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
         diodeSide: settings.value.diodeSide,
         diodePositionX: settings.value.diodePositionX,
         diodePositionY: settings.value.diodePositionY,
+      }
+
+      // LED chain fields are only sent when the feature is enabled. This mirrors
+      // the backend contract (all LED fields optional, feature off unless
+      // createLedSchFile is true) and avoids sending stale placement data.
+      if (settings.value.createLedSchFile) {
+        apiSettings.createLedSchFile = true
+        apiSettings.skipLedDecoupling = settings.value.skipLedDecoupling
+        apiSettings.ledFootprint = settings.value.ledFootprint
+        apiSettings.ledRotation = settings.value.ledRotation
+        apiSettings.ledSide = settings.value.ledSide
+        apiSettings.ledPositionX = settings.value.ledPositionX
+        apiSettings.ledPositionY = settings.value.ledPositionY
+
+        // Decoupling capacitor placement is only relevant when not skipped.
+        if (!settings.value.skipLedDecoupling) {
+          apiSettings.ledCapacitorFootprint = settings.value.ledCapacitorFootprint
+          apiSettings.ledCapacitorRotation = settings.value.ledCapacitorRotation
+          apiSettings.ledCapacitorSide = settings.value.ledCapacitorSide
+          apiSettings.ledCapacitorPositionX = settings.value.ledCapacitorPositionX
+          apiSettings.ledCapacitorPositionY = settings.value.ledCapacitorPositionY
+        }
       }
 
       // Mark VIA-annotated rotary encoders with sm="rot_ec11" so the backend
@@ -417,19 +456,7 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
         const parsed = JSON.parse(saved)
         // Merge with defaults to ensure new fields have default values
         // (backward compatibility for users with old localStorage data)
-        const defaults: PcbSettings = {
-          switchFootprint: 'Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_{:.2f}u',
-          stabilizerFootprint: 'Mounting_Keyboard_Stabilizer:Stabilizer_Cherry_MX_{:.2f}u',
-          diodeFootprint: 'Diode_SMD:D_SOD-123F',
-          routing: 'Full',
-          switchRotation: 0,
-          switchSide: 'FRONT',
-          diodeRotation: 90,
-          diodeSide: 'BACK',
-          diodePositionX: 5.08,
-          diodePositionY: 4.0,
-        }
-        settings.value = { ...defaults, ...parsed }
+        settings.value = { ...DEFAULT_SETTINGS, ...parsed }
       } catch (error) {
         console.warn('Failed to load PCB settings:', error)
       }

@@ -5,6 +5,10 @@
   overlapping in their actual positions. Provides immediate visual feedback
   before generating a full PCB.
 
+  When the LED chain feature is enabled, per-key LED and (optional) decoupling
+  capacitor footprints are also shown in their configured positions. These
+  currently use placeholder rectangle SVGs; real footprint SVGs land later.
+
   Usage:
   <FootprintPreview />
 
@@ -16,15 +20,18 @@
 import { ref, computed, watch, watchEffect, onMounted, nextTick, onUnmounted } from 'vue'
 import { usePcbGeneratorStore } from '@/stores/pcbGenerator'
 import { storeToRefs } from 'pinia'
-import type { ViewBox, HoveredFootprintElement } from '@/types/footprint'
+import type { ViewBox, HoveredFootprintElement, FootprintGroup } from '@/types/footprint'
 import {
   getSwitchFootprintFilename,
   getDiodeFootprintFilename,
+  getLedFootprintFilename,
+  getCapacitorFootprintFilename,
   getFootprintSvgUrl,
   parseViewBox,
   extractSvgContent,
-  calculateCompositeViewBox,
+  calculateCompositeViewBoxMulti,
   calculateElementCenter,
+  type OffsetFootprint,
 } from '@/utils/footprintUtils'
 import BiInfoCircle from 'bootstrap-icons/icons/info-circle.svg'
 import BiExclamationTriangle from 'bootstrap-icons/icons/exclamation-triangle.svg'
@@ -42,8 +49,12 @@ const { settings } = storeToRefs(pcbStore)
 // Component state
 const switchSvgContent = ref<string>('')
 const diodeSvgContent = ref<string>('')
+const ledSvgContent = ref<string>('')
+const capacitorSvgContent = ref<string>('')
 const switchViewBox = ref<ViewBox | null>(null)
 const diodeViewBox = ref<ViewBox | null>(null)
+const ledViewBox = ref<ViewBox | null>(null)
+const capacitorViewBox = ref<ViewBox | null>(null)
 const isLoading = ref(false)
 const error = ref<string | null>(null)
 const isFallback = ref(false)
@@ -53,6 +64,8 @@ const loadController = ref<AbortController | null>(null)
 const hoveredElement = ref<HoveredFootprintElement | null>(null)
 const switchGroupRef = ref<SVGGElement | null>(null)
 const diodeGroupRef = ref<SVGGElement | null>(null)
+const ledGroupRef = ref<SVGGElement | null>(null)
+const capacitorGroupRef = ref<SVGGElement | null>(null)
 
 // Event listener tracking for proper cleanup (prevents memory leaks)
 type EventHandlerPair = {
@@ -70,6 +83,22 @@ const switchSvgUrl = computed(() => {
 const diodeSvgUrl = computed(() => {
   const filename = getDiodeFootprintFilename(settings.value.diodeFootprint)
   return getFootprintSvgUrl(filename, settings.value.diodeSide)
+})
+
+// LED chain visibility (mirrors the store's conditional API submission)
+const showLed = computed(() => settings.value.createLedSchFile)
+const showCapacitor = computed(
+  () => settings.value.createLedSchFile && !settings.value.skipLedDecoupling,
+)
+
+const ledSvgUrl = computed(() => {
+  const filename = getLedFootprintFilename(settings.value.ledFootprint)
+  return getFootprintSvgUrl(filename, settings.value.ledSide)
+})
+
+const capacitorSvgUrl = computed(() => {
+  const filename = getCapacitorFootprintFilename(settings.value.ledCapacitorFootprint)
+  return getFootprintSvgUrl(filename, settings.value.ledCapacitorSide)
 })
 
 /**
@@ -96,10 +125,14 @@ async function loadFootprints() {
   error.value = null
 
   try {
-    // Load both SVGs in parallel
-    const [switchSvg, diodeSvg] = await Promise.all([
-      loadSvg(switchSvgUrl.value, loadController.value.signal),
-      loadSvg(diodeSvgUrl.value, loadController.value.signal),
+    const signal = loadController.value.signal
+
+    // Load switch + diode (always) plus LED + capacitor (when enabled) in parallel
+    const [switchSvg, diodeSvg, ledSvg, capacitorSvg] = await Promise.all([
+      loadSvg(switchSvgUrl.value, signal),
+      loadSvg(diodeSvgUrl.value, signal),
+      showLed.value ? loadSvg(ledSvgUrl.value, signal) : Promise.resolve(null),
+      showCapacitor.value ? loadSvg(capacitorSvgUrl.value, signal) : Promise.resolve(null),
     ])
 
     // CRITICAL: Parse viewBox from original SVG BEFORE extracting content
@@ -110,6 +143,22 @@ async function loadFootprints() {
     // This prevents coordinate system conflicts when injecting into parent SVG
     switchSvgContent.value = extractSvgContent(switchSvg)
     diodeSvgContent.value = extractSvgContent(diodeSvg)
+
+    // LED + capacitor placeholders (cleared when disabled)
+    if (ledSvg) {
+      ledViewBox.value = parseViewBox(ledSvg)
+      ledSvgContent.value = extractSvgContent(ledSvg)
+    } else {
+      ledViewBox.value = null
+      ledSvgContent.value = ''
+    }
+    if (capacitorSvg) {
+      capacitorViewBox.value = parseViewBox(capacitorSvg)
+      capacitorSvgContent.value = extractSvgContent(capacitorSvg)
+    } else {
+      capacitorViewBox.value = null
+      capacitorSvgContent.value = ''
+    }
 
     // Check if using fallback
     const switchFilename = getSwitchFootprintFilename(settings.value.switchFootprint)
@@ -126,6 +175,45 @@ async function loadFootprints() {
 }
 
 /**
+ * Resolve the offset-footprint placement for a group (diode/LED/capacitor).
+ * Returns null for the switch (which is centered, not offset) or when the
+ * group's footprint isn't loaded.
+ */
+function offsetForGroup(group: FootprintGroup): OffsetFootprint | null {
+  switch (group) {
+    case 'diode':
+      return diodeViewBox.value
+        ? {
+            vb: diodeViewBox.value,
+            offsetX: settings.value.diodePositionX,
+            offsetY: settings.value.diodePositionY,
+            rotation: settings.value.diodeRotation,
+          }
+        : null
+    case 'led':
+      return ledViewBox.value
+        ? {
+            vb: ledViewBox.value,
+            offsetX: settings.value.ledPositionX,
+            offsetY: settings.value.ledPositionY,
+            rotation: settings.value.ledRotation,
+          }
+        : null
+    case 'capacitor':
+      return capacitorViewBox.value
+        ? {
+            vb: capacitorViewBox.value,
+            offsetX: settings.value.ledCapacitorPositionX,
+            offsetY: settings.value.ledCapacitorPositionY,
+            rotation: settings.value.ledCapacitorRotation,
+          }
+        : null
+    default:
+      return null
+  }
+}
+
+/**
  * Setup hover handlers on SVG elements after content injection
  */
 function setupHoverHandlers() {
@@ -134,6 +222,8 @@ function setupHoverHandlers() {
   nextTick(() => {
     setupGroupHoverHandlers(switchGroupRef.value, 'switch')
     setupGroupHoverHandlers(diodeGroupRef.value, 'diode')
+    setupGroupHoverHandlers(ledGroupRef.value, 'led')
+    setupGroupHoverHandlers(capacitorGroupRef.value, 'capacitor')
   })
 }
 
@@ -141,7 +231,7 @@ function setupHoverHandlers() {
  * Attach event listeners to all hoverable elements in a footprint group
  * Properly tracks event handlers for cleanup to prevent memory leaks
  */
-function setupGroupHoverHandlers(groupElement: SVGGElement | null, groupType: 'switch' | 'diode') {
+function setupGroupHoverHandlers(groupElement: SVGGElement | null, groupType: FootprintGroup) {
   if (!groupElement) return
 
   // Query ALL elements with class="hoverable" (circles, paths, rects, polygons, etc.)
@@ -156,8 +246,8 @@ function setupGroupHoverHandlers(groupElement: SVGGElement | null, groupType: 's
         element,
         groupType,
         switchViewBox.value,
-        diodeViewBox.value,
-        settings.value,
+        offsetForGroup(groupType),
+        settings.value.switchRotation,
       )
       hoveredElement.value = {
         type: element.tagName.toLowerCase() as 'circle' | 'path',
@@ -189,31 +279,12 @@ function setupGroupHoverHandlers(groupElement: SVGGElement | null, groupType: 's
 function cleanupHoverHandlers() {
   hoveredElement.value = null
 
-  // Remove event listeners from switch group elements
-  if (switchGroupRef.value) {
-    const elements = switchGroupRef.value.querySelectorAll('.hoverable')
-    elements.forEach((element) => {
-      const handlers = eventHandlers.get(element)
-      if (handlers) {
-        element.removeEventListener('mouseenter', handlers.enter)
-        element.removeEventListener('mouseleave', handlers.leave)
-        eventHandlers.delete(element)
-      }
-    })
-  }
-
-  // Remove event listeners from diode group elements
-  if (diodeGroupRef.value) {
-    const elements = diodeGroupRef.value.querySelectorAll('.hoverable')
-    elements.forEach((element) => {
-      const handlers = eventHandlers.get(element)
-      if (handlers) {
-        element.removeEventListener('mouseenter', handlers.enter)
-        element.removeEventListener('mouseleave', handlers.leave)
-        eventHandlers.delete(element)
-      }
-    })
-  }
+  // Remove every tracked listener (covers all groups: switch/diode/LED/capacitor)
+  eventHandlers.forEach((handlers, element) => {
+    element.removeEventListener('mouseenter', handlers.enter)
+    element.removeEventListener('mouseleave', handlers.leave)
+  })
+  eventHandlers.clear()
 }
 
 /**
@@ -239,48 +310,70 @@ const switchTransform = computed(() => {
   return `rotate(${rotation}) translate(${-centerX}, ${-centerY})`
 })
 
-// Computed transform for diode (offset from switch center with rotation)
-const diodeTransform = computed(() => {
-  if (!diodeViewBox.value) return ''
+/**
+ * Builds the SVG transform for a footprint positioned relative to the switch
+ * center (diode, LED, capacitor). Offsets and rotation are switch-relative:
+ *
+ * 1. translate(-center): center the footprint at origin
+ * 2. rotate(rotation + switchRotation): switch-relative orientation
+ * 3. translate(rotatedOffset): offset vector rotated into world coords
+ *
+ * Note: SVG applies the chain right-to-left, matching the order above.
+ */
+function buildOffsetTransform(
+  vb: ViewBox,
+  offsetX: number,
+  offsetY: number,
+  rotation: number,
+): string {
+  const centerX = vb.x + vb.width / 2
+  const centerY = vb.y + vb.height / 2
 
-  const diodeVB = diodeViewBox.value
-  // Calculate diode center in its viewBox coordinate system
-  const diodeCenterX = diodeVB.x + diodeVB.width / 2
-  const diodeCenterY = diodeVB.y + diodeVB.height / 2
-
-  // User's diode position offsets in SWITCH-RELATIVE coordinates
-  // Example: offsetX=5 means "5mm to the right in the switch's local coordinate frame"
-  // When switch is rotated, the offset direction rotates with it
-  const offsetX = settings.value.diodePositionX
-  const offsetY = settings.value.diodePositionY
-  const diodeRotation = settings.value.diodeRotation
-
-  // CRITICAL FIX: Transform offset from switch-relative to world coordinates
-  // We must rotate the offset vector by the switch rotation angle
-  //
-  // Why: When switch rotates 180°, its local x-axis points LEFT in world coords
-  //      So offsetX=5 (right in switch frame) → -5 (left in world frame)
-  //
-  // Rotation Matrix:
-  //   [cos -sin] [offsetX]   [rotatedOffsetX]
-  //   [sin  cos] [offsetY] = [rotatedOffsetY]
+  // Rotate the switch-relative offset vector by the switch rotation so that,
+  // e.g., a 180° switch flips a "5mm right" offset to 5mm left in world coords.
   const switchRotationRad = (settings.value.switchRotation * Math.PI) / 180
   const cos = Math.cos(switchRotationRad)
   const sin = Math.sin(switchRotationRad)
-
   const rotatedOffsetX = offsetX * cos - offsetY * sin
   const rotatedOffsetY = offsetX * sin + offsetY * cos
 
-  // CRITICAL FIX: Diode rotation is also switch-relative
-  // The diode should maintain its orientation relative to the switch
-  // Final rotation in world coords = diodeRotation + switchRotation
-  const finalDiodeRotation = diodeRotation + settings.value.switchRotation
+  // Footprint orientation is switch-relative too.
+  const finalRotation = rotation + settings.value.switchRotation
 
-  // Transform chain (SVG applies right-to-left):
-  // 1. translate(-diodeCenterX, -diodeCenterY): center diode at origin
-  // 2. rotate(finalDiodeRotation): rotate diode around its center (switch-relative + switch rotation)
-  // 3. translate(rotatedOffsetX, rotatedOffsetY): move to final position in world coords
-  return `translate(${rotatedOffsetX}, ${rotatedOffsetY}) rotate(${finalDiodeRotation}) translate(${-diodeCenterX}, ${-diodeCenterY})`
+  return `translate(${rotatedOffsetX}, ${rotatedOffsetY}) rotate(${finalRotation}) translate(${-centerX}, ${-centerY})`
+}
+
+// Computed transform for diode (offset from switch center with rotation)
+const diodeTransform = computed(() => {
+  if (!diodeViewBox.value) return ''
+  return buildOffsetTransform(
+    diodeViewBox.value,
+    settings.value.diodePositionX,
+    settings.value.diodePositionY,
+    settings.value.diodeRotation,
+  )
+})
+
+// Computed transform for LED placeholder (offset from switch center with rotation)
+const ledTransform = computed(() => {
+  if (!ledViewBox.value) return ''
+  return buildOffsetTransform(
+    ledViewBox.value,
+    settings.value.ledPositionX,
+    settings.value.ledPositionY,
+    settings.value.ledRotation,
+  )
+})
+
+// Computed transform for LED decoupling capacitor placeholder
+const capacitorTransform = computed(() => {
+  if (!capacitorViewBox.value) return ''
+  return buildOffsetTransform(
+    capacitorViewBox.value,
+    settings.value.ledCapacitorPositionX,
+    settings.value.ledCapacitorPositionY,
+    settings.value.ledCapacitorRotation,
+  )
 })
 
 // Computed base viewBox without zoom (memoized separately for performance)
@@ -289,12 +382,37 @@ const baseViewBox = computed(() => {
     return null
   }
 
-  return calculateCompositeViewBox(
+  // Diode is always present; LED and capacitor only when the feature is enabled.
+  const offsets: OffsetFootprint[] = [
+    {
+      vb: diodeViewBox.value,
+      offsetX: settings.value.diodePositionX,
+      offsetY: settings.value.diodePositionY,
+      rotation: settings.value.diodeRotation,
+    },
+  ]
+
+  if (showLed.value && ledViewBox.value) {
+    offsets.push({
+      vb: ledViewBox.value,
+      offsetX: settings.value.ledPositionX,
+      offsetY: settings.value.ledPositionY,
+      rotation: settings.value.ledRotation,
+    })
+  }
+
+  if (showCapacitor.value && capacitorViewBox.value) {
+    offsets.push({
+      vb: capacitorViewBox.value,
+      offsetX: settings.value.ledCapacitorPositionX,
+      offsetY: settings.value.ledCapacitorPositionY,
+      rotation: settings.value.ledCapacitorRotation,
+    })
+  }
+
+  return calculateCompositeViewBoxMulti(
     switchViewBox.value,
-    diodeViewBox.value,
-    settings.value.diodePositionX,
-    settings.value.diodePositionY,
-    settings.value.diodeRotation,
+    offsets,
     settings.value.switchRotation,
     CONTAINER_PADDING,
   )
@@ -327,33 +445,29 @@ const compositeViewBox = computed(() => {
   return `${zoomedMinX} ${zoomedMinY} ${zoomedWidth} ${zoomedHeight}`
 })
 
-// Watch for settings changes and reload footprints
-watch([switchSvgUrl, diodeSvgUrl], () => {
+// Watch for settings changes and reload footprints. Includes LED/capacitor
+// URLs and visibility so toggling the feature (or its sides/footprints) reloads.
+watch([switchSvgUrl, diodeSvgUrl, ledSvgUrl, capacitorSvgUrl, showLed, showCapacitor], () => {
   loadFootprints()
 })
 
-// Re-attach hover handlers when SVG content changes
-watch([switchSvgContent, diodeSvgContent], () => {
+// Re-attach hover handlers when any group's SVG content changes
+watch([switchSvgContent, diodeSvgContent, ledSvgContent, capacitorSvgContent], () => {
   setupHoverHandlers()
 })
 
 // Re-calculate coordinates if settings change while hovering
 // Using watchEffect to automatically track all dependencies and reduce redundancy
 watchEffect(() => {
-  // Automatically tracks: switchRotation, diodeRotation, diodePositionX, diodePositionY
-  // as well as switchViewBox and diodeViewBox
-  if (
-    hoveredElement.value &&
-    switchViewBox.value &&
-    diodeViewBox.value &&
-    hoveredElement.value.element
-  ) {
+  // Automatically tracks switchRotation and the hovered group's placement
+  // settings (via offsetForGroup) plus the relevant viewBoxes.
+  if (hoveredElement.value && switchViewBox.value && hoveredElement.value.element) {
     const center = calculateElementCenter(
       hoveredElement.value.element,
       hoveredElement.value.group,
       switchViewBox.value,
-      diodeViewBox.value,
-      settings.value,
+      offsetForGroup(hoveredElement.value.group),
+      settings.value.switchRotation,
     )
     // Update coordinates reactively
     hoveredElement.value.centerX = center.x
@@ -385,6 +499,20 @@ onUnmounted(() => {
         <!-- Diode footprint (offset from switch center) -->
         <g ref="diodeGroupRef" :transform="diodeTransform">
           <g v-html="diodeSvgContent"></g>
+        </g>
+
+        <!-- LED footprint (offset from switch center) -->
+        <g v-if="showLed && ledSvgContent" ref="ledGroupRef" :transform="ledTransform">
+          <g v-html="ledSvgContent"></g>
+        </g>
+
+        <!-- LED decoupling capacitor footprint (offset from switch center) -->
+        <g
+          v-if="showCapacitor && capacitorSvgContent"
+          ref="capacitorGroupRef"
+          :transform="capacitorTransform"
+        >
+          <g v-html="capacitorSvgContent"></g>
         </g>
 
         <!-- Crosshair overlay -->

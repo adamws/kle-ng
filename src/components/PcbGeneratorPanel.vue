@@ -4,6 +4,7 @@ import { usePcbGeneratorStore } from '@/stores/pcbGenerator'
 import { isBackendConfigured } from '@/config/api'
 import PcbWorkerStatus from './PcbWorkerStatus.vue'
 import PcbGeneratorSettings from './PcbGeneratorSettings.vue'
+import PcbLedSettings from './PcbLedSettings.vue'
 import PcbGeneratorControls from './PcbGeneratorControls.vue'
 import PcbGeneratorResults from './PcbGeneratorResults.vue'
 import PcbDownloadButton from './PcbDownloadButton.vue'
@@ -59,9 +60,9 @@ onUnmounted(() => {
               <PcbGeneratorSettings />
             </template>
 
-            <!-- LEDs Tab (empty for now) -->
+            <!-- LEDs Tab -->
             <template #leds>
-              <div class="tab-pane-empty text-body-secondary">No LED settings yet.</div>
+              <PcbLedSettings />
             </template>
           </ScrollableTabs>
         </div>
@@ -139,11 +140,5 @@ onUnmounted(() => {
     position: static;
     min-height: 300px;
   }
-}
-
-.tab-pane-empty {
-  padding: 1.5rem 0.5rem;
-  text-align: center;
-  font-size: 0.85rem;
 }
 </style>

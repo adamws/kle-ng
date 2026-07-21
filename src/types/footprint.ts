@@ -44,11 +44,14 @@ export interface FootprintPreviewSettings {
  * in the footprint preview, along with its calculated center coordinates in
  * world space (relative to switch center at origin).
  */
+/** Which footprint group a preview element belongs to. */
+export type FootprintGroup = 'switch' | 'diode' | 'led' | 'capacitor'
+
 export interface HoveredFootprintElement {
   /** Element type - circle or path */
   type: 'circle' | 'path'
-  /** Parent group - switch or diode */
-  group: 'switch' | 'diode'
+  /** Parent group - switch, diode, LED or LED capacitor */
+  group: FootprintGroup
   /** Center X coordinate in world space (mm) */
   centerX: number
   /** Center Y coordinate in world space (mm) */

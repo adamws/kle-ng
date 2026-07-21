@@ -84,6 +84,18 @@ describe('pcbGenerator store', () => {
         diodeSide: 'BACK',
         diodePositionX: 5.08,
         diodePositionY: 4,
+        createLedSchFile: false,
+        skipLedDecoupling: false,
+        ledFootprint: 'LED_SMD:LED_SK6812MINI-E_3.2x2.8mm_P1.5mm_ReverseMount',
+        ledCapacitorFootprint: 'Capacitor_SMD:C_0603_1608Metric',
+        ledRotation: 0,
+        ledSide: 'BACK',
+        ledPositionX: 0,
+        ledPositionY: 5.25,
+        ledCapacitorRotation: 0,
+        ledCapacitorSide: 'BACK',
+        ledCapacitorPositionX: 5.5,
+        ledCapacitorPositionY: 5.75,
       })
       expect(store.currentTaskId).toBeNull()
       expect(store.taskStatus).toBeNull()
@@ -116,6 +128,18 @@ describe('pcbGenerator store', () => {
         diodeSide: 'BACK',
         diodePositionX: 5.08,
         diodePositionY: 4.0,
+        createLedSchFile: false,
+        skipLedDecoupling: false,
+        ledFootprint: 'LED_SMD:LED_SK6812MINI-E_3.2x2.8mm_P1.5mm_ReverseMount',
+        ledCapacitorFootprint: 'Capacitor_SMD:C_0603_1608Metric',
+        ledRotation: 0,
+        ledSide: 'BACK',
+        ledPositionX: 0,
+        ledPositionY: 5.25,
+        ledCapacitorRotation: 0,
+        ledCapacitorSide: 'BACK',
+        ledCapacitorPositionX: 5.5,
+        ledCapacitorPositionY: 5.75,
       })
     })
 
@@ -280,6 +304,66 @@ describe('pcbGenerator store', () => {
       )
       expect(store.currentTaskId).toBe('test-task-123')
       expect(store.taskStatus).toEqual(mockResponse)
+    })
+
+    it('should omit LED fields when the LED chain is disabled', async () => {
+      const store = usePcbGeneratorStore()
+      mockKeyboardStore.getSerializedData.mockReturnValue({ meta: {}, keys: [{ x: 0, y: 0 }] })
+      vi.mocked(pcbApi.submitTask).mockResolvedValue({
+        task_id: 't',
+        task_status: 'PENDING',
+        task_result: { percentage: 0 },
+      })
+
+      await store.startTask()
+
+      const submitted = vi.mocked(pcbApi.submitTask).mock.calls[0]![0].settings
+      expect(submitted.createLedSchFile).toBeUndefined()
+      expect(submitted.ledFootprint).toBeUndefined()
+      expect(submitted.ledCapacitorFootprint).toBeUndefined()
+    })
+
+    it('should include LED fields when the LED chain is enabled', async () => {
+      const store = usePcbGeneratorStore()
+      store.settings.createLedSchFile = true
+      mockKeyboardStore.getSerializedData.mockReturnValue({ meta: {}, keys: [{ x: 0, y: 0 }] })
+      vi.mocked(pcbApi.submitTask).mockResolvedValue({
+        task_id: 't',
+        task_status: 'PENDING',
+        task_result: { percentage: 0 },
+      })
+
+      await store.startTask()
+
+      const submitted = vi.mocked(pcbApi.submitTask).mock.calls[0]![0].settings
+      expect(submitted.createLedSchFile).toBe(true)
+      expect(submitted.ledFootprint).toBe('LED_SMD:LED_SK6812MINI-E_3.2x2.8mm_P1.5mm_ReverseMount')
+      expect(submitted.ledSide).toBe('BACK')
+      expect(submitted.ledPositionY).toBe(5.25)
+      // Decoupling on by default → capacitor fields present
+      expect(submitted.ledCapacitorFootprint).toBe('Capacitor_SMD:C_0603_1608Metric')
+      expect(submitted.ledCapacitorPositionX).toBe(5.5)
+    })
+
+    it('should omit capacitor fields when decoupling is skipped', async () => {
+      const store = usePcbGeneratorStore()
+      store.settings.createLedSchFile = true
+      store.settings.skipLedDecoupling = true
+      mockKeyboardStore.getSerializedData.mockReturnValue({ meta: {}, keys: [{ x: 0, y: 0 }] })
+      vi.mocked(pcbApi.submitTask).mockResolvedValue({
+        task_id: 't',
+        task_status: 'PENDING',
+        task_result: { percentage: 0 },
+      })
+
+      await store.startTask()
+
+      const submitted = vi.mocked(pcbApi.submitTask).mock.calls[0]![0].settings
+      expect(submitted.createLedSchFile).toBe(true)
+      expect(submitted.skipLedDecoupling).toBe(true)
+      expect(submitted.ledFootprint).toBe('LED_SMD:LED_SK6812MINI-E_3.2x2.8mm_P1.5mm_ReverseMount')
+      expect(submitted.ledCapacitorFootprint).toBeUndefined()
+      expect(submitted.ledCapacitorPositionX).toBeUndefined()
     })
 
     it('should validate empty layout', async () => {

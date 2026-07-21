@@ -12,6 +12,19 @@ export interface PcbSettings {
   diodeSide: 'FRONT' | 'BACK'
   diodePositionX: number
   diodePositionY: number
+  // LED chain configuration (per-key SK6812MINI-E LEDs + optional decoupling capacitors)
+  createLedSchFile: boolean
+  skipLedDecoupling: boolean
+  ledFootprint: string
+  ledCapacitorFootprint: string
+  ledRotation: number
+  ledSide: 'FRONT' | 'BACK'
+  ledPositionX: number
+  ledPositionY: number
+  ledCapacitorRotation: number
+  ledCapacitorSide: 'FRONT' | 'BACK'
+  ledCapacitorPositionX: number
+  ledCapacitorPositionY: number
 }
 
 // API request format (for submission)
@@ -28,6 +41,21 @@ export interface PcbApiSettings {
   diodeSide: string // "FRONT" or "BACK"
   diodePositionX: number
   diodePositionY: number
+  // LED chain configuration. All fields are optional and only sent when the
+  // feature is enabled (createLedSchFile). Capacitor fields are omitted when
+  // decoupling is skipped. Mirrors the backend's "required when" semantics.
+  createLedSchFile?: boolean
+  skipLedDecoupling?: boolean
+  ledFootprint?: string
+  ledCapacitorFootprint?: string
+  ledRotation?: number
+  ledSide?: string // "FRONT" or "BACK"
+  ledPositionX?: number
+  ledPositionY?: number
+  ledCapacitorRotation?: number
+  ledCapacitorSide?: string // "FRONT" or "BACK"
+  ledCapacitorPositionX?: number
+  ledCapacitorPositionY?: number
 }
 
 export interface TaskRequest {

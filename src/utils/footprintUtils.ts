@@ -5,7 +5,7 @@
  * Includes filename mapping, URL generation, viewBox parsing, and positioning calculations.
  */
 
-import type { ViewBox } from '@/types/footprint'
+import type { ViewBox, FootprintGroup } from '@/types/footprint'
 import { D } from './decimal-math'
 
 /**
@@ -68,6 +68,47 @@ export function getDiodeFootprintFilename(footprintValue: string): string {
   }
   console.warn(`Invalid diode footprint format: ${footprintValue}, using SOD-123F fallback`)
   return 'D_SOD-123F.svg'
+}
+
+/**
+ * Extracts the SVG filename from a `library:name` footprint setting value.
+ *
+ * @param footprintValue - The footprint setting value (e.g. 'Capacitor_SMD:C_0402_1005Metric')
+ * @param label - Human-readable footprint kind, used only in the warning message
+ * @param fallback - SVG filename returned when the value is malformed
+ * @returns `${name}.svg`, or `fallback` when the value has no `library:name` form
+ */
+function getFootprintFilename(footprintValue: string, label: string, fallback: string): string {
+  const parts = footprintValue.split(':')
+  if (parts.length === 2) {
+    return `${parts[1]}.svg`
+  }
+  console.warn(`Invalid ${label} footprint format: ${footprintValue}, using ${fallback} fallback`)
+  return fallback
+}
+
+/**
+ * Extracts the LED footprint filename from its setting value.
+ *
+ * @param footprintValue - The LED footprint setting value (e.g. 'LED_SMD:LED_SK6812MINI-E_3.2x2.8mm_P1.5mm_ReverseMount')
+ * @returns SVG filename for the LED footprint (placeholder until real SVGs land)
+ */
+export function getLedFootprintFilename(footprintValue: string): string {
+  return getFootprintFilename(
+    footprintValue,
+    'LED',
+    'LED_SK6812MINI-E_3.2x2.8mm_P1.5mm_ReverseMount.svg',
+  )
+}
+
+/**
+ * Extracts the LED decoupling-capacitor footprint filename from its setting value.
+ *
+ * @param footprintValue - The capacitor footprint setting value (e.g. 'Capacitor_SMD:C_0402_1005Metric')
+ * @returns SVG filename for the capacitor footprint (placeholder until real SVGs land)
+ */
+export function getCapacitorFootprintFilename(footprintValue: string): string {
+  return getFootprintFilename(footprintValue, 'capacitor', 'C_0402_1005Metric.svg')
 }
 
 /**
@@ -156,110 +197,82 @@ export function extractSvgContent(svgText: string): string {
 }
 
 /**
- * Calculates composite viewBox optimized to minimize empty space
+ * An offset footprint (diode, LED, capacitor, …) positioned relative to the
+ * switch center. Offsets and rotation are in SWITCH-RELATIVE coordinates,
+ * matching the diode convention.
+ */
+export interface OffsetFootprint {
+  vb: ViewBox
+  offsetX: number
+  offsetY: number
+  rotation: number
+}
+
+/**
+ * Calculates the composite viewBox for the switch plus an arbitrary number of
+ * offset footprints (diode, LED, decoupling capacitor, …).
  *
- * Starts with the switch footprint as the base and only expands the viewBox
- * if the diode extends beyond the switch bounds. Handles both switch and diode rotation.
+ * Reuses {@link applySwitchTransform} / {@link applyDiodeTransform} so the
+ * computed bounds exactly match how each group is rendered (including switch
+ * rotation, which is reflected in the switch's own bounds).
  *
- * IMPORTANT: Diode offsets AND rotation are in SWITCH-RELATIVE coordinates, not world coordinates.
- * The function rotates the offset vector by switchRotation and adds switchRotation to diodeRotation.
- *
- * @param switchVB - ViewBox of the switch footprint
- * @param diodeVB - ViewBox of the diode footprint
- * @param diodeOffsetX - Horizontal offset in SWITCH coordinates (positive = right in switch's frame)
- * @param diodeOffsetY - Vertical offset in SWITCH coordinates (positive = down in switch's frame)
- * @param diodeRotation - Diode rotation angle in degrees (0, 90, 180, 270)
- * @param switchRotation - Switch rotation angle in degrees (0, 90, 180, 270)
+ * @param switchVB - ViewBox of the switch footprint (centered at origin)
+ * @param offsets - Offset footprints to include in the bounds
+ * @param switchRotation - Switch rotation angle in degrees
  * @param padding - Padding around the composite in mm
  * @returns ViewBox string in format "minX minY width height"
- *
- * @example
- * ```typescript
- * const switchVB = { x: 0, y: 0, width: 19.48, height: 19.13 }
- * const diodeVB = { x: 0, y: 0, width: 5.0, height: 3.0 }
- * // Switch at 180°, diode offset (5, 0) in switch coords
- * // Results in diode positioned 5mm to the LEFT in world coords
- * const composite = calculateCompositeViewBox(switchVB, diodeVB, 5.0, 0.0, 90, 180, 2.0)
- * // Returns optimized bounding box
- * ```
  */
-export function calculateCompositeViewBox(
+export function calculateCompositeViewBoxMulti(
   switchVB: ViewBox,
-  diodeVB: ViewBox,
-  diodeOffsetX: number,
-  diodeOffsetY: number,
-  diodeRotation: number,
+  offsets: OffsetFootprint[],
   switchRotation: number,
   padding: number,
 ): string {
-  // Switch is centered at (0, 0) after its transform
-  // Calculate switch bounds in the composite coordinate system
-  const switchCenterX = switchVB.x + switchVB.width / 2
-  const switchCenterY = switchVB.y + switchVB.height / 2
+  const xs: number[] = []
+  const ys: number[] = []
 
-  // Switch corners after centering at origin
-  const switchMinX = switchVB.x - switchCenterX
-  const switchMinY = switchVB.y - switchCenterY
-  const switchMaxX = switchMinX + switchVB.width
-  const switchMaxY = switchMinY + switchVB.height
-
-  // Diode center in its viewBox coordinate system
-  const diodeCenterX = diodeVB.x + diodeVB.width / 2
-  const diodeCenterY = diodeVB.y + diodeVB.height / 2
-
-  // Diode corners in its original coordinate system
-  const diodeCorners = [
-    { x: diodeVB.x, y: diodeVB.y }, // top-left
-    { x: diodeVB.x + diodeVB.width, y: diodeVB.y }, // top-right
-    { x: diodeVB.x + diodeVB.width, y: diodeVB.y + diodeVB.height }, // bottom-right
-    { x: diodeVB.x, y: diodeVB.y + diodeVB.height }, // bottom-left
+  // Switch corners (centered at origin, then rotated) via the shared transform.
+  const switchCorners = [
+    { x: switchVB.x, y: switchVB.y },
+    { x: switchVB.x + switchVB.width, y: switchVB.y },
+    { x: switchVB.x + switchVB.width, y: switchVB.y + switchVB.height },
+    { x: switchVB.x, y: switchVB.y + switchVB.height },
   ]
+  for (const corner of switchCorners) {
+    const world = applySwitchTransform(corner.x, corner.y, switchVB, switchRotation)
+    xs.push(world.x)
+    ys.push(world.y)
+  }
 
-  // CRITICAL: Diode offset must be rotated by switch rotation angle
-  // to transform from switch-relative coordinates to world coordinates using decimal math
-  const switchRotationRad = D.degreesToRadians(switchRotation)
-  const rotatedOffset = D.rotatePoint(diodeOffsetX, diodeOffsetY, switchRotationRad)
-
-  // CRITICAL: Diode rotation is also switch-relative
-  // The diode maintains its orientation relative to the switch
-  // Final rotation in world coords = diodeRotation + switchRotation
-  const finalDiodeRotation = D.add(diodeRotation, switchRotation)
-
-  // Apply the same transforms as in the component:
-  // translate(rotatedOffset) rotate(finalDiodeRotation) translate(-center)
-  const diodeRotationRad = D.degreesToRadians(finalDiodeRotation)
-
-  const transformedCorners = diodeCorners.map((corner) => {
-    // Step 1: Translate diode center to origin
-    const x = D.sub(corner.x, diodeCenterX)
-    const y = D.sub(corner.y, diodeCenterY)
-
-    // Step 2: Rotate around origin by diode rotation using decimal math
-    const rotated = D.rotatePoint(x, y, diodeRotationRad)
-
-    // Step 3: Apply world-coordinate offset (already rotated by switch rotation)
-    return {
-      x: D.add(rotated.x, rotatedOffset.x),
-      y: D.add(rotated.y, rotatedOffset.y),
+  // Each offset footprint's corners via the same transform used to render it.
+  for (const fp of offsets) {
+    const corners = [
+      { x: fp.vb.x, y: fp.vb.y },
+      { x: fp.vb.x + fp.vb.width, y: fp.vb.y },
+      { x: fp.vb.x + fp.vb.width, y: fp.vb.y + fp.vb.height },
+      { x: fp.vb.x, y: fp.vb.y + fp.vb.height },
+    ]
+    for (const corner of corners) {
+      const world = applyDiodeTransform(
+        corner.x,
+        corner.y,
+        fp.vb,
+        fp.offsetX,
+        fp.offsetY,
+        fp.rotation,
+        switchRotation,
+      )
+      xs.push(world.x)
+      ys.push(world.y)
     }
-  })
+  }
 
-  // Find bounding box of transformed diode using decimal math
-  const diodeMinX = D.min(...transformedCorners.map((c) => c.x))
-  const diodeMinY = D.min(...transformedCorners.map((c) => c.y))
-  const diodeMaxX = D.max(...transformedCorners.map((c) => c.x))
-  const diodeMaxY = D.max(...transformedCorners.map((c) => c.y))
+  const minX = D.sub(D.min(...xs), padding)
+  const minY = D.sub(D.min(...ys), padding)
+  const maxX = D.add(D.max(...xs), padding)
+  const maxY = D.add(D.max(...ys), padding)
 
-  // Calculate composite bounds (start with switch, expand if diode extends beyond)
-  const minX = D.sub(D.min(switchMinX, diodeMinX), padding)
-  const minY = D.sub(D.min(switchMinY, diodeMinY), padding)
-  const maxX = D.add(D.max(switchMaxX, diodeMaxX), padding)
-  const maxY = D.add(D.max(switchMaxY, diodeMaxY), padding)
-
-  const width = D.sub(maxX, minX)
-  const height = D.sub(maxY, minY)
-
-  return `${minX} ${minY} ${width} ${height}`
+  return `${minX} ${minY} ${D.sub(maxX, minX)} ${D.sub(maxY, minY)}`
 }
 
 /**
@@ -366,34 +379,30 @@ export function applyDiodeTransform(
  *
  * Handles both circles and paths, accounting for:
  * - Element's own transform attribute if present
- * - Parent group transform (switch or diode)
+ * - Parent group transform (switch, or an offset footprint: diode/LED/capacitor)
  * - All rotation and positioning settings
  *
  * @param element - The SVG circle or path element
- * @param groupType - Which group the element belongs to ('switch' or 'diode')
+ * @param group - Which group the element belongs to
  * @param switchVB - ViewBox of the switch footprint
- * @param diodeVB - ViewBox of the diode footprint
- * @param settings - PCB generator settings (rotation, positioning)
+ * @param offset - The offset footprint (diode/LED/capacitor) this element belongs
+ *   to, with its switch-relative placement; pass null for the switch group.
+ * @param switchRotation - Switch rotation angle in degrees
  * @returns Object with x, y coordinates in world space (mm)
  *
  * @example
  * ```typescript
  * const circle = document.querySelector('circle')
- * const center = calculateElementCenter(circle, 'switch', switchVB, diodeVB, settings)
+ * const center = calculateElementCenter(circle, 'switch', switchVB, null, 0)
  * // Returns: { x: 0.123, y: -2.456 } (world coordinates in mm)
  * ```
  */
 export function calculateElementCenter(
   element: SVGCircleElement | SVGPathElement,
-  groupType: 'switch' | 'diode',
+  group: FootprintGroup,
   switchVB: ViewBox | null,
-  diodeVB: ViewBox | null,
-  settings: {
-    switchRotation: number
-    diodeRotation: number
-    diodePositionX: number
-    diodePositionY: number
-  },
+  offset: OffsetFootprint | null,
+  switchRotation: number,
 ): { x: number; y: number } {
   // Extract local coordinates based on element type
   let localX: number, localY: number
@@ -422,19 +431,20 @@ export function calculateElementCenter(
   }
 
   // Apply parent group transform based on group type
-  if (groupType === 'switch') {
+  if (group === 'switch') {
     if (!switchVB) return { x: 0, y: 0 }
-    return applySwitchTransform(localX, localY, switchVB, settings.switchRotation)
-  } else {
-    if (!diodeVB) return { x: 0, y: 0 }
-    return applyDiodeTransform(
-      localX,
-      localY,
-      diodeVB,
-      settings.diodePositionX,
-      settings.diodePositionY,
-      settings.diodeRotation,
-      settings.switchRotation,
-    )
+    return applySwitchTransform(localX, localY, switchVB, switchRotation)
   }
+
+  // Diode / LED / capacitor are all offset footprints sharing the same transform.
+  if (!offset) return { x: 0, y: 0 }
+  return applyDiodeTransform(
+    localX,
+    localY,
+    offset.vb,
+    offset.offsetX,
+    offset.offsetY,
+    offset.rotation,
+    switchRotation,
+  )
 }
