@@ -106,17 +106,17 @@ describe('pcbGenerator store', () => {
       })
     })
 
-    it('should load settings from localStorage', () => {
+    it('should load settings from localStorage (grouped JSON format)', () => {
       const savedSettings = {
-        switchFootprint: 'Switch_Keyboard_Alps_Matias:SW_Alps_Matias_{:.2f}u',
-        diodeFootprint: 'Diode_SMD:D_SOD-123',
+        switch: { footprint: 'Switch_Keyboard_Alps_Matias:SW_Alps_Matias_{:.2f}u' },
+        diode: { footprint: 'Diode_SMD:D_SOD-123' },
         routing: 'Disabled',
       }
       localStorageMock['kle-ng-pcb-settings'] = JSON.stringify(savedSettings)
 
       const store = usePcbGeneratorStore()
 
-      // Should merge saved settings with migration defaults for new fields
+      // Grouped fields deserialize on top of defaults for everything omitted
       expect(store.settings).toEqual({
         switchFootprint: 'Switch_Keyboard_Alps_Matias:SW_Alps_Matias_{:.2f}u',
         stabilizerFootprint: 'Mounting_Keyboard_Stabilizer:Stabilizer_Cherry_MX_{:.2f}u',
@@ -143,6 +143,22 @@ describe('pcbGenerator store', () => {
       })
     })
 
+    it('should reset to defaults when localStorage holds the old flat format', () => {
+      // Old exports had a top-level `switchFootprint` key; these are rejected on load.
+      localStorageMock['kle-ng-pcb-settings'] = JSON.stringify({
+        switchFootprint: 'Switch_Keyboard_Alps_Matias:SW_Alps_Matias_{:.2f}u',
+        routing: 'Disabled',
+      })
+
+      const store = usePcbGeneratorStore()
+
+      expect(store.settings.switchFootprint).toBe(
+        'Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_{:.2f}u',
+      )
+      expect(store.settings.routing).toBe('Full')
+      expect(localStorage.removeItem).toHaveBeenCalledWith('kle-ng-pcb-settings')
+    })
+
     it('should handle corrupted localStorage gracefully', () => {
       localStorageMock['kle-ng-pcb-settings'] = 'invalid json'
 
@@ -164,10 +180,14 @@ describe('pcbGenerator store', () => {
       // Wait for debounce (500ms)
       await vi.advanceTimersByTimeAsync(500)
 
-      expect(localStorage.setItem).toHaveBeenCalledWith(
-        'kle-ng-pcb-settings',
-        JSON.stringify(store.settings),
-      )
+      // Persisted in the grouped serializer format (pretty-printed)
+      const saved = localStorageMock['kle-ng-pcb-settings']
+      expect(saved).toBeDefined()
+      const parsed = JSON.parse(saved as string)
+      expect(parsed.routing).toBe('Switch-Diode only')
+      expect(parsed.switch.footprint).toBe(store.settings.switchFootprint)
+      // LED feature is off by default, so the led section is omitted
+      expect(parsed.led).toBeUndefined()
     })
 
     it('should debounce settings saves', async () => {
@@ -185,6 +205,65 @@ describe('pcbGenerator store', () => {
 
       // Should only save once
       expect(localStorage.setItem).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('applySettings', () => {
+    it('should replace settings from grouped JSON, applying defaults for omitted fields', () => {
+      const store = usePcbGeneratorStore()
+
+      store.applySettings({
+        switch: { footprint: 'Custom:SW', rotation: 90, side: 'BACK' },
+        diode: { footprint: 'Diode_SMD:D_SOD-323', offsetX: 1, offsetY: 2 },
+        routing: 'Disabled',
+      })
+
+      expect(store.settings.switchFootprint).toBe('Custom:SW')
+      expect(store.settings.switchRotation).toBe(90)
+      expect(store.settings.switchSide).toBe('BACK')
+      expect(store.settings.diodeFootprint).toBe('Diode_SMD:D_SOD-323')
+      expect(store.settings.diodePositionX).toBe(1)
+      expect(store.settings.diodePositionY).toBe(2)
+      expect(store.settings.routing).toBe('Disabled')
+      // Omitted diode.rotation falls back to default
+      expect(store.settings.diodeRotation).toBe(90)
+    })
+
+    it('should treat presence of the led section as enabling the LED feature', () => {
+      const store = usePcbGeneratorStore()
+
+      store.applySettings({
+        led: {
+          footprint: 'LED:X',
+          offsetX: 3,
+          capacitor: { footprint: 'Cap:Y', offsetY: 7 },
+        },
+      })
+
+      expect(store.settings.createLedSchFile).toBe(true)
+      expect(store.settings.skipLedDecoupling).toBe(false)
+      expect(store.settings.ledFootprint).toBe('LED:X')
+      expect(store.settings.ledPositionX).toBe(3)
+      expect(store.settings.ledCapacitorFootprint).toBe('Cap:Y')
+      expect(store.settings.ledCapacitorPositionY).toBe(7)
+    })
+
+    it('should skip decoupling when the led section has no capacitor', () => {
+      const store = usePcbGeneratorStore()
+
+      store.applySettings({ led: { footprint: 'LED:X' } })
+
+      expect(store.settings.createLedSchFile).toBe(true)
+      expect(store.settings.skipLedDecoupling).toBe(true)
+    })
+
+    it('should disable the LED feature when the led section is absent', () => {
+      const store = usePcbGeneratorStore()
+      store.settings.createLedSchFile = true
+
+      store.applySettings({ routing: 'Full' })
+
+      expect(store.settings.createLedSchFile).toBe(false)
     })
   })
 

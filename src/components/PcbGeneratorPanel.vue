@@ -5,6 +5,7 @@ import { isBackendConfigured } from '@/config/api'
 import PcbWorkerStatus from './PcbWorkerStatus.vue'
 import PcbGeneratorSettings from './PcbGeneratorSettings.vue'
 import PcbLedSettings from './PcbLedSettings.vue'
+import PcbJsonView from './PcbJsonView.vue'
 import PcbGeneratorControls from './PcbGeneratorControls.vue'
 import PcbGeneratorResults from './PcbGeneratorResults.vue'
 import PcbDownloadButton from './PcbDownloadButton.vue'
@@ -17,6 +18,7 @@ const backendConfigured = isBackendConfigured()
 const tabs = [
   { id: 'switches', label: 'Switches' },
   { id: 'leds', label: 'LEDs' },
+  { id: 'json', label: 'JSON' },
 ] as const
 
 const activeTab = ref<(typeof tabs)[number]['id']>('switches')
@@ -63,6 +65,11 @@ onUnmounted(() => {
             <!-- LEDs Tab -->
             <template #leds>
               <PcbLedSettings />
+            </template>
+
+            <!-- JSON Tab -->
+            <template #json>
+              <PcbJsonView />
             </template>
           </ScrollableTabs>
         </div>

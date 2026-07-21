@@ -55,6 +55,16 @@ The automatic router attempts to connect switches to diodes using a basic algori
 
 ::::
 
+## Saving and Sharing Settings {#json-settings}
+
+The **JSON** tab shows the current switch, diode, routing, and LED settings as an editable JSON document, so you can save a configuration as a preset and reuse or share it.
+
+- **Edit** — Change values directly in the editor and click **Apply** (or press `Ctrl+Enter`) to update the form. Invalid JSON is flagged in the status bar and cannot be applied; **Reset** discards your edits.
+- **Download** — Save the current settings as `pcb-settings.json`.
+- **Upload** — Load a previously saved `pcb-settings.json`. Valid files are applied immediately; invalid files are loaded into the editor so you can correct them.
+
+The editor always reflects changes made on the **Switches** and **LEDs** tabs. Only active sections are written: the `led` section appears only when **Add per-key LED** is enabled, and its nested `capacitor` section only when **Add capacitors** is enabled. Settings are also remembered between sessions in the same format.
+
 ## After Downloading the PCB
 
 The downloaded ZIP archive contains two files:

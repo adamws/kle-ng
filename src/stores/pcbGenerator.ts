@@ -8,6 +8,12 @@ import type {
   RenderViews,
 } from '@/types/pcb'
 import { pcbApi, ApiError } from '@/utils/pcbApi'
+import {
+  serializePcbSettings,
+  deserializePcbSettings,
+  type PcbSettingsJson,
+} from '@/utils/pcb/pcb-settings-serializer'
+import { validatePcbSettingsJson } from '@/utils/pcb/pcb-settings-validator'
 import { applyViaEncoderSwitchMount } from '@/utils/pcb-encoder'
 import { useKeyboardStore } from '@/stores/keyboard'
 import { useToast } from '@/composables/useToast'
@@ -451,20 +457,29 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
   // Settings persistence
   function loadSettings() {
     const saved = localStorage.getItem('kle-ng-pcb-settings')
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved)
-        // Merge with defaults to ensure new fields have default values
-        // (backward compatibility for users with old localStorage data)
-        settings.value = { ...DEFAULT_SETTINGS, ...parsed }
-      } catch (error) {
-        console.warn('Failed to load PCB settings:', error)
+    if (!saved) return
+    try {
+      const result = validatePcbSettingsJson(saved)
+      if (!result.valid) {
+        console.warn('PCB settings: invalid format, resetting to defaults:', result.error)
+        localStorage.removeItem('kle-ng-pcb-settings')
+        return
       }
+      settings.value = deserializePcbSettings(result.json, DEFAULT_SETTINGS)
+    } catch (error) {
+      console.warn('Failed to load PCB settings:', error)
     }
   }
 
   function saveSettings() {
-    localStorage.setItem('kle-ng-pcb-settings', JSON.stringify(settings.value))
+    localStorage.setItem(
+      'kle-ng-pcb-settings',
+      JSON.stringify(serializePcbSettings(settings.value), null, 2),
+    )
+  }
+
+  function applySettings(json: PcbSettingsJson) {
+    settings.value = deserializePcbSettings(json, DEFAULT_SETTINGS)
   }
 
   // Manual debounce helper
@@ -510,5 +525,6 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
     cleanup,
     setBackendUrl,
     resetBackendUrl,
+    applySettings,
   }
 })
