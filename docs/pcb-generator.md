@@ -42,6 +42,13 @@ The easiest way to assign matrix coordinates is to use [Add Switch Matrix Coordi
 7. Once complete, preview renders will be displayed
 8. Click **Download ZIP** to save the archive, or **New Task** to start over
 
+The preview offers **Schematic**, **PCB Front** and **PCB Back** tabs. When the
+project spans multiple schematic sheets — for example with **Add per-key LED**
+enabled, which splits the design into a key-matrix sheet and an LED-chain sheet —
+each sheet gets its own top-level tab (**Main**, **Key Matrix**, **LED Chain**,
+**PCB Front**, **PCB Back**), so you can review every sheet without downloading
+the ZIP first.
+
 :::: warning
 The preview does not support displaying traces for **Routing** option enabled.
 ::::

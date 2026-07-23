@@ -12,7 +12,9 @@ const { renders, isTaskSuccess, isTaskFailed, taskStatus, isTaskActive } = store
 
 function hasRenders(): boolean {
   return (
-    renders.value.front !== null || renders.value.back !== null || renders.value.schematic !== null
+    renders.value.front !== null ||
+    renders.value.back !== null ||
+    renders.value.schematics.some((schematic) => schematic.url !== null)
   )
 }
 
@@ -70,7 +72,7 @@ function getProgressPercentage(): number {
       <PcbRenderViewer
         :front-svg="renders.front"
         :back-svg="renders.back"
-        :schematic-svg="renders.schematic"
+        :schematics="renders.schematics"
       />
       <DownloadExpirationNotice />
     </div>

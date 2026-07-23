@@ -102,7 +102,7 @@ describe('pcbGenerator store', () => {
       expect(store.renders).toEqual({
         front: null,
         back: null,
-        schematic: null,
+        schematics: [],
       })
     })
 
@@ -621,7 +621,7 @@ describe('pcbGenerator store', () => {
   })
 
   describe('fetchRenders', () => {
-    it('should fetch all three renders', async () => {
+    it('should fetch the fixed set when no manifest is present', async () => {
       const store = usePcbGeneratorStore()
       store.currentTaskId = 'test-task-123'
 
@@ -632,12 +632,60 @@ describe('pcbGenerator store', () => {
 
       await store.fetchRenders()
 
-      expect(store.renders).toEqual({
-        front: 'blob:front-url',
-        back: 'blob:back-url',
-        schematic: 'blob:schematic-url',
-      })
+      expect(store.renders.front).toBe('blob:front-url')
+      expect(store.renders.back).toBe('blob:back-url')
+      expect(store.renders.schematics).toEqual([
+        { name: 'schematic', sheet: '', label: 'Schematic', url: 'blob:schematic-url' },
+      ])
       expect(pcbApi.getTaskRenderAsBlobUrl).toHaveBeenCalledTimes(3)
+    })
+
+    it('should fetch one schematic render per sheet from the manifest', async () => {
+      const store = usePcbGeneratorStore()
+      store.currentTaskId = 'test-task-123'
+      store.taskStatus = {
+        task_id: 'test-task-123',
+        task_status: 'SUCCESS',
+        task_result: {
+          percentage: 100,
+          files: {
+            archive: 'test-task-123.zip',
+            renders: [
+              { name: 'front', kind: 'pcb-front' },
+              { name: 'back', kind: 'pcb-back' },
+              { name: 'schematic', kind: 'schematic' },
+              { name: 'schematic-key-matrix', kind: 'schematic', sheet: 'key-matrix' },
+              { name: 'schematic-led-chain', kind: 'schematic', sheet: 'led-chain' },
+            ],
+          },
+        },
+      }
+
+      vi.mocked(pcbApi.getTaskRenderAsBlobUrl).mockImplementation(
+        async (_taskId, name) => `blob:${name}`,
+      )
+
+      await store.fetchRenders()
+
+      expect(pcbApi.getTaskRenderAsBlobUrl).toHaveBeenCalledTimes(5)
+      expect(store.renders.front).toBe('blob:front')
+      expect(store.renders.back).toBe('blob:back')
+      // Root sheet first, then child sheets; labels humanized (LED preserved).
+      expect(store.renders.schematics).toEqual([
+        { name: 'schematic', sheet: '', label: 'Schematic', url: 'blob:schematic' },
+        {
+          name: 'schematic-key-matrix',
+          sheet: 'key-matrix',
+          label: 'Key Matrix',
+          url: 'blob:schematic-key-matrix',
+        },
+        {
+          name: 'schematic-led-chain',
+          sheet: 'led-chain',
+          label: 'LED Chain',
+          url: 'blob:schematic-led-chain',
+        },
+      ])
     })
 
     it('should handle individual render failures', async () => {
@@ -651,11 +699,11 @@ describe('pcbGenerator store', () => {
 
       await store.fetchRenders()
 
-      expect(store.renders).toEqual({
-        front: 'blob:front-url',
-        back: null,
-        schematic: 'blob:schematic-url',
-      })
+      expect(store.renders.front).toBe('blob:front-url')
+      expect(store.renders.back).toBeNull()
+      expect(store.renders.schematics).toEqual([
+        { name: 'schematic', sheet: '', label: 'Schematic', url: 'blob:schematic-url' },
+      ])
     })
 
     it('should revoke old blob URLs', async () => {
@@ -664,7 +712,9 @@ describe('pcbGenerator store', () => {
       store.renders = {
         front: 'blob:old-front',
         back: 'blob:old-back',
-        schematic: 'blob:old-schematic',
+        schematics: [
+          { name: 'schematic', sheet: '', label: 'Schematic', url: 'blob:old-schematic' },
+        ],
       }
 
       const revokeObjectURLSpy = vi.spyOn(URL, 'revokeObjectURL')
@@ -788,7 +838,7 @@ describe('pcbGenerator store', () => {
       store.renders = {
         front: 'blob:front',
         back: 'blob:back',
-        schematic: 'blob:schematic',
+        schematics: [{ name: 'schematic', sheet: '', label: 'Schematic', url: 'blob:schematic' }],
       }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ;(store as any).pollingInterval = window.setInterval(() => {}, 1000)
@@ -804,7 +854,7 @@ describe('pcbGenerator store', () => {
       expect(store.renders).toEqual({
         front: null,
         back: null,
-        schematic: null,
+        schematics: [],
       })
       expect(store.isPolling).toBe(false)
       expect(revokeObjectURLSpy).toHaveBeenCalledTimes(3)
@@ -827,7 +877,7 @@ describe('pcbGenerator store', () => {
       store.renders = {
         front: 'blob:front',
         back: 'blob:back',
-        schematic: 'blob:schematic',
+        schematics: [{ name: 'schematic', sheet: '', label: 'Schematic', url: 'blob:schematic' }],
       }
 
       store.cleanup()
@@ -836,7 +886,7 @@ describe('pcbGenerator store', () => {
       expect(store.renders).toEqual({
         front: null,
         back: null,
-        schematic: null,
+        schematics: [],
       })
     })
   })

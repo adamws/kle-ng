@@ -6,6 +6,8 @@ import type {
   TaskStatusResponse,
   WorkerStatusResponse,
   RenderViews,
+  RenderFile,
+  SchematicView,
 } from '@/types/pcb'
 import { pcbApi, ApiError } from '@/utils/pcbApi'
 import {
@@ -46,7 +48,7 @@ const DEFAULT_SETTINGS: PcbSettings = {
   ledCapacitorRotation: 0,
   ledCapacitorSide: 'BACK',
   ledCapacitorPositionX: 5.5,
-  ledCapacitorPositionY: 5.750,
+  ledCapacitorPositionY: 5.75,
 }
 
 export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
@@ -63,7 +65,7 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
   const renders = ref<RenderViews>({
     front: null,
     back: null,
-    schematic: null,
+    schematics: [],
   })
 
   // Download expiration tracking
@@ -355,39 +357,87 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
     }
   }
 
-  async function fetchRenders() {
-    if (!currentTaskId.value) return
+  // Historical fixed render set, used as a fallback when the backend response
+  // does not include a file manifest (older backend).
+  const FALLBACK_RENDERS: RenderFile[] = [
+    { name: 'front', kind: 'pcb-front' },
+    { name: 'back', kind: 'pcb-back' },
+    { name: 'schematic', kind: 'schematic' },
+  ]
 
-    // Revoke old blob URLs to prevent memory leaks
+  // Turn a schematic render into a human-friendly tab label. The root sheet is
+  // just "Schematic"; child sheets are derived from their sheet name
+  // (e.g. 'led-chain' -> 'LED Chain', 'key-matrix' -> 'Key Matrix').
+  function schematicLabel(render: RenderFile): string {
+    if (!render.sheet) return 'Schematic'
+    return render.sheet
+      .split('-')
+      .map((word) =>
+        word.toLowerCase() === 'led' ? 'LED' : word.charAt(0).toUpperCase() + word.slice(1),
+      )
+      .join(' ')
+  }
+
+  function revokeRenderUrls() {
     if (renders.value.front) URL.revokeObjectURL(renders.value.front)
     if (renders.value.back) URL.revokeObjectURL(renders.value.back)
-    if (renders.value.schematic) URL.revokeObjectURL(renders.value.schematic)
-
-    // Fetch all renders as blob URLs, handling individual failures
-    const results = await Promise.allSettled([
-      pcbApi.getTaskRenderAsBlobUrl(currentTaskId.value, 'front', abortController.value?.signal),
-      pcbApi.getTaskRenderAsBlobUrl(currentTaskId.value, 'back', abortController.value?.signal),
-      pcbApi.getTaskRenderAsBlobUrl(
-        currentTaskId.value,
-        'schematic',
-        abortController.value?.signal,
-      ),
-    ])
-
-    // Extract successful results, null for failures
-    renders.value = {
-      front: results[0].status === 'fulfilled' ? results[0].value : null,
-      back: results[1].status === 'fulfilled' ? results[1].value : null,
-      schematic: results[2].status === 'fulfilled' ? results[2].value : null,
+    for (const schematic of renders.value.schematics) {
+      if (schematic.url) URL.revokeObjectURL(schematic.url)
     }
+  }
 
-    // Log any failures
-    results.forEach((result, index) => {
-      if (result.status === 'rejected') {
-        const names = ['front', 'back', 'schematic']
-        console.error(`Failed to fetch ${names[index]} render:`, result.reason)
+  async function fetchRenders() {
+    if (!currentTaskId.value) return
+    const taskId = currentTaskId.value
+    const signal = abortController.value?.signal
+
+    // Revoke old blob URLs to prevent memory leaks
+    revokeRenderUrls()
+
+    // Prefer the file manifest returned by the backend: it lists exactly which
+    // renders exist, including one schematic per sheet for multi-sheet projects.
+    // Fall back to the fixed set if an older backend omits it.
+    const manifest = taskStatus.value?.task_result?.files?.renders
+    const wanted = manifest && manifest.length > 0 ? manifest : FALLBACK_RENDERS
+
+    // Fetch every advertised render as a blob URL, handling individual failures
+    const results = await Promise.allSettled(
+      wanted.map((render) => pcbApi.getTaskRenderAsBlobUrl(taskId, render.name, signal)),
+    )
+
+    let front: string | null = null
+    let back: string | null = null
+    const schematics: SchematicView[] = []
+
+    wanted.forEach((render, index) => {
+      const result = results[index]
+      const url = result && result.status === 'fulfilled' ? result.value : null
+      if (result && result.status === 'rejected') {
+        console.error(`Failed to fetch ${render.name} render:`, result.reason)
+      }
+
+      if (render.kind === 'pcb-front') {
+        front = url
+      } else if (render.kind === 'pcb-back') {
+        back = url
+      } else if (render.kind === 'schematic') {
+        schematics.push({
+          name: render.name,
+          sheet: render.sheet ?? '',
+          label: schematicLabel(render),
+          url,
+        })
       }
     })
+
+    // Keep the root sheet first, then child sheets alphabetically. The backend
+    // already orders them this way; re-sorting keeps us robust to the fallback.
+    schematics.sort((a, b) => {
+      if ((a.sheet === '') !== (b.sheet === '')) return a.sheet === '' ? -1 : 1
+      return a.label.localeCompare(b.label)
+    })
+
+    renders.value = { front, back, schematics }
   }
 
   function getResultDownloadUrl() {
@@ -420,14 +470,12 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
     abortController.value = null
 
     // Revoke blob URLs to prevent memory leaks
-    if (renders.value.front) URL.revokeObjectURL(renders.value.front)
-    if (renders.value.back) URL.revokeObjectURL(renders.value.back)
-    if (renders.value.schematic) URL.revokeObjectURL(renders.value.schematic)
+    revokeRenderUrls()
 
     // Reset state
     currentTaskId.value = null
     taskStatus.value = null
-    renders.value = { front: null, back: null, schematic: null }
+    renders.value = { front: null, back: null, schematics: [] }
     pollFailureCount = 0
   }
 

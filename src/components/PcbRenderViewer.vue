@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import type { SchematicView } from '@/types/pcb'
 import BiZoomIn from 'bootstrap-icons/icons/zoom-in.svg'
 import BiZoomOut from 'bootstrap-icons/icons/zoom-out.svg'
 import BiArrowCounterclockwise from 'bootstrap-icons/icons/arrow-counterclockwise.svg'
@@ -7,15 +8,25 @@ import BiArrowCounterclockwise from 'bootstrap-icons/icons/arrow-counterclockwis
 interface Props {
   frontSvg: string | null
   backSvg: string | null
-  schematicSvg: string | null
+  // One entry per schematic sheet (root first). Multi-sheet projects (e.g. the
+  // LED chain) supply several; single-sheet projects supply exactly one.
+  schematics: SchematicView[]
 }
 
 const props = defineProps<Props>()
 
-type ViewType = 'front' | 'back' | 'schematic'
+type ViewKind = 'schematic' | 'front' | 'back'
+
+interface Tab {
+  key: string // unique tab id: schematic render name, or 'front' / 'back'
+  label: string
+  kind: ViewKind
+  schematicIndex: number // index into props.schematics (-1 for PCB tabs)
+}
 
 const containerRef = ref<HTMLElement | null>(null)
-const currentView = ref<ViewType>('schematic')
+// Selected tab, tracked by key so it survives changes to the tab set.
+const currentTabKey = ref<string>('')
 const isPanning = ref(false)
 const lastMouseX = ref(0)
 const lastMouseY = ref(0)
@@ -25,28 +36,65 @@ const controlsActive = ref(false)
 const schematicState = ref({ zoom: 1, panX: 0, panY: 0 })
 const pcbState = ref({ zoom: 1, panX: 0, panY: 0 })
 
-const viewState = computed(() =>
-  currentView.value === 'schematic' ? schematicState.value : pcbState.value,
-)
-
 let wheelHandler: ((e: WheelEvent) => void) | null = null
 let documentDeactivateHandler: ((e: PointerEvent) => void) | null = null
 
-const currentSvgUrl = computed(() => {
-  switch (currentView.value) {
-    case 'front':
-      return props.frontSvg
-    case 'back':
-      return props.backSvg
-    case 'schematic':
-      return props.schematicSvg
-    default:
-      return null
-  }
+// Flat tab list: one tab per schematic sheet, then the two PCB views. Each
+// schematic sheet is a top-level tab; when there is more than one sheet the root
+// is labelled "Main" (e.g. Main / Key Matrix / LED Chain / PCB Front / PCB Back),
+// otherwise it keeps its plain "Schematic" label.
+const tabs = computed<Tab[]>(() => {
+  const multiSheet = props.schematics.length > 1
+  const schematicTabs: Tab[] = props.schematics.map((schematic, index) => ({
+    key: schematic.name,
+    label: multiSheet && schematic.sheet === '' ? 'Main' : schematic.label,
+    kind: 'schematic',
+    schematicIndex: index,
+  }))
+
+  return [
+    ...schematicTabs,
+    { key: 'front', label: 'PCB Front', kind: 'front', schematicIndex: -1 },
+    { key: 'back', label: 'PCB Back', kind: 'back', schematicIndex: -1 },
+  ]
 })
 
-function setView(view: ViewType) {
-  currentView.value = view
+const currentTab = computed<Tab | null>(
+  () => tabs.value.find((tab) => tab.key === currentTabKey.value) ?? tabs.value[0] ?? null,
+)
+
+// Default / repair the selection when the tab set changes (e.g. a new task with
+// a different number of sheets). Defaults to the first schematic sheet.
+watch(
+  tabs,
+  (list) => {
+    if (!list.some((tab) => tab.key === currentTabKey.value)) {
+      currentTabKey.value = list[0]?.key ?? ''
+    }
+  },
+  { immediate: true },
+)
+
+const viewState = computed(() =>
+  currentTab.value?.kind === 'schematic' ? schematicState.value : pcbState.value,
+)
+
+const currentSvgUrl = computed(() => {
+  const tab = currentTab.value
+  if (!tab) return null
+  if (tab.kind === 'front') return props.frontSvg
+  if (tab.kind === 'back') return props.backSvg
+  return props.schematics[tab.schematicIndex]?.url ?? null
+})
+
+function setTab(tab: Tab) {
+  if (tab.key === currentTabKey.value) return
+  // Reset schematic pan/zoom when switching to a different schematic sheet so it
+  // starts framed (sheets differ in size).
+  if (tab.kind === 'schematic') {
+    schematicState.value = { zoom: 1, panX: 0, panY: 0 }
+  }
+  currentTabKey.value = tab.key
 }
 
 function zoomIn() {
@@ -131,34 +179,24 @@ const transformStyle = computed(() => {
 })
 
 const containerBackgroundClass = computed(() => {
-  return currentView.value === 'schematic' ? 'svg-container-schematic' : 'svg-container-pcb'
+  return currentTab.value?.kind === 'schematic' ? 'svg-container-schematic' : 'svg-container-pcb'
 })
 </script>
 
 <template>
   <div ref="containerRef" class="pcb-render-viewer">
-    <!-- Tab bar at top -->
-    <div class="tab-bar">
+    <!-- Tab bar at top: one tab per schematic sheet, then the PCB views -->
+    <div class="tab-bar" role="tablist" aria-label="Render views">
       <button
+        v-for="tab in tabs"
+        :key="tab.key"
         class="tab-bar-item"
-        :class="{ active: currentView === 'schematic' }"
-        @click="setView('schematic')"
+        :class="{ active: tab.key === currentTabKey }"
+        :aria-selected="tab.key === currentTabKey"
+        role="tab"
+        @click="setTab(tab)"
       >
-        Schematic
-      </button>
-      <button
-        class="tab-bar-item"
-        :class="{ active: currentView === 'front' }"
-        @click="setView('front')"
-      >
-        PCB Front
-      </button>
-      <button
-        class="tab-bar-item"
-        :class="{ active: currentView === 'back' }"
-        @click="setView('back')"
-      >
-        PCB Back
+        {{ tab.label }}
       </button>
     </div>
 
@@ -225,6 +263,7 @@ const containerBackgroundClass = computed(() => {
 /* Segmented tab bar matching PlateGeneratorResults style */
 .tab-bar {
   display: flex;
+  flex-wrap: wrap;
   background-color: var(--bs-secondary-bg);
   border-radius: 5px;
   padding: 3px;
@@ -232,6 +271,7 @@ const containerBackgroundClass = computed(() => {
   margin-bottom: 8px;
   flex-shrink: 0;
   width: fit-content;
+  max-width: 100%;
 }
 
 .tab-bar-item {

@@ -170,10 +170,12 @@ export const pcbApi = {
     return response.json()
   },
 
-  // Fetch SVG render and convert to blob URL for memory efficiency
+  // Fetch SVG render and convert to blob URL for memory efficiency.
+  // `name` is any render identifier from the task's file manifest (e.g. 'front',
+  // 'back', 'schematic', 'schematic-led-chain').
   async getTaskRenderAsBlobUrl(
     taskId: string,
-    name: 'front' | 'back' | 'schematic',
+    name: string,
     signal?: AbortSignal,
   ): Promise<string> {
     return withRetry(async () => {
