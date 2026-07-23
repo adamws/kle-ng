@@ -69,6 +69,7 @@ export default defineConfig({
           { text: 'Layout Export', link: '/development/layout-export' },
           { text: 'Matrix Annotation', link: '/development/matrix-annotation' },
           { text: 'Plate Generator', link: '/development/plate-generator' },
+          { text: 'PCB Generator', link: '/development/pcb-generator' },
         ],
       },
     ],
