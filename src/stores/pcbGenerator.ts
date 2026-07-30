@@ -107,8 +107,7 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
   const isTaskActive = computed(
     () =>
       taskStatus.value?.task_status === 'PENDING' ||
-      taskStatus.value?.task_status === 'PROGRESS' ||
-      taskStatus.value?.task_status === 'RETRY',
+      taskStatus.value?.task_status === 'PROGRESS',
   )
 
   const isTaskSuccess = computed(() => taskStatus.value?.task_status === 'SUCCESS')

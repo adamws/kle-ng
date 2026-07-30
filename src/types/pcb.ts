@@ -63,7 +63,7 @@ export interface TaskRequest {
   settings: PcbApiSettings
 }
 
-export type TaskStatusType = 'PENDING' | 'PROGRESS' | 'SUCCESS' | 'FAILURE' | 'RETRY'
+export type TaskStatusType = 'PENDING' | 'PROGRESS' | 'SUCCESS' | 'FAILURE'
 
 // A single generated SVG preview, as advertised by the backend's file manifest.
 // Each is fetchable via GET /api/pcb/{task_id}/render/{name}.
@@ -87,8 +87,6 @@ export interface TaskResult {
   percentage: number
   message?: string
   error?: string
-  retries?: number
-  max_retry?: number
   files?: ProjectFiles
 }
 
