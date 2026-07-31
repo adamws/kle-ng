@@ -312,7 +312,7 @@ describe('pcbGenerator store', () => {
       store.taskStatus = {
         task_id: 'test-123',
         task_status: 'PENDING',
-        task_result: { percentage: 0 },
+        task_result: {},
       }
       expect(store.isTaskActive).toBe(true)
 
@@ -331,7 +331,7 @@ describe('pcbGenerator store', () => {
       store.taskStatus = {
         task_id: 'test-123',
         task_status: 'SUCCESS',
-        task_result: { percentage: 100 },
+        task_result: {},
       }
       expect(store.isTaskSuccess).toBe(true)
     })
@@ -344,7 +344,7 @@ describe('pcbGenerator store', () => {
       store.taskStatus = {
         task_id: 'test-123',
         task_status: 'FAILURE',
-        task_result: { percentage: 0, error: 'Test error' },
+        task_result: { error: 'Test error' },
       }
       expect(store.isTaskFailed).toBe(true)
     })
@@ -393,7 +393,7 @@ describe('pcbGenerator store', () => {
       const mockResponse: TaskStatusResponse = {
         task_id: 'test-task-123',
         task_status: 'PENDING',
-        task_result: { percentage: 0 },
+        task_result: {},
       }
       vi.mocked(pcbApi.submitTask).mockResolvedValue(mockResponse)
 
@@ -427,7 +427,7 @@ describe('pcbGenerator store', () => {
       vi.mocked(pcbApi.submitTask).mockResolvedValue({
         task_id: 't',
         task_status: 'PENDING',
-        task_result: { percentage: 0 },
+        task_result: {},
       })
 
       await store.startTask()
@@ -445,7 +445,7 @@ describe('pcbGenerator store', () => {
       vi.mocked(pcbApi.submitTask).mockResolvedValue({
         task_id: 't',
         task_status: 'PENDING',
-        task_result: { percentage: 0 },
+        task_result: {},
       })
 
       await store.startTask()
@@ -468,7 +468,7 @@ describe('pcbGenerator store', () => {
       vi.mocked(pcbApi.submitTask).mockResolvedValue({
         task_id: 't',
         task_status: 'PENDING',
-        task_result: { percentage: 0 },
+        task_result: {},
       })
 
       await store.startTask()
@@ -519,7 +519,7 @@ describe('pcbGenerator store', () => {
       const mockResponse: TaskStatusResponse = {
         task_id: 'test-task-123',
         task_status: 'PENDING',
-        task_result: { percentage: 0 },
+        task_result: {},
       }
       vi.mocked(pcbApi.submitTask).mockResolvedValue(mockResponse)
 
@@ -552,7 +552,7 @@ describe('pcbGenerator store', () => {
       const mockResponse: TaskStatusResponse = {
         task_id: 'test-task-123',
         task_status: 'PENDING',
-        task_result: { percentage: 0 },
+        task_result: {},
       }
       vi.mocked(pcbApi.submitTask).mockResolvedValue(mockResponse)
       vi.mocked(pcbApi.getTaskStatus).mockResolvedValue(mockResponse)
@@ -575,7 +575,7 @@ describe('pcbGenerator store', () => {
       const mockResponse: TaskStatusResponse = {
         task_id: 'test-task-123',
         task_status: 'PROGRESS',
-        task_result: { percentage: 50 },
+        task_result: {},
       }
       vi.mocked(pcbApi.getTaskStatus).mockResolvedValue(mockResponse)
 
@@ -592,7 +592,7 @@ describe('pcbGenerator store', () => {
       const mockResponse: TaskStatusResponse = {
         task_id: 'test-task-123',
         task_status: 'SUCCESS',
-        task_result: { percentage: 100 },
+        task_result: {},
       }
       vi.mocked(pcbApi.getTaskStatus).mockResolvedValue(mockResponse)
       vi.mocked(pcbApi.getTaskRenderAsBlobUrl).mockResolvedValue('blob:mock-url')
@@ -617,7 +617,7 @@ describe('pcbGenerator store', () => {
       const mockResponse: TaskStatusResponse = {
         task_id: 'test-task-123',
         task_status: 'FAILURE',
-        task_result: { percentage: 0, error: 'Test error' },
+        task_result: { error: 'Test error' },
       }
       vi.mocked(pcbApi.getTaskStatus).mockResolvedValue(mockResponse)
 
@@ -683,7 +683,6 @@ describe('pcbGenerator store', () => {
         task_id: 'test-task-123',
         task_status: 'SUCCESS',
         task_result: {
-          percentage: 100,
           files: {
             archive: 'test-task-123.zip',
             renders: [
@@ -869,7 +868,7 @@ describe('pcbGenerator store', () => {
       store.taskStatus = {
         task_id: 'test-task-123',
         task_status: 'SUCCESS',
-        task_result: { percentage: 100 },
+        task_result: {},
       }
       store.renders = {
         front: 'blob:front',
@@ -964,7 +963,7 @@ describe('pcbGenerator store', () => {
       store.taskStatus = {
         task_id: 'task-1',
         task_status: 'PROGRESS',
-        task_result: { percentage: 10 },
+        task_result: {},
       }
 
       store.startLogStream('task-1')
@@ -985,7 +984,7 @@ describe('pcbGenerator store', () => {
       store.taskStatus = {
         task_id: 'task-1',
         task_status: 'FAILURE',
-        task_result: { percentage: 0 },
+        task_result: {},
       }
 
       store.startLogStream('task-1')

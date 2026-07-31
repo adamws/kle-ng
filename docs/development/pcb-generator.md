@@ -93,7 +93,7 @@ in **Redis**, managed by [asynq](https://github.com/hibiken/asynq); there is no 
               ▼
 ┌─────────────────────────────┐        ┌────────────────────────────┐
 │  worker HandleGenerate...   │───────►│  kicad.NewPCB()            │
-│  0% → 10% → 50% → 100%      │        │  kbplacer + kicad-cli      │
+│  init → generate → upload   │        │  kbplacer + kicad-cli      │
 │  reportProgress() to Redis  │        │  → workDir + ProjectFiles  │
 └─────────────┬───────────────┘        └────────────────────────────┘
               │ UploadToStorage() → Filer (zip + SVGs)
@@ -311,7 +311,7 @@ timeout**, `Queue("kicad")`, and 24-hour retention; asynq auto-generates the tas
 
 **Status mapping:** `KicadGetTaskStatus` translates asynq task states into the API contract —
 `Pending → PENDING`, `Active → PROGRESS` (parsing the `common.Progress` written to the result
-writer for `percentage`/`message`), `Completed/Archived-without-error → SUCCESS` (attaching the
+writer for its `message`), `Completed/Archived-without-error → SUCCESS` (attaching the
 `files` manifest via `successResult`), `Archived-with-error → FAILURE`, `Retry → RETRY`.
 
 **Filer proxy:** `FilerProxy` fetches `{FILER_URL}/{objectName}`, copies headers, optionally overrides
@@ -330,7 +330,7 @@ queued. Active tasks are left to finish (or hit the 10-minute timeout).
   `kicad` and `critical` queues with priority weights; exponential retry backoff of 1/2/4/8 min) and
   runs the `ServeMux` until a termination signal.
 - `task_handler.go` — Registers and runs `generate_kicad_project`. `HandleGenerateKicadProject`
-  reports progress at **0% (init) → 10% (generating) → 50% (uploading) → 100% (complete)** by writing
+  reports progress through **init → generating → uploading → complete** step messages by writing
   `common.Progress` JSON to the task's result writer (read back by the server on status polls). It
   recovers from panics, parses the payload, calls `kicad.NewPCB()`, uploads via
   `filerUploader.UploadToStorage()`, and writes the final result **including the file manifest**
@@ -439,8 +439,7 @@ queue is full.
   "task_id": "…",
   "task_status": "PROGRESS", // PENDING | PROGRESS | SUCCESS | FAILURE | RETRY
   "task_result": {
-    "percentage": 50,
-    "message": "Uploading files to storage",
+    "message": "Uploading files to storage", // present during PROGRESS
     // on SUCCESS, a file manifest is included:
     "files": {
       "renders": [
@@ -540,7 +539,9 @@ PENDING ──────► (queued) ─────────────�
 ```
 
 - **Client polling** runs at 1s intervals and tolerates 5 consecutive failures before giving up.
-- **Progress percentages** come from the worker's `reportProgress` writes: 0 → 10 → 50 → 100.
+- **Progress messages** come from the worker's `reportProgress` writes (init → generating → uploading
+  → complete). There is no completion percentage; the client shows an indeterminate loader with the
+  current message, and the live build log conveys real progress.
 - **Retries**: only infrastructure failures (e.g. Filer upload) retry, with 1/2/4/8-minute backoff;
   generation errors are marked `SkipRetry` and fail immediately.
 - **Download window**: the Filer stores artifacts with a 1-hour TTL, and the client mirrors this with

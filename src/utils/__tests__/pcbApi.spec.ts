@@ -69,7 +69,7 @@ describe('pcbApi', () => {
       const mockResponse: TaskStatusResponse = {
         task_id: 'test-task-123',
         task_status: 'PENDING',
-        task_result: { percentage: 0 },
+        task_result: {},
       }
 
       fetchMock.mockResolvedValueOnce({
@@ -109,7 +109,7 @@ describe('pcbApi', () => {
       const mockResponse: TaskStatusResponse = {
         task_id: 'test-task-123',
         task_status: 'PENDING',
-        task_result: { percentage: 0 },
+        task_result: {},
       }
 
       // First call fails with 503, second succeeds
@@ -202,7 +202,7 @@ describe('pcbApi', () => {
       const mockResponse: TaskStatusResponse = {
         task_id: 'test-task-123',
         task_status: 'SUCCESS',
-        task_result: { percentage: 100 },
+        task_result: {},
       }
 
       fetchMock.mockResolvedValueOnce({
@@ -408,7 +408,7 @@ describe('pcbApi', () => {
       const mockResponse: TaskStatusResponse = {
         task_id: 'test-task-123',
         task_status: 'PENDING',
-        task_result: { percentage: 0 },
+        task_result: {},
       }
 
       // Fail twice with 503, then succeed

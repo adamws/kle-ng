@@ -84,10 +84,6 @@ export interface ProjectFiles {
 }
 
 export interface TaskResult {
-  // Deprecated: the backend no longer reports a completion percentage. Kept
-  // optional for backward compatibility with older responses; the UI shows an
-  // indeterminate loader instead.
-  percentage?: number
   message?: string
   error?: string
   files?: ProjectFiles
