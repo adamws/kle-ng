@@ -8,6 +8,8 @@ import type {
   RenderViews,
   RenderFile,
   SchematicView,
+  BuildLogLine,
+  BuildLogMessage,
 } from '@/types/pcb'
 import { pcbApi, ApiError } from '@/utils/pcbApi'
 import {
@@ -103,11 +105,18 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
   // AbortController for request cancellation
   const abortController = ref<AbortController | null>(null)
 
+  // Build log streaming state (WebSocket). The socket itself is module-scoped
+  // (non-reactive) so Vue doesn't try to proxy the WebSocket instance.
+  const buildLogs = ref<BuildLogLine[]>([])
+  const isLogStreamActive = ref(false)
+  let logSocket: WebSocket | null = null
+  let logReconnectAttempts = 0
+  const MAX_LOG_RECONNECTS = 3
+
   // Computed
   const isTaskActive = computed(
     () =>
-      taskStatus.value?.task_status === 'PENDING' ||
-      taskStatus.value?.task_status === 'PROGRESS',
+      taskStatus.value?.task_status === 'PENDING' || taskStatus.value?.task_status === 'PROGRESS',
   )
 
   const isTaskSuccess = computed(() => taskStatus.value?.task_status === 'SUCCESS')
@@ -287,8 +296,10 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
       // Reset polling failure count
       pollFailureCount = 0
 
-      // Start polling
+      // Start polling and the live build-log stream (additive, independent
+      // channel; a failure to connect never affects the task itself).
       startPolling()
+      startLogStream(response.task_id)
     } catch (error) {
       console.error('Failed to start task:', error)
       throw error
@@ -348,7 +359,6 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
           task_id: currentTaskId.value!,
           task_status: 'FAILURE',
           task_result: {
-            percentage: 0,
             error: 'Lost connection to server after multiple failures. Please try again.',
           },
         }
@@ -460,8 +470,122 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
     }
   }
 
+  // --- Build log streaming ------------------------------------------------
+
+  // Open the WebSocket log stream for a task. The server replays the full
+  // retained backfill from the start of the build, then live-tails, then sends
+  // one terminal `end` frame. Because reconnects replay from the start, we clear
+  // buildLogs on every (re)connect to avoid duplicating lines.
+  function startLogStream(taskId: string) {
+    // Tear down any previous socket without clobbering reconnect bookkeeping.
+    closeLogSocket()
+    logReconnectAttempts = 0
+    openLogSocket(taskId)
+  }
+
+  function openLogSocket(taskId: string) {
+    let socket: WebSocket
+    try {
+      socket = new WebSocket(pcbApi.getTaskLogsWsUrl(taskId))
+    } catch (error) {
+      console.error('Failed to open build log stream:', error)
+      isLogStreamActive.value = false
+      return
+    }
+
+    // Fresh (re)connect: server replays from the start, so start clean. Only
+    // clear once the socket was actually constructed, so a throwing
+    // constructor doesn't wipe already-visible logs.
+    buildLogs.value = []
+
+    logSocket = socket
+    isLogStreamActive.value = true
+
+    // A healthy (re)connection resets the reconnect budget, so the bound is on
+    // consecutive failures rather than cumulative drops over a long build.
+    socket.onopen = () => {
+      if (socket === logSocket) logReconnectAttempts = 0
+    }
+
+    socket.onmessage = (event) => {
+      let msg: BuildLogMessage
+      try {
+        msg = JSON.parse(event.data)
+      } catch (error) {
+        console.error('Failed to parse build log message:', error)
+        return
+      }
+
+      if ('event' in msg && msg.event === 'end') {
+        // Terminal frame — stop the stream but keep logs readable.
+        stopLogStream()
+        return
+      }
+
+      // Ignore anything that isn't a well-formed log line (e.g. an unknown
+      // control frame) so we never render a blank/undefined row.
+      if (typeof (msg as BuildLogLine).line !== 'string') return
+
+      buildLogs.value.push(msg as BuildLogLine)
+    }
+
+    socket.onclose = () => handleLogSocketDrop(taskId, socket)
+    socket.onerror = () => handleLogSocketDrop(taskId, socket)
+  }
+
+  // On an unexpected drop (not a clean `end`), reconnect a bounded number of
+  // times while the task is still active. Each reconnect clears+refills.
+  function handleLogSocketDrop(taskId: string, socket: WebSocket) {
+    // Ignore stale sockets (superseded by a newer connection or clean shutdown).
+    if (socket !== logSocket) return
+
+    logSocket = null
+
+    // If the stream was intentionally stopped or the task is no longer active,
+    // don't reconnect.
+    if (!isLogStreamActive.value || !isTaskActive.value) {
+      isLogStreamActive.value = false
+      return
+    }
+
+    if (logReconnectAttempts >= MAX_LOG_RECONNECTS) {
+      isLogStreamActive.value = false
+      return
+    }
+
+    logReconnectAttempts++
+    openLogSocket(taskId)
+  }
+
+  // Detach handlers and close the current socket without touching reactive
+  // state. Used internally before (re)connecting or during teardown.
+  function closeLogSocket() {
+    if (logSocket) {
+      const socket = logSocket
+      logSocket = null
+      socket.onopen = null
+      socket.onmessage = null
+      socket.onclose = null
+      socket.onerror = null
+      try {
+        socket.close()
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  // Stop the stream but keep buildLogs populated so the terminal stays readable
+  // after SUCCESS/FAILURE.
+  function stopLogStream() {
+    closeLogSocket()
+    isLogStreamActive.value = false
+  }
+
   function resetTask() {
     stopPolling()
+    stopLogStream()
+    buildLogs.value = []
     stopDownloadTimer()
 
     // Cancel any in-flight requests
@@ -554,6 +678,8 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
     workerStatusError,
     customBackendUrl,
     effectiveBackendUrl,
+    buildLogs,
+    isLogStreamActive,
     isPolling,
     isTaskActive,
     isTaskSuccess,
@@ -567,6 +693,8 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
     fetchRenders,
     getResultDownloadUrl,
     fetchWorkerStatus,
+    startLogStream,
+    stopLogStream,
     resetTask,
     stopPolling,
     cleanup,

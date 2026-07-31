@@ -23,7 +23,8 @@ This document covers both sides: the browser client (`kle-ng`) and the Go/KiCad 
 │  ├── PcbGeneratorControls.vue    ← Generate button, validation gating     │
 │  ├── PcbDownloadButton.vue       ← ZIP download (time-limited)            │
 │  ├── PcbGeneratorResults.vue     ← Progress bar / renders / errors        │
-│  │   └── PcbRenderViewer.vue     ←   Tabbed SVG viewer (schematic + PCB)  │
+│  │   ├── PcbRenderViewer.vue     ←   Tabbed SVG viewer (schematic + PCB)  │
+│  │   └── PcbBuildLog.vue         ←   Live build-log terminal (WebSocket)  │
 │  ├── PcbWorkerStatus.vue         ← Backend availability indicator         │
 │  └── PcbSettingsModal.vue        ← Custom backend URL override            │
 │                                                                           │
@@ -86,7 +87,7 @@ in **Redis**, managed by [asynq](https://github.com/hibiken/asynq); there is no 
 │  store startPolling()       │◄───────────────────┐
 │  GET /api/pcb/{task_id}     │                    │
 └─────────────┬───────────────┘                    │
-              │  PENDING / PROGRESS (percentage)   │
+              │  PENDING / PROGRESS (status only)  │
               └────────────────────────────────────┘
               │  SUCCESS
               ▼
@@ -130,19 +131,20 @@ as-is; kbplacer handles the matrix on the backend.
 
 ### Components
 
-| File                       | Purpose                                                                                                                                                                                                                                                                                                               |
-| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PcbGeneratorPanel.vue`    | Root container. Two-column layout: tabbed controls (`ScrollableTabs`: Switches / LEDs / JSON) on the left, the results pane on the right. Renders a **"Backend Not Configured"** warning instead of the UI when `isBackendConfigured()` is false. Calls `pcbStore.cleanup()` on unmount.                              |
-| `PcbGeneratorSettings.vue` | [Switches tab] Selects switch footprint, stabilizer footprint (or None), switch rotation, diode footprint / rotation / X-Y offset, and routing mode. Footprint values are the kbplacer `lib:footprint` templates (with `{:.2f}u` size placeholders). Diode offsets use `CustomNumberInput` (mm).                      |
-| `PcbLedSettings.vue`       | [LEDs tab] Per-key SK6812MINI-E LED-chain settings. A master **enable** checkbox drives `createLedSchFile`; an **add decoupling capacitors** checkbox is the positive-form UI over `skipLedDecoupling`. LED and capacitor footprint / rotation / side / offset fields stay visible but disabled when not applicable.  |
-| `PcbJsonView.vue`          | [JSON tab] CodeMirror editor over the grouped `PcbSettingsJson` form. Live validation, **Apply** (Ctrl+Enter), **Reset**, **Download** (`pcb-settings.json`), and **Upload**. Mirrors `PlateJsonView` behavior: rebuilds on theme change, syncs from the store only when the editor has no uncommitted edits.         |
-| `PcbGeneratorControls.vue` | **Generate PCB** button and, once a task exists, a **New Task** button. Gates generation on submitting state, active task, backend availability, VIA annotation, and matrix-duplicate validity. Surfaces `ApiError.userMessage` in an alert and shows contextual warnings (annotation required, duplicate positions). |
-| `PcbDownloadButton.vue`    | Downloads the result ZIP from `getResultDownloadUrl()` (`/api/pcb/{id}/result`). Visible only while the download is available (`isDownloadAvailable`, i.e. task succeeded and the 1-hour link has not expired).                                                                                                       |
-| `PcbGeneratorResults.vue`  | Right-hand output pane. Shows an animated progress bar with the current status message while `isTaskActive`, the tabbed render viewer on success, a failure alert on `isTaskFailed`, or the idle `FootprintPreview` before any task runs.                                                                             |
-| `PcbRenderViewer.vue`      | Tabbed SVG viewer with independent zoom/pan for schematic vs. PCB views. One tab per schematic sheet (root labelled **Main** for multi-sheet projects, otherwise **Schematic**) followed by **PCB Front** / **PCB Back**. Tabs are keyed by render name so the selection survives task changes.                       |
-| `PcbWorkerStatus.vue`      | Backend availability badge. Auto-refreshes `fetchWorkerStatus()` every 30s and shows `idle/total workers available`, a busy warning, or a connection error with a retry button.                                                                                                                                       |
-| `PcbSettingsModal.vue`     | Lets the user override the backend URL for the session (not persisted). Writes through `pcbStore.setBackendUrl()` / `resetBackendUrl()`, which reset cached worker status so the next poll re-checks the new host.                                                                                                    |
-| `PcbHelpModal.vue`         | Static help/explanatory modal for the panel.                                                                                                                                                                                                                                                                          |
+| File                       | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PcbGeneratorPanel.vue`    | Root container. Two-column layout: tabbed controls (`ScrollableTabs`: Switches / LEDs / JSON) on the left, the results pane on the right. Renders a **"Backend Not Configured"** warning instead of the UI when `isBackendConfigured()` is false. Calls `pcbStore.cleanup()` on unmount.                                                                                                                                                                                                                                                                                                                                   |
+| `PcbGeneratorSettings.vue` | [Switches tab] Selects switch footprint, stabilizer footprint (or None), switch rotation, diode footprint / rotation / X-Y offset, and routing mode. Footprint values are the kbplacer `lib:footprint` templates (with `{:.2f}u` size placeholders). Diode offsets use `CustomNumberInput` (mm).                                                                                                                                                                                                                                                                                                                           |
+| `PcbLedSettings.vue`       | [LEDs tab] Per-key SK6812MINI-E LED-chain settings. A master **enable** checkbox drives `createLedSchFile`; an **add decoupling capacitors** checkbox is the positive-form UI over `skipLedDecoupling`. LED and capacitor footprint / rotation / side / offset fields stay visible but disabled when not applicable.                                                                                                                                                                                                                                                                                                       |
+| `PcbJsonView.vue`          | [JSON tab] CodeMirror editor over the grouped `PcbSettingsJson` form. Live validation, **Apply** (Ctrl+Enter), **Reset**, **Download** (`pcb-settings.json`), and **Upload**. Mirrors `PlateJsonView` behavior: rebuilds on theme change, syncs from the store only when the editor has no uncommitted edits.                                                                                                                                                                                                                                                                                                              |
+| `PcbGeneratorControls.vue` | **Generate PCB** button and, once a task exists, a **New Task** button. Gates generation on submitting state, active task, backend availability, VIA annotation, and matrix-duplicate validity. Surfaces `ApiError.userMessage` in an alert and shows contextual warnings (annotation required, duplicate positions).                                                                                                                                                                                                                                                                                                      |
+| `PcbDownloadButton.vue`    | Downloads the result ZIP from `getResultDownloadUrl()` (`/api/pcb/{id}/result`). Visible only while the download is available (`isDownloadAvailable`, i.e. task succeeded and the 1-hour link has not expired).                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `PcbGeneratorResults.vue`  | Right-hand output pane. Shows an indeterminate (sliding) progress bar with the current status message while `isTaskActive` — real progress is conveyed by the live build log below it — the tabbed render viewer on success, a failure alert on `isTaskFailed`, or the idle `FootprintPreview` before any task runs.                                                                                                                                                                                                                                                                                                       |
+| `PcbRenderViewer.vue`      | Tabbed SVG viewer with independent zoom/pan for schematic vs. PCB views. One tab per schematic sheet (root labelled **Main** for multi-sheet projects, otherwise **Schematic**) followed by **PCB Front** / **PCB Back**, and — when `hasLogs` is set — a trailing **Logs** tab that embeds `PcbBuildLog` so the build output stays accessible after completion. Tabs are keyed by render name so the selection survives task changes.                                                                                                                                                                                     |
+| `PcbBuildLog.vue`          | Dark monospace terminal that renders the store's `buildLogs` (one line per entry, optionally prefixed with `[source]`) streamed live over WebSocket. Auto-scrolls on new lines but pauses when the user scrolls up (with a **Jump to bottom** affordance), shows a **live** indicator while streaming, and offers copy-to-clipboard. A `fill` prop makes it grow to fill its container (used inside the viewer's **Logs** tab); by default it uses a fixed-height box. Shown beneath the progress bar while `isTaskActive`, below the failure alert on `isTaskFailed`, and in the render viewer's **Logs** tab on success. |
+| `PcbWorkerStatus.vue`      | Backend availability badge. Auto-refreshes `fetchWorkerStatus()` every 30s and shows `idle/total workers available`, a busy warning, or a connection error with a retry button.                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `PcbSettingsModal.vue`     | Lets the user override the backend URL for the session (not persisted). Writes through `pcbStore.setBackendUrl()` / `resetBackendUrl()`, which reset cached worker status so the next poll re-checks the new host.                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `PcbHelpModal.vue`         | Static help/explanatory modal for the panel.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 
 ### Store
 
@@ -157,6 +159,9 @@ API.
   `PcbSettingsJson` format.
 - `currentTaskId` / `taskStatus` — The active task id and its latest polled status.
 - `renders: RenderViews` — Blob URLs for `front`, `back`, and one `SchematicView` per schematic sheet.
+- `buildLogs: BuildLogLine[]` / `isLogStreamActive` — Live build-log lines streamed over
+  WebSocket and whether the stream is currently open. The `WebSocket` itself is a non-reactive
+  module-scoped variable (`logSocket`), so Vue never proxies it.
 - `workerStatus` / `workerStatusError` — Backend capacity snapshot for the status badge.
 - `customBackendUrl` — Session-only backend override (null → use env default).
 - Download-expiration timers (`downloadExpiresAt`, `countdownTick`, …) driving the 1-hour link window.
@@ -184,6 +189,13 @@ API.
   and sorts schematics root-first.
 - `getResultDownloadUrl()` — Returns the `/api/pcb/{id}/result` ZIP URL.
 - `fetchWorkerStatus()` — Populates `workerStatus` / `workerStatusError` for the badge.
+- `startLogStream(taskId)` / `stopLogStream()` — Open / close the WebSocket log stream. Called
+  from `startTask()` right after `startPolling()`. The server replays the full retained backfill
+  from the start of the build on every (re)connect, so each connect **clears** `buildLogs` before
+  repopulating to avoid duplicates. An `end` frame closes the socket and marks the stream inactive
+  while **keeping** `buildLogs` readable; an unexpected drop triggers a bounded number of reconnects
+  (`MAX_LOG_RECONNECTS`, 3) as long as the task is still active. `resetTask()` / `cleanup()` close the
+  socket and clear the logs. Streaming is best-effort — a failed connection never affects the task.
 - `resetTask()` / `cleanup()` — Stop polling and timers, abort requests, revoke blob URLs, clear state.
 - `setBackendUrl()` / `resetBackendUrl()` — Manage the session backend override.
 - `applySettings(json)` — Deserialize edited JSON from `PcbJsonView` onto defaults.
@@ -197,8 +209,9 @@ leaks.
 #### `utils/pcbApi.ts`
 
 The HTTP layer. Exports the `pcbApi` object (`submitTask`, `getTaskStatus`, `getTaskRenderAsBlobUrl`,
-`getTaskResultUrl`, `getWorkerStatus`) and the `ApiError` class (carrying a user-facing
-`userMessage`).
+`getTaskResultUrl`, `getWorkerStatus`, `getTaskLogsWsUrl`) and the `ApiError` class (carrying a
+user-facing `userMessage`). `getTaskLogsWsUrl(taskId)` is a pure URL builder for the log-stream
+WebSocket (`${wsBase}/api/pcb/{id}/logs`); the store owns the socket.
 
 - `fetchWithErrorHandling()` wraps `fetch` with a 30s timeout (`API_CONFIG.timeout`), merges caller
   `AbortSignal`s, and maps HTTP status codes to friendly messages (503 → "Server is busy",
@@ -209,7 +222,10 @@ The HTTP layer. Exports the `pcbApi` object (`submitTask`, `getTaskStatus`, `get
 
 #### `config/api.ts`
 
-Resolves the backend base URL and exposes `ENDPOINTS` (`/api/pcb`, `/api/workers`).
+Resolves the backend base URL and exposes `ENDPOINTS` (`/api/pcb`, `/api/workers`). `getWsBaseUrl()`
+derives a WebSocket base from the effective REST base by swapping the protocol (`http→ws`,
+`https→wss`); when the base URL is empty (dev Vite-proxy, same-origin) it falls back to
+`location.origin` with its protocol swapped.
 
 - Development: `VITE_BACKEND_URL` unset → empty string (same origin, Vite proxies `/api/*`).
 - Production: `VITE_BACKEND_URL` must be set and HTTPS, otherwise the PCB Generator is disabled
@@ -261,6 +277,8 @@ format by detecting a top-level `switchFootprint` key.
 - `TaskResult` / `TaskStatusResponse` — polling response shape.
 - `WorkerDetail` / `WorkerStatusResponse` — `/api/workers` shape.
 - `SchematicView` / `RenderViews` — client-side render bookkeeping (blob URLs, per-sheet labels).
+- `BuildLogLine` / `BuildLogMessage` — a streamed log line (`{ ts?, source?, line }`) and the union
+  of a log line with the terminal `{ event: 'end', status }` frame.
 
 ## Backend File Reference (`kle-ng-api`)
 
@@ -282,6 +300,7 @@ and applies CORS restricted to `CORS_ALLOWED_ORIGIN`; in development CORS is ful
 | `DELETE /api/pcb/{id}`            | `KicadDeleteTask`    | Cancel a pending/retry task (active tasks cannot be cancelled). |
 | `GET /api/pcb/{id}/render/{name}` | `KicadGetTaskRender` | Proxy `{id}/{name}.svg` from the Filer.                         |
 | `GET /api/pcb/{id}/result`        | `KicadGetTaskResult` | Proxy `{id}/{id}.zip` from the Filer as an attachment.          |
+| `GET /api/pcb/{id}/logs`          | `KicadGetTaskLogs`   | WebSocket upgrade; stream live build logs (backfill then tail). |
 | `GET /api/workers`                | `KicadGetWorkers`    | Aggregate asynq server info into worker capacity.               |
 | `GET /api/version`                | `GetVersion`         | Build version string.                                           |
 
@@ -365,6 +384,17 @@ x y rotation side` placement templates).
   `{taskID}/{taskID}.zip`, then uploads each manifest render as `{taskID}/{name}.svg`.
 - `zip.go` — `CreateZipInMemory` walks the work dir and streams every file into an in-memory ZIP.
 
+### `internal/logstream` — live build-log streaming
+
+`logstream.go` publishes build output to a bounded Redis Stream (`pcb:logs:{task_id}`) that the
+server's WebSocket handler (`cmd/server/logs.go`, `KicadGetTaskLogs`) tails: `XREAD` from ID `0`
+returns the full backfill first and then blocks for new entries, so one code path serves both the
+backfill and the live tail. The `Publisher` exposes `PublishLine` / `PublishEnd` and a `Writer`
+line-splitter; the worker tees kbplacer's stdout+stderr through a single
+`io.MultiWriter(build.log, streamWriter)` (with `python3 -u` for prompt flushing) and emits `worker`
+step markers, publishing the terminal `end` on every exit path. Publishing is best-effort — if Redis
+fails, the build is unaffected and `build.log` / the on-failure error string still work.
+
 ### `internal/common`
 
 - `progress.go` — `Progress`, `RenderFile`, `ProjectFiles`. These structs are the wire format between
@@ -416,11 +446,11 @@ queue is full.
       "renders": [
         { "name": "front", "kind": "pcb-front" },
         { "name": "back", "kind": "pcb-back" },
-        { "name": "schematic", "kind": "schematic" }
+        { "name": "schematic", "kind": "schematic" },
       ],
-      "archive": "<task_id>.zip"
-    }
-  }
+      "archive": "<task_id>.zip",
+    },
+  },
 }
 ```
 
@@ -434,6 +464,29 @@ assume fixed names.**
 - `GET /api/pcb/{task_id}/result` — the project ZIP (as an attachment).
 - `DELETE /api/pcb/{task_id}` — cancel a still-pending task (409 if active, 410 if already finished).
 - `GET /api/workers` — worker capacity (`total_capacity`, `idle_capacity`, per-worker detail).
+- `GET /api/pcb/{task_id}/logs` — **WebSocket** stream of live build logs (see below).
+
+### `GET /api/pcb/{task_id}/logs` (WebSocket)
+
+An additive, independent channel to the 1s status polling. The client opens it as soon as it has a
+`task_id`; the server replays the retained backfill from the **start of the build**, then live-tails,
+then sends exactly one terminal frame before closing. Server → browser frames are text, one JSON
+object each:
+
+```jsonc
+{ "ts": 1731758400, "source": "kbplacer", "line": "12:00:01: Routing SW1 with D1" }
+{ "event": "end", "status": "success" }   // status: "success" | "failure"
+```
+
+- `source` is `"kbplacer"` (subprocess output) or `"worker"` (step markers). `ts` is a Unix timestamp
+  (seconds), optional. `line` is rendered verbatim and is **not** newline-terminated.
+- Backfill is a bounded Redis Stream (`pcb:logs:{task_id}`, ~last 2000 lines, expiring ~15 min after
+  the build), so a late join / page reload / dropped socket just re-opens and replays from the start
+  — no cursors. Because reconnect replays from the start, the client **clears** `buildLogs` on each
+  (re)connect to avoid duplicates.
+- The server pings every 30s (browsers auto-pong) and hard-caps the connection at 11 min. In prod the
+  upgrader enforces `CORS_ALLOWED_ORIGIN`; in dev any origin is allowed. Streaming is best-effort — a
+  client that never connects changes nothing about the build.
 
 ## Settings
 
@@ -511,7 +564,10 @@ The production stack (`deploy/docker-compose.yml`) is orchestrated behind Traefi
 - **prometheus** — metrics, including asynq queue metrics.
 
 Locally, a worker + Redis + Filer can be run against the dev server; the frontend points at them via
-the Vite proxy (`VITE_BACKEND_URL=""`) or a custom URL set through `PcbSettingsModal`.
+the Vite proxy (`VITE_BACKEND_URL=""`) or a custom URL set through `PcbSettingsModal`. The `/api`
+proxy entry sets `ws: true` so the browser's log-stream WebSocket upgrade is forwarded to the backend
+in dev; in prod, Traefik forwards the upgrade on `kicad.<domain>` and the server's 30s pings keep the
+connection under Traefik's 180s idle timeout with no special config.
 
 ## Relationship to Other Features
 

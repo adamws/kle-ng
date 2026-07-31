@@ -12,6 +12,7 @@ vi.mock('@/utils/pcbApi', () => ({
     getTaskRenderAsBlobUrl: vi.fn(),
     getTaskResultUrl: vi.fn(),
     getWorkerStatus: vi.fn(),
+    getTaskLogsWsUrl: vi.fn((taskId: string) => `ws://test/api/pcb/${taskId}/logs`),
   },
   ApiError: class ApiError extends Error {
     constructor(
@@ -34,6 +35,37 @@ const mockKeyboardStore = {
 vi.mock('@/stores/keyboard', () => ({
   useKeyboardStore: () => mockKeyboardStore,
 }))
+
+// Minimal controllable WebSocket mock. Tracks instances so tests can drive
+// message/close/error events and assert on socket lifecycle.
+class MockWebSocket {
+  static instances: MockWebSocket[] = []
+  static OPEN = 1
+  static CLOSED = 3
+
+  url: string
+  readyState = MockWebSocket.OPEN
+  onmessage: ((ev: { data: string }) => void) | null = null
+  onclose: (() => void) | null = null
+  onerror: (() => void) | null = null
+  close = vi.fn(() => {
+    this.readyState = MockWebSocket.CLOSED
+  })
+
+  constructor(url: string) {
+    this.url = url
+    MockWebSocket.instances.push(this)
+  }
+
+  emitMessage(data: unknown) {
+    this.onmessage?.({ data: typeof data === 'string' ? data : JSON.stringify(data) })
+  }
+
+  emitClose() {
+    this.readyState = MockWebSocket.CLOSED
+    this.onclose?.()
+  }
+}
 
 describe('pcbGenerator store', () => {
   let localStorageMock: { [key: string]: string }
@@ -62,6 +94,10 @@ describe('pcbGenerator store', () => {
     vi.clearAllMocks()
     vi.useFakeTimers()
     mockKeyboardStore.keys = [] // Reset keys for each test
+
+    // Fresh WebSocket mock per test
+    MockWebSocket.instances = []
+    global.WebSocket = MockWebSocket as unknown as typeof WebSocket
   })
 
   afterEach(() => {
@@ -888,6 +924,89 @@ describe('pcbGenerator store', () => {
         back: null,
         schematics: [],
       })
+    })
+  })
+
+  describe('build log stream', () => {
+    it('should open a socket and push log lines to buildLogs', () => {
+      const store = usePcbGeneratorStore()
+      store.startLogStream('task-1')
+
+      expect(MockWebSocket.instances).toHaveLength(1)
+      expect(MockWebSocket.instances[0]!.url).toBe('ws://test/api/pcb/task-1/logs')
+      expect(store.isLogStreamActive).toBe(true)
+
+      const socket = MockWebSocket.instances[0]!
+      socket.emitMessage({ ts: 1, source: 'worker', line: 'Generating KiCad PCB files' })
+      socket.emitMessage({ source: 'kbplacer', line: 'Routing SW1 with D1' })
+
+      expect(store.buildLogs).toHaveLength(2)
+      expect(store.buildLogs[1]).toEqual({ source: 'kbplacer', line: 'Routing SW1 with D1' })
+    })
+
+    it('should close the socket and go inactive on an end frame, keeping logs', () => {
+      const store = usePcbGeneratorStore()
+      store.startLogStream('task-1')
+      const socket = MockWebSocket.instances[0]!
+
+      socket.emitMessage({ source: 'worker', line: 'Task completed successfully' })
+      socket.emitMessage({ event: 'end', status: 'success' })
+
+      expect(socket.close).toHaveBeenCalled()
+      expect(store.isLogStreamActive).toBe(false)
+      // Logs stay readable after the stream ends
+      expect(store.buildLogs).toHaveLength(1)
+    })
+
+    it('should reconnect and clear buildLogs when the socket drops mid-build', () => {
+      const store = usePcbGeneratorStore()
+      // Make the task look active so reconnect logic engages.
+      store.taskStatus = {
+        task_id: 'task-1',
+        task_status: 'PROGRESS',
+        task_result: { percentage: 10 },
+      }
+
+      store.startLogStream('task-1')
+      const first = MockWebSocket.instances[0]!
+      first.emitMessage({ source: 'kbplacer', line: 'partial line' })
+      expect(store.buildLogs).toHaveLength(1)
+
+      // Unexpected drop → should reconnect and clear logs (server replays).
+      first.emitClose()
+
+      expect(MockWebSocket.instances).toHaveLength(2)
+      expect(store.buildLogs).toHaveLength(0)
+      expect(store.isLogStreamActive).toBe(true)
+    })
+
+    it('should not reconnect after the task is no longer active', () => {
+      const store = usePcbGeneratorStore()
+      store.taskStatus = {
+        task_id: 'task-1',
+        task_status: 'FAILURE',
+        task_result: { percentage: 0 },
+      }
+
+      store.startLogStream('task-1')
+      const socket = MockWebSocket.instances[0]!
+      socket.emitClose()
+
+      expect(MockWebSocket.instances).toHaveLength(1)
+      expect(store.isLogStreamActive).toBe(false)
+    })
+
+    it('should clear logs and close the socket on resetTask', () => {
+      const store = usePcbGeneratorStore()
+      store.startLogStream('task-1')
+      const socket = MockWebSocket.instances[0]!
+      socket.emitMessage({ source: 'worker', line: 'hello' })
+
+      store.resetTask()
+
+      expect(socket.close).toHaveBeenCalled()
+      expect(store.isLogStreamActive).toBe(false)
+      expect(store.buildLogs).toHaveLength(0)
     })
   })
 })

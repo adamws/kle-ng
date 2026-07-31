@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import type { SchematicView } from '@/types/pcb'
+import PcbBuildLog from './PcbBuildLog.vue'
 import BiZoomIn from 'bootstrap-icons/icons/zoom-in.svg'
 import BiZoomOut from 'bootstrap-icons/icons/zoom-out.svg'
 import BiArrowCounterclockwise from 'bootstrap-icons/icons/arrow-counterclockwise.svg'
@@ -11,11 +12,14 @@ interface Props {
   // One entry per schematic sheet (root first). Multi-sheet projects (e.g. the
   // LED chain) supply several; single-sheet projects supply exactly one.
   schematics: SchematicView[]
+  // When true, append a "Logs" tab (last) showing the build-log terminal so the
+  // logs stay accessible after the task finishes.
+  hasLogs?: boolean
 }
 
 const props = defineProps<Props>()
 
-type ViewKind = 'schematic' | 'front' | 'back'
+type ViewKind = 'schematic' | 'front' | 'back' | 'logs'
 
 interface Tab {
   key: string // unique tab id: schematic render name, or 'front' / 'back'
@@ -52,11 +56,18 @@ const tabs = computed<Tab[]>(() => {
     schematicIndex: index,
   }))
 
-  return [
+  const list: Tab[] = [
     ...schematicTabs,
     { key: 'front', label: 'PCB Front', kind: 'front', schematicIndex: -1 },
     { key: 'back', label: 'PCB Back', kind: 'back', schematicIndex: -1 },
   ]
+
+  // Build log lives in the last tab so it stays accessible after completion.
+  if (props.hasLogs) {
+    list.push({ key: 'logs', label: 'Logs', kind: 'logs', schematicIndex: -1 })
+  }
+
+  return list
 })
 
 const currentTab = computed<Tab | null>(
@@ -200,8 +211,12 @@ const containerBackgroundClass = computed(() => {
       </button>
     </div>
 
+    <!-- Build log terminal (last tab) -->
+    <PcbBuildLog v-if="currentTab?.kind === 'logs'" fill />
+
     <!-- SVG Viewer -->
     <div
+      v-else
       class="svg-container"
       :class="[containerBackgroundClass, { active: controlsActive }]"
       @mousedown="handleMouseDown"

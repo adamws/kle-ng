@@ -1,4 +1,4 @@
-import { API_CONFIG, ENDPOINTS } from '@/config/api'
+import { API_CONFIG, ENDPOINTS, getWsBaseUrl } from '@/config/api'
 import type { TaskRequest, TaskStatusResponse, WorkerStatusResponse } from '@/types/pcb'
 
 // Custom error class with user-friendly messages
@@ -195,6 +195,12 @@ export const pcbApi = {
   // Get download URL for task result ZIP
   getTaskResultUrl(taskId: string): string {
     return `${API_CONFIG.baseURL}${ENDPOINTS.PCB}/${taskId}/result`
+  },
+
+  // Build the WebSocket URL for streaming a task's live build logs. Pure URL
+  // builder; the store owns the socket lifecycle.
+  getTaskLogsWsUrl(taskId: string): string {
+    return `${getWsBaseUrl()}${ENDPOINTS.PCB}/${taskId}/logs`
   },
 
   // Get worker status information

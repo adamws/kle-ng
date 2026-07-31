@@ -84,7 +84,10 @@ export interface ProjectFiles {
 }
 
 export interface TaskResult {
-  percentage: number
+  // Deprecated: the backend no longer reports a completion percentage. Kept
+  // optional for backward compatibility with older responses; the UI shows an
+  // indeterminate loader instead.
+  percentage?: number
   message?: string
   error?: string
   files?: ProjectFiles
@@ -136,3 +139,13 @@ export interface StoredTask {
   taskId: string
   submittedAt: number // Timestamp for staleness checking
 }
+
+// Real-time build log streaming (WebSocket). The server streams one JSON object
+// per text frame: either a log line or a terminal `end` event.
+export interface BuildLogLine {
+  ts?: number // Unix timestamp (seconds); optional / may be 0
+  source?: string // 'kbplacer' (subprocess output) or 'worker' (step markers)
+  line: string // text, rendered verbatim; not newline-terminated
+}
+
+export type BuildLogMessage = BuildLogLine | { event: 'end'; status: 'success' | 'failure' }

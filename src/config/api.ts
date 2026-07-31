@@ -95,6 +95,16 @@ export const ENDPOINTS = {
   WORKERS: '/api/workers',
 } as const
 
+// Derive a WebSocket base URL from the effective REST base URL, swapping the
+// protocol (http→ws, https→wss). When the base URL is empty (dev Vite-proxy,
+// same-origin) fall back to the current location's origin with its protocol
+// swapped, so the proxy forwards the upgrade to the backend.
+export function getWsBaseUrl(): string {
+  const baseURL = API_CONFIG.baseURL
+  const origin = baseURL || (typeof location !== 'undefined' ? location.origin : '')
+  return origin.replace(/^http/, 'ws')
+}
+
 // Verify CORS configuration
 export async function verifyCorsConfiguration(): Promise<boolean> {
   try {
