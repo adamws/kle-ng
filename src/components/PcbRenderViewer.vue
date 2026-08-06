@@ -9,8 +9,9 @@ import BiArrowCounterclockwise from 'bootstrap-icons/icons/arrow-counterclockwis
 interface Props {
   frontSvg: string | null
   backSvg: string | null
-  // One entry per schematic sheet (root first). Multi-sheet projects (e.g. the
-  // LED chain) supply several; single-sheet projects supply exactly one.
+  // One entry per schematic sheet (child sheets first, root last). Multi-sheet
+  // projects (e.g. the LED chain) supply several; single-sheet projects supply
+  // exactly one.
   schematics: SchematicView[]
   // When true, append a "Logs" tab (last) showing the build-log terminal so the
   // logs stay accessible after the task finishes.
@@ -45,8 +46,8 @@ let documentDeactivateHandler: ((e: PointerEvent) => void) | null = null
 
 // Flat tab list: one tab per schematic sheet, then the two PCB views. Each
 // schematic sheet is a top-level tab; when there is more than one sheet the root
-// is labelled "Main" (e.g. Main / Key Matrix / LED Chain / PCB Front / PCB Back),
-// otherwise it keeps its plain "Schematic" label.
+// is labelled "Main" and ordered last (e.g. Key Matrix / LED Chain / Main / PCB
+// Front / PCB Back), otherwise it keeps its plain "Schematic" label.
 const tabs = computed<Tab[]>(() => {
   const multiSheet = props.schematics.length > 1
   const schematicTabs: Tab[] = props.schematics.map((schematic, index) => ({

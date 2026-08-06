@@ -705,9 +705,9 @@ describe('pcbGenerator store', () => {
       expect(pcbApi.getTaskRenderAsBlobUrl).toHaveBeenCalledTimes(5)
       expect(store.renders.front).toBe('blob:front')
       expect(store.renders.back).toBe('blob:back')
-      // Root sheet first, then child sheets; labels humanized (LED preserved).
+      // Child sheets first (alphabetical), then the root sheet last; labels
+      // humanized (LED preserved).
       expect(store.renders.schematics).toEqual([
-        { name: 'schematic', sheet: '', label: 'Schematic', url: 'blob:schematic' },
         {
           name: 'schematic-key-matrix',
           sheet: 'key-matrix',
@@ -720,6 +720,7 @@ describe('pcbGenerator store', () => {
           label: 'LED Chain',
           url: 'blob:schematic-led-chain',
         },
+        { name: 'schematic', sheet: '', label: 'Schematic', url: 'blob:schematic' },
       ])
     })
 

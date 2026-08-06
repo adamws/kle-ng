@@ -22,6 +22,29 @@ describe('PcbRenderViewer', () => {
     expect(labels).not.toContain('Logs')
   })
 
+  it('orders multi-sheet schematic tabs as child sheets then Main, before the PCB tabs', () => {
+    const wrapper = mount(PcbRenderViewer, {
+      props: {
+        ...baseProps,
+        // Store hands schematics in child-first, root-last order.
+        schematics: [
+          {
+            name: 'schematic-key-matrix',
+            sheet: 'key-matrix',
+            label: 'Key Matrix',
+            url: 'blob:km',
+          },
+          { name: 'schematic-led-chain', sheet: 'led-chain', label: 'LED Chain', url: 'blob:led' },
+          { name: 'schematic', sheet: '', label: 'Schematic', url: 'blob:schematic' },
+        ],
+        hasLogs: false,
+      },
+    })
+    const labels = wrapper.findAll('.tab-bar-item').map((t) => t.text())
+    // Root sheet is labelled "Main" and comes last among the schematic tabs.
+    expect(labels).toEqual(['Key Matrix', 'LED Chain', 'Main', 'PCB Front', 'PCB Back'])
+  })
+
   it('appends a Logs tab as the last tab when hasLogs is true', () => {
     const wrapper = mount(PcbRenderViewer, { props: { ...baseProps, hasLogs: true } })
     const labels = wrapper.findAll('.tab-bar-item').map((t) => t.text())

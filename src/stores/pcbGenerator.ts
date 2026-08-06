@@ -439,10 +439,11 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
       }
     })
 
-    // Keep the root sheet first, then child sheets alphabetically. The backend
-    // already orders them this way; re-sorting keeps us robust to the fallback.
+    // Order child sheets alphabetically, then the root ("Main") sheet last. For
+    // the multi-sheet LED-chain layout this yields Key Matrix / LED Chain / Main.
+    // Single-sheet projects only have the root, so ordering is a no-op there.
     schematics.sort((a, b) => {
-      if ((a.sheet === '') !== (b.sheet === '')) return a.sheet === '' ? -1 : 1
+      if ((a.sheet === '') !== (b.sheet === '')) return a.sheet === '' ? 1 : -1
       return a.label.localeCompare(b.label)
     })
 
