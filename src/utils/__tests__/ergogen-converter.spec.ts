@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
 import { join } from 'path'
-import yaml from 'js-yaml'
+import * as yaml from 'js-yaml'
 import { ergogenGetPoints, ergogenPointsToKeyboard } from '../ergogen-converter'
 import { getSerializedData } from '../serialization'
 import { getKeyCenter } from '../keyboard-geometry'

@@ -9,7 +9,7 @@ import units_lib from 'ergogen/src/units'
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import points_lib from 'ergogen/src/points'
-import yaml from 'js-yaml'
+import * as yaml from 'js-yaml'
 import LZString from 'lz-string'
 
 /**
