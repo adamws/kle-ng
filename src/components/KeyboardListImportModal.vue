@@ -1,6 +1,6 @@
 <template>
   <div v-if="isVisible" class="modal fade show d-block" tabindex="-1" @click.self="close">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-dialog-centered" :class="source ? 'modal-xl' : 'modal-lg'">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title">{{ title }}</h5>
@@ -17,32 +17,57 @@
             autocomplete="off"
             @keydown.down.prevent="focusListItem(0)"
           />
-          <div v-if="listLoading" class="text-center text-muted py-3">
-            <span class="spinner-border spinner-border-sm me-2"></span>Loading keyboard list…
-          </div>
-          <div v-else-if="listError" class="alert alert-danger">{{ listError }}</div>
-          <div v-else ref="listRef" :class="`${prefix}-keyboard-list`">
-            <button
-              v-for="(result, index) in filteredKeyboards"
-              :key="result.item"
-              type="button"
-              :class="[`${prefix}-keyboard-item`, { selected: selectedKeyboard === result.item }]"
-              @click="selectedKeyboard = result.item"
-              @dblclick="performImport"
-              @focus="selectedKeyboard = result.item"
-              @keydown="handleListKeydown($event, index)"
-              v-html="result.html"
-            ></button>
-            <p v-if="!filteredKeyboards.length" class="text-muted fst-italic text-center py-3">
-              No keyboards match your search
-            </p>
-          </div>
-          <div class="form-text mt-2">
-            {{
-              searchQuery.trim()
-                ? `${filteredKeyboards.length} result(s)`
-                : `${keyboardList.length} keyboards available`
-            }}
+          <div class="row g-3">
+            <div :class="source ? 'col-lg-7' : 'col-12'">
+              <div v-if="listLoading" class="text-center text-muted py-3">
+                <span class="spinner-border spinner-border-sm me-2"></span>Loading keyboard list…
+              </div>
+              <div v-else-if="listError" class="alert alert-danger">{{ listError }}</div>
+              <div v-else ref="listRef" :class="`${prefix}-keyboard-list`">
+                <button
+                  v-for="(result, index) in filteredKeyboards"
+                  :key="result.item"
+                  type="button"
+                  :class="[
+                    `${prefix}-keyboard-item`,
+                    { selected: selectedKeyboard === result.item },
+                  ]"
+                  :data-keyboard-name="result.item"
+                  :aria-pressed="selectedKeyboard === result.item"
+                  @mousedown="rememberSelectionBeforeClick(result.item)"
+                  @click="toggleSelection(result.item, $event)"
+                  @dblclick="performImport"
+                  @focus="selectedKeyboard = result.item"
+                  @mouseenter="previewName(result.item)"
+                  @keydown="handleListKeydown($event, index)"
+                >
+                  <span v-html="result.html"></span>
+                </button>
+                <p v-if="!filteredKeyboards.length" class="text-muted fst-italic text-center py-3">
+                  No keyboards match your search
+                </p>
+              </div>
+              <div class="form-text mt-2">
+                {{
+                  searchQuery.trim()
+                    ? `${filteredKeyboards.length} result(s)`
+                    : `${keyboardList.length} keyboards available`
+                }}
+              </div>
+            </div>
+            <div v-if="source && preview" class="col-lg-5">
+              <LayoutPreviewPane
+                :state="preview.state.value"
+                :layout="preview.layout.value"
+                :variant-index="preview.variantIndex.value"
+                :name="preview.activeName.value"
+                :error-message="preview.errorMessage.value"
+                :renderer="preview.renderer"
+                :pinned="selectedKeyboard !== null"
+                @next-variant="preview.nextVariant"
+                @previous-variant="preview.previousVariant"
+              />
+            </div>
           </div>
         </div>
         <div class="modal-footer">
@@ -66,6 +91,9 @@ import { ref, computed, watch, shallowRef, nextTick, onMounted, onUnmounted } fr
 import Fuse from 'fuse.js'
 import { toast } from '@/composables/useToast'
 import { highlightMatches } from '@/utils/fuse-highlight'
+import LayoutPreviewPane from './LayoutPreviewPane.vue'
+import { useLayoutPreview, type UseLayoutPreview } from '@/composables/useLayoutPreview'
+import type { LayoutSource, PreviewLayout } from '@/utils/preview/layout-source'
 
 interface Props {
   isVisible: boolean
@@ -73,7 +101,12 @@ interface Props {
   listUrl: string
   label: string
   prefix: string
-  importFn: (name: string) => Promise<void>
+  importFn: (name: string, cached?: PreviewLayout) => Promise<void>
+  /**
+   * Enables the hover preview pane. Omit it and the modal behaves exactly as
+   * a plain searchable list with no speculative network traffic.
+   */
+  source?: LayoutSource
 }
 
 interface Emits {
@@ -97,6 +130,8 @@ const selectedKeyboard = ref<string | null>(null)
 const listLoading = ref(false)
 const listError = ref<string | null>(null)
 const fuseInstance = shallowRef<Fuse<string> | null>(null)
+
+const preview: UseLayoutPreview | null = props.source ? useLayoutPreview(props.source) : null
 
 watch(keyboardList, (list) => {
   if (!list.length) return
@@ -129,7 +164,104 @@ const filteredKeyboards = computed<SearchResult[]>(() => {
 
 watch(searchQuery, () => {
   selectedKeyboard.value = null
+  preview?.onQueryChange()
 })
+
+// Clicking or arrow-keying through the list drives the preview too, so
+// keyboard navigation gets the same feedback as the mouse.
+watch(selectedKeyboard, (name) => {
+  if (name) preview?.hover(name)
+})
+
+/**
+ * Once something is selected the preview is pinned to it: the user has
+ * committed to a candidate and is reading it, so sweeping the pointer across
+ * other rows on the way to the Import button must not swap it out.
+ */
+const previewName = (name: string) => {
+  if (selectedKeyboard.value !== null) return
+  preview?.hover(name)
+}
+
+// `mousedown` lands before the button's `focus` handler assigns the selection,
+// so it is the only place that still sees the pre-click state.
+let selectedBeforeClick: string | null = null
+
+const rememberSelectionBeforeClick = (name: string) => {
+  selectedBeforeClick = selectedKeyboard.value === name ? name : null
+}
+
+/**
+ * Clicking the selected row again deselects it and unpins the preview.
+ *
+ * `event.detail` is the click count: the second click of a double-click must
+ * not deselect, or the `@dblclick` import that follows would find nothing
+ * selected.
+ */
+const toggleSelection = (name: string, event: MouseEvent) => {
+  const deselecting = selectedBeforeClick === name && event.detail <= 1
+  selectedBeforeClick = null
+  selectedKeyboard.value = deselecting ? null : name
+}
+
+/* -------------------------------------------------------------------------- */
+/* Speculative prefetch of rows scrolled into view                            */
+/* -------------------------------------------------------------------------- */
+
+let observer: IntersectionObserver | null = null
+let prefetchTimer: ReturnType<typeof setTimeout> | null = null
+const visibleNames = new Set<string>()
+
+const flushPrefetch = () => {
+  prefetchTimer = null
+  if (visibleNames.size > 0) preview?.prefetchVisible([...visibleNames])
+}
+
+const schedulePrefetch = () => {
+  if (prefetchTimer !== null) clearTimeout(prefetchTimer)
+  prefetchTimer = setTimeout(flushPrefetch, 150)
+}
+
+const teardownObserver = () => {
+  observer?.disconnect()
+  observer = null
+  visibleNames.clear()
+  if (prefetchTimer !== null) {
+    clearTimeout(prefetchTimer)
+    prefetchTimer = null
+  }
+}
+
+const setupObserver = () => {
+  teardownObserver()
+  // Only observe while a search is active. The empty-query branch renders the
+  // entire catalogue (~2,500 rows) and speculatively downloading all of it
+  // would be pure waste.
+  if (!preview || !listRef.value || !searchQuery.value.trim()) return
+  if (typeof IntersectionObserver === 'undefined') return
+
+  observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        const name = (entry.target as HTMLElement).dataset.keyboardName
+        if (!name) continue
+        if (entry.isIntersecting) visibleNames.add(name)
+        else visibleNames.delete(name)
+      }
+      schedulePrefetch()
+    },
+    { root: listRef.value, rootMargin: '96px' },
+  )
+
+  for (const item of listItems()) observer.observe(item)
+}
+
+watch([filteredKeyboards, listRef], () => {
+  if (!props.isVisible) return
+  void nextTick(setupObserver)
+})
+
+/* -------------------------------------------------------------------------- */
 
 function listItems(): HTMLButtonElement[] {
   return listRef.value
@@ -162,6 +294,8 @@ function handleListKeydown(event: KeyboardEvent, index: number) {
 const close = () => {
   searchQuery.value = ''
   selectedKeyboard.value = null
+  teardownObserver()
+  preview?.onQueryChange()
   emit('close')
 }
 
@@ -198,6 +332,7 @@ watch(
     } else {
       document.removeEventListener('keydown', handleKeyDown)
       document.body.classList.remove('modal-open')
+      teardownObserver()
     }
   },
 )
@@ -212,13 +347,17 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('keydown', handleKeyDown)
   document.body.classList.remove('modal-open')
+  teardownObserver()
+  preview?.dispose()
 })
 
 const performImport = async () => {
   if (!selectedKeyboard.value) return
   const name = selectedKeyboard.value
   try {
-    await props.importFn(name)
+    // Reuse the definition the preview already downloaded instead of
+    // re-fetching it.
+    await props.importFn(name, preview?.getCached(name))
     toast.showSuccess(`${props.label} keyboard "${name}" imported`, 'Import Successful')
   } catch (error) {
     const errorMessage =

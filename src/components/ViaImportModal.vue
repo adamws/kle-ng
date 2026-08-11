@@ -2,9 +2,10 @@
   <KeyboardListImportModal
     :is-visible="isVisible"
     title="Import from VIA"
-    list-url="https://adamws.github.io/keyboard-pcbs/keyboard_list.json"
+    :list-url="viaLayoutSource.listUrl"
     label="VIA"
     prefix="via"
+    :source="viaLayoutSource"
     :import-fn="importVia"
     @close="emit('close')"
   />
@@ -16,6 +17,7 @@ import KeyboardListImportModal from './KeyboardListImportModal.vue'
 import { useKeyboardStore } from '@/stores/keyboard'
 import { convertViaToKle } from '@/utils/via-import'
 import type { ExtendedKeyboardMetadata } from '@/utils/json-layout-processor'
+import { viaLayoutSource, type PreviewLayout } from '@/utils/preview/layout-source'
 
 interface Props {
   isVisible: boolean
@@ -30,11 +32,15 @@ const emit = defineEmits<Emits>()
 
 const keyboardStore = useKeyboardStore()
 
-const importVia = async (name: string) => {
-  const url = `https://raw.githubusercontent.com/the-via/keyboards/master/v3/${name}.json`
-  const resp = await fetch(url)
+const fetchViaDefinition = async (name: string): Promise<unknown> => {
+  const resp = await fetch(viaLayoutSource.layoutUrl(name))
   if (!resp.ok) throw new Error(`Failed to fetch: ${resp.status} ${resp.statusText}`)
-  const data = await resp.json()
+  return resp.json()
+}
+
+const importVia = async (name: string, cached?: PreviewLayout) => {
+  // The preview already downloaded this definition — don't ask for it twice.
+  const data = cached?.raw ?? (await fetchViaDefinition(name))
 
   const kleData = convertViaToKle(data)
   keyboardStore.loadKLELayout(kleData)

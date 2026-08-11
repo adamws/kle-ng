@@ -6,9 +6,9 @@ import { parseCache } from './caches/ParseCache'
 import { imageCache } from './caches/ImageCache'
 import { labelParser } from './parsers/LabelParser'
 import { keyRenderer } from './renderers/KeyRenderer'
-import { labelRenderer } from './renderers/LabelRenderer'
+import { LabelRenderer } from './renderers/LabelRenderer'
 import { rotationRenderer } from './renderers/RotationRenderer'
-import { linkTracker } from './renderers/LinkTracker'
+import { LinkTracker, linkTracker } from './renderers/LinkTracker'
 import { BoundsCalculator } from './utils/BoundsCalculator'
 import { HitTester } from './utils/HitTester'
 import type { LabelNode } from './parsers/LabelAST'
@@ -72,6 +72,19 @@ export interface KeyRenderParams {
   origin_y: number
 }
 
+/**
+ * Optional collaborators a CanvasRenderer can be constructed with.
+ *
+ * Every renderer collaborator is otherwise a module-level singleton. That is
+ * fine for content-keyed caches (`svgCache`, `parseCache`, `imageCache`) but
+ * not for the LinkTracker, which is *cleared on every render*. A second
+ * renderer drawing to an offscreen canvas would wipe the visible editor's link
+ * hit boxes, so offscreen callers pass their own tracker here.
+ */
+export interface CanvasRendererDeps {
+  linkTracker?: LinkTracker
+}
+
 export class CanvasRenderer {
   private ctx: CanvasRenderingContext2D
   private options: RenderOptions
@@ -79,14 +92,19 @@ export class CanvasRenderer {
   private onImageErrorCallback?: (url: string) => void
   private boundsCalculator: BoundsCalculator
   private hitTester: HitTester
+  private linkTracker: LinkTracker
+  private labelRenderer: LabelRenderer
 
-  constructor(canvas: HTMLCanvasElement, options: RenderOptions) {
+  constructor(canvas: HTMLCanvasElement, options: RenderOptions, deps?: CanvasRendererDeps) {
     this.ctx = canvas.getContext('2d')!
     this.options = options
     this.boundsCalculator = new BoundsCalculator(options.unit)
     this.hitTester = new HitTester(options.unit, (key, opts) =>
       keyRenderer.getRenderParams(key, opts),
     )
+    // Defaults to the shared singleton so existing callers keep today's behaviour
+    this.linkTracker = deps?.linkTracker ?? linkTracker
+    this.labelRenderer = new LabelRenderer(this.linkTracker)
   }
 
   /**
@@ -115,8 +133,12 @@ export class CanvasRenderer {
     this.options = options
     this.boundsCalculator.setUnit(options.unit)
     this.hitTester.setUnit(options.unit)
-    // Clear color cache when options change (Phase 2 optimization)
-    keyRenderer.clearColorCache()
+    // The shared keyRenderer colour cache is deliberately NOT cleared here.
+    // It memoizes a pure function under a key that contains both its inputs
+    // (`${color}-${factor}`), so an entry can never go stale and options have
+    // no bearing on it. Clearing it was also a cross-renderer side effect:
+    // every offscreen render (import previews, thumbnails) calls this, and
+    // would have wiped the cache the visible editor depends on.
   }
 
   /**
@@ -248,7 +270,7 @@ export class CanvasRenderer {
 
     // Draw labels using LabelRenderer
     if (isRotaryEncoder) {
-      labelRenderer.drawRotaryEncoderLabels(
+      this.labelRenderer.drawRotaryEncoderLabels(
         this.ctx,
         key,
         params,
@@ -259,7 +281,7 @@ export class CanvasRenderer {
         hoveredLinkHref,
       )
     } else {
-      labelRenderer.drawKeyLabels(
+      this.labelRenderer.drawKeyLabels(
         this.ctx,
         key,
         params,
@@ -322,7 +344,7 @@ export class CanvasRenderer {
     searchMatchKeys: Key[] = [],
   ) {
     // Clear link tracker at start of each render
-    linkTracker.clear()
+    this.linkTracker.clear()
 
     // Clear canvas if requested
     if (clearCanvas) {
@@ -488,6 +510,6 @@ export class CanvasRenderer {
    * @returns The link at this position, or null if none
    */
   public getLinkAtPosition(x: number, y: number) {
-    return linkTracker.getLinkAtPosition(x, y)
+    return this.linkTracker.getLinkAtPosition(x, y)
   }
 }

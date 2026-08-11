@@ -524,6 +524,330 @@ test.describe('Import from QMK', () => {
     })
   })
 
+  // --------------------------------------------------------
+  // Group 8: Hover Preview
+  // --------------------------------------------------------
+  test.describe('Hover Preview', () => {
+    const PREVIEW = SELECTORS.LAYOUT_PREVIEW
+
+    /** Serves ergodox_ez info.json, counting hits and optionally stalling. */
+    async function mockInfoJson(page: Page, options: { hold?: boolean } = {}) {
+      const state = { calls: 0, release: null as null | (() => void) }
+      await page.route(
+        'https://keyboards.qmk.fm/v1/keyboards/ergodox_ez/info.json',
+        async (route) => {
+          state.calls++
+          if (options.hold) {
+            await new Promise<void>((resolve) => {
+              state.release = resolve
+            })
+          }
+          await route.fulfill({ json: ERGODOX_INFO })
+        },
+      )
+      return state
+    }
+
+    test('TC-QMK-080 — preview pane shows an idle hint before anything is hovered', async ({
+      page,
+    }) => {
+      await mockKeyboardList(page)
+      await page.goto('/')
+      await openQmkModal(page)
+      await waitForList(page)
+
+      await expect(page.locator(PREVIEW.PANE)).toBeVisible()
+      await expect(page.locator(PREVIEW.IDLE)).toBeVisible()
+    })
+
+    test('TC-QMK-081 — hovering a result shows the loading bar, then the rendered preview', async ({
+      page,
+    }) => {
+      await mockKeyboardList(page)
+      const info = await mockInfoJson(page, { hold: true })
+      await page.goto('/')
+      await openQmkModal(page)
+      await waitForList(page)
+
+      await page.hover('.qmk-keyboard-item:has-text("ergodox_ez")')
+
+      await expect(page.locator(PREVIEW.PROGRESS)).toBeVisible()
+      await expect.poll(() => info.calls, { timeout: 5000 }).toBe(1)
+
+      info.release!()
+
+      await expect(page.locator(`${PREVIEW.PANE} canvas`)).toBeVisible()
+      await expect(page.locator(PREVIEW.LOADING)).not.toBeVisible()
+      await expect(page.locator(PREVIEW.PANE)).toContainText('ergodox_ez')
+    })
+
+    test('TC-QMK-082 — a failed preview reports inline without blocking the list', async ({
+      page,
+    }) => {
+      await mockKeyboardList(page)
+      await page.route('https://keyboards.qmk.fm/v1/keyboards/ergodox_ez/info.json', (route) =>
+        route.fulfill({ status: 404, body: 'not found' }),
+      )
+      await page.goto('/')
+      await openQmkModal(page)
+      await waitForList(page)
+
+      await page.hover('.qmk-keyboard-item:has-text("ergodox_ez")')
+
+      await expect(page.locator(PREVIEW.ERROR)).toBeVisible()
+      // The list is still usable and no toast was raised for a mere hover
+      await expect(page.locator('.qmk-keyboard-list')).toBeVisible()
+      await expect(page.locator(SELECTORS.TOAST.NOTIFICATION)).not.toBeVisible()
+    })
+
+    test('TC-QMK-083 — importing a previewed keyboard does not download it again', async ({
+      page,
+    }) => {
+      await mockKeyboardList(page)
+      const info = await mockInfoJson(page)
+      await page.goto('/')
+      await openQmkModal(page)
+      await waitForList(page)
+
+      await page.hover('.qmk-keyboard-item:has-text("ergodox_ez")')
+      await expect(page.locator(`${PREVIEW.PANE} canvas`)).toBeVisible()
+      expect(info.calls).toBe(1)
+
+      await page.click('.qmk-keyboard-item:has-text("ergodox_ez")')
+      await page.click(QMK_IMPORT_BTN)
+
+      await expect(page.locator(SELECTORS.TOAST.TITLE)).toContainText('Import Successful')
+      expect(info.calls).toBe(1)
+    })
+
+    test('TC-QMK-084 — moving to another result abandons the pending download', async ({
+      page,
+    }) => {
+      await mockKeyboardList(page)
+      const first = await mockInfoJson(page, { hold: true })
+
+      // The envelope must be keyed by the requested name, as the real API is
+      let secondCalls = 0
+      const gherkinInfo = {
+        keyboards: {
+          '40percentclub/gherkin': {
+            keyboard_name: 'Gherkin',
+            layouts: ERGODOX_INFO.keyboards.ergodox_ez.layouts,
+          },
+        },
+      }
+      await page.route(
+        'https://keyboards.qmk.fm/v1/keyboards/40percentclub/gherkin/info.json',
+        (route) => {
+          secondCalls++
+          route.fulfill({ json: gherkinInfo })
+        },
+      )
+
+      await page.goto('/')
+      await openQmkModal(page)
+      await waitForList(page)
+
+      await page.hover('.qmk-keyboard-item:has-text("ergodox_ez")')
+      await expect.poll(() => first.calls, { timeout: 5000 }).toBe(1)
+
+      // Switch before the first request completes
+      await page.hover('.qmk-keyboard-item:has-text("gherkin")')
+      await expect.poll(() => secondCalls, { timeout: 5000 }).toBe(1)
+
+      first.release!()
+
+      // The pane settles on the second board, not the late first response
+      await expect(page.locator(`${PREVIEW.PANE} canvas`)).toBeVisible()
+      await expect(page.locator(PREVIEW.PANE)).toContainText('gherkin')
+    })
+
+    test('TC-QMK-085 — multi-layout keyboards expose a variant switcher', async ({ page }) => {
+      await mockKeyboardList(page)
+      await page.route('https://keyboards.qmk.fm/v1/keyboards/ergodox_ez/info.json', (route) =>
+        route.fulfill({
+          json: {
+            keyboards: {
+              ergodox_ez: {
+                keyboard_name: 'ErgoDox EZ',
+                layouts: {
+                  LAYOUT_ansi: {
+                    layout: [
+                      { matrix: [0, 0], x: 0, y: 0 },
+                      { matrix: [0, 1], x: 1, y: 0 },
+                    ],
+                  },
+                  LAYOUT_iso: {
+                    layout: [
+                      { matrix: [0, 0], x: 0, y: 0 },
+                      { matrix: [0, 2], x: 2, y: 0 },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        }),
+      )
+      await page.goto('/')
+      await openQmkModal(page)
+      await waitForList(page)
+
+      await page.hover('.qmk-keyboard-item:has-text("ergodox_ez")')
+      await expect(page.locator(`${PREVIEW.PANE} canvas`)).toBeVisible()
+
+      await expect(page.locator(PREVIEW.PANE)).toContainText('LAYOUT_ansi (1/2)')
+      await page.click(PREVIEW.VARIANT_NEXT)
+      await expect(page.locator(PREVIEW.PANE)).toContainText('LAYOUT_iso (2/2)')
+      await page.click(PREVIEW.VARIANT_PREV)
+      await expect(page.locator(PREVIEW.PANE)).toContainText('LAYOUT_ansi (1/2)')
+    })
+
+    test('TC-QMK-087 — selecting a result pins the preview against further hovering', async ({
+      page,
+    }) => {
+      await mockKeyboardList(page)
+      const ergodox = await mockInfoJson(page)
+
+      let gherkinCalls = 0
+      await page.route(
+        'https://keyboards.qmk.fm/v1/keyboards/40percentclub/gherkin/info.json',
+        (route) => {
+          gherkinCalls++
+          route.fulfill({
+            json: { keyboards: { '40percentclub/gherkin': { keyboard_name: 'Gherkin' } } },
+          })
+        },
+      )
+
+      await page.goto('/')
+      await openQmkModal(page)
+      await waitForList(page)
+
+      await page.click('.qmk-keyboard-item:has-text("ergodox_ez")')
+      await expect(page.locator(`${PREVIEW.PANE} canvas`)).toBeVisible()
+      await expect(page.locator(PREVIEW.PINNED)).toBeVisible()
+      await expect(page.locator(PREVIEW.PANE)).toContainText('ergodox_ez')
+      expect(ergodox.calls).toBe(1)
+
+      // Sweeping over other results must neither swap the preview nor fetch
+      await page.hover('.qmk-keyboard-item:has-text("gherkin")')
+      await page.hover('.qmk-keyboard-item:has-text("iris")')
+      await expect(page.locator(PREVIEW.PANE)).toContainText('ergodox_ez')
+      expect(gherkinCalls).toBe(0)
+    })
+
+    test('TC-QMK-088 — clicking the selected result again deselects and unpins it', async ({
+      page,
+    }) => {
+      await mockKeyboardList(page)
+      await mockInfoJson(page)
+      await page.route(
+        'https://keyboards.qmk.fm/v1/keyboards/40percentclub/gherkin/info.json',
+        (route) =>
+          route.fulfill({
+            json: {
+              keyboards: {
+                '40percentclub/gherkin': {
+                  keyboard_name: 'Gherkin',
+                  layouts: ERGODOX_INFO.keyboards.ergodox_ez.layouts,
+                },
+              },
+            },
+          }),
+      )
+      await page.goto('/')
+      await openQmkModal(page)
+      await waitForList(page)
+
+      const row = page.locator('.qmk-keyboard-item:has-text("ergodox_ez")')
+
+      await row.click()
+      await expect(row).toHaveClass(/selected/)
+      await expect(page.locator(QMK_IMPORT_BTN)).toBeEnabled()
+      await expect(page.locator(PREVIEW.PINNED)).toBeVisible()
+
+      await row.click()
+      await expect(row).not.toHaveClass(/selected/)
+      await expect(page.locator(QMK_IMPORT_BTN)).toBeDisabled()
+      await expect(page.locator(PREVIEW.PINNED)).not.toBeVisible()
+
+      // Hover previews resume once nothing is selected
+      await page.hover('.qmk-keyboard-item:has-text("gherkin")')
+      await expect(page.locator(PREVIEW.PANE)).toContainText('gherkin')
+    })
+
+    test('TC-QMK-086 — an empty query does not trigger speculative downloads', async ({ page }) => {
+      const bigList = Array.from({ length: 200 }, (_, i) => `vendor/board_${i}`)
+      await page.route('https://keyboards.qmk.fm/v1/keyboard_list.json', (route) =>
+        route.fulfill({ json: { keyboards: bigList, last_updated: '2026-01-01' } }),
+      )
+
+      let infoCalls = 0
+      await page.route('**/v1/keyboards/vendor/**/info.json', (route) => {
+        infoCalls++
+        route.fulfill({ json: ERGODOX_INFO })
+      })
+
+      await page.goto('/')
+      await openQmkModal(page)
+      await waitForList(page)
+      await expect(page.locator(PREVIEW.IDLE)).toBeVisible()
+
+      expect(infoCalls).toBe(0)
+    })
+
+    test('TC-QMK-089 — a tall layout is scaled to fit and never grows the modal', async ({
+      page,
+    }) => {
+      // A deliberately tall board: 30 rows, far taller than the preview pane.
+      // The canvas must be scaled down into the stage — the stage must not grow
+      // to accommodate the canvas and drag the row and modal along with it.
+      await mockKeyboardList(page)
+      await page.route('https://keyboards.qmk.fm/v1/keyboards/ergodox_ez/info.json', (route) =>
+        route.fulfill({
+          json: {
+            keyboards: {
+              ergodox_ez: {
+                keyboard_name: 'Tall',
+                layouts: {
+                  LAYOUT: {
+                    layout: Array.from({ length: 30 }, (_, y) => ({ matrix: [y, 0], x: 0, y })),
+                  },
+                },
+              },
+            },
+          },
+        }),
+      )
+
+      await page.goto('/')
+      await openQmkModal(page)
+      await waitForList(page)
+
+      const modal = page.locator(`${QMK_MODAL} .modal-content`)
+      const stage = page.locator(`${PREVIEW.PANE} .preview-stage`)
+      const before = (await modal.boundingBox())!.height
+
+      await page.hover('.qmk-keyboard-item:has-text("ergodox_ez")')
+      await expect(page.locator(`${PREVIEW.PANE} canvas`)).toBeVisible()
+
+      // The modal is the same height it was before anything was previewed
+      expect((await modal.boundingBox())!.height).toBeCloseTo(before, 0)
+
+      // …and the canvas sits inside the stage's content box rather than
+      // overflowing it (the stage is padded, so allow for that).
+      const canvasBox = (await page.locator(`${PREVIEW.PANE} canvas`).boundingBox())!
+      const stageBox = (await stage.boundingBox())!
+      expect(canvasBox.height).toBeLessThanOrEqual(stageBox.height)
+      expect(canvasBox.width).toBeLessThanOrEqual(stageBox.width)
+
+      // The list keeps its fixed height — the row never stretched
+      const listBox = (await page.locator('.qmk-keyboard-list').boundingBox())!
+      expect(listBox.height).toBeCloseTo(360, 0)
+    })
+  })
+
   test.describe('Large list', () => {
     test('TC-QMK-072 — large keyboard list is constrained and scrollable', async ({ page }) => {
       const bigList = Array.from({ length: 500 }, (_, i) => `vendor/board_${i}`)

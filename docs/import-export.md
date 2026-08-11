@@ -36,6 +36,8 @@ Zoom in on the canvas before exporting to PNG to increase the output image resol
 - **From File**: Browse for a VIA layout JSON file on your computer
 - **From VIA**: Search and import directly from a curated database of VIA-ready keyboards via **Import → From VIA** modal, without needing to download the JSON file manually
 
+The **From VIA** modal previews layouts before you commit to one — see [Previewing before you import](#import-preview).
+
 **On export**, layouts containing `_kleng_via_data` metadata can be exported back to VIA JSON format using **Export → Download VIA JSON**.
 
 <table class="example-table">
@@ -187,6 +189,37 @@ After importing a QMK layout, you can use the [PCB Generator](./pcb-generator) i
 **On export**, layouts with matrix-annotated keys can be exported back to QMK `info.json` format using **Export → Download QMK JSON**. The reconstructed layout includes all original QMK metadata (keyboard_name, manufacturer, processor, USB config, etc.) merged with your updated key positions and dimensions.
 
 See [QMK Export](#qmk-export) below for detailed information.
+
+### Previewing before you import {#import-preview}
+
+The **Import → From QMK** and **Import → From VIA** modals show a preview of the layout next to
+the search results, so you can tell boards apart without loading each one into the editor and
+losing your current work.
+
+Hover a result (or move to it with the arrow keys) and kle-ng downloads that keyboard's definition
+in the background and draws it using the same renderer as the main canvas. A loading bar appears
+while the download is in progress. You can wait for it, or move straight on to another result — the
+abandoned download is cancelled. Results you scroll past are fetched speculatively, so previews for
+nearby entries usually appear instantly.
+
+**Selecting pins the preview.** Click a result and the preview holds on it — marked **Selected** —
+so moving the pointer across other rows on the way to the **Import** button doesn't swap out what
+you were reading. Click the selected result again to deselect it, which unpins the preview and lets
+hovering drive it once more.
+
+The preview shows what pressing **Import** will actually produce, including matrix legends. For
+keyboards that define more than one layout, arrows under the preview step through the variants:
+
+- **QMK** — one entry per `LAYOUT_*` macro (e.g. `LAYOUT_ortho_4x12`, `LAYOUT_planck_2x2u`)
+- **VIA** — a **Default** entry with every option at choice 0, then one entry per alternative
+  choice, named from the definition's `layouts.labels`
+
+Cycling variants is preview-only; importing always loads the complete layout, and you pick the
+variant you want afterwards from the layout toolbar below the canvas.
+
+Because the preview has already downloaded the definition, pressing **Import** on a keyboard you
+previewed does not re-request it. Nothing is downloaded until you hover — opening the modal on its
+own only fetches the keyboard index.
 
 ### Ergogen Format {#ergogen-format}
 

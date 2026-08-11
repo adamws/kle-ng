@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { CanvasRenderer } from '../canvas-renderer'
+import { LinkTracker, linkTracker } from '../renderers/LinkTracker'
+import { keyRenderer } from '../renderers/KeyRenderer'
 import { Key, KeyboardMetadata } from '@adamws/kle-serial'
 
 // Mock Path2D constructor and methods for Node.js environment
@@ -800,6 +802,80 @@ describe('CanvasRenderer', () => {
 
       // Should have rendered something (even if truncated)
       expect(mockContext.fillText).toHaveBeenCalled()
+    })
+  })
+
+  describe('link tracker isolation', () => {
+    const metadata = new KeyboardMetadata()
+
+    const makeLinkKey = (): Key => {
+      const key = new Key()
+      key.x = 0
+      key.y = 0
+      key.width = 1
+      key.height = 1
+      key.labels[0] = '<a href="https://example.com">docs</a>'
+      return key
+    }
+
+    it('registers links with the shared singleton by default', () => {
+      renderer.render([makeLinkKey()], [], metadata)
+      expect(linkTracker.count).toBeGreaterThan(0)
+    })
+
+    it('does not touch the shared singleton when given its own tracker', () => {
+      // Editor renders first and owns the singleton's hit boxes…
+      renderer.render([makeLinkKey()], [], metadata)
+      const editorLinkCount = linkTracker.count
+      expect(editorLinkCount).toBeGreaterThan(0)
+
+      // …an offscreen preview renderer must not clear or add to them.
+      const ownTracker = new LinkTracker()
+      const offscreen = new CanvasRenderer(
+        mockCanvas,
+        { unit: 54, background: '#ffffff' },
+        { linkTracker: ownTracker },
+      )
+      offscreen.render([makeLinkKey()], [], metadata)
+
+      expect(linkTracker.count).toBe(editorLinkCount)
+      expect(ownTracker.count).toBeGreaterThan(0)
+    })
+
+    it('does not clear the shared key colour cache when reconfigured', () => {
+      // The cache is keyed by every input of the pure function it memoizes, so
+      // it never goes stale. Clearing it here used to be a cross-renderer side
+      // effect: an offscreen preview calls updateOptions on every render and
+      // would have thrown away the work the visible editor depends on.
+      const spy = vi.spyOn(keyRenderer, 'clearColorCache')
+
+      const offscreen = new CanvasRenderer(
+        mockCanvas,
+        { unit: 54, background: '#ffffff' },
+        { linkTracker: new LinkTracker() },
+      )
+      offscreen.updateOptions({ unit: 54, background: '#123456' })
+
+      expect(spy).not.toHaveBeenCalled()
+      spy.mockRestore()
+    })
+
+    it('resolves hit tests against its own tracker', () => {
+      const ownTracker = new LinkTracker()
+      const offscreen = new CanvasRenderer(
+        mockCanvas,
+        { unit: 54, background: '#ffffff' },
+        { linkTracker: ownTracker },
+      )
+      offscreen.render([makeLinkKey()], [], metadata)
+
+      const registered = ownTracker.getLinks()[0]
+      expect(registered).toBeDefined()
+      const hit = offscreen.getLinkAtPosition(
+        registered!.localX + 1,
+        registered!.localY + registered!.localHeight / 2,
+      )
+      expect(hit?.href).toBe('https://example.com')
     })
   })
 

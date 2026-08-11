@@ -3,7 +3,7 @@ import type { KeyRenderParams } from '../canvas-renderer'
 import type { LabelNode, ListNode, TextStyle } from '../parsers/LabelAST'
 import { labelParser } from '../parsers/LabelParser'
 import { svgCache } from '../caches/SVGCache'
-import { linkTracker } from './LinkTracker'
+import { LinkTracker, linkTracker } from './LinkTracker'
 import type { LabelPosition } from '../label-positions'
 import { LABEL_POSITIONS } from '../label-positions'
 export type { LabelPosition }
@@ -54,6 +54,12 @@ export interface LabelRenderOptions {
  * This class follows a functional approach where the canvas context is passed
  * as a parameter rather than stored, making it easier to test and reason about.
  *
+ * The only piece of state it owns is the {@link LinkTracker} that clickable
+ * labels register their bounding boxes with. It defaults to the shared
+ * singleton so existing callers are unaffected; renderers that draw to an
+ * offscreen canvas (layout previews, thumbnails) pass their own instance so
+ * they don't overwrite the editor's link hit boxes.
+ *
  * @example
  * ```typescript
  * const renderer = new LabelRenderer()
@@ -72,6 +78,12 @@ export interface LabelRenderOptions {
  * ```
  */
 export class LabelRenderer {
+  /**
+   * @param tracker - Where clickable link bounding boxes are registered.
+   *   Defaults to the shared `linkTracker` singleton.
+   */
+  constructor(private readonly tracker: LinkTracker = linkTracker) {}
+
   /**
    * Draw all labels for a standard keyboard key.
    * Handles positioning of up to 12 labels in a 3x3 grid pattern plus front legends.
@@ -561,7 +573,7 @@ export class LabelRenderer {
     }
 
     // Register link bounding box for hit testing
-    linkTracker.registerLink(
+    this.tracker.registerLink(
       node.href,
       node.text,
       x,

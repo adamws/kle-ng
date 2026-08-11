@@ -34,6 +34,11 @@
   - [LayoutOptionToolbar.vue](#layoutoptiontoolbarvue)
   - [Canvas Wiring](#canvas-wiring)
   - [Read-Only Gating](#read-only-gating)
+- [Headless Layout Preview](#headless-layout-preview)
+  - [Why a separate entry point](#why-a-separate-entry-point)
+  - [Rendering flow](#rendering-flow-1)
+  - [Variants](#variants)
+  - [Prefetching](#prefetching)
 - [Recent Improvements](#recent-improvements)
 
 ---
@@ -233,6 +238,12 @@ CanvasRenderer.render(keys, selectedKeys, metadata)
 
 ```typescript
 class CanvasRenderer {
+  // Construction
+  // `deps.linkTracker` defaults to the shared singleton. Offscreen renderers
+  // (see Headless Layout Preview) pass their own so they don't clear the
+  // editor's link hit boxes.
+  constructor(canvas: HTMLCanvasElement, options: RenderOptions, deps?: CanvasRendererDeps)
+
   // Rendering
   render(
     keys,
@@ -255,10 +266,11 @@ class CanvasRenderer {
   setImageErrorCallback(callback: (url: string) => void)
 
   // Cache management
+  // (the colour cache is not among these — it lives on the shared keyRenderer
+  //  and never needs invalidating; see Color Cache below)
   clearSVGCache()
   clearImageCache()
   clearParseCache()
-  clearColorCache()
   getSVGCacheStats()
   getImageCacheStats()
   getParseCacheStats()
@@ -776,21 +788,23 @@ interface TextStyle {
 ```typescript
 // In KeyRenderer:
 private colorCache = new Map<string, string>()
+private static readonly COLOR_CACHE_MAX = 1000
 
-lightenColor(hexColor: string, factor = 1.2): string {
-  const cacheKey = `${hexColor}_${factor}`
-
-  // Check cache first
-  if (this.colorCache.has(cacheKey)) {
-    return this.colorCache.get(cacheKey)!
-  }
+private lightenColor(color: string, factor: number = 1.2): string {
+  const key = `${color}-${factor}`
+  const hit = this.colorCache.get(key)
+  if (hit) return hit
 
   // Expensive Lab color space calculation
-  const lightened = lightenColorLab(hexColor, factor)
+  const result = computeLightenColor(color, factor)
 
-  // Cache the result
-  this.colorCache.set(cacheKey, lightened)
-  return lightened
+  // Entries are equally valid forever, so evicting the whole map on overflow
+  // is fine: it costs at most one recomputation per surviving colour.
+  if (this.colorCache.size >= KeyRenderer.COLOR_CACHE_MAX) {
+    this.colorCache.clear()
+  }
+  this.colorCache.set(key, result)
+  return result
 }
 
 clearColorCache(): void {
@@ -798,13 +812,19 @@ clearColorCache(): void {
 }
 ```
 
-**Cache invalidation**:
+**Cache invalidation**: none — and deliberately so.
 
-- Called when render options change (via `CanvasRenderer.updateOptions()`)
-- Ensures cache doesn't grow unbounded
-- Clears stale entries when rendering parameters change
+The cache key contains every input of the pure function it memoizes (`${color}-${factor}`), so an
+entry can never become stale and no state change requires dropping it. `updateOptions()` used to
+call `clearColorCache()`, which was both unnecessary and a cross-renderer side effect: the cache
+lives on the shared `keyRenderer` singleton, and every offscreen render calls `updateOptions()` on
+each pass (see [Headless Layout Preview](#headless-layout-preview)), so scanning down the import
+preview list repeatedly threw away the entries the visible editor depends on.
 
-**Implementation**: Simple Map-based cache (no size limit needed due to periodic invalidation)
+**Implementation**: Map-based cache bounded by `COLOR_CACHE_MAX` (1000). On overflow it is cleared
+wholesale rather than evicting per entry — with no staleness to worry about, the only cost is one
+recomputation per colour still in use. `clearColorCache()` remains available for callers that
+genuinely want to reclaim the memory; nothing calls it in the render path.
 
 ### LRUCache (Base Implementation)
 
@@ -1023,10 +1043,33 @@ getLinkAtPosition(canvasX, canvasY):
 
 **Usage in Rendering Pipeline**:
 
-1. `CanvasRenderer.render()` calls `linkTracker.clear()` at start of each render
-2. `LabelRenderer.renderLinkNode()` calls `linkTracker.registerLink()` for each link
-3. `CanvasRenderer.getLinkAtPosition()` delegates to `linkTracker.getLinkAtPosition()`
+1. `CanvasRenderer.render()` calls `this.linkTracker.clear()` at start of each render
+2. `LabelRenderer.renderLinkNode()` calls `this.tracker.registerLink()` for each link
+3. `CanvasRenderer.getLinkAtPosition()` delegates to `this.linkTracker.getLinkAtPosition()`
 4. `KeyboardCanvas.vue` uses `getLinkAtPosition()` for hover detection and click handling
+
+**Ownership (important)**:
+
+The tracker is **per CanvasRenderer instance**, not a hard-wired singleton reference:
+
+```typescript
+// CanvasRenderer constructor
+this.linkTracker = deps?.linkTracker ?? linkTracker // shared singleton by default
+this.labelRenderer = new LabelRenderer(this.linkTracker)
+```
+
+`LabelRenderer` takes its tracker as a constructor argument (defaulting to the singleton) rather
+than importing it at module scope, because `renderLinkNode` sits four calls deep behind
+`drawKeyLabels` and threading the tracker through those positional parameter lists would be worse
+than owning it.
+
+This matters because `clear()` runs on **every** render. Without per-instance ownership, an
+offscreen render — a thumbnail, an export — would wipe the visible editor's link hit boxes, and
+link hover/click would silently stop working until the next editor render. Worse, boxes registered
+at a different unit or offset would resolve to the wrong URLs rather than simply missing.
+
+`keyRenderer`, `svgCache`, `parseCache` and `imageCache` remain shared: they are content-keyed
+memoizers, and sharing them across renderers is desirable.
 
 ### Layout Change Event System
 
@@ -2516,6 +2559,127 @@ The following components check `isLayoutPreviewMode` and disable themselves acco
 - **`KeyboardToolbar.vue`**: The Presets and Import buttons receive `:disabled="keyboardStore.isLayoutPreviewMode"` directly.
 - **`CanvasToolbar.vue`**: Extra tool buttons and add-key / add-special-key actions are gated with the same flag.
 - **`MatrixAnnotationOverlay.vue`**: Draw gestures (mousedown, mousemove handlers that modify annotation state) return early when preview is active; the overlay itself stays rendered.
+
+---
+
+## Headless Layout Preview
+
+**Locations**:
+
+- `src/utils/preview/layout-preview-renderer.ts` — offscreen rendering
+- `src/utils/preview/layout-source.ts` — QMK/VIA download → previewable layout
+- `src/utils/preview/layout-prefetcher.ts` — cache, concurrency pool, cancellation
+- `src/composables/useLayoutPreview.ts` — Vue glue
+- `src/components/LayoutPreviewPane.vue` — the pane itself
+
+**Purpose**: Draw a keyboard layout through the normal canvas pipeline **without mounting the
+layout editor**, so features like the QMK/VIA import hover preview can show what a layout looks
+like before committing to it.
+
+### Why a separate entry point
+
+`CanvasRenderer` has always accepted any `HTMLCanvasElement`, but it was only ever driven from
+`KeyboardCanvas.vue`, where bounds, DPI, zoom, pan, mirror padding and background painting are
+computed inline against the keyboard store. Nothing outside that component could produce a render.
+The PNG export path shows the consequence — `useKeyboardExport.ts` copies pixels off the _visible_
+canvas via `document.querySelector('.keyboard-canvas')` and fails with "Please make sure the
+keyboard is visible" when the editor isn't on screen.
+
+`LayoutPreviewRenderer` is the store-free counterpart: same renderer, same `KeyRenderer` and
+`LabelRenderer`, but sized to fit an arbitrary box.
+
+### Rendering flow
+
+```
+keys[] + metadata + { maxWidth, maxHeight, dpr }
+    │
+    ├─► BoundsCalculator(54).calculateBounds(keys)      rotation-aware, in px
+    │
+    ├─► contentW = bounds.width  + padding * 2          padding = LAYOUT_PADDING (9)
+    │   contentH = bounds.height + padding * 2
+    │   scale    = min(maxW/contentW, maxH/contentH, 1) never upscales
+    │
+    ├─► canvas.width  = round(contentW * scale * dpr)   backing store, device px
+    │   canvas.style.width = round(contentW * scale)    element, CSS px
+    │
+    ├─► background pass  (identity transform, ctx.scale(dpr, dpr))
+    │      parseBorderRadius(metadata.radii || '6px') + createRoundedRectanglePath
+    │
+    ├─► ctx.setTransform(scale*dpr, 0, 0, scale*dpr,
+    │                    (padding - bounds.x) * scale * dpr,
+    │                    (padding - bounds.y) * scale * dpr)
+    │
+    └─► renderer.render(keys, [], metadata, /* clearCanvas */ false, /* rotationPoints */ false)
+```
+
+Three details worth knowing:
+
+1. **`clearCanvas: false` is mandatory.** The `true` branch of `CanvasRenderer.render()` fills using
+   `ctx.canvas.width/height`, which are _device_ pixels, and is therefore only correct at identity
+   transform. `KeyboardCanvas.vue` passes `false` for the same reason and paints its own background.
+
+2. **The full bounds offset is applied**, not just a clamp on negative coordinates as in
+   `getCoordinateSystemOffset()`. A layout whose keys start at `x: 5` is drawn flush against the
+   padding rather than with 5U of empty space, so the preview uses the whole box.
+
+3. **Async label images repaint later.** `ImageCache` has no promise API, so a label containing
+   `<img>` or an external SVG paints blank on the first pass. The renderer registers
+   `setImageLoadCallback` to repaint and fires `options.onUpdate`. A stale-repaint guard
+   (`this.repaint !== paint`) prevents a late image from redrawing a layout the user has already
+   moved past. Consumers that snapshot the canvas to a bitmap must refresh on `onUpdate`; the
+   preview pane mounts the live canvas, so its repaint is visible for free.
+
+Instances are reusable — the canvas and `CanvasRenderer` are allocated once and reused, so scanning
+down a list of results does not allocate a canvas per hover.
+
+### Variants
+
+`layout-source.ts` splits a downloaded definition back into individually drawable variants using
+the existing collapse utilities, so a preview shows one coherent keyboard rather than the
+overlapping superset that `convertQmkToKle` produces:
+
+| Source | Variants                                                                                                                                                       |
+| ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| QMK    | one per `LAYOUT_*`, via `getQmkLayouts()` + `collapseToQmkLayout()`                                                                                            |
+| VIA    | `Default` (all options at choice 0), then one per non-zero choice with the other groups held at 0, via `getLayoutOptionGroups()` + `collapseToLayoutChoices()` |
+
+The VIA expansion is deliberately linear rather than a cross product of option groups, which would
+explode on boards with several of them.
+
+### Prefetching
+
+Neither backing service has a usable bulk endpoint (QMK's full dump is ~28 MB), so
+`LayoutPrefetcher` runs a concurrency-limited pool of small requests — QMK `info.json` ≈ 9 KB, VIA
+≈ 2.4 KB, both CDN-cached:
+
+- **`high`** — the hovered item. Jumps the queue and survives a query change.
+- **`low`** — rows scrolled into view (`IntersectionObserver` in `KeyboardListImportModal.vue`).
+  Aborted wholesale on query change, and capped per query so scrolling a 2,500-entry catalogue
+  cannot spawn thousands of requests. Not armed at all while the query is empty.
+
+Only `low` requests are ever aborted mid-flight. Moving the pointer to another row does **not**
+cancel an issued `high` request: `useLayoutPreview` discards the response via its
+`activeName !== name` guard and the result still populates the cache. The genuine saving is
+upstream — the 120 ms `HOVER_INTENT_MS` timer means a row swept across never costs a request at all.
+
+Results **and failures** are cached in an `LRUCache` (200 entries) — a 404 must not be re-requested
+on every hover. Aborts are never cached. `PreviewLayout.raw` keeps the parsed response so pressing
+Import after a preview reuses it instead of downloading the definition a second time.
+
+**Request lifecycle invariants**
+
+The `inFlight` map is keyed by name, and cancellation removes entries out of band, so two rules keep
+that map honest:
+
+1. **A request only retracts its own registration.** `cancelLowPriority()` and `dispose()` delete
+   the entry the instant they abort, so by the time the aborted promise chain settles the slot may
+   already belong to a newer request for the same name. The `.finally()` handler therefore compares
+   `AbortController` identity before deleting. Without that check the stale settle evicts the live
+   request, which silently breaks both deduplication (the next call starts a duplicate download) and
+   cancellation (nothing can abort a request that is no longer tracked).
+2. **Requests made after `dispose()` reject rather than hang.** `pump()` refuses to start work once
+   disposed, so a queued entry would never settle; `request()` short-circuits with
+   `PrefetchCancelledError` instead of returning a promise that never resolves.
 
 ---
 

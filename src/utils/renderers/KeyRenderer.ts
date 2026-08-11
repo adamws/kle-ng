@@ -95,8 +95,13 @@ export class KeyRenderer {
   private static readonly HOMING_NUB_POSITION_RATIO = 0.9 // Vertical position (90% down key)
   private static readonly HOMING_NUB_OPACITY = 0.3 // Opacity of the nub indicator
 
-  // Color cache for performance optimization (Phase 2)
+  // Color cache for performance optimization (Phase 2).
+  // Keyed by `${color}-${factor}`, i.e. by every input of the pure function it
+  // memoizes, so entries never need invalidating. Nothing clears it on a state
+  // change; the size cap below is what keeps it bounded when many distinct
+  // layouts are rendered in one session (e.g. scanning the import preview).
   private colorCache = new Map<string, string>()
+  private static readonly COLOR_CACHE_MAX = 1000
 
   /**
    * Calculate render parameters for a key, including all geometry calculations
@@ -792,6 +797,11 @@ export class KeyRenderer {
     const hit = this.colorCache.get(key)
     if (hit) return hit
     const result = computeLightenColor(color, factor)
+    // Entries are equally valid forever, so evicting the whole map on overflow
+    // is fine: it costs at most one recomputation per surviving colour.
+    if (this.colorCache.size >= KeyRenderer.COLOR_CACHE_MAX) {
+      this.colorCache.clear()
+    }
     this.colorCache.set(key, result)
     return result
   }

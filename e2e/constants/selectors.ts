@@ -63,6 +63,21 @@ export const SELECTORS = {
   },
 
   /**
+   * Hover preview pane in the QMK/VIA import modals
+   */
+  LAYOUT_PREVIEW: {
+    PANE: '[data-testid="layout-preview-pane"]',
+    IDLE: '[data-testid="layout-preview-idle"]',
+    LOADING: '[data-testid="layout-preview-loading"]',
+    PROGRESS: '[data-testid="layout-preview-progress"]',
+    ERROR: '[data-testid="layout-preview-error"]',
+    TOO_LARGE: '[data-testid="layout-preview-too-large"]',
+    PINNED: '[data-testid="layout-preview-pinned"]',
+    VARIANT_PREV: '[data-testid="layout-preview-variant-prev"]',
+    VARIANT_NEXT: '[data-testid="layout-preview-variant-next"]',
+  },
+
+  /**
    * Modals and dialogs
    */
   MODALS: {
