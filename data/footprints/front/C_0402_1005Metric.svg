@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1.53722mm" height="0.636222mm" viewBox="6.68939 1.69039 1.53722 0.636222">
+    <g style="fill:none;stroke:#585d84;stroke-width:.04;stroke-opacity:1;stroke-linecap:round;stroke-linejoin:round">
+        <path d="M6.958 1.758h1v.5h-1Z"/>
+    </g>
+    <g style="fill:#c83434;stroke:none">
+        <path class="hoverable" d="m6.698 1.838.011-.053.03-.046.046-.03.053-.01h.28l.054.01.045.03.03.046.011.053v.34l-.01.054-.03.045-.046.03-.054.011h-.28l-.053-.01-.046-.03-.03-.046-.01-.054Z"/>
+        <path class="hoverable" d="m7.658 1.838.011-.053.03-.046.046-.03.053-.01h.28l.054.01.045.03.03.046.011.053v.34l-.01.054-.03.045-.046.03-.054.011h-.28l-.053-.01-.046-.03-.03-.046-.01-.054Z"/>
+    </g>
+</svg>
