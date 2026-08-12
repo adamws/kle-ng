@@ -31,7 +31,12 @@ Events:
     </div>
 
     <div v-else class="table-responsive">
-      <table class="table table-sm table-bordered table-hover mb-0">
+      <table class="table table-sm table-bordered table-hover mb-0 key-centers-table">
+        <colgroup>
+          <col class="col-index" />
+          <col class="col-coord" />
+          <col class="col-coord" />
+        </colgroup>
         <thead>
           <tr>
             <th
@@ -81,10 +86,10 @@ Events:
             @mouseleave="handleRowLeave()"
           >
             <td class="small">{{ item.originalIndex }}</td>
-            <td class="small font-monospace">
+            <td class="small font-monospace" :title="formatCoordinate(item.center.x)">
               {{ formatCoordinate(item.center.x) }}
             </td>
-            <td class="small font-monospace">
+            <td class="small font-monospace" :title="formatCoordinate(item.center.y)">
               {{ formatCoordinate(item.center.y) }}
             </td>
           </tr>
@@ -213,6 +218,11 @@ const handleRowLeave = () => {
 
 <style scoped>
 .key-centers-table-container {
+  /* Reserved for "#": digits + sort icon + cell padding */
+  --index-col-width: 4.25rem;
+  /* Below this the columns would clip digits, so scroll horizontally instead */
+  --table-min-width: 17rem;
+
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -222,6 +232,48 @@ const handleRowLeave = () => {
   max-height: 400px;
   border-radius: 0.375rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  /*
+   * Always reserve the scrollbar track. Without this, a browser with classic
+   * (space-taking) scrollbars resizes every column the moment the row count
+   * crosses max-height and the vertical scrollbar appears or disappears.
+   */
+  scrollbar-gutter: stable;
+}
+
+/*
+ * Fixed layout keeps column widths independent of cell content, so editing a
+ * key (which reflows X/Y values) never resizes the columns. The two coordinate
+ * columns split the remaining width evenly and stay equal at any panel width.
+ */
+.key-centers-table {
+  table-layout: fixed;
+  width: 100%;
+  min-width: var(--table-min-width);
+}
+
+.key-centers-table .col-index {
+  width: var(--index-col-width);
+}
+
+.key-centers-table .col-coord {
+  width: calc((100% - var(--index-col-width)) / 2);
+}
+
+/* Safety net: never let an unusually long value push the layout around */
+.key-centers-table tbody td {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.key-centers-table thead .sortable-header span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.key-centers-table thead .sortable-header svg {
+  flex: 0 0 auto;
 }
 
 /* Sticky header */
