@@ -162,6 +162,7 @@ Automatic annotations may not produce correct results for certain keyboard layou
 | ![Draw rows](/manual-annotation-draw-row.gif) | ![Draw columns](/manual-annotation-draw-columns.gif) | ![Remove](/manual-annotation-remove-elements.gif) |
 
 - Left-click to start and complete wire segments
+- Hold <kbd>Shift</kbd> while making the second click to connect two keys directly, skipping any keys the line passes over
 - Right-click or <kbd>Escape</kbd> to cancel
 - Click an existing wire to append to it
 - Hold <kbd>Ctrl</kbd> while clicking a wire to remove the entire row/column

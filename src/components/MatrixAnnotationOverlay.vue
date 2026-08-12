@@ -12,6 +12,7 @@
       @click="handleClick"
       @contextmenu.prevent="handleRightClick"
       @mousemove="handleMouseMove"
+      @mouseleave="handleMouseLeave"
     />
   </div>
 </template>
@@ -21,7 +22,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { type Key } from '@/stores/keyboard'
 import type { CanvasRenderer } from '@/utils/canvas-renderer'
 import { getKeyCenter as calculateKeyCenter } from '@/utils/keyboard-geometry'
-import { findKeysAlongLine } from '@/utils/line-intersection'
+import { computeSegmentKeys } from '@/utils/matrix-segment'
 import { useKeyboardStore } from '@/stores/keyboard'
 import { useMatrixDrawingStore } from '@/stores/matrix-drawing'
 import { getKeyChoice } from '@/utils/matrix-validation'
@@ -72,6 +73,17 @@ const hoveredSegment = ref<{
   endKey: Key
 } | null>(null)
 const ctrlKeyPressed = ref<boolean>(false)
+const shiftKeyPressed = ref<boolean>(false)
+
+// Last known pointer position in canvas coordinates, so the preview can be
+// recomputed when a modifier changes without the mouse moving
+const lastPointerCanvasPos = ref<{ x: number; y: number } | null>(null)
+
+// Direct mode: connect the last key straight to the target, skipping keys in
+// between. Never active in remove mode (shift is meaningless there).
+const directModeActive = computed(
+  () => shiftKeyPressed.value && matrixDrawingStore.drawingType !== 'remove',
+)
 
 // Renumbering state
 const typedNumberBuffer = ref<string>('')
@@ -388,14 +400,86 @@ const detectHover = (canvasX: number, canvasY: number) => {
   }
 }
 
+// Clear any preview currently shown
+const clearPreview = () => {
+  if (previewSequence.value.length > 0 || errorPreviewSequence.value.length > 0) {
+    previewSequence.value = []
+    errorPreviewSequence.value = []
+    renderCanvas()
+  }
+}
+
+// Recompute the preview for a given canvas position.
+// Extracted from handleMouseMove so modifier key changes can refresh the
+// preview without requiring the mouse to move.
+const updatePreviewAt = (canvasPos: { x: number; y: number }) => {
+  if (
+    !matrixDrawingStore.isDrawing ||
+    !props.renderer ||
+    matrixDrawingStore.currentSequence.length === 0
+  ) {
+    clearPreview()
+    return
+  }
+
+  const closestKey = findClosestKey(canvasPos.x, canvasPos.y, keyboardStore.keys)
+
+  if (!closestKey || matrixDrawingStore.currentSequence.includes(closestKey)) {
+    // Nothing to preview, or hovering over an already-included key
+    clearPreview()
+    return
+  }
+
+  const lastKey = matrixDrawingStore.currentSequence[matrixDrawingStore.currentSequence.length - 1]
+  if (!lastKey) return
+
+  // Resolve which keys this segment would cover (all keys along the line, or
+  // just the target when direct mode is active) and split legal from illegal
+  const { legalKeys, illegalKeys } = computeSegmentKeys({
+    lastKey,
+    targetKey: closestKey,
+    allKeys: keyboardStore.keys,
+    sensitivity: matrixDrawingStore.sensitivity,
+    direct: directModeActive.value,
+    isInSequence: (key) => matrixDrawingStore.currentSequence.includes(key),
+    canAdd: (key) => matrixDrawingStore.canAddKeyToSequence(key, keyboardStore.keys),
+  })
+
+  // Update preview if it changed
+  const previewChanged =
+    previewSequence.value.length !== legalKeys.length ||
+    !previewSequence.value.every((key, i) => key === legalKeys[i])
+
+  const errorPreviewChanged =
+    errorPreviewSequence.value.length !== illegalKeys.length ||
+    !errorPreviewSequence.value.every((key, i) => key === illegalKeys[i])
+
+  if (previewChanged || errorPreviewChanged) {
+    previewSequence.value = legalKeys
+    errorPreviewSequence.value = illegalKeys
+    renderCanvas()
+  }
+}
+
+// Re-run the preview using the last known pointer position
+// (used when a modifier is pressed/released without moving the mouse)
+const refreshPreviewFromLastPointer = () => {
+  if (!props.visible) return
+  const pos = lastPointerCanvasPos.value
+  if (!pos) return
+  updatePreviewAt(pos)
+}
+
 // Mouse move handler - show preview of next segment and detect hover
 const handleMouseMove = (event: MouseEvent) => {
   if (keyboardStore.isLayoutPreviewMode) return
-  // Track Ctrl/Cmd key state
+  // Track Ctrl/Cmd and Shift key state
   const previousCtrlState = ctrlKeyPressed.value
   ctrlKeyPressed.value = event.ctrlKey || event.metaKey
+  shiftKeyPressed.value = event.shiftKey
 
   const canvasPos = getCanvasPosition(event)
+  lastPointerCanvasPos.value = canvasPos
 
   // In remove mode, always detect hover for targeting elements
   if (matrixDrawingStore.drawingType === 'remove') {
@@ -439,62 +523,16 @@ const handleMouseMove = (event: MouseEvent) => {
     renderCanvas()
     return
   }
-  const closestKey = findClosestKey(canvasPos.x, canvasPos.y, keyboardStore.keys)
 
-  if (!closestKey || matrixDrawingStore.currentSequence.includes(closestKey)) {
-    // Clear preview if hovering over already-included key
-    if (previewSequence.value.length > 0 || errorPreviewSequence.value.length > 0) {
-      previewSequence.value = []
-      errorPreviewSequence.value = []
-      renderCanvas()
-    }
-    return
-  }
+  updatePreviewAt(canvasPos)
+}
 
-  // Calculate preview: what keys would be added if user clicks here
-  const lastKey = matrixDrawingStore.currentSequence[matrixDrawingStore.currentSequence.length - 1]
-  if (!lastKey) return
-  const lastKeyCenter = calculateKeyCenter(lastKey)
-  const newKeyCenter = calculateKeyCenter(closestKey)
-
-  // Find all keys along the line between the last key and the new key
-  const keysAlongLine = findKeysAlongLine(
-    lastKeyCenter,
-    newKeyCenter,
-    keyboardStore.keys,
-    matrixDrawingStore.sensitivity,
-  )
-
-  // Separate keys into legal and illegal
-  const newKeys: Key[] = []
-  const illegalKeys: Key[] = []
-
-  keysAlongLine.forEach((key) => {
-    // Skip keys already in current sequence
-    if (matrixDrawingStore.currentSequence.includes(key)) return
-
-    // Check if key would violate matrix rules
-    if (matrixDrawingStore.canAddKeyToSequence(key, keyboardStore.keys)) {
-      newKeys.push(key)
-    } else {
-      illegalKeys.push(key)
-    }
-  })
-
-  // Update preview if it changed
-  const previewChanged =
-    previewSequence.value.length !== newKeys.length ||
-    !previewSequence.value.every((key, i) => key === newKeys[i])
-
-  const errorPreviewChanged =
-    errorPreviewSequence.value.length !== illegalKeys.length ||
-    !errorPreviewSequence.value.every((key, i) => key === illegalKeys[i])
-
-  if (previewChanged || errorPreviewChanged) {
-    previewSequence.value = newKeys
-    errorPreviewSequence.value = illegalKeys
-    renderCanvas()
-  }
+// Mouse leave handler - drop the preview and the remembered pointer position
+// so a modifier press cannot resurrect a stale preview
+const handleMouseLeave = () => {
+  if (keyboardStore.isLayoutPreviewMode) return
+  lastPointerCanvasPos.value = null
+  clearPreview()
 }
 
 // Click handler - add keys to sequence or finish sequence
@@ -564,38 +602,31 @@ const handleClick = (event: MouseEvent) => {
     return
   }
 
-  // If this is the second or later key, find all keys along the line from the last key to this one
+  // If this is the second or later key, resolve the segment from the last key to this one
   if (matrixDrawingStore.currentSequence.length > 0) {
     const lastKey =
       matrixDrawingStore.currentSequence[matrixDrawingStore.currentSequence.length - 1]
     if (!lastKey) return
-    const lastKeyCenter = calculateKeyCenter(lastKey)
-    const newKeyCenter = calculateKeyCenter(closestKey)
 
-    // Find all keys along the line between the last key and the new key
-    const keysAlongLine = findKeysAlongLine(
-      lastKeyCenter,
-      newKeyCenter,
-      keyboardStore.keys,
-      matrixDrawingStore.sensitivity,
-    )
+    // Shift = direct point-to-point connection: skip the keys in between.
+    // Read from the event so the result never depends on tracked key state.
+    const isDirect = event.shiftKey
 
-    // Add all intersecting keys that aren't already in the sequence AND don't violate matrix rules
-    keysAlongLine.forEach((key) => {
-      if (
-        !matrixDrawingStore.currentSequence.includes(key) &&
-        matrixDrawingStore.canAddKeyToSequence(key, keyboardStore.keys)
-      ) {
-        matrixDrawingStore.addKeyToSequence(key)
-      }
+    // computeSegmentKeys always includes the clicked key (already validated
+    // above), so no separate "always add the clicked key" step is needed.
+    // Keys are added through onAccept, i.e. one at a time, so canAddKeyToSequence
+    // validates each candidate against the keys accepted before it in this same
+    // segment (it rejects keys that would end up on a duplicate matrix position).
+    computeSegmentKeys({
+      lastKey,
+      targetKey: closestKey,
+      allKeys: keyboardStore.keys,
+      sensitivity: matrixDrawingStore.sensitivity,
+      direct: isDirect,
+      isInSequence: (key) => matrixDrawingStore.currentSequence.includes(key),
+      canAdd: (key) => matrixDrawingStore.canAddKeyToSequence(key, keyboardStore.keys),
+      onAccept: (key) => matrixDrawingStore.addKeyToSequence(key),
     })
-
-    // ALWAYS add the clicked key itself, even if not in keysAlongLine
-    // (This can happen with higher sensitivity where the clicked key doesn't intersect the line)
-    // The clicked key has already been validated above, so we can safely add it
-    if (!matrixDrawingStore.currentSequence.includes(closestKey)) {
-      matrixDrawingStore.addKeyToSequence(closestKey)
-    }
 
     // Automatically finish the sequence after second click
     matrixDrawingStore.completeSequence()
@@ -682,26 +713,36 @@ const handleRightClick = () => {
   }
 }
 
-// Keyboard event handlers for Ctrl/Cmd key tracking
-const handleCtrlKeyDown = (event: KeyboardEvent) => {
-  if (event.key === 'Control' || event.key === 'Meta') {
-    const previousState = ctrlKeyPressed.value
-    ctrlKeyPressed.value = true
-    // Update visual feedback when Ctrl state changes (highlight changes)
-    if (previousState !== ctrlKeyPressed.value && matrixDrawingStore.drawingType === 'remove') {
-      renderCanvas()
-    }
+// Keyboard event handler for modifier tracking
+// (Ctrl/Cmd selects wire vs segment in remove mode, Shift enables direct wiring).
+// Reading the modifier flags off the event works for both keydown and keyup and
+// self-heals if a modifier changed while the window was unfocused.
+const handleModifierKeyChange = (event: KeyboardEvent) => {
+  const previousCtrlState = ctrlKeyPressed.value
+  const previousShiftState = shiftKeyPressed.value
+
+  ctrlKeyPressed.value = event.ctrlKey || event.metaKey
+  shiftKeyPressed.value = event.shiftKey
+
+  // Update visual feedback when Ctrl state changes (highlight changes)
+  if (previousCtrlState !== ctrlKeyPressed.value && matrixDrawingStore.drawingType === 'remove') {
+    renderCanvas()
+  }
+
+  // Shift toggles direct mode - recompute the preview in place
+  if (previousShiftState !== shiftKeyPressed.value) {
+    refreshPreviewFromLastPointer()
   }
 }
 
-const handleCtrlKeyUp = (event: KeyboardEvent) => {
-  if (event.key === 'Control' || event.key === 'Meta') {
-    const previousState = ctrlKeyPressed.value
-    ctrlKeyPressed.value = false
-    // Update visual feedback when Ctrl state changes (highlight changes)
-    if (previousState !== ctrlKeyPressed.value && matrixDrawingStore.drawingType === 'remove') {
-      renderCanvas()
-    }
+// Reset modifier state when the window loses focus (e.g. alt-tab while held)
+const handleWindowBlur = () => {
+  const wasPressed = ctrlKeyPressed.value || shiftKeyPressed.value
+  ctrlKeyPressed.value = false
+  shiftKeyPressed.value = false
+  if (wasPressed) {
+    refreshPreviewFromLastPointer()
+    renderCanvas()
   }
 }
 
@@ -1578,9 +1619,10 @@ watch(
 onMounted(() => {
   renderCanvas()
 
-  // Add keyboard event listeners for Ctrl/Cmd tracking
-  window.addEventListener('keydown', handleCtrlKeyDown)
-  window.addEventListener('keyup', handleCtrlKeyUp)
+  // Add keyboard event listeners for modifier tracking (Ctrl/Cmd and Shift)
+  window.addEventListener('keydown', handleModifierKeyChange)
+  window.addEventListener('keyup', handleModifierKeyChange)
+  window.addEventListener('blur', handleWindowBlur)
 
   // Add keyboard event listener for renumbering
   // Use capture phase to ensure we get events before modal's handler
@@ -1590,8 +1632,9 @@ onMounted(() => {
 // Cleanup
 onUnmounted(() => {
   // Remove keyboard event listeners
-  window.removeEventListener('keydown', handleCtrlKeyDown)
-  window.removeEventListener('keyup', handleCtrlKeyUp)
+  window.removeEventListener('keydown', handleModifierKeyChange)
+  window.removeEventListener('keyup', handleModifierKeyChange)
+  window.removeEventListener('blur', handleWindowBlur)
   document.removeEventListener('keydown', handleKeyDown, true)
 })
 </script>

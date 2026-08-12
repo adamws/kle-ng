@@ -20,6 +20,7 @@ coordinates are applied to keys.
 | `src/stores/matrix-drawing.ts`                    | Drawing store (sequences, completed wires, editing)                                                                              |
 | `src/utils/keyboard-geometry.ts`                  | `getKeyCenter` -- rotation-aware center calculation                                                                              |
 | `src/utils/line-intersection.ts`                  | `findKeysAlongLine` -- line sweep for manual drawing                                                                             |
+| `src/utils/matrix-segment.ts`                     | `computeSegmentKeys` -- resolves a wire segment (sweep or direct) into legal/illegal keys                                        |
 | `src/components/MatrixAnnotationOverlay.vue`      | Canvas overlay that renders wires and handles input                                                                              |
 
 ---
@@ -454,18 +455,37 @@ Manual drawing follows a two-click interaction model:
    -> If clicked on an existing wire segment/node, set up continuation state
 
 2. User moves mouse
-   -> Overlay computes preview: findKeysAlongLine from last key to cursor
+   -> Overlay computes preview via computeSegmentKeys (matrix-segment.ts)
    -> Legal keys shown as gray dashed preview
    -> Illegal keys shown as red dashed preview with X markers
+   -> Holding Shift switches the preview to direct mode (target key only);
+      pressing/releasing Shift refreshes the preview without moving the mouse
 
 3. User left-clicks another key (second click)
-   -> findKeysAlongLine sweeps the line between the two clicked keys
-   -> All legal intermediate keys are auto-collected
+   -> computeSegmentKeys resolves the segment:
+        direct=false -> findKeysAlongLine sweeps and collects intermediate keys
+        direct=true  (Shift held) -> only the clicked key is added
    -> Sequence is completed (completeSequence)
    -> Wire appears as solid blue (row) or green (column) line
 ```
 
 **Cancel drawing**: Right-click or Escape clears the current sequence.
+
+**Direct (point-to-point) mode**: holding <kbd>Shift</kbd> on the second click
+connects the two keys directly, skipping everything the line passes over. The
+preview and the commit path share `computeSegmentKeys`, so which keys the
+segment covers is resolved identically in both. Shift on the _first_ click is a
+no-op (there is no segment to shorten yet), and the resulting two-key sequence
+flows through the same `completeSequence` / `findOptimalInsertion` path as any
+other wire.
+
+**Preview vs commit validation**: the commit path passes an `onAccept` callback
+so keys enter the sequence one at a time and `canAddKeyToSequence` validates
+each candidate against the keys accepted before it in the same segment -- that
+is what rejects a second key which would land on a duplicate matrix position.
+The preview cannot mutate the sequence, so it validates every candidate against
+the sequence as it stands; in that corner case the preview is optimistic and
+shows a key as legal that the commit then drops.
 
 ### 6.3 Line Sweep (`findKeysAlongLine`)
 
@@ -500,6 +520,12 @@ incorrectly collected.
 
 Results are sorted by distance from the start point so they appear in
 traversal order.
+
+The sweep is bypassed entirely when the user holds <kbd>Shift</kbd> — see
+"Direct (point-to-point) mode" above. `computeSegmentKeys` in
+`matrix-segment.ts` is the single entry point used by both the preview and the
+commit paths; it always terminates the segment at the target key, even when the
+sweep misses it (possible at high sensitivity with wide or offset keys).
 
 ### 6.4 Row and Column Number Assignment
 
@@ -544,6 +570,9 @@ The drawing mode toggle includes a "Remove" option. In this mode:
 | Click node (overlap) | No         | Remove key from both its row and column                     |
 | Click segment        | No         | Split the wire at that segment boundary (creates two wires) |
 | Click segment        | Yes        | Remove the entire wire                                      |
+
+<kbd>Shift</kbd> has no effect in remove mode — direct mode only applies while
+drawing rows or columns.
 
 Segment splitting uses `splitRowAtSegment` / `splitColumnAtSegment` in the
 drawing store. These functions:

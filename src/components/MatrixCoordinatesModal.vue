@@ -390,6 +390,10 @@
                   <strong>Draw Rows/Columns Mode</strong>
                   <ul class="small mb-0 ps-3">
                     <li><strong>Left-click</strong> to start and complete segments</li>
+                    <li>
+                      Hold <strong>shift</strong> on the second click to connect directly, skipping
+                      keys in between
+                    </li>
                     <li><strong>Right-click or Escape</strong> to cancel while drawing</li>
                     <li><strong>Click existing wire</strong> to append/continue</li>
                   </ul>

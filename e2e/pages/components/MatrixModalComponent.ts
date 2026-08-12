@@ -113,8 +113,15 @@ export class MatrixModalComponent {
    * @param startCol - Starting column index
    * @param endCol - Ending column index
    * @param rowIndex - Row index (0-based)
+   * @param options.direct - Hold Shift on the second click to connect directly,
+   *                         skipping the keys in between
    */
-  async drawRow(startCol: number, endCol: number, rowIndex: number = 0) {
+  async drawRow(
+    startCol: number,
+    endCol: number,
+    rowIndex: number = 0,
+    options: { direct?: boolean } = {},
+  ) {
     const startX = this.OFFSET + startCol * this.UNIT
     const endX = this.OFFSET + endCol * this.UNIT
     const y = this.OFFSET + rowIndex * this.UNIT
@@ -130,7 +137,10 @@ export class MatrixModalComponent {
     })
 
     // Click end position
-    await this.overlay.click({ position: { x: endX, y } })
+    await this.overlay.click({
+      position: { x: endX, y },
+      modifiers: options.direct ? ['Shift'] : [],
+    })
 
     // Wait for row to be drawn using RAF
     await this.page.evaluate(() => {
@@ -147,8 +157,15 @@ export class MatrixModalComponent {
    * @param startRow - Starting row index
    * @param endRow - Ending row index
    * @param colIndex - Column index (0-based)
+   * @param options.direct - Hold Shift on the second click to connect directly,
+   *                         skipping the keys in between
    */
-  async drawColumn(startRow: number, endRow: number, colIndex: number = 0) {
+  async drawColumn(
+    startRow: number,
+    endRow: number,
+    colIndex: number = 0,
+    options: { direct?: boolean } = {},
+  ) {
     const x = this.OFFSET + colIndex * this.UNIT
     const startY = this.OFFSET + startRow * this.UNIT
     const endY = this.OFFSET + endRow * this.UNIT
@@ -164,7 +181,10 @@ export class MatrixModalComponent {
     })
 
     // Click end position
-    await this.overlay.click({ position: { x, y: endY } })
+    await this.overlay.click({
+      position: { x, y: endY },
+      modifiers: options.direct ? ['Shift'] : [],
+    })
 
     // Wait for column to be drawn using RAF
     await this.page.evaluate(() => {

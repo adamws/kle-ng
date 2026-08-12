@@ -28,6 +28,16 @@ async function exportLayoutJSON(page: import('@playwright/test').Page) {
   return layout
 }
 
+// Helper function to read the key labels of one exported row.
+// Exported rows interleave key labels with property objects (e.g. {"a":0}),
+// so only the string entries are labels.
+function getRowLabels(layout: unknown, rowIndex: number): string[] {
+  const rows = (layout as unknown[]).filter((entry): entry is unknown[] => Array.isArray(entry))
+  const row = rows[rowIndex]
+  if (!row) throw new Error(`Exported layout has no row ${rowIndex}`)
+  return row.filter((entry): entry is string => typeof entry === 'string')
+}
+
 // Helper function to import layout via JSON file
 async function importLayoutJSON(
   page: import('@playwright/test').Page,
@@ -1132,6 +1142,124 @@ test.describe('Matrix Drawing - Interactive Drawing Tests', () => {
     expect(row0Count).toBe(3)
     // Last row should not have a label:
     expect(layoutString).toContain('"w":6},""]')
+  })
+
+  test('should skip intermediate keys when Shift is held on the second click', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
+    // Single row of three keys
+    const fixtureData = [['', '', '']]
+
+    await importLayoutJSON(page, fixtureData, waitHelpers)
+    await editor.expectKeyCount(3)
+
+    await editor.matrix.open()
+    await editor.matrix.expectVisible()
+    await editor.matrix.expectRowModeActive()
+
+    // Shift held on the closing click connects first and last key directly
+    await editor.matrix.drawRow(0, 2, 0, { direct: true })
+
+    const exportedLayout = await exportLayoutJSON(page)
+    const layoutString = JSON.stringify(exportedLayout)
+
+    // Only the two clicked keys should be wired - the middle key is skipped
+    const row0Count = (layoutString.match(/"0,"/g) || []).length
+    expect(row0Count).toBe(2)
+    // Middle key keeps an empty label
+    expect(getRowLabels(exportedLayout, 0)).toEqual(['0,', '', '0,'])
+  })
+
+  test('should still fill gaps when drawing without the modifier', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
+    const fixtureData = [['', '', '']]
+
+    await importLayoutJSON(page, fixtureData, waitHelpers)
+    await editor.expectKeyCount(3)
+
+    await editor.matrix.open()
+    await editor.matrix.expectVisible()
+    await editor.matrix.expectRowModeActive()
+
+    // No modifier - the middle key is collected by the line sweep as before
+    await editor.matrix.drawRow(0, 2, 0)
+
+    const exportedLayout = await exportLayoutJSON(page)
+    const layoutString = JSON.stringify(exportedLayout)
+
+    const row0Count = (layoutString.match(/"0,"/g) || []).length
+    expect(row0Count).toBe(3)
+  })
+
+  test('should ignore the modifier on the first click', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
+    const fixtureData = [['', '', '']]
+
+    await importLayoutJSON(page, fixtureData, waitHelpers)
+    await editor.expectKeyCount(3)
+
+    await editor.matrix.open()
+    await editor.matrix.expectVisible()
+    await editor.matrix.expectRowModeActive()
+
+    const overlay = editor.matrix.getOverlay()
+    await expect(overlay).toBeVisible()
+
+    // Shift on the first click has no segment to shorten - it must be a no-op
+    await overlay.click({ position: { x: 36, y: 36 }, modifiers: ['Shift'] })
+    await waitHelpers.waitForDoubleAnimationFrame()
+
+    // Plain second click - gap filling still applies
+    await overlay.click({ position: { x: 36 + 2 * 54, y: 36 } })
+    await waitHelpers.waitForDoubleAnimationFrame()
+
+    const exportedLayout = await exportLayoutJSON(page)
+    const layoutString = JSON.stringify(exportedLayout)
+
+    const row0Count = (layoutString.match(/"0,"/g) || []).length
+    expect(row0Count).toBe(3)
+  })
+
+  test('should create a direct diagonal connection with Shift', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+
+    // 3x3 grid - the scenario from issue #72
+    const fixtureData = [
+      ['', '', ''],
+      ['', '', ''],
+      ['', '', ''],
+    ]
+
+    await importLayoutJSON(page, fixtureData, waitHelpers)
+    await editor.expectKeyCount(9)
+
+    await editor.matrix.open()
+    await editor.matrix.expectVisible()
+    await editor.matrix.expectRowModeActive()
+
+    const overlay = editor.matrix.getOverlay()
+    await expect(overlay).toBeVisible()
+
+    // Top-left key, then Shift+click the bottom-right key
+    await overlay.click({ position: { x: 36, y: 36 } })
+    await waitHelpers.waitForDoubleAnimationFrame()
+
+    await overlay.click({
+      position: { x: 36 + 2 * 54, y: 36 + 2 * 54 },
+      modifiers: ['Shift'],
+    })
+    await waitHelpers.waitForDoubleAnimationFrame()
+
+    const exportedLayout = await exportLayoutJSON(page)
+    const layoutString = JSON.stringify(exportedLayout)
+
+    // Only the two corners are wired - the center key the line crosses is skipped
+    const row0Count = (layoutString.match(/"0,"/g) || []).length
+    expect(row0Count).toBe(2)
+    // The middle row the diagonal crosses is untouched
+    expect(getRowLabels(exportedLayout, 1)).toEqual(['', '', ''])
   })
 
   test('should renumber rows by typing digits while hovering', async ({ page }) => {
