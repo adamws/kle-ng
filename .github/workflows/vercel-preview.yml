@@ -61,6 +61,14 @@ jobs:
           # than leaking production credentials.
           VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL_PREVIEW }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY_PREVIEW }}
+          # One shared account on the preview project, so signed-in features can be
+          # tried from a preview URL without real GitHub sign-in. This password ends
+          # up readable in the deployed bundle - that is acceptable only because it
+          # unlocks nothing but the preview database. Set unconditionally for the same
+          # reason as above: absent secrets resolve to empty and the shortcut is simply
+          # not offered. See supabase/README.md.
+          VITE_TEST_USER_EMAIL: ${{ secrets.SUPABASE_TEST_USER_EMAIL_PREVIEW }}
+          VITE_TEST_USER_PASSWORD: ${{ secrets.SUPABASE_TEST_USER_PASSWORD_PREVIEW }}
 
       - name: Deploy Preview to Vercel
         id: deploy

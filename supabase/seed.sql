@@ -6,10 +6,11 @@
 --     dev@test.local / password123
 --
 -- The editor signs in as this user with the "Continue as test user" item in the
--- account menu, which appears only in a dev build pointed at a local instance
--- (isTestSignInAvailable() in src/config/supabase.ts).
+-- account menu, which falls back to these credentials in a dev build pointed at a
+-- local instance (getTestUser() in src/config/supabase.ts).
 --
--- This file NEVER runs against production: seeds apply to the local stack only.
+-- This file NEVER runs against a hosted project: seeds apply to the local stack only.
+-- The preview project's shared test user is created by hand — see README.md.
 --
 -- Writing into auth.users directly couples this to GoTrue's schema, which does drift
 -- between versions. If a Supabase upgrade breaks the insert, the fix is to add whatever

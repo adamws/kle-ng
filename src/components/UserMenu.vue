@@ -57,7 +57,8 @@
           </button>
         </li>
 
-        <!-- Dev builds against a local Supabase stack only; compiled out of production -->
+        <!-- Local dev stack, or the shared account on a preview deployment. Never
+             production: getTestUser() refuses that project outright. -->
         <template v-if="auth.canUseTestUser">
           <li><hr class="dropdown-divider" /></li>
           <li>
@@ -69,7 +70,7 @@
               <BiPersonCircle />
               <span>
                 Continue as test user
-                <span class="d-block text-muted small">local development</span>
+                <span class="d-block text-muted small">{{ auth.testUser?.label }}</span>
               </span>
             </button>
           </li>

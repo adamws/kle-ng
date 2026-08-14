@@ -2,12 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Session, SupabaseClient, User } from '@supabase/supabase-js'
 import { toast } from '@/composables/useToast'
-import {
-  AUTH_STORAGE_KEY,
-  LOCAL_TEST_USER,
-  isAuthConfigured,
-  isTestSignInAvailable,
-} from '@/config/supabase'
+import { AUTH_STORAGE_KEY, getTestUser, isAuthConfigured, isLocalSupabase } from '@/config/supabase'
 import { getSupabaseClient } from '@/utils/supabase-loader'
 import {
   captureReturnUrl,
@@ -60,6 +55,13 @@ function toAuthUser(user: User | null | undefined): AuthUser | null {
   }
 }
 
+/** What to do about a test user that the configured project does not have. */
+function missingTestUserHint(): string {
+  return isLocalSupabase()
+    ? 'No local test user found. Run `npm run supabase:reset` to seed it.'
+    : 'The test user does not exist on this Supabase project — create it in the dashboard (see supabase/README.md).'
+}
+
 /** Cheap probe for a persisted session that avoids loading supabase-js. */
 function hasPersistedSession(): boolean {
   try {
@@ -76,7 +78,8 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isConfigured = computed(() => isAuthConfigured())
   const isSignedIn = computed(() => user.value !== null)
-  const canUseTestUser = computed(() => isTestSignInAvailable())
+  const testUser = computed(() => getTestUser())
+  const canUseTestUser = computed(() => testUser.value !== null)
 
   let unsubscribe: (() => void) | null = null
 
@@ -166,33 +169,33 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
-   * Sign in as the account seeded by supabase/seed.sql. Dev builds against a local
-   * instance only — see isTestSignInAvailable(). Unlike the OAuth path this does not
-   * navigate away, so the session is applied here and the subscription established.
+   * Sign in as the shared test account — seeded locally, or the preview project's
+   * account on a preview deployment. Never available in production; see
+   * getTestUser(). Unlike the OAuth path this does not navigate away, so the session
+   * is applied here and the subscription established.
    */
   const signInAsTestUser = async (): Promise<void> => {
-    if (!canUseTestUser.value || busy.value) return
+    const credentials = testUser.value
+    if (!credentials || busy.value) return
 
     busy.value = true
     try {
       const supabase = await getSupabaseClient()
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: LOCAL_TEST_USER.email,
-        password: LOCAL_TEST_USER.password,
+        email: credentials.email,
+        password: credentials.password,
       })
       if (error) throw error
 
       subscribe(supabase)
       applySession(data.session)
-      toast.showSuccess(`Signed in as ${LOCAL_TEST_USER.email}`, 'Local Development')
+      toast.showSuccess(`Signed in as ${credentials.email}`, 'Test User')
     } catch (error) {
       console.error('Error signing in as test user:', error)
       const message = error instanceof Error ? error.message : 'Could not sign in'
       toast.showError(
-        // Almost always means the seed has not run against this instance.
-        /invalid login credentials/i.test(message)
-          ? 'No local test user found. Run `npm run supabase:reset` to seed it.'
-          : message,
+        // Almost always means the account does not exist on this instance.
+        /invalid login credentials/i.test(message) ? missingTestUserHint() : message,
         'Sign-in Failed',
       )
     } finally {
@@ -248,6 +251,7 @@ export const useAuthStore = defineStore('auth', () => {
     initialized,
     isConfigured,
     isSignedIn,
+    testUser,
     canUseTestUser,
     initialize,
     signIn,

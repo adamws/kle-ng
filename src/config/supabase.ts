@@ -59,33 +59,90 @@ export function isAuthConfigured(): boolean {
  * Credentials of the account created by supabase/seed.sql on the local stack.
  * Deliberately not a secret — the local instance is disposable and unreachable
  * from anywhere else.
+ *
+ * Not exported: `getTestUser()` is the only way in, so callers cannot use these
+ * without passing the gating below. `.env.local` is gitignored, so this stays
+ * hardcoded to keep a fresh checkout working with no setup.
  */
-export const LOCAL_TEST_USER = {
+const LOCAL_TEST_USER = {
   email: 'dev@test.local',
   password: 'password123',
 } as const
 
-/** True when the configured project is a local Supabase stack. */
-export function isLocalSupabase(): boolean {
+/**
+ * Host of the production project (see VITE_SUPABASE_URL in .env.production).
+ *
+ * Named here only so the test-user shortcut can refuse it outright: production is
+ * the one database where a shared, publicly-readable password must never work,
+ * whatever a build happens to inject. Keep in sync with .env.production.
+ */
+const PRODUCTION_SUPABASE_HOST = 'cdcvedgnkamejhhowach.supabase.co'
+
+/** Hostname of the configured project, or null when unconfigured/unparseable. */
+function supabaseHostname(): string | null {
   const config = getSupabaseConfig()
-  if (!config) return false
+  if (!config) return null
   try {
-    const { hostname } = new URL(config.url)
-    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]'
+    return new URL(config.url).hostname
   } catch {
-    return false
+    return null
   }
 }
 
+/** True when the configured project is a local Supabase stack. */
+export function isLocalSupabase(): boolean {
+  const hostname = supabaseHostname()
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]'
+}
+
+/** A password account the editor may sign into without an OAuth round trip. */
+export interface TestUserCredentials {
+  email: string
+  password: string
+  /** Sub-label shown under the menu item, e.g. 'local development'. */
+  label: string
+}
+
 /**
- * Whether the "continue as test user" shortcut may be offered.
+ * Credentials for the "continue as test user" shortcut, or null when it must not
+ * be offered.
  *
- * Requires BOTH a dev build and a local instance. `import.meta.env.DEV` is compiled
- * away in production, so the shortcut and its credentials cannot reach a shipped
- * bundle even if someone builds with a localhost URL configured.
+ * Two ways to get one, and production can have neither:
+ *
+ *   preview  VITE_TEST_USER_EMAIL / VITE_TEST_USER_PASSWORD, injected at build time
+ *            by .github/workflows/vercel-preview.yml. One shared account on the
+ *            preview project, so signed-in features are reachable from a preview
+ *            URL without real GitHub sign-in. The password is compiled into that
+ *            bundle and therefore public — which is why it is scoped to a database
+ *            that holds nothing but throwaway data.
+ *   local    the account seeded by supabase/seed.sql, in a dev build only.
+ *
+ * The production host is refused first and unconditionally. Everything else here
+ * depends on build-time environment, and the one mistake worth being immune to is
+ * a shared password reaching real users' data.
  */
+export function getTestUser(): TestUserCredentials | null {
+  const hostname = supabaseHostname()
+  if (!hostname || hostname === PRODUCTION_SUPABASE_HOST) return null
+
+  const email = import.meta.env.VITE_TEST_USER_EMAIL
+  const password = import.meta.env.VITE_TEST_USER_PASSWORD
+  if (email && password) {
+    return { email, password, label: 'shared preview account' }
+  }
+
+  // `import.meta.env.DEV` is compiled away in production, so the seeded credentials
+  // cannot reach a shipped bundle even if someone builds with a localhost URL.
+  if (import.meta.env.DEV && isLocalSupabase()) {
+    return { ...LOCAL_TEST_USER, label: 'local development' }
+  }
+
+  return null
+}
+
+/** Whether the "continue as test user" shortcut may be offered. */
 export function isTestSignInAvailable(): boolean {
-  return import.meta.env.DEV && isLocalSupabase()
+  return getTestUser() !== null
 }
 
 /** Test seam: forget the memoised config so stubbed env vars are re-read. */

@@ -1,9 +1,16 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 
+const TEST_USER = {
+  email: 'dev@test.local',
+  password: 'password123',
+  label: 'local development',
+}
+
 const mocks = vi.hoisted(() => ({
   isAuthConfigured: vi.fn(() => true),
-  isTestSignInAvailable: vi.fn(() => false),
+  getTestUser: vi.fn<() => { email: string; password: string; label: string } | null>(() => null),
+  isLocalSupabase: vi.fn(() => true),
   getSupabaseClient: vi.fn(),
   showError: vi.fn(),
   showSuccess: vi.fn(),
@@ -12,9 +19,9 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/config/supabase', () => ({
   AUTH_STORAGE_KEY: 'kle-ng-auth',
-  LOCAL_TEST_USER: { email: 'dev@test.local', password: 'password123' },
   isAuthConfigured: mocks.isAuthConfigured,
-  isTestSignInAvailable: mocks.isTestSignInAvailable,
+  getTestUser: mocks.getTestUser,
+  isLocalSupabase: mocks.isLocalSupabase,
 }))
 
 vi.mock('@/utils/supabase-loader', () => ({
@@ -57,6 +64,8 @@ describe('auth store', () => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
     mocks.isAuthConfigured.mockReturnValue(true)
+    mocks.getTestUser.mockReturnValue(null)
+    mocks.isLocalSupabase.mockReturnValue(true)
     localStorage.clear()
     window.history.replaceState({}, '', '/')
   })
@@ -214,8 +223,18 @@ describe('auth store', () => {
   })
 
   describe('signInAsTestUser', () => {
-    it('is unavailable unless a dev build points at a local instance', async () => {
-      mocks.isTestSignInAvailable.mockReturnValue(false)
+    /** Rejects the sign-in the way Supabase does when the account is absent */
+    const clientWithoutTestUser = () => {
+      const client = fakeClient()
+      client.auth.signInWithPassword = vi.fn().mockResolvedValue({
+        data: { session: null },
+        error: new Error('Invalid login credentials'),
+      })
+      return client
+    }
+
+    it('is unavailable when no test user is configured', async () => {
+      mocks.getTestUser.mockReturnValue(null)
       mocks.getSupabaseClient.mockResolvedValue(fakeClient())
       const auth = useAuthStore()
 
@@ -226,12 +245,13 @@ describe('auth store', () => {
       expect(mocks.getSupabaseClient).not.toHaveBeenCalled()
     })
 
-    it('signs in with the seeded credentials and applies the session', async () => {
-      mocks.isTestSignInAvailable.mockReturnValue(true)
+    it('signs in with the configured credentials and applies the session', async () => {
+      mocks.getTestUser.mockReturnValue(TEST_USER)
       const client = fakeClient({ user: GITHUB_USER })
       mocks.getSupabaseClient.mockResolvedValue(client)
       const auth = useAuthStore()
 
+      expect(auth.canUseTestUser).toBe(true)
       await auth.signInAsTestUser()
 
       expect(client.auth.signInWithPassword).toHaveBeenCalledWith({
@@ -244,16 +264,29 @@ describe('auth store', () => {
       expect(client.auth.onAuthStateChange).toHaveBeenCalled()
     })
 
-    it('points at the seed command when the test user is missing', async () => {
-      mocks.isTestSignInAvailable.mockReturnValue(true)
-      const client = fakeClient()
-      client.auth.signInWithPassword = vi
-        .fn()
-        .mockResolvedValue({
-          data: { session: null },
-          error: new Error('Invalid login credentials'),
-        })
+    it('uses whichever credentials are configured, such as a preview deployment’s', async () => {
+      mocks.getTestUser.mockReturnValue({
+        email: 'preview@example.com',
+        password: 'preview-secret',
+        label: 'shared preview account',
+      })
+      const client = fakeClient({ user: GITHUB_USER })
       mocks.getSupabaseClient.mockResolvedValue(client)
+      const auth = useAuthStore()
+
+      await auth.signInAsTestUser()
+
+      expect(client.auth.signInWithPassword).toHaveBeenCalledWith({
+        email: 'preview@example.com',
+        password: 'preview-secret',
+      })
+      expect(auth.isSignedIn).toBe(true)
+    })
+
+    it('points at the seed command when the local test user is missing', async () => {
+      mocks.getTestUser.mockReturnValue(TEST_USER)
+      mocks.isLocalSupabase.mockReturnValue(true)
+      mocks.getSupabaseClient.mockResolvedValue(clientWithoutTestUser())
       const auth = useAuthStore()
 
       await auth.signInAsTestUser()
@@ -263,6 +296,20 @@ describe('auth store', () => {
         'Sign-in Failed',
       )
       expect(auth.busy).toBe(false)
+    })
+
+    it('points at the dashboard when a hosted test user is missing', async () => {
+      mocks.getTestUser.mockReturnValue(TEST_USER)
+      mocks.isLocalSupabase.mockReturnValue(false)
+      mocks.getSupabaseClient.mockResolvedValue(clientWithoutTestUser())
+      const auth = useAuthStore()
+
+      await auth.signInAsTestUser()
+
+      expect(mocks.showError).toHaveBeenCalledWith(
+        expect.stringContaining('does not exist on this Supabase project'),
+        'Sign-in Failed',
+      )
     })
   })
 
