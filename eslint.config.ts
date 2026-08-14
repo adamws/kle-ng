@@ -16,7 +16,16 @@ export default defineConfigWithVueTs(
     files: ['**/*.{ts,mts,tsx,vue}'],
   },
 
-  globalIgnores(['**/dist/**', '**/dist-ssr/**', '**/coverage/**', 'docs/.vitepress/cache/**']),
+  globalIgnores([
+    '**/dist/**',
+    '**/dist-ssr/**',
+    '**/coverage/**',
+    'docs/.vitepress/cache/**',
+    // Working files written by the Supabase CLI on `supabase start`. Bundled
+    // third-party TypeScript, not ours to lint.
+    'supabase/.temp/**',
+    'supabase/.branches/**',
+  ]),
 
   pluginVue.configs['flat/essential'],
   vueTsConfigs.recommended,

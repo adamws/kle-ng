@@ -176,6 +176,19 @@
           </ul>
         </div>
 
+        <!-- Only shown to signed-in users; accounts are optional and off by default -->
+        <button
+          v-if="authStore.isSignedIn"
+          class="btn btn-outline-secondary"
+          data-testid="my-layouts"
+          type="button"
+          title="Your saved layouts"
+          @click="showMyLayoutsModal = true"
+        >
+          <BiCollection class="bi" aria-hidden="true" />
+          <span class="d-none d-lg-inline ms-1" style="white-space: nowrap">My Layouts</span>
+        </button>
+
         <button
           class="btn btn-primary"
           @click="shareLayout"
@@ -201,6 +214,7 @@
     <UrlImportModal :is-visible="showUrlImportModal" @close="showUrlImportModal = false" />
     <QmkImportModal :is-visible="showQmkImportModal" @close="showQmkImportModal = false" />
     <ViaImportModal :is-visible="showViaImportModal" @close="showViaImportModal = false" />
+    <MyLayoutsModal :is-visible="showMyLayoutsModal" @close="showMyLayoutsModal = false" />
   </div>
 </template>
 
@@ -214,10 +228,14 @@ import { useKeyboardImport } from '@/composables/useKeyboardImport'
 import UrlImportModal from './UrlImportModal.vue'
 import QmkImportModal from './QmkImportModal.vue'
 import ViaImportModal from './ViaImportModal.vue'
+import MyLayoutsModal from './MyLayoutsModal.vue'
+import { useAuthStore } from '@/stores/auth'
 
 import BiBoxArrowUpRight from 'bootstrap-icons/icons/box-arrow-up-right.svg'
+import BiCollection from 'bootstrap-icons/icons/collection.svg'
 
 const keyboardStore = useKeyboardStore()
+const authStore = useAuthStore()
 
 // Preset state
 const selectedPreset = ref('')
@@ -282,6 +300,7 @@ const { triggerFileUpload, handleFileUpload } = useKeyboardImport(fileInput)
 // Modal visibility
 const showUrlImportModal = ref(false)
 const showQmkImportModal = ref(false)
+const showMyLayoutsModal = ref(false)
 const showViaImportModal = ref(false)
 
 // Share

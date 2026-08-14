@@ -19,8 +19,11 @@ import PlateHelpModal from './components/PlateHelpModal.vue'
 import PcbSettingsModal from './components/PcbSettingsModal.vue'
 import ToastContainer from './components/ToastContainer.vue'
 import ThemeToggle from './components/ThemeToggle.vue'
+import UserMenu from './components/UserMenu.vue'
 import GitHubStarPopup from './components/GitHubStarPopup.vue'
 import { useKeyboardStore } from '@/stores/keyboard'
+import { useAuthStore } from '@/stores/auth'
+import { useLayoutsStore } from '@/stores/layouts'
 import { useTheme } from '@/composables/useTheme'
 import { preloadErgogenModule } from '@/utils/ergogen-loader'
 
@@ -34,6 +37,17 @@ import BiQuestionCircle from 'bootstrap-icons/icons/question-circle.svg'
 const canvasRef = ref<InstanceType<typeof KeyboardCanvas>>()
 
 const keyboardStore = useKeyboardStore()
+const authStore = useAuthStore()
+const layoutsStore = useLayoutsStore()
+
+// Drop cached rows the moment the session ends, so a second sign-in on the same device
+// never starts with the previous user's list on screen.
+watch(
+  () => authStore.isSignedIn,
+  (signedIn) => {
+    if (!signedIn) layoutsStore.reset()
+  },
+)
 
 // Check if running in production mode (hide debug features)
 const isProduction = import.meta.env.PROD
@@ -83,6 +97,10 @@ const collapsedSections = ref<Record<string, boolean>>({
 })
 
 onMounted(() => {
+  // Restores an existing session and completes any OAuth callback. Returns without
+  // loading supabase-js when accounts are unconfigured or nobody is signed in.
+  authStore.initialize().catch((error) => console.error('Auth initialization failed:', error))
+
   const savedOrder = localStorage.getItem('kle-ng-section-order')
   if (savedOrder) {
     try {
@@ -385,6 +403,7 @@ const isLayoutEditorSettingsOpen = ref(false)
             </div>
             <!-- Theme toggle grouped with toolbar buttons on small screens -->
             <ThemeToggle />
+            <UserMenu />
           </nav>
         </div>
       </div>

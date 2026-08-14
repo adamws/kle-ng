@@ -51,6 +51,16 @@ jobs:
         run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
         env:
           VITE_BACKEND_URL: https://kicad.vps.keyboard-tools.xyz
+          # Previews get their own Supabase project, never production's.
+          #
+          # Set unconditionally, and deliberately so: `vercel build` runs in production
+          # mode and would otherwise read VITE_SUPABASE_* straight out of
+          # .env.production, pointing every preview at the live database. Process env
+          # beats .env files in Vite, so these always win - and when the secrets are
+          # absent (fork PRs) they resolve to empty, which disables accounts rather
+          # than leaking production credentials.
+          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL_PREVIEW }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY_PREVIEW }}
 
       - name: Deploy Preview to Vercel
         id: deploy
