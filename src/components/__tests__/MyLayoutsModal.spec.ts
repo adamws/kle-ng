@@ -149,13 +149,37 @@ describe('MyLayoutsModal', () => {
       expect(save).not.toHaveBeenCalled()
       expect(overwrite).not.toHaveBeenCalled()
       expect(wrapper.find('[data-testid="confirm-action"]').text()).toBe('Update')
-      expect(wrapper.text()).toContain('Update "two" with the editor contents?')
+      expect(wrapper.find('[data-testid="confirm-message"]').text()).toBe(
+        'Replace with the editor contents?',
+      )
 
       await wrapper.find('[data-testid="confirm-action"]').trigger('click')
       await wrapper.vm.$nextTick()
 
       expect(overwrite).toHaveBeenCalledWith('two', expect.any(String))
       expect(save).not.toHaveBeenCalled()
+    })
+
+    // The prompt used to sit among the buttons, the one column that cannot shrink. A
+    // flex item's automatic minimum size is its content width, so quoting a long name
+    // made it spill out of the row and crush the name column. It belongs in the info
+    // column, which can shrink — and the row already names the layout.
+    it('puts the confirmation prompt in the name column, not among the buttons', async () => {
+      const longName = 'My 65% split ergo with thumb cluster v3'
+      const { wrapper } = mountModal([makeLayout(longName)])
+      await setName(wrapper, longName)
+      await wrapper.find('[data-testid="save-layout"]').trigger('click')
+
+      const message = wrapper.find('[data-testid="confirm-message"]')
+      expect(message.exists()).toBe(true)
+      expect(message.element.closest('.layout-item-info')).not.toBeNull()
+      expect(message.element.closest('.layout-item-actions')).toBeNull()
+      expect(message.classes()).toContain('text-truncate')
+      expect(message.text()).not.toContain(longName)
+
+      // …leaving the actions column holding nothing but the two buttons
+      const actions = wrapper.find('.layout-item-actions')
+      expect(actions.findAll('button').map((b) => b.text())).toEqual(['Update', 'Cancel'])
     })
 
     it('matches names case-insensitively and ignoring surrounding space', async () => {

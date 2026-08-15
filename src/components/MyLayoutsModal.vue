@@ -101,85 +101,101 @@
                 </template>
                 <template v-else>
                   <div class="fw-medium text-truncate" :title="layout.name">{{ layout.name }}</div>
-                  <div class="text-muted small">{{ describe(layout) }}</div>
+                  <!--
+                    A pending question takes the description's line rather than sitting
+                    among the buttons. It is the widest column, so a sentence fits
+                    without being truncated, and the row keeps both its height and its
+                    column widths. It also means the question does not have to name the
+                    layout — the name is directly above it.
+                  -->
+                  <div
+                    v-if="pending?.id === layout.id"
+                    class="small fw-medium text-truncate"
+                    :class="pending?.danger ? 'text-danger' : 'text-body-emphasis'"
+                    data-testid="confirm-message"
+                  >
+                    {{ pending?.message }}
+                  </div>
+                  <div v-else class="text-muted small text-truncate">{{ describe(layout) }}</div>
                 </template>
               </div>
 
-              <!-- Pending confirmation replaces the actions for this row -->
-              <div v-if="pending?.id === layout.id" class="layout-item-actions confirm">
-                <span class="small text-truncate me-1">{{ pending.message }}</span>
-                <button
-                  type="button"
-                  class="btn btn-sm"
-                  :class="pending.danger ? 'btn-danger' : 'btn-primary'"
-                  data-testid="confirm-action"
-                  :disabled="store.busy"
-                  @click="runPending"
-                >
-                  {{ pending.confirmLabel }}
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-sm btn-outline-secondary"
-                  data-testid="cancel-action"
-                  @click="pending = null"
-                >
-                  Cancel
-                </button>
-              </div>
+              <div class="layout-item-actions">
+                <!-- Pending confirmation replaces the actions for this row -->
+                <template v-if="pending?.id === layout.id">
+                  <button
+                    type="button"
+                    class="btn btn-sm"
+                    :class="pending?.danger ? 'btn-danger' : 'btn-primary'"
+                    data-testid="confirm-action"
+                    :disabled="store.busy"
+                    @click="runPending"
+                  >
+                    {{ pending?.confirmLabel }}
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-secondary"
+                    data-testid="cancel-action"
+                    @click="pending = null"
+                  >
+                    Cancel
+                  </button>
+                </template>
 
-              <div v-else-if="renamingId === layout.id" class="layout-item-actions">
-                <button
-                  type="button"
-                  class="btn btn-sm btn-primary d-flex align-items-center justify-content-center"
-                  data-testid="rename-confirm"
-                  :disabled="store.busy || !renameValue.trim()"
-                  @click="commitRename(layout.id)"
-                >
-                  <BiCheckLg aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center"
-                  data-testid="rename-cancel"
-                  @click="cancelRename"
-                >
-                  <BiXLg aria-hidden="true" />
-                </button>
-              </div>
+                <template v-else-if="renamingId === layout.id">
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-primary d-flex align-items-center justify-content-center"
+                    data-testid="rename-confirm"
+                    :disabled="store.busy || !renameValue.trim()"
+                    @click="commitRename(layout.id)"
+                  >
+                    <BiCheckLg aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center"
+                    data-testid="rename-cancel"
+                    @click="cancelRename"
+                  >
+                    <BiXLg aria-hidden="true" />
+                  </button>
+                </template>
 
-              <div v-else class="layout-item-actions">
-                <button
-                  type="button"
-                  class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center"
-                  data-testid="load-layout"
-                  :disabled="store.busy || !decoded(layout)"
-                  title="Load into the editor"
-                  @click="requestLoad(layout)"
-                >
-                  <BiBoxArrowInRight aria-hidden="true" />
-                  <span class="d-none d-sm-inline ms-1">Load</span>
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center"
-                  data-testid="rename-layout"
-                  :disabled="store.busy"
-                  title="Rename"
-                  @click="startRename(layout)"
-                >
-                  <BiPencil aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-sm btn-outline-danger d-flex align-items-center justify-content-center"
-                  data-testid="delete-layout"
-                  :disabled="store.busy"
-                  title="Delete"
-                  @click="requestDelete(layout)"
-                >
-                  <BiTrash aria-hidden="true" />
-                </button>
+                <template v-else>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center"
+                    data-testid="load-layout"
+                    :disabled="store.busy || !decoded(layout)"
+                    title="Load into the editor"
+                    @click="requestLoad(layout)"
+                  >
+                    <BiBoxArrowInRight aria-hidden="true" />
+                    <span class="d-none d-sm-inline ms-1">Load</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center"
+                    data-testid="rename-layout"
+                    :disabled="store.busy"
+                    title="Rename"
+                    @click="startRename(layout)"
+                  >
+                    <BiPencil aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-danger d-flex align-items-center justify-content-center"
+                    data-testid="delete-layout"
+                    :disabled="store.busy"
+                    title="Delete"
+                    @click="requestDelete(layout)"
+                  >
+                    <BiTrash aria-hidden="true" />
+                  </button>
+                </template>
               </div>
             </li>
           </ul>
@@ -314,12 +330,13 @@ const defaultName = () =>
 const saveCurrent = async () => {
   if (!canSave.value) return
 
-  // Confirm in the row being replaced, so it is obvious which layout is about to change.
+  // Confirm in the row being replaced, so it is obvious which layout is about to
+  // change. The row names it, so the question does not repeat the name.
   const existing = existingByName.value
   if (existing) {
     pending.value = {
       id: existing.id,
-      message: `Update "${existing.name}" with the editor contents?`,
+      message: 'Replace with the editor contents?',
       confirmLabel: 'Update',
       danger: false,
       run: async () => {
@@ -369,7 +386,9 @@ const requestLoad = (layout: SavedLayout) => {
     pending.value = {
       id: layout.id,
       message: 'Discard unsaved changes?',
-      confirmLabel: 'Load anyway',
+      // Named for the action, like the other two, so the button pair stays about the
+      // same width whichever confirmation is open.
+      confirmLabel: 'Load',
       danger: false,
       run: async () => applyLayout(layout),
     }
@@ -381,7 +400,7 @@ const requestLoad = (layout: SavedLayout) => {
 const requestDelete = (layout: SavedLayout) => {
   pending.value = {
     id: layout.id,
-    message: `Delete "${layout.name}"?`,
+    message: 'Delete this layout permanently?',
     confirmLabel: 'Delete',
     danger: true,
     run: async () => {
@@ -545,9 +564,13 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.layout-item-actions.confirm {
-  max-width: 60%;
-}
+/*
+ * The buttons never shrink, so anything long has to live in .layout-item-info, which
+ * can (it is `flex: 1 1 auto; min-width: 0`). A flex item's automatic minimum size is
+ * its content width, so a sentence placed in here instead would refuse to shrink and
+ * spill out of the row — no `max-width` on this container can reach inside it to stop
+ * that, which is exactly what the confirmation prompt used to do.
+ */
 
 @media (max-width: 575.98px) {
   .layout-item-thumb {
