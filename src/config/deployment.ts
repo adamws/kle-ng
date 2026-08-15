@@ -5,6 +5,8 @@
 // resolves to 'production' and behaves exactly as it did before these variables existed.
 
 export const GITHUB_REPO_URL = 'https://github.com/adamws/kle-ng'
+// Where to send someone who landed on a preview build but wants the real thing
+export const PRODUCTION_URL = 'https://editor.keyboard-tools.xyz'
 
 export type DeploymentEnv = 'local' | 'preview' | 'production'
 
@@ -14,6 +16,8 @@ export const deploymentEnv: DeploymentEnv =
     : import.meta.env.DEV
       ? 'local'
       : 'production'
+
+export const isPreviewDeployment = deploymentEnv === 'preview'
 
 // Word for the header stamp and the tab title prefix; null on production, which stays unmarked.
 export const deploymentLabel: string | null = deploymentEnv === 'production' ? null : deploymentEnv

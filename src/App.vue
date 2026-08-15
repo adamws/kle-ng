@@ -25,7 +25,7 @@ import { useKeyboardStore } from '@/stores/keyboard'
 import { useAuthStore } from '@/stores/auth'
 import { useLayoutsStore } from '@/stores/layouts'
 import { useTheme } from '@/composables/useTheme'
-import { deploymentLabel } from '@/config/deployment'
+import { PRODUCTION_URL, deploymentLabel, isPreviewDeployment } from '@/config/deployment'
 import { preloadErgogenModule } from '@/utils/ergogen-loader'
 
 import BiChevronDown from 'bootstrap-icons/icons/chevron-down.svg'
@@ -413,6 +413,13 @@ const isLayoutEditorSettingsOpen = ref(false)
       </div>
     </header>
 
+    <!-- Preview deployments only: unreleased build, may be broken -->
+    <div v-if="isPreviewDeployment" class="preview-banner border-bottom px-3 py-2 text-center">
+      This is a <strong>preview</strong> build from an unreleased commit &mdash; features may be
+      incomplete or broken. For the stable editor go to
+      <a :href="PRODUCTION_URL">editor.keyboard-tools.xyz</a>.
+    </div>
+
     <!-- Main Container -->
     <main class="flex-grow-1" role="main" aria-label="Keyboard layout editor workspace">
       <!-- Dynamic Reorderable Sections -->
@@ -692,6 +699,20 @@ const isLayoutEditorSettingsOpen = ref(false)
   .navbar-brand[data-deployment] {
     padding-right: 4.75rem;
   }
+}
+
+/* Warning strip under the header on preview deployments */
+.preview-banner {
+  background-color: var(--bs-warning-bg-subtle);
+  border-color: var(--bs-warning-border-subtle) !important;
+  color: var(--bs-warning-text-emphasis);
+  font-size: 0.875rem;
+}
+
+.preview-banner a {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
 }
 
 .canvas-area {
