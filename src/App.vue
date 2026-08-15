@@ -25,6 +25,7 @@ import { useKeyboardStore } from '@/stores/keyboard'
 import { useAuthStore } from '@/stores/auth'
 import { useLayoutsStore } from '@/stores/layouts'
 import { useTheme } from '@/composables/useTheme'
+import { deploymentLabel } from '@/config/deployment'
 import { preloadErgogenModule } from '@/utils/ergogen-loader'
 
 import BiChevronDown from 'bootstrap-icons/icons/chevron-down.svg'
@@ -390,7 +391,10 @@ const isLayoutEditorSettingsOpen = ref(false)
         <div
           class="w-100 d-flex flex-column flex-md-row align-items-stretch align-items-md-center gap-2"
         >
-          <h1 class="navbar-brand mb-0 flex-shrink-0 text-center text-md-start">
+          <h1
+            class="navbar-brand mb-0 flex-shrink-0 text-center text-md-start"
+            :data-deployment="deploymentLabel"
+          >
             <strong>Keyboard Layout Editor NG</strong>
           </h1>
           <!-- On small screens: toolbar and theme toggle in same row -->
@@ -645,6 +649,49 @@ const isLayoutEditorSettingsOpen = ref(false)
 
 .navbar-brand {
   color: var(--bs-primary) !important;
+}
+
+/* Non-production builds get a stamp across the title (see src/config/deployment.ts).
+   Drawn as a pseudo-element so the heading's text content stays untouched. */
+.navbar-brand[data-deployment] {
+  position: relative;
+}
+
+.navbar-brand[data-deployment]::after {
+  content: attr(data-deployment);
+  position: absolute;
+  top: 50%;
+  right: 0.25rem;
+  transform: translateY(-50%) rotate(-12deg);
+  padding: 0.1em 0.4em;
+  border: 0.15em solid currentColor;
+  border-radius: 0.2em;
+  font-size: 0.8em;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1.1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.navbar-brand[data-deployment='preview']::after {
+  color: var(--bs-danger);
+}
+
+.navbar-brand[data-deployment='local']::after {
+  color: var(--bs-secondary-color);
+}
+
+/* From md up the header is a single row and the heading shrinks to its text, so reserve
+   room for the stamp: without it the stamp would either cover the title or land on the
+   toolbar controls that sit right next to it on narrower desktops. Below md the heading
+   spans the full row and already has room to spare. */
+@media (min-width: 768px) {
+  .navbar-brand[data-deployment] {
+    padding-right: 4.75rem;
+  }
 }
 
 .canvas-area {

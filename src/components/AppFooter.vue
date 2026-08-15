@@ -4,14 +4,14 @@
       <div class="row">
         <div class="col-md-6">
           <div>
-            <strong>Keyboard Layout Editor NG</strong>
+            <strong>Keyboard Layout Editor NG</strong>{{ ' ' }}
             <a
-              :href="githubReleaseUrl"
+              :href="versionUrl"
               target="_blank"
               class="text-decoration-none"
-              :title="`View release v${version} on GitHub`"
+              :title="versionTitle"
             >
-              v{{ version }}
+              {{ versionText }}
             </a>
           </div>
           Successor of
@@ -51,14 +51,20 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import packageJson from '../../package.json'
+import { GITHUB_REPO_URL, commitUrl, shortSha } from '@/config/deployment'
 
 // Get version from package.json
 const version = packageJson.version
 
-// Generate GitHub release URL
-const githubReleaseUrl = computed(() => {
-  return `https://github.com/adamws/kle-ng/releases/tag/v${version}`
-})
+// Preview builds point at the exact commit they were built from, everything else at the
+// release matching package.json (see src/config/deployment.ts)
+const versionUrl = computed(() => commitUrl ?? `${GITHUB_REPO_URL}/releases/tag/v${version}`)
+
+const versionText = computed(() => (commitUrl ? `v${version} (${shortSha})` : `v${version}`))
+
+const versionTitle = computed(() =>
+  commitUrl ? `View commit ${shortSha} on GitHub` : `View release v${version} on GitHub`,
+)
 </script>
 
 <style scoped>

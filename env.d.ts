@@ -18,5 +18,12 @@ declare global {
      */
     readonly VITE_TEST_USER_EMAIL?: string
     readonly VITE_TEST_USER_PASSWORD?: string
+    /**
+     * Set to 'preview' by the preview workflow only (see src/config/deployment.ts). Marks
+     * the bundle with a header stamp and a tab title prefix; unset means production.
+     */
+    readonly VITE_DEPLOY_ENV?: string
+    /** Commit the bundle was built from; makes the footer version link to that commit. */
+    readonly VITE_GIT_COMMIT_SHA?: string
   }
 }

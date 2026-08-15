@@ -69,6 +69,13 @@ jobs:
           # not offered. See supabase/README.md.
           VITE_TEST_USER_EMAIL: ${{ secrets.SUPABASE_TEST_USER_EMAIL_PREVIEW }}
           VITE_TEST_USER_PASSWORD: ${{ secrets.SUPABASE_TEST_USER_PASSWORD_PREVIEW }}
+          # Marks the bundle as a preview build: stamps the header title and makes the
+          # footer version link to the commit it was built from. Never set for the
+          # GitHub Pages production build, which keeps linking to the release tag.
+          VITE_DEPLOY_ENV: preview
+          # The commit actually checked out above: the PR head for pull_request_target
+          # (where github.sha is the merge commit), the pushed commit for develop.
+          VITE_GIT_COMMIT_SHA: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.sha || github.sha }}
 
       - name: Deploy Preview to Vercel
         id: deploy

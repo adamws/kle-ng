@@ -6,12 +6,18 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 
 import App from './App.vue'
+import { deploymentLabel } from './config/deployment'
 import { restoreReturnUrl } from './utils/auth-return-url'
 
 // Put back the URL fragment that an OAuth redirect dropped, before anything reads the
 // location. The keyboard store picks up #share= / #url= / #gist= during its normal
 // startup, so it needs no knowledge of auth. No-op unless this is an OAuth callback.
 restoreReturnUrl()
+
+// Make non-production instances recognizable in the tab strip; production stays untouched.
+if (deploymentLabel) {
+  document.title = `[${deploymentLabel}] ${document.title}`
+}
 
 const app = createApp(App)
 const pinia = createPinia()
