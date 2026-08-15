@@ -15,7 +15,7 @@ vi.mock('@/utils/supabase-loader', () => ({
   getSupabaseClient: mocks.getSupabaseClient,
 }))
 
-import { useLayoutsStore } from '../layouts'
+import { MAX_PAYLOAD_LENGTH, useLayoutsStore } from '../layouts'
 
 const ROW_A = {
   id: 'id-a',
@@ -203,6 +203,31 @@ describe('layouts store', () => {
 
       expect(store.busy).toBe(false)
     })
+
+    // The DB constraint is the real limit; this only saves the user a round trip.
+    it('rejects an oversized payload without contacting the database', async () => {
+      const client = fakeClient({ insert: { data: ROW_A, error: null } })
+      mocks.getSupabaseClient.mockResolvedValue(client)
+      const store = useLayoutsStore()
+
+      const saved = await store.save('Huge', 'x'.repeat(MAX_PAYLOAD_LENGTH + 1))
+
+      expect(saved).toBeNull()
+      // Same wording the layouts_payload_length constraint would have produced
+      expect(store.errorMessage).toBe('This layout is too large to save.')
+      expect(mocks.getSupabaseClient).not.toHaveBeenCalled()
+      expect(client.calls.insert).toEqual([])
+      expect(store.busy).toBe(false)
+    })
+
+    it('accepts a payload exactly at the limit', async () => {
+      const client = fakeClient({ insert: { data: ROW_A, error: null } })
+      mocks.getSupabaseClient.mockResolvedValue(client)
+      const store = useLayoutsStore()
+
+      expect(await store.save('Alpha', 'x'.repeat(MAX_PAYLOAD_LENGTH))).not.toBeNull()
+      expect(client.calls.insert).toHaveLength(1)
+    })
   })
 
   describe('overwrite and rename', () => {
@@ -233,6 +258,20 @@ describe('layouts store', () => {
       await store.rename('id-a', '  Renamed  ')
 
       expect(client.calls.update).toEqual([{ name: 'Renamed' }])
+    })
+
+    it('rejects an oversized overwrite without contacting the database', async () => {
+      const client = fakeClient({ update: { data: ROW_A, error: null } })
+      mocks.getSupabaseClient.mockResolvedValue(client)
+      const store = useLayoutsStore()
+
+      const result = await store.overwrite('id-a', 'x'.repeat(MAX_PAYLOAD_LENGTH + 1))
+
+      expect(result).toBeNull()
+      expect(store.errorMessage).toBe('This layout is too large to save.')
+      expect(mocks.getSupabaseClient).not.toHaveBeenCalled()
+      expect(client.calls.update).toEqual([])
+      expect(store.busy).toBe(false)
     })
   })
 

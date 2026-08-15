@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Session, SupabaseClient, User } from '@supabase/supabase-js'
 import { toast } from '@/composables/useToast'
-import { AUTH_STORAGE_KEY, getTestUser, isAuthConfigured, isLocalSupabase } from '@/config/supabase'
+import { AUTH_STORAGE_KEY, getTestUser, isAuthConfigured } from '@/config/supabase'
 import { getSupabaseClient } from '@/utils/supabase-loader'
 import {
   captureReturnUrl,
@@ -55,12 +55,14 @@ function toAuthUser(user: User | null | undefined): AuthUser | null {
   }
 }
 
-/** What to do about a test user that the configured project does not have. */
-function missingTestUserHint(): string {
-  return isLocalSupabase()
-    ? 'No local test user found. Run `npm run supabase:reset` to seed it.'
-    : 'The test user does not exist on this Supabase project — create it in the dashboard (see supabase/README.md).'
-}
+/**
+ * What to do about a test user that the configured project does not have.
+ *
+ * Only ever one message: the shortcut is offered exclusively on a dev build against a
+ * local stack (see `getTestUser()`), so the seeded account is the only test user this
+ * can be about. A hosted project can never reach here.
+ */
+const MISSING_TEST_USER_HINT = 'No local test user found. Run `npm run supabase:reset` to seed it.'
 
 /** Cheap probe for a persisted session that avoids loading supabase-js. */
 function hasPersistedSession(): boolean {
@@ -169,10 +171,10 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
-   * Sign in as the shared test account — seeded locally, or the preview project's
-   * account on a preview deployment. Never available in production; see
-   * getTestUser(). Unlike the OAuth path this does not navigate away, so the session
-   * is applied here and the subscription established.
+   * Sign in as the account `supabase/seed.sql` creates on the local stack. Available
+   * only in a dev build pointed at that stack — no deployment offers it, production
+   * included; see getTestUser(). Unlike the OAuth path this does not navigate away, so
+   * the session is applied here and the subscription established.
    */
   const signInAsTestUser = async (): Promise<void> => {
     const credentials = testUser.value
@@ -195,7 +197,7 @@ export const useAuthStore = defineStore('auth', () => {
       const message = error instanceof Error ? error.message : 'Could not sign in'
       toast.showError(
         // Almost always means the account does not exist on this instance.
-        /invalid login credentials/i.test(message) ? missingTestUserHint() : message,
+        /invalid login credentials/i.test(message) ? MISSING_TEST_USER_HINT : message,
         'Sign-in Failed',
       )
     } finally {
@@ -225,8 +227,12 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
-   * Current access token for authenticated requests (used by the link service in a
-   * later phase). Returns null when signed out.
+   * Current access token for authenticated requests. Returns null when signed out.
+   *
+   * Deliberately unused so far: it is for the share-link service in a later phase (see
+   * notes/user-accounts-plan.md). Everything the editor stores today goes through
+   * PostgREST, which supabase-js authenticates itself. Kept on purpose — do not delete
+   * it as dead code without checking that plan first.
    */
   const getAccessToken = async (): Promise<string | null> => {
     if (!isConfigured.value || !isSignedIn.value) return null

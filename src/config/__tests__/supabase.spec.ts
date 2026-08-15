@@ -4,7 +4,6 @@ import {
   getTestUser,
   isAuthConfigured,
   isLocalSupabase,
-  isTestSignInAvailable,
   resetSupabaseConfigCache,
 } from '../supabase'
 
@@ -110,21 +109,20 @@ describe('supabase config', () => {
           password: 'password123',
           label: 'local development',
         })
-        expect(isTestSignInAvailable()).toBe(true)
       })
 
       it('is never offered in a production build, even against localhost', () => {
         vi.stubEnv('DEV', false)
         configure('http://127.0.0.1:54321')
 
-        expect(isTestSignInAvailable()).toBe(false)
+        expect(getTestUser()).toBeNull()
       })
 
       it('is never offered against a remote project', () => {
         vi.stubEnv('DEV', true)
         configure(PREVIEW_URL)
 
-        expect(isTestSignInAvailable()).toBe(false)
+        expect(getTestUser()).toBeNull()
       })
     })
 
@@ -139,7 +137,6 @@ describe('supabase config', () => {
       configure(url)
 
       expect(getTestUser()).toBeNull()
-      expect(isTestSignInAvailable()).toBe(false)
     })
 
     // The env vars that used to carry them are gone; setting them must do nothing.

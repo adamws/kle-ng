@@ -10,7 +10,6 @@ const TEST_USER = {
 const mocks = vi.hoisted(() => ({
   isAuthConfigured: vi.fn(() => true),
   getTestUser: vi.fn<() => { email: string; password: string; label: string } | null>(() => null),
-  isLocalSupabase: vi.fn(() => true),
   getSupabaseClient: vi.fn(),
   showError: vi.fn(),
   showSuccess: vi.fn(),
@@ -21,7 +20,6 @@ vi.mock('@/config/supabase', () => ({
   AUTH_STORAGE_KEY: 'kle-ng-auth',
   isAuthConfigured: mocks.isAuthConfigured,
   getTestUser: mocks.getTestUser,
-  isLocalSupabase: mocks.isLocalSupabase,
 }))
 
 vi.mock('@/utils/supabase-loader', () => ({
@@ -65,7 +63,6 @@ describe('auth store', () => {
     vi.clearAllMocks()
     mocks.isAuthConfigured.mockReturnValue(true)
     mocks.getTestUser.mockReturnValue(null)
-    mocks.isLocalSupabase.mockReturnValue(true)
     localStorage.clear()
     window.history.replaceState({}, '', '/')
   })
@@ -285,9 +282,10 @@ describe('auth store', () => {
       expect(auth.isSignedIn).toBe(true)
     })
 
-    it('points at the seed command when the local test user is missing', async () => {
+    // The shortcut only exists on a dev build against a local stack, so a missing
+    // account can only ever mean the seed has not run — there is no second message.
+    it('points at the seed command when the test user is missing', async () => {
       mocks.getTestUser.mockReturnValue(TEST_USER)
-      mocks.isLocalSupabase.mockReturnValue(true)
       mocks.getSupabaseClient.mockResolvedValue(clientWithoutTestUser())
       const auth = useAuthStore()
 
@@ -300,18 +298,20 @@ describe('auth store', () => {
       expect(auth.busy).toBe(false)
     })
 
-    it('points at the dashboard when a hosted test user is missing', async () => {
+    // Anything else is surfaced as-is rather than rewritten into the seed hint.
+    it('passes through a failure that is not a missing account', async () => {
       mocks.getTestUser.mockReturnValue(TEST_USER)
-      mocks.isLocalSupabase.mockReturnValue(false)
-      mocks.getSupabaseClient.mockResolvedValue(clientWithoutTestUser())
+      const client = fakeClient()
+      client.auth.signInWithPassword = vi.fn().mockResolvedValue({
+        data: { session: null },
+        error: new Error('Failed to fetch'),
+      })
+      mocks.getSupabaseClient.mockResolvedValue(client)
       const auth = useAuthStore()
 
       await auth.signInAsTestUser()
 
-      expect(mocks.showError).toHaveBeenCalledWith(
-        expect.stringContaining('does not exist on this Supabase project'),
-        'Sign-in Failed',
-      )
+      expect(mocks.showError).toHaveBeenCalledWith('Failed to fetch', 'Sign-in Failed')
     })
   })
 

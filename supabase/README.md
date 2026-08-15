@@ -24,10 +24,18 @@ npm run supabase:reset     # wipes and re-applies migrations from scratch
 npm run supabase:stop
 ```
 
-`supabase:start` prints an **anon / publishable key** — paste it into `VITE_SUPABASE_ANON_KEY` in
-`.env.local`, which is already pointed at `http://127.0.0.1:54321`. Until that key has a value,
-accounts stay disabled, so a half-configured checkout can never silently fall through to
-production. Studio is at <http://127.0.0.1:54323>.
+Configuration lives in `.env.local`, which is gitignored and so does not exist in a fresh clone —
+create it from the committed template:
+
+```sh
+cp .env.local.example .env.local
+```
+
+That points the editor at `http://127.0.0.1:54321` with the key a stock local stack issues. If
+`supabase:start` prints a different **anon / publishable key**, paste that into
+`VITE_SUPABASE_ANON_KEY`. Until both variables have values, accounts stay disabled, so a
+half-configured checkout can never silently fall through to production. Studio is at
+<http://127.0.0.1:54323>.
 
 Migrations in `migrations/` are applied automatically on `start` and `reset`, so a schema change is
 just a new file plus `npm run supabase:reset`.

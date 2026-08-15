@@ -39,6 +39,16 @@ const DEFAULT_QUOTA = 5
 
 export const MAX_NAME_LENGTH = 120
 
+/**
+ * Mirrors the layouts_payload_length constraint in the migration.
+ *
+ * The payload is lz-string's compressToEncodedURIComponent output, which is plain
+ * ASCII, so JavaScript's UTF-16 `.length` and Postgres's `char_length` agree.
+ */
+export const MAX_PAYLOAD_LENGTH = 32768
+
+const PAYLOAD_TOO_LARGE = 'This layout is too large to save.'
+
 function toSavedLayout(row: LayoutRow): SavedLayout {
   return {
     id: row.id,
@@ -66,7 +76,7 @@ function describeError(error: unknown, fallback: string): string {
     return `Name must be between 1 and ${MAX_NAME_LENGTH} characters.`
   }
   if (message.includes('layouts_payload_length')) {
-    return 'This layout is too large to save.'
+    return PAYLOAD_TOO_LARGE
   }
   return message || fallback
 }
@@ -85,6 +95,18 @@ export const useLayoutsStore = defineStore('layouts', () => {
   const client = async () => {
     if (!isAuthConfigured()) throw new Error('Accounts are not configured')
     return getSupabaseClient()
+  }
+
+  /**
+   * Fail an oversized payload locally instead of paying a round trip to learn the same
+   * thing from layouts_payload_length. A fast path only — the constraint (like RLS)
+   * stays the real boundary, and describeError() still translates it if this is ever
+   * out of step with the schema.
+   */
+  const rejectOversizedPayload = (payload: string): boolean => {
+    if (payload.length <= MAX_PAYLOAD_LENGTH) return false
+    errorMessage.value = PAYLOAD_TOO_LARGE
+    return true
   }
 
   /** Newest first, matching the (user_id, updated_at desc) index. */
@@ -124,8 +146,10 @@ export const useLayoutsStore = defineStore('layouts', () => {
   /** Insert a new layout. Returns the saved row, or null when the write failed. */
   const save = async (name: string, payload: string): Promise<SavedLayout | null> => {
     if (busy.value) return null
-    busy.value = true
     errorMessage.value = null
+    if (rejectOversizedPayload(payload)) return null
+
+    busy.value = true
     try {
       const supabase = await client()
       // user_id defaults to auth.uid() in the schema, so it is never sent from here.
@@ -151,6 +175,10 @@ export const useLayoutsStore = defineStore('layouts', () => {
 
   /** Replace the contents of an existing layout. */
   const overwrite = async (id: string, payload: string): Promise<SavedLayout | null> => {
+    if (busy.value) return null
+    errorMessage.value = null
+    if (rejectOversizedPayload(payload)) return null
+
     return update(id, { payload }, 'Could not overwrite this layout')
   }
 

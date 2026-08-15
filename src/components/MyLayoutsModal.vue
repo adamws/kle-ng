@@ -408,13 +408,19 @@ const toEntryName = (stem: string, taken: Set<string>) => {
   return candidate
 }
 
+/**
+ * The revoke is deferred rather than run in the same turn as `click()`: current
+ * browsers snapshot the blob synchronously, but that is not guaranteed and revoking
+ * immediately has historically raced the download handoff. A macrotask is enough — the
+ * navigation has been queued by then.
+ */
 const saveBlob = (blob: Blob, filename: string) => {
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = url
   anchor.download = filename
   anchor.click()
-  URL.revokeObjectURL(url)
+  setTimeout(() => URL.revokeObjectURL(url), 0)
 }
 
 /**

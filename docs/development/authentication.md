@@ -78,8 +78,8 @@ Exports:
 - `isAuthConfigured(): boolean` — the gate every account surface checks.
 - `isLocalSupabase(): boolean` — true when the configured hostname is `localhost`, `127.0.0.1`, or
   `[::1]`.
-- `getTestUser(): TestUserCredentials | null` / `isTestSignInAvailable()` — see
-  [Test-user shortcut](#test-user-shortcut).
+- `getTestUser(): TestUserCredentials | null` — see [Test-user shortcut](#test-user-shortcut). The
+  only way to the credentials; components read `auth.canUseTestUser` rather than calling it.
 - `AUTH_STORAGE_KEY = 'kle-ng-auth'` — the localStorage key the session is persisted under.
 
 `AUTH_STORAGE_KEY` is set explicitly rather than left to supabase-js's
@@ -116,7 +116,7 @@ createClient(config.url, config.anonKey, {
 query parameter; the implicit flow would return `#access_token=…` in the fragment, which is exactly
 where the editor already keeps `#share=` / `#url=` / `#gist=`. The two would collide head-on.
 
-`isSupabaseLoaded()` reports whether the client exists; `resetSupabaseClient()` is a test seam.
+`resetSupabaseClient()` drops the cached client; it exists as a test seam.
 
 ### Graceful degradation
 
@@ -217,8 +217,10 @@ The edge cases the tests in `src/utils/__tests__/auth-return-url.spec.ts` pin do
 
 Token refresh is handled by supabase-js (`autoRefreshToken`), and refreshes arrive in the store
 through the same `onAuthStateChange` subscription. `getAccessToken()` re-reads the session and
-returns `data.session?.access_token ?? null`; its doc comment describes it as intended for the link
-service "in a later phase", and no caller uses it on this branch.
+returns `data.session?.access_token ?? null`. Nothing calls it yet — it is deliberately kept for the
+share-link service in a later phase (`notes/user-accounts-plan.md`), since everything stored today
+goes through PostgREST, which supabase-js authenticates itself. Its doc comment says so, so a
+dead-code sweep does not remove it blind.
 
 `signOut()` calls `supabase.auth.signOut()`, clears `user`, and toasts. `App.vue` watches
 `authStore.isSignedIn` and calls `layoutsStore.reset()` when it goes false, so a second sign-in on
@@ -234,9 +236,10 @@ hosted project can satisfy the local-host half, production included. The credent
 `getTestUser()` is the only way to them.
 
 `signInAsTestUser()` uses `signInWithPassword`, which does not navigate away, so it applies the
-session and subscribes inline. An `invalid login credentials` failure is rewritten into an
-actionable hint by `missingTestUserHint()` — "run `npm run supabase:reset`" locally, "create it in
-the dashboard" otherwise.
+session and subscribes inline. An `invalid login credentials` failure is rewritten into the one
+actionable hint that can apply — run `npm run supabase:reset` to seed the account. There is no
+second message for a hosted project, because the gate above means a hosted project never reaches
+this code. Any other error is surfaced as-is.
 
 Preview deployments used to get their own shared password account via `VITE_TEST_USER_EMAIL` /
 `VITE_TEST_USER_PASSWORD`. It was removed because the preview project has password sign-in disabled,
@@ -300,18 +303,19 @@ interface SavedLayout {
 ```
 
 Rows come back snake_case and are mapped by `toSavedLayout()`. `MAX_NAME_LENGTH = 120` is exported
-for the input `maxlength` and mirrors the `layouts_name_length` check constraint.
+for the input `maxlength` and mirrors the `layouts_name_length` check constraint;
+`MAX_PAYLOAD_LENGTH = 32768` mirrors `layouts_payload_length` the same way.
 
 **Actions**
 
-| Action                    | Notes                                                                                                                                      |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `fetchAll(force = false)` | Reads the quota with `supabase.rpc('layout_quota')`, then selects ordered by `updated_at desc`. Skips when already `loaded` unless forced. |
-| `save(name, payload)`     | `insert({ name: name.trim(), payload })` — **`user_id` is never sent**; the schema defaults it from the JWT.                               |
-| `overwrite(id, payload)`  | Thin wrapper over the private `update()`.                                                                                                  |
-| `rename(id, name)`        | Ditto, trimming the name. `updated_at` is never sent — a trigger maintains it.                                                             |
-| `remove(id)`              | `delete().eq('id', id)`.                                                                                                                   |
-| `reset()`                 | Drops cached rows; called from `App.vue` on sign-out.                                                                                      |
+| Action                    | Notes                                                                                                                                                 |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fetchAll(force = false)` | Reads the quota with `supabase.rpc('layout_quota')`, then selects ordered by `updated_at desc`. Skips when already `loaded` unless forced.            |
+| `save(name, payload)`     | `insert({ name: name.trim(), payload })` — **`user_id` is never sent**; the schema defaults it from the JWT. Fails locally past `MAX_PAYLOAD_LENGTH`. |
+| `overwrite(id, payload)`  | Thin wrapper over the private `update()`, with the same payload-length pre-check.                                                                     |
+| `rename(id, name)`        | Ditto, trimming the name. `updated_at` is never sent — a trigger maintains it.                                                                        |
+| `remove(id)`              | `delete().eq('id', id)`.                                                                                                                              |
+| `reset()`                 | Drops cached rows; called from `App.vue` on sign-out.                                                                                                 |
 
 `describeError()` turns PostgREST errors into something a user can act on by matching the constraint
 and exception names the database raises:
@@ -435,15 +439,15 @@ nothing by default.
 
 ### Where each rule is enforced
 
-| Rule                           | Enforced by                                     | Client role                            |
-| ------------------------------ | ----------------------------------------------- | -------------------------------------- |
-| You only see your own layouts  | RLS `layouts_select_own`                        | none — no query filters by user id     |
-| You cannot write another's row | RLS `layouts_insert_own` / `layouts_update_own` | none                                   |
-| Max 5 layouts per user         | `layouts_enforce_quota` trigger                 | `isFull` disables the button, cosmetic |
-| Name 1–120 chars               | `layouts_name_length` check                     | `maxlength` on the input, cosmetic     |
-| Payload ≤ 32768 chars          | `layouts_payload_length` check                  | none                                   |
-| `updated_at` / `created_at`    | `layouts_set_updated_at` trigger                | never sent                             |
-| `user_id`                      | column default `auth.uid()`                     | never sent                             |
+| Rule                           | Enforced by                                     | Client role                              |
+| ------------------------------ | ----------------------------------------------- | ---------------------------------------- |
+| You only see your own layouts  | RLS `layouts_select_own`                        | none — no query filters by user id       |
+| You cannot write another's row | RLS `layouts_insert_own` / `layouts_update_own` | none                                     |
+| Max 5 layouts per user         | `layouts_enforce_quota` trigger                 | `isFull` disables the button, cosmetic   |
+| Name 1–120 chars               | `layouts_name_length` check                     | `maxlength` on the input, cosmetic       |
+| Payload ≤ 32768 chars          | `layouts_payload_length` check                  | `MAX_PAYLOAD_LENGTH` pre-check, cosmetic |
+| `updated_at` / `created_at`    | `layouts_set_updated_at` trigger                | never sent                               |
+| `user_id`                      | column default `auth.uid()`                     | never sent                               |
 
 Note that the quota counts **inserts only**. Saving over an existing name is an update, so re-saving
 work in place stays possible at the limit — which is exactly what `MyLayoutsModal` turns the
@@ -518,9 +522,11 @@ credentials. To use real GitHub sign-in locally, register a _second_ GitHub OAut
 true, and restart. Otherwise use the seeded email/password account, which is enabled locally
 (`[auth.email] enable_signup = true`, `enable_confirmations = false`).
 
-`.env.local` is gitignored and holds `VITE_SUPABASE_URL=http://127.0.0.1:54321` plus the anon key
-that `supabase:start` prints. Until that key has a value accounts stay disabled — a half-configured
-checkout can never silently fall through to production.
+`.env.local` is gitignored, so a fresh clone starts from the committed `.env.local.example`
+(`cp .env.local.example .env.local`). It holds `VITE_SUPABASE_URL=http://127.0.0.1:54321` plus the
+anon key — the template carries the one a stock local stack issues; replace it if `supabase:start`
+prints something else. Until both have values accounts stay disabled — a half-configured checkout
+can never silently fall through to production.
 
 ### Preview (Vercel)
 
@@ -707,17 +713,18 @@ migration that touches policies.
   upgrade, since the fixtures write into GoTrue's `auth.users` directly.
 - **Adding a new user-facing constraint** means adding a matching branch in `describeError()`, or the
   user will see a raw PostgREST message.
-- **`payload` is capped at 32768 characters** of lz-string-compressed KLE. Very large layouts will
-  fail to save with "This layout is too large to save." There is no client-side pre-check.
+- **`payload` is capped at 32768 characters** of lz-string-compressed KLE. Very large layouts fail
+  with "This layout is too large to save." The store checks `MAX_PAYLOAD_LENGTH` before writing so
+  the failure is local, but that is only a fast path — `layouts_payload_length` is still the real
+  limit, and `describeError()` still translates it. Changing the cap means editing both.
 - **`busy` stays true after `signIn()` succeeds** — the page is expected to navigate away. Anything
   new that keys off `auth.busy` must tolerate that, the way `AccountMenu` does.
 - **Migrations are not applied to hosted projects by CI.** `npx supabase db push` against preview
   _and_ production is a manual step whenever a migration lands.
-- **`.env.local` is gitignored and there is no committed template.** A fresh clone therefore has no
-  Supabase configuration at all (which is the safe default — accounts simply stay off), so
-  `supabase/README.md`'s "already pointed at `http://127.0.0.1:54321`" describes an existing working
-  copy rather than a new checkout. Create the file with `VITE_SUPABASE_URL` and the key that
-  `npm run supabase:start` prints.
+- **`.env.local` is gitignored; `.env.local.example` is the committed template.** A fresh clone has
+  no Supabase configuration until someone runs `cp .env.local.example .env.local` — which is a safe
+  default either way, since accounts simply stay off. Keep the template in step with any new
+  `VITE_` variable the local stack needs, and never put a hosted project's URL in it.
 - **The seed writes into `auth.users` directly**, which couples it to GoTrue's schema. Several token
   columns must be `''` and not `NULL` — GoTrue scans them into non-nullable Go strings, and a `NULL`
   makes every read of the row fail with "Database error querying schema".

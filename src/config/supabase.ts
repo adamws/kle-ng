@@ -116,11 +116,6 @@ export function getTestUser(): TestUserCredentials | null {
   return null
 }
 
-/** Whether the "continue as test user" shortcut may be offered. */
-export function isTestSignInAvailable(): boolean {
-  return getTestUser() !== null
-}
-
 /** Test seam: forget the memoised config so stubbed env vars are re-read. */
 export function resetSupabaseConfigCache(): void {
   cachedConfig = undefined

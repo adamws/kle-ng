@@ -16,11 +16,6 @@ const LOAD_TIMEOUT_MS = 30_000
 let loadedClient: SupabaseClient | null = null
 let loadingPromise: Promise<SupabaseClient> | null = null
 
-/** Check whether the client has already been created. */
-export function isSupabaseLoaded(): boolean {
-  return loadedClient !== null
-}
-
 /**
  * Get the Supabase client (lazy-loaded).
  * Throws when accounts are not configured — callers should gate on `isAuthConfigured()`.
