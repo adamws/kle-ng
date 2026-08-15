@@ -39,6 +39,7 @@ vi.mock('@/composables/useToast', () => ({
 
 import MyLayoutsModal from '../MyLayoutsModal.vue'
 import { useLayoutsStore, type SavedLayout } from '@/stores/layouts'
+import { useKeyboardStore } from '@/stores/keyboard'
 import { encodeLayoutToUrl } from '@/utils/url-sharing'
 
 const payload = () => {
@@ -80,10 +81,83 @@ const mountModal = (layouts: SavedLayout[], quota = 5) => {
   return { wrapper, store, save, overwrite, fetchAll }
 }
 
+/**
+ * Open the modal the way the toolbar does — the component stays mounted and
+ * `isVisible` flips — because the prefill happens in the watcher on that prop, not on
+ * mount. `editor` seeds the keyboard store before the modal opens.
+ */
+const openModal = async (editor: { name?: string; filename?: string }) => {
+  const pinia = createPinia()
+  setActivePinia(pinia)
+
+  const store = useLayoutsStore()
+  store.quota = 5
+  store.loaded = true
+  vi.spyOn(store, 'fetchAll').mockResolvedValue(undefined)
+
+  const keyboard = useKeyboardStore()
+  keyboard.metadata.name = editor.name as string
+  keyboard.filename = editor.filename ?? ''
+
+  const wrapper = mount(MyLayoutsModal, {
+    props: { isVisible: false },
+    global: { plugins: [pinia], stubs: { LayoutThumbnail: true } },
+  })
+  await wrapper.setProps({ isVisible: true })
+
+  return { wrapper, keyboard }
+}
+
+const nameField = (wrapper: { find: (s: string) => { element: Element } }) =>
+  (wrapper.find('[data-testid="save-layout-name"]').element as HTMLInputElement).value
+
 describe('MyLayoutsModal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     setActivePinia(createPinia())
+  })
+
+  describe('name prefill', () => {
+    it('offers the name from the layout metadata', async () => {
+      const { wrapper } = await openModal({ name: 'Planck rev6' })
+      expect(nameField(wrapper)).toBe('Planck rev6')
+    })
+
+    it('trims it', async () => {
+      const { wrapper } = await openModal({ name: '  Planck rev6  ' })
+      expect(nameField(wrapper)).toBe('Planck rev6')
+    })
+
+    // The reported bug: filename is a download name, it outlives the layout it came
+    // from — this modal even sets it when loading a saved layout — so falling back to
+    // it proposed the *previous* layout's name. Worse, a stale name that matches
+    // something saved turns Save into Update against a row the user never chose.
+    it('leaves the field empty rather than proposing a previous layout name', async () => {
+      const { wrapper } = await openModal({ name: '', filename: 'Planck rev6' })
+
+      expect(nameField(wrapper)).toBe('')
+      expect(wrapper.find('[data-testid="save-layout-name"]').attributes('placeholder')).toBe(
+        'Name this layout',
+      )
+      // …and nothing can be saved until a name is actually given
+      expect(wrapper.find('[data-testid="save-layout"]').attributes('disabled')).toBeDefined()
+    })
+
+    it('empties a whitespace-only name instead of keeping it', async () => {
+      const { wrapper } = await openModal({ name: '   ', filename: 'Planck rev6' })
+      expect(nameField(wrapper)).toBe('')
+    })
+
+    it('re-derives on every open, following the editor', async () => {
+      const { wrapper, keyboard } = await openModal({ name: 'Planck rev6' })
+      expect(nameField(wrapper)).toBe('Planck rev6')
+
+      await wrapper.setProps({ isVisible: false })
+      keyboard.metadata.name = 'Lily58'
+      await wrapper.setProps({ isVisible: true })
+
+      expect(nameField(wrapper)).toBe('Lily58')
+    })
   })
 
   describe('quota', () => {

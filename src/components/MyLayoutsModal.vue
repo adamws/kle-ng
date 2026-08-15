@@ -340,8 +340,18 @@ const currentPayload = () => {
   return encodeLayoutToUrl(keyboard)
 }
 
-const defaultName = () =>
-  keyboardStore.metadata.name?.trim() || keyboardStore.filename?.trim() || 'Untitled layout'
+/**
+ * Prefill from the layout's own name, and from nothing else — an unnamed layout opens
+ * with an empty field and its placeholder.
+ *
+ * `keyboardStore.filename` used to be the fallback, with 'Untitled layout' behind it.
+ * But filename is what a download is called, not what the layout is: `loadKeyboard()`
+ * never clears it and only some import paths set it, so it outlives the layout it came
+ * from and proposed the previous one's name. Here that is worse than an empty field —
+ * a stale name that matches something already saved turns Save into Update, and the
+ * confirmation names a row the user was not thinking about.
+ */
+const defaultName = () => keyboardStore.metadata.name?.trim() ?? ''
 
 const saveCurrent = async () => {
   if (!canSave.value) return
