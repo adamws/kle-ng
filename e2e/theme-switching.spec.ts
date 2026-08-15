@@ -22,7 +22,7 @@ test.describe('Theme switching functionality', () => {
     theme = new ThemeComponent(page, waitHelpers)
   })
 
-  test('theme toggle button should be visible in header', async () => {
+  test('account menu button should be visible in header', async () => {
     await theme.expectToggleVisible()
 
     // Should show some theme icon
@@ -31,7 +31,7 @@ test.describe('Theme switching functionality', () => {
   })
 
   test('should default to auto theme', async () => {
-    await theme.expectButtonShowsTheme('auto')
+    await theme.expectActiveTheme('auto')
 
     // HTML element should have data-bs-theme set to light or dark based on system preference when in auto mode
     const dataBsTheme = await theme.getHtmlElement().getAttribute('data-bs-theme')
@@ -47,7 +47,7 @@ test.describe('Theme switching functionality', () => {
 
     // Verify theme is applied
     await theme.expectCurrentTheme('dark')
-    await theme.expectButtonShowsTheme('dark')
+    await theme.expectActiveTheme('dark')
   })
 
   test('should switch to light theme', async () => {
@@ -59,7 +59,7 @@ test.describe('Theme switching functionality', () => {
 
     // Verify theme is applied
     await theme.expectCurrentTheme('light')
-    await theme.expectButtonShowsTheme('light')
+    await theme.expectActiveTheme('light')
   })
 
   test('should persist theme preference after reload', async ({ page }) => {
@@ -86,7 +86,7 @@ test.describe('Theme switching functionality', () => {
 
     // Verify dark theme is still applied after reload
     await newTheme.expectCurrentTheme('dark')
-    await newTheme.expectButtonShowsTheme('dark')
+    await newTheme.expectActiveTheme('dark')
   })
 
   test('should show active state in dropdown menu', async () => {
@@ -113,7 +113,7 @@ test.describe('Theme switching functionality', () => {
     await theme.switchTo('auto')
 
     // Verify auto theme
-    await theme.expectButtonShowsTheme('auto')
+    await theme.expectActiveTheme('auto')
 
     // For auto mode, HTML should have data-bs-theme set to light or dark based on system preference
     const dataBsTheme = await theme.getHtmlElement().getAttribute('data-bs-theme')

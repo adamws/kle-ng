@@ -1,30 +1,26 @@
 import { Locator, Page, expect } from '@playwright/test'
 import { WaitHelpers } from '../../helpers/wait-helpers'
+import { SELECTORS } from '../../constants/selectors'
 
 /**
  * PresetComponent - Keyboard layout preset selection
  *
- * Encapsulates preset dropdown interactions for selecting predefined keyboard layouts.
+ * Presets are a section of the Import dropdown rather than a control of their own,
+ * so opening the "dropdown" here means opening the Import menu.
  *
  * @example
  * const preset = new PresetComponent(page, waitHelpers)
  * await preset.selectPreset('ANSI 104')
  * await preset.expectPresetLoaded(104)
- *
- * @remarks
- * ⚠️ TECH DEBT: This component currently uses CSS class selectors (.preset-dropdown)
- * instead of data-testid attributes. These should be migrated to data-testid in the future.
  */
 export class PresetComponent {
   private readonly dropdownButton: Locator
-  private readonly dropdown: Locator
 
   constructor(
     private readonly page: Page,
     private readonly waitHelpers: WaitHelpers,
   ) {
-    this.dropdown = page.locator('.preset-dropdown')
-    this.dropdownButton = this.dropdown.locator('button.preset-select')
+    this.dropdownButton = page.locator(SELECTORS.PRESET.SELECT_BUTTON)
   }
 
   /**
@@ -39,7 +35,7 @@ export class PresetComponent {
 
     // Find and click the preset item (exact match)
     const escaped = presetName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    const presetItem = this.page.locator('.preset-dropdown .dropdown-item', {
+    const presetItem = this.page.locator(SELECTORS.PRESET.DROPDOWN_ITEM, {
       hasText: new RegExp(`^${escaped}$`),
     })
     await expect(presetItem).toBeVisible()
@@ -71,7 +67,7 @@ export class PresetComponent {
    * @param presetName - Name of the preset to check
    */
   async expectPresetOptionVisible(presetName: string): Promise<void> {
-    const presetItem = this.page.locator('.preset-dropdown .dropdown-item', {
+    const presetItem = this.page.locator(SELECTORS.PRESET.DROPDOWN_ITEM, {
       hasText: new RegExp(`^${presetName}$`),
     })
     await expect(presetItem).toBeVisible()
@@ -88,7 +84,7 @@ export class PresetComponent {
    * Assert that the dropdown is open
    */
   async expectDropdownOpen(): Promise<void> {
-    const firstItem = this.page.locator('.preset-dropdown .dropdown-item').first()
+    const firstItem = this.page.locator(SELECTORS.PRESET.DROPDOWN_ITEM).first()
     await expect(firstItem).toBeVisible()
   }
 
@@ -96,7 +92,7 @@ export class PresetComponent {
    * Assert that the dropdown is closed
    */
   async expectDropdownClosed(): Promise<void> {
-    const firstItem = this.page.locator('.preset-dropdown .dropdown-item').first()
+    const firstItem = this.page.locator(SELECTORS.PRESET.DROPDOWN_ITEM).first()
     await expect(firstItem).not.toBeVisible()
   }
 
@@ -111,7 +107,7 @@ export class PresetComponent {
    * Get all preset option locators
    */
   getPresetOptions(): Locator {
-    return this.page.locator('.preset-dropdown .dropdown-item')
+    return this.page.locator(SELECTORS.PRESET.DROPDOWN_ITEM)
   }
 
   /**

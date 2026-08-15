@@ -90,9 +90,13 @@ export const SELECTORS = {
   /**
    * Theme switching
    */
+  /**
+   * Theme switching. The theme picker lives inside the account menu, so these point
+   * at that menu rather than a dedicated toggle.
+   */
   THEME: {
-    TOGGLE_BUTTON: '[data-testid="theme-toggle-button"]',
-    DROPDOWN_MENU: '[data-testid="theme-dropdown-menu"]',
+    TOGGLE_BUTTON: '[data-testid="user-menu-button"]',
+    DROPDOWN_MENU: '[data-testid="user-menu-dropdown"]',
   },
 
   /**
@@ -103,14 +107,12 @@ export const SELECTORS = {
   },
 
   /**
-   * Preset dropdown
-   * ⚠️ TECH DEBT: These selectors use CSS classes instead of data-testid.
-   * Should be migrated to data-testid attributes in the future.
+   * Presets, which are a section of the Import dropdown
    */
   PRESET: {
-    DROPDOWN: '.preset-dropdown',
-    SELECT_BUTTON: '.preset-dropdown button.preset-select',
-    DROPDOWN_ITEM: '.preset-dropdown .dropdown-item',
+    DROPDOWN: '.import-menu',
+    SELECT_BUTTON: '[data-testid="button-import"]',
+    DROPDOWN_ITEM: '[data-testid="import-from-preset"] .dropdown-item',
   },
 
   /**

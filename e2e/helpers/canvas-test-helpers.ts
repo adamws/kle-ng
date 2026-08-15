@@ -336,12 +336,12 @@ export class CanvasTestHelper {
   }
 
   async loadPreset(presetIndex: number) {
-    // Open the presets dropdown
-    const presetButton = this.page.locator('.preset-dropdown button.preset-select')
+    // Open the Import dropdown, which holds the presets
+    const presetButton = this.page.locator('[data-testid="button-import"]')
     await presetButton.click()
 
     // Click the specific preset item
-    const presetItems = this.page.locator('.preset-dropdown .dropdown-item')
+    const presetItems = this.page.locator('[data-testid="import-from-preset"] .dropdown-item')
     await presetItems.nth(presetIndex).click()
 
     // Wait for layout to load with increased timeout for CI environments

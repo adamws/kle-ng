@@ -4,13 +4,21 @@
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title">My Layouts</h5>
-          <span class="badge text-bg-secondary ms-2" data-testid="layouts-quota">
-            {{ store.count }} / {{ store.quota }}
-          </span>
           <button type="button" class="btn-close" @click="close" aria-label="Close"></button>
         </div>
 
         <div class="modal-body">
+          <!-- Quota is only worth mentioning once it actually constrains the user -->
+          <div
+            v-if="store.isFull"
+            class="alert alert-warning py-2 mb-3"
+            data-testid="layouts-quota-warning"
+            role="status"
+          >
+            You have saved the maximum of {{ store.quota }} layouts. Delete one to add another, or
+            save over an existing name to update it.
+          </div>
+
           <!-- Save current layout -->
           <div class="save-row">
             <input
@@ -28,13 +36,11 @@
               class="btn btn-primary flex-shrink-0"
               data-testid="save-layout"
               :disabled="!canSave"
-              :title="
-                store.isFull ? 'You have reached your limit — delete one to make room' : undefined
-              "
+              :title="saveHint"
               @click="saveCurrent"
             >
-              <BiCloudArrowUp class="bi" aria-hidden="true" />
-              Save current
+              <BiFloppy class="bi" aria-hidden="true" />
+              {{ existingByName ? 'Update' : 'Save current' }}
             </button>
           </div>
 
@@ -157,16 +163,6 @@
                 <button
                   type="button"
                   class="btn btn-sm btn-outline-secondary"
-                  data-testid="overwrite-layout"
-                  :disabled="store.busy"
-                  title="Replace with the layout currently in the editor"
-                  @click="requestOverwrite(layout)"
-                >
-                  <BiUpload aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-sm btn-outline-secondary"
                   data-testid="rename-layout"
                   :disabled="store.busy"
                   title="Rename"
@@ -206,9 +202,8 @@ import { encodeLayoutToUrl, decodeLayoutFromUrl } from '@/utils/url-sharing'
 import { toast } from '@/composables/useToast'
 import LayoutThumbnail from './LayoutThumbnail.vue'
 
-import BiCloudArrowUp from 'bootstrap-icons/icons/cloud-arrow-up.svg'
+import BiFloppy from 'bootstrap-icons/icons/floppy.svg'
 import BiBoxArrowInDown from 'bootstrap-icons/icons/box-arrow-in-down.svg'
-import BiUpload from 'bootstrap-icons/icons/upload.svg'
 import BiPencil from 'bootstrap-icons/icons/pencil.svg'
 import BiTrash from 'bootstrap-icons/icons/trash.svg'
 import BiCheckLg from 'bootstrap-icons/icons/check-lg.svg'
@@ -235,7 +230,29 @@ interface PendingAction {
 }
 const pending = ref<PendingAction | null>(null)
 
-const canSave = computed(() => !store.busy && !store.isFull && saveName.value.trim().length > 0)
+/**
+ * Saving under the name of an existing layout updates that layout rather than adding a
+ * second one. That is the only way to re-save work in place, so it stays available at
+ * the quota — the database only counts inserts, and an update is not one.
+ */
+const existingByName = computed(() => {
+  const name = saveName.value.trim().toLowerCase()
+  if (!name) return null
+  return store.layouts.find((layout) => layout.name.trim().toLowerCase() === name) ?? null
+})
+
+const canSave = computed(
+  () =>
+    !store.busy &&
+    saveName.value.trim().length > 0 &&
+    (!store.isFull || existingByName.value !== null),
+)
+
+const saveHint = computed(() => {
+  if (existingByName.value) return `Update "${existingByName.value.name}" with the editor contents`
+  if (store.isFull) return 'You have reached your limit — delete one to make room'
+  return undefined
+})
 
 /**
  * Decoded payloads, cached by id so a re-render does not re-parse every row.
@@ -285,6 +302,26 @@ const defaultName = () =>
 
 const saveCurrent = async () => {
   if (!canSave.value) return
+
+  // Confirm in the row being replaced, so it is obvious which layout is about to change.
+  const existing = existingByName.value
+  if (existing) {
+    pending.value = {
+      id: existing.id,
+      message: `Update "${existing.name}" with the editor contents?`,
+      confirmLabel: 'Update',
+      danger: false,
+      run: async () => {
+        const saved = await store.overwrite(existing.id, currentPayload())
+        if (saved) {
+          decodedCache.delete(saved.id)
+          toast.showSuccess(`Updated "${saved.name}"`, 'My Layouts')
+        }
+      },
+    }
+    return
+  }
+
   const saved = await store.save(saveName.value, currentPayload())
   if (saved) {
     decodedCache.delete(saved.id)
@@ -328,22 +365,6 @@ const requestLoad = (layout: SavedLayout) => {
     return
   }
   applyLayout(layout)
-}
-
-const requestOverwrite = (layout: SavedLayout) => {
-  pending.value = {
-    id: layout.id,
-    message: `Replace "${layout.name}" with the editor contents?`,
-    confirmLabel: 'Replace',
-    danger: false,
-    run: async () => {
-      const saved = await store.overwrite(layout.id, currentPayload())
-      if (saved) {
-        decodedCache.delete(saved.id)
-        toast.showSuccess(`Replaced "${saved.name}"`, 'My Layouts')
-      }
-    },
-  }
 }
 
 const requestDelete = (layout: SavedLayout) => {

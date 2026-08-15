@@ -18,8 +18,7 @@ import PcbHelpModal from './components/PcbHelpModal.vue'
 import PlateHelpModal from './components/PlateHelpModal.vue'
 import PcbSettingsModal from './components/PcbSettingsModal.vue'
 import ToastContainer from './components/ToastContainer.vue'
-import ThemeToggle from './components/ThemeToggle.vue'
-import UserMenu from './components/UserMenu.vue'
+import AccountMenu from './components/AccountMenu.vue'
 import GitHubStarPopup from './components/GitHubStarPopup.vue'
 import { useKeyboardStore } from '@/stores/keyboard'
 import { useAuthStore } from '@/stores/auth'
@@ -397,7 +396,7 @@ const isLayoutEditorSettingsOpen = ref(false)
           >
             <strong>Keyboard Layout Editor NG</strong>
           </h1>
-          <!-- On small screens: toolbar and theme toggle in same row -->
+          <!-- On small screens: toolbar and account menu in same row -->
           <nav
             class="d-flex flex-row flex-grow-1 align-items-center gap-2"
             aria-label="Main toolbar"
@@ -405,9 +404,8 @@ const isLayoutEditorSettingsOpen = ref(false)
             <div class="flex-grow-1">
               <KeyboardToolbar />
             </div>
-            <!-- Theme toggle grouped with toolbar buttons on small screens -->
-            <ThemeToggle />
-            <UserMenu />
+            <!-- Theme lives in here too, so it is present even without accounts -->
+            <AccountMenu />
           </nav>
         </div>
       </div>

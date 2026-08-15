@@ -78,3 +78,41 @@ textarea.form-control:focus {
   which fixes svg off by 1 centering problem */
   line-height: 1.4286;
 }
+
+/* Section headings inside dropdown menus. Bootstrap's default grey is light enough to
+   read as disabled text rather than as a heading, which made the sections easy to miss
+   once menus started carrying more than one group; the band and the default cursor mark
+   the heading as a label rather than something clickable.
+
+   Padding and font-size are matched to `.dropdown-item` rather than left at Bootstrap's
+   own header values, because CanvasToolbar.vue's non-scoped style block overrides every
+   `.dropdown-item` in the app to `padding: 8px 12px; font-size: 12px` — so the stock
+   header (16px/14px) no longer lines up with the entries beneath it. */
+.dropdown-header {
+  padding: 0.375rem 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--bs-body-color);
+  background-color: var(--bs-secondary-bg);
+  cursor: default;
+  user-select: none;
+}
+
+/* Header controls shrink together on narrow viewports. This lives here rather than in
+   a component because the header's buttons come from several components (App.vue's
+   style block is scoped) and they have to stay the same height as each other. */
+@media (max-width: 575.98px) {
+  .app-header .btn,
+  .app-header .account-trigger {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }
+}
+
+@media (max-width: 320px) {
+  .app-header .btn,
+  .app-header .account-trigger {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+  }
+}

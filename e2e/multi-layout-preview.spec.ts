@@ -167,10 +167,7 @@ test.describe('Alternative Layouts Preview', () => {
       await editor.expectSelectedCount(0)
     })
 
-    test('should keep the Preset dropdown button enabled in preview mode', async () => {
-      await expect(presets.getDropdownButton()).toBeEnabled()
-    })
-
+    // Presets live in this menu too, so this covers loading either kind of layout
     test('should keep the Import dropdown button enabled in preview mode', async ({ page }) => {
       await expect(page.locator(SELECTORS.IMPORT_EXPORT.IMPORT_BUTTON)).toBeEnabled()
     })

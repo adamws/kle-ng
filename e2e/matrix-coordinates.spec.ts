@@ -509,17 +509,19 @@ test.describe('Matrix Coordinates Tool', () => {
 
     const editor = new KeyboardEditorPage(page)
 
-    // Open the presets dropdown
-    const presetButton = page.locator('.preset-dropdown button.preset-select')
+    // Open the Import dropdown, which holds the presets
+    const presetButton = page.locator('[data-testid="button-import"]')
     await presetButton.click()
 
     // Wait for dropdown items to be in DOM
-    await expect(page.locator('.preset-dropdown .dropdown-item').first()).toBeAttached({
+    await expect(
+      page.locator('[data-testid="import-from-preset"] .dropdown-item').first(),
+    ).toBeAttached({
       timeout: 5000,
     })
 
     // Click the Multilayout 60% (VIA) preset item
-    const viaItem = page.locator('.preset-dropdown .dropdown-item', {
+    const viaItem = page.locator('[data-testid="import-from-preset"] .dropdown-item', {
       hasText: 'Multilayout 60% (VIA)',
     })
     await viaItem.click()

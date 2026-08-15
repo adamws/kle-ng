@@ -1,10 +1,13 @@
 import { Locator, Page, expect } from '@playwright/test'
 import { WaitHelpers } from '../../helpers/wait-helpers'
+import { SELECTORS } from '../../constants/selectors'
 
 /**
  * ThemeComponent - Theme switching functionality
  *
- * Encapsulates theme toggle button and theme switching operations.
+ * The theme picker is a section of the account menu, so the "toggle button" here is
+ * that menu's trigger and the current mode is read from the active item inside it
+ * rather than from the button.
  *
  * @example
  * const theme = new ThemeComponent(page, waitHelpers)
@@ -19,7 +22,7 @@ export class ThemeComponent {
     private readonly page: Page,
     private readonly waitHelpers: WaitHelpers,
   ) {
-    this.themeToggleButton = page.locator('button[title*="Current theme"]')
+    this.themeToggleButton = page.locator(SELECTORS.THEME.TOGGLE_BUTTON)
     this.htmlElement = page.locator('html')
   }
 
@@ -31,7 +34,7 @@ export class ThemeComponent {
     await this.themeToggleButton.click()
 
     // Wait for theme dropdown specifically (using data-testid)
-    const dropdown = this.page.getByTestId('theme-dropdown-menu')
+    const dropdown = this.page.locator(SELECTORS.THEME.DROPDOWN_MENU)
     await expect(dropdown).toBeVisible()
 
     // Capitalize first letter for button text
@@ -67,11 +70,15 @@ export class ThemeComponent {
   }
 
   /**
-   * Assert that the theme toggle button shows the expected theme
-   * @param theme - Expected theme displayed in button title
+   * Assert that the given mode is the one currently selected. Opens the menu, since
+   * the setting (notably 'auto') is only visible there, and closes it again.
+   * @param theme - Expected selected theme
    */
-  async expectButtonShowsTheme(theme: 'light' | 'dark' | 'auto') {
-    await expect(this.themeToggleButton).toHaveAttribute('title', `Current theme: ${theme}`)
+  async expectActiveTheme(theme: 'light' | 'dark' | 'auto') {
+    await this.openDropdown()
+    await this.expectDropdownOptionActive(theme)
+    await this.page.keyboard.press('Escape')
+    await expect(this.page.locator(SELECTORS.THEME.DROPDOWN_MENU)).toBeHidden()
   }
 
   /**
@@ -102,7 +109,7 @@ export class ThemeComponent {
     await this.themeToggleButton.click()
 
     // Wait for theme dropdown specifically (using data-testid)
-    const dropdown = this.page.getByTestId('theme-dropdown-menu')
+    const dropdown = this.page.locator(SELECTORS.THEME.DROPDOWN_MENU)
     await expect(dropdown).toBeVisible()
   }
 
@@ -112,7 +119,9 @@ export class ThemeComponent {
    */
   async expectDropdownOptionActive(theme: 'light' | 'dark' | 'auto'): Promise<void> {
     const themeName = theme.charAt(0).toUpperCase() + theme.slice(1)
-    const option = this.page.locator(`.dropdown-item:has-text("${themeName}")`)
+    const option = this.page
+      .locator(SELECTORS.THEME.DROPDOWN_MENU)
+      .locator(`.dropdown-item:has-text("${themeName}")`)
     await expect(option).toHaveClass(/active/)
   }
 
@@ -122,7 +131,9 @@ export class ThemeComponent {
    */
   async expectDropdownOptionNotActive(theme: 'light' | 'dark' | 'auto'): Promise<void> {
     const themeName = theme.charAt(0).toUpperCase() + theme.slice(1)
-    const option = this.page.locator(`.dropdown-item:has-text("${themeName}")`)
+    const option = this.page
+      .locator(SELECTORS.THEME.DROPDOWN_MENU)
+      .locator(`.dropdown-item:has-text("${themeName}")`)
     await expect(option).not.toHaveClass(/active/)
   }
 

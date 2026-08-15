@@ -1,27 +1,23 @@
 <template>
   <div class="toolbar-container keyboard-toolbar" data-testid="panel-toolbar-container">
-    <!-- Right side: Presets, Import/Export -->
-    <div
-      class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2 gap-sm-3 justify-content-sm-end"
-    >
-      <!-- Presets -->
-      <div class="dropdown preset-dropdown">
-        <button
-          class="btn btn-outline-primary dropdown-toggle preset-select"
-          type="button"
-          data-bs-toggle="dropdown"
-          aria-expanded="false"
-        >
-          {{ selectedPresetName || 'Choose Preset...' }}
-        </button>
-        <ul class="dropdown-menu">
-          <li v-for="(preset, index) in availablePresets" :key="index">
-            <a class="dropdown-item" href="#" @click.prevent="selectPreset(index)">
-              {{ preset.name }}
-            </a>
-          </li>
-        </ul>
-      </div>
+    <!-- Right side: My Layouts, Import/Export/Share -->
+    <!-- Everything fits one row at every width now that the preset dropdown, which
+         was the widest control by far, has moved into the Import menu. -->
+    <div class="d-flex flex-row align-items-center gap-2 gap-sm-3 justify-content-end">
+      <!-- Only shown to signed-in users; accounts are optional and off by default.
+           Kept out of the button group below so it reads as its own destination
+           rather than a fourth import/export action. -->
+      <button
+        v-if="authStore.isSignedIn"
+        class="btn btn-outline-primary flex-shrink-0"
+        data-testid="my-layouts"
+        type="button"
+        title="Your saved layouts"
+        @click="showMyLayoutsModal = true"
+      >
+        <span class="d-none d-sm-inline">My Layouts</span>
+        <span class="d-inline d-sm-none">Layouts</span>
+      </button>
 
       <!-- Import/Export/Share buttons -->
       <div class="btn-group" role="group">
@@ -36,7 +32,7 @@
           >
             Import
           </button>
-          <ul class="dropdown-menu">
+          <ul class="dropdown-menu import-menu">
             <li>
               <a
                 class="dropdown-item"
@@ -60,6 +56,20 @@
             <li>
               <a class="dropdown-item" href="#" @click.prevent="showViaImportModal = true">
                 From VIA
+              </a>
+            </li>
+
+            <!-- Presets are just another way to start a layout, so they live with the
+                 other sources rather than owning a slot in the header. The heading band
+                 separates the two groups, so no divider above it. -->
+            <li><h6 class="dropdown-header">Presets</h6></li>
+            <li
+              v-for="preset in availablePresets"
+              :key="preset.file"
+              data-testid="import-from-preset"
+            >
+              <a class="dropdown-item" href="#" @click.prevent="loadPreset(preset)">
+                {{ preset.name }}
               </a>
             </li>
           </ul>
@@ -176,26 +186,13 @@
           </ul>
         </div>
 
-        <!-- Only shown to signed-in users; accounts are optional and off by default -->
-        <button
-          v-if="authStore.isSignedIn"
-          class="btn btn-outline-secondary"
-          data-testid="my-layouts"
-          type="button"
-          title="Your saved layouts"
-          @click="showMyLayoutsModal = true"
-        >
-          <BiCollection class="bi" aria-hidden="true" />
-          <span class="d-none d-lg-inline ms-1" style="white-space: nowrap">My Layouts</span>
-        </button>
-
         <button
           class="btn btn-primary"
           @click="shareLayout"
           type="button"
           title="Copy share URL to clipboard"
         >
-          <span class="d-none d-sm-inline" style="white-space: nowrap">Share Link</span>
+          <span class="d-none d-sm-inline">Share Link</span>
           <span class="d-inline d-sm-none">Share</span>
         </button>
       </div>
@@ -232,49 +229,33 @@ import MyLayoutsModal from './MyLayoutsModal.vue'
 import { useAuthStore } from '@/stores/auth'
 
 import BiBoxArrowUpRight from 'bootstrap-icons/icons/box-arrow-up-right.svg'
-import BiCollection from 'bootstrap-icons/icons/collection.svg'
 
 const keyboardStore = useKeyboardStore()
 const authStore = useAuthStore()
 
-// Preset state
-const selectedPreset = ref('')
-const selectedPresetName = ref('')
-const availablePresets = ref<{ name: string; file: string }[]>([])
+interface Preset {
+  name: string
+  file: string
+}
+
+const availablePresets = ref<Preset[]>([])
 
 onMounted(() => {
   availablePresets.value = presetsMetadata.presets || []
 })
 
-const selectPreset = async (index: number) => {
-  selectedPreset.value = index.toString()
-  const preset = availablePresets.value[index]
-  selectedPresetName.value = preset?.name || ''
-  await loadPreset()
-}
-
-const loadPreset = async () => {
-  if (selectedPreset.value === '') return
-
-  const presetIndex = parseInt(selectedPreset.value)
-  const preset = availablePresets.value[presetIndex]
-
-  console.log('Loading preset:', preset?.name)
-
-  if (preset) {
-    try {
-      const response = await fetch(`${import.meta.env.BASE_URL}data/presets/${preset.file}`)
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-      }
-      const presetData = await response.json()
-
-      keyboardStore.loadKLELayout(presetData)
-      console.log('Preset loaded successfully:', preset.name, 'Keys:', keyboardStore.keys.length)
-    } catch (error) {
-      console.error('Error loading preset:', error)
-      toast.showError(`Failed to load ${preset.name}`, 'Error loading preset')
+const loadPreset = async (preset: Preset) => {
+  try {
+    const response = await fetch(`${import.meta.env.BASE_URL}data/presets/${preset.file}`)
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
     }
+    const presetData = await response.json()
+
+    keyboardStore.loadKLELayout(presetData)
+  } catch (error) {
+    console.error('Error loading preset:', error)
+    toast.showError(`Failed to load ${preset.name}`, 'Error loading preset')
   }
 }
 
@@ -339,53 +320,24 @@ const shareLayout = async () => {
   min-height: 38px;
 }
 
-.preset-dropdown .preset-select {
-  width: 220px;
-  min-width: 220px;
-  flex-shrink: 0;
-  text-align: left;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+/* The presets section makes this the one long menu in the header. Cap it against the
+   viewport rather than a fixed height, so it only scrolls when it genuinely cannot
+   fit: the allowance covers the header above it plus a margin at the bottom. */
+.import-menu {
+  max-height: calc(100vh - 5rem);
+  overflow-y: auto;
+}
+
+.keyboard-toolbar .btn {
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  /* Match standard Bootstrap button height and sizing */
-}
-
-.preset-dropdown .preset-select::after {
-  margin-left: 0.5rem;
-  flex-shrink: 0;
-}
-
-/* Mobile responsive adjustments */
-@media (max-width: 575.98px) {
-  .preset-dropdown .preset-select {
-    width: 100%;
-  }
-
-  /* Make buttons more compact to fit in one row */
-  .btn-group .btn,
-  .preset-dropdown .preset-select {
-    font-size: 0.75rem;
-    padding: 0.25rem 0.5rem;
-    white-space: nowrap;
-  }
-}
-
-@media (max-width: 320px) {
-  .btn-group .btn,
-  .preset-dropdown .preset-select {
-    font-size: 0.7rem;
-    padding: 0.2rem 0.4rem;
-  }
 }
 
 .keyboard-toolbar .btn-outline-primary {
   border-width: 2px;
 }
 
-/* Import/Export/Share button group corner rounding */
+/* Import/Export/Share button group corner rounding. The group is always exactly
+   [Import dropdown][Export dropdown][Share], so these positional rules are stable. */
 .btn-group > .dropdown:first-child .btn {
   border-top-left-radius: 6px !important;
   border-bottom-left-radius: 6px !important;

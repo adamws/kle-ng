@@ -20,8 +20,13 @@ describe('KeyboardToolbar', () => {
     setActivePinia(createPinia())
   })
 
-  describe('preset dropdown', () => {
-    it('should have "Choose Preset..." as default dropdown text', async () => {
+  describe('presets in the import menu', () => {
+    // Presets are a section of the Import dropdown rather than a header control of
+    // their own, so everything here is scoped to that menu.
+    const presetItems = (wrapper: ReturnType<typeof mount>) =>
+      wrapper.findAll('[data-testid="import-from-preset"] .dropdown-item')
+
+    it('should list presets under the Import dropdown', async () => {
       const wrapper = mount(KeyboardToolbar, {
         global: {
           plugins: [createPinia()],
@@ -30,28 +35,13 @@ describe('KeyboardToolbar', () => {
 
       await wrapper.vm.$nextTick()
 
-      const dropdownButton = wrapper.find('button.preset-select')
-      expect(dropdownButton.exists()).toBe(true)
-      expect(dropdownButton.text().trim()).toBe('Choose Preset...')
-    })
+      const importMenu = wrapper.find('.import-menu')
+      expect(importMenu.exists()).toBe(true)
+      expect(importMenu.text()).toContain('Presets')
+      expect(presetItems(wrapper).length).toBeGreaterThan(0)
 
-    it('should show dropdown menu with preset options', async () => {
-      const wrapper = mount(KeyboardToolbar, {
-        global: {
-          plugins: [createPinia()],
-        },
-      })
-
-      await wrapper.vm.$nextTick()
-
-      const dropdownButton = wrapper.find('button.preset-select')
-      expect(dropdownButton.exists()).toBe(true)
-
-      const dropdownMenu = wrapper.find('.preset-dropdown .dropdown-menu')
-      expect(dropdownMenu.exists()).toBe(true)
-
-      const dropdownItems = dropdownMenu.findAll('.dropdown-item')
-      expect(dropdownItems.length).toBeGreaterThan(0)
+      // The standalone preset dropdown is gone from the header
+      expect(wrapper.find('.preset-dropdown').exists()).toBe(false)
     })
 
     it('should load preset when selected', async () => {
@@ -77,14 +67,11 @@ describe('KeyboardToolbar', () => {
 
       await wrapper.vm.$nextTick()
 
-      const presetDropdown = wrapper.find('.preset-dropdown .dropdown-menu')
-      expect(presetDropdown.exists()).toBe(true)
-
-      const dropdownItems = presetDropdown.findAll('.dropdown-item')
-      expect(dropdownItems.length).toBeGreaterThan(0)
+      const items = presetItems(wrapper)
+      expect(items.length).toBeGreaterThan(0)
 
       // Click the first preset
-      const firstPreset = dropdownItems[0]
+      const firstPreset = items[0]
       expect(firstPreset).toBeDefined()
       await firstPreset!.trigger('click')
 
@@ -92,12 +79,9 @@ describe('KeyboardToolbar', () => {
       await new Promise((resolve) => setTimeout(resolve, 500))
       await wrapper.vm.$nextTick()
 
-      // Should have called loadKLELayout with the mocked data
+      // Should have fetched the file named in presets.json and loaded the result
+      expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('planck.json'))
       expect(loadKLELayoutSpy).toHaveBeenCalledWith(mockPresetData)
-
-      // The dropdown button should show the selected preset name
-      const dropdownButton = wrapper.find('button.preset-select')
-      expect(dropdownButton.text().trim()).toBe('Test Layout 1')
     })
 
     it('should load available presets from presets.json', async () => {
@@ -109,18 +93,14 @@ describe('KeyboardToolbar', () => {
 
       await wrapper.vm.$nextTick()
 
-      // Find only the preset dropdown items (not import/export dropdowns)
-      const presetDropdown = wrapper.find('.preset-dropdown .dropdown-menu')
-      expect(presetDropdown.exists()).toBe(true)
-
-      const dropdownItems = presetDropdown.findAll('.dropdown-item')
+      const items = presetItems(wrapper)
 
       // Should have 2 preset options
-      expect(dropdownItems.length).toBe(2)
-      const firstPresetOption = dropdownItems[0]
+      expect(items.length).toBe(2)
+      const firstPresetOption = items[0]
       expect(firstPresetOption).toBeDefined()
       expect(firstPresetOption!.text().trim()).toBe('Test Layout 1')
-      const secondPresetOption = dropdownItems[1]
+      const secondPresetOption = items[1]
       expect(secondPresetOption).toBeDefined()
       expect(secondPresetOption!.text().trim()).toBe('Test Layout 2')
     })
