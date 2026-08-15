@@ -33,14 +33,14 @@
             />
             <button
               type="button"
-              class="btn btn-primary flex-shrink-0"
+              class="btn btn-primary flex-shrink-0 d-flex align-items-center justify-content-center"
               data-testid="save-layout"
               :disabled="!canSave"
               :title="saveHint"
               @click="saveCurrent"
             >
-              <BiFloppy class="bi" aria-hidden="true" />
-              {{ existingByName ? 'Update' : 'Save current' }}
+              <BiFloppy aria-hidden="true" />
+              <span class="ms-1">{{ existingByName ? 'Update' : 'Save current' }}</span>
             </button>
           </div>
 
@@ -131,7 +131,7 @@
               <div v-else-if="renamingId === layout.id" class="layout-item-actions">
                 <button
                   type="button"
-                  class="btn btn-sm btn-primary"
+                  class="btn btn-sm btn-primary d-flex align-items-center justify-content-center"
                   data-testid="rename-confirm"
                   :disabled="store.busy || !renameValue.trim()"
                   @click="commitRename(layout.id)"
@@ -140,7 +140,7 @@
                 </button>
                 <button
                   type="button"
-                  class="btn btn-sm btn-outline-secondary"
+                  class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center"
                   data-testid="rename-cancel"
                   @click="cancelRename"
                 >
@@ -151,18 +151,18 @@
               <div v-else class="layout-item-actions">
                 <button
                   type="button"
-                  class="btn btn-sm btn-outline-primary"
+                  class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center"
                   data-testid="load-layout"
                   :disabled="store.busy || !decoded(layout)"
                   title="Load into the editor"
                   @click="requestLoad(layout)"
                 >
-                  <BiBoxArrowInDown aria-hidden="true" />
+                  <BiBoxArrowInRight aria-hidden="true" />
                   <span class="d-none d-sm-inline ms-1">Load</span>
                 </button>
                 <button
                   type="button"
-                  class="btn btn-sm btn-outline-secondary"
+                  class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center"
                   data-testid="rename-layout"
                   :disabled="store.busy"
                   title="Rename"
@@ -172,7 +172,7 @@
                 </button>
                 <button
                   type="button"
-                  class="btn btn-sm btn-outline-danger"
+                  class="btn btn-sm btn-outline-danger d-flex align-items-center justify-content-center"
                   data-testid="delete-layout"
                   :disabled="store.busy"
                   title="Delete"
@@ -203,7 +203,11 @@ import { toast } from '@/composables/useToast'
 import LayoutThumbnail from './LayoutThumbnail.vue'
 
 import BiFloppy from 'bootstrap-icons/icons/floppy.svg'
-import BiBoxArrowInDown from 'bootstrap-icons/icons/box-arrow-in-down.svg'
+// box-arrow-in-right, not one of the download arrows: `download.svg` already means
+// "write a file to disk" in PlateDownloadButtons, and this loads into the editor. Its
+// ink is also centred in its 16px box and only 12px tall, so it sits on the same
+// optical line as the label — box-arrow-in-down's ran to the bottom edge of the box.
+import BiBoxArrowInRight from 'bootstrap-icons/icons/box-arrow-in-right.svg'
 import BiPencil from 'bootstrap-icons/icons/pencil.svg'
 import BiTrash from 'bootstrap-icons/icons/trash.svg'
 import BiCheckLg from 'bootstrap-icons/icons/check-lg.svg'
@@ -468,6 +472,28 @@ onUnmounted(() => {
   display: flex;
   gap: 0.5rem;
   margin-bottom: 1rem;
+}
+
+/*
+ * The buttons here centre their contents with `d-flex align-items-center
+ * justify-content-center`, the same way the download and matrix modals do. Without it
+ * the icons — 16px inline replaced elements — rest ON the text baseline and ride low
+ * next to a label.
+ *
+ * Those buttons always carry text, though, and these do not: rename and delete are
+ * icon-only, and Load drops its label below 576px. A flex container has no strut, so
+ * an icon-only one would be only as tall as its 16px icon while its labelled neighbour
+ * keeps a 20px text box, and the row would step. This restores that line box — its
+ * height is .btn-sm's line-height, set in bootstrap-custom.scss.
+ *
+ * It has to be a zero-width item with no `gap` on the container: `gap` also applies
+ * between the strut and the icon, which widens every icon-only button and pushes a
+ * labelled one off centre. Label spacing is a margin utility instead.
+ */
+.layout-item-actions .btn::before {
+  content: '';
+  width: 0;
+  height: 1.4286em;
 }
 
 .empty-icon {
