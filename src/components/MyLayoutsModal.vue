@@ -202,6 +202,19 @@
         </div>
 
         <div class="modal-footer">
+          <!-- Kept away from the per-row actions: this one is about the whole list,
+               and the footer is the only place that belongs to all of it. -->
+          <button
+            type="button"
+            class="btn btn-outline-secondary me-auto d-flex align-items-center justify-content-center"
+            data-testid="download-all-layouts"
+            :disabled="store.busy || store.loading || store.layouts.length === 0"
+            title="Download every saved layout as a zip of KLE JSON files"
+            @click="downloadAll"
+          >
+            <BiDownload aria-hidden="true" />
+            <span class="ms-1">Download all</span>
+          </button>
           <button type="button" class="btn btn-secondary" @click="close">Close</button>
         </div>
       </div>
@@ -215,10 +228,13 @@ import { Keyboard, type Key, type KeyboardMetadata } from '@adamws/kle-serial'
 import { useKeyboardStore } from '@/stores/keyboard'
 import { useLayoutsStore, MAX_NAME_LENGTH, type SavedLayout } from '@/stores/layouts'
 import { encodeLayoutToUrl, decodeLayoutFromUrl } from '@/utils/url-sharing'
+import { getSerializedData, stringifyWithRounding } from '@/utils/serialization'
+import { createZip, type ZipEntry } from '@/utils/zip'
 import { toast } from '@/composables/useToast'
 import LayoutThumbnail from './LayoutThumbnail.vue'
 
 import BiFloppy from 'bootstrap-icons/icons/floppy.svg'
+import BiDownload from 'bootstrap-icons/icons/download.svg'
 // box-arrow-in-right, not one of the download arrows: `download.svg` already means
 // "write a file to disk" in PlateDownloadButtons, and this loads into the editor. Its
 // ink is also centred in its 16px box and only 12px tall, so it sits on the same
@@ -355,6 +371,100 @@ const saveCurrent = async () => {
     decodedCache.delete(saved.id)
     toast.showSuccess(`Saved "${saved.name}"`, 'My Layouts')
   }
+}
+
+/**
+ * A layout name is free text; an archive entry name is not. Strip what Windows
+ * refuses, and never return an empty stem, which would produce a bare ".json".
+ */
+const toEntryStem = (name: string) => {
+  // Reserved on Windows: < > : " / \ | ? * and the C0 controls, none of
+  // which a layout name is stopped from containing.
+  const cleaned = name.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '-').trim()
+  return cleaned.replace(/[. ]+$/, '') || 'layout'
+}
+
+/**
+ * Names are not unique across saved layouts, and sanitising can collide two that
+ * were distinct, so entries are suffixed until they are. Compared case-insensitively
+ * because the filesystems these land on generally are.
+ */
+const toEntryName = (stem: string, taken: Set<string>) => {
+  let candidate = `${stem}.json`
+  for (let n = 2; taken.has(candidate.toLowerCase()); n += 1) {
+    candidate = `${stem} (${n}).json`
+  }
+  taken.add(candidate.toLowerCase())
+  return candidate
+}
+
+const saveBlob = (blob: Blob, filename: string) => {
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = filename
+  anchor.click()
+  URL.revokeObjectURL(url)
+}
+
+/**
+ * Every saved layout in one archive, as a backup.
+ *
+ * A zip of one ordinary .json per layout rather than a single combined file: each
+ * entry is then exactly what "Export → Download JSON" produces for that layout, so
+ * restoring one is an ordinary import and needs nothing that understands a bundle
+ * format. A layout whose payload will not decode is skipped rather than failing the
+ * download — the point of a backup is to rescue what is still readable.
+ */
+const downloadAll = () => {
+  const taken = new Set<string>()
+  const entries: ZipEntry[] = []
+  let unreadable = 0
+
+  for (const layout of store.layouts) {
+    const entry = decoded(layout)
+    if (!entry) {
+      unreadable += 1
+      continue
+    }
+    const keyboard = new Keyboard()
+    keyboard.keys = entry.keys
+    keyboard.meta = entry.meta
+    entries.push({
+      name: toEntryName(toEntryStem(layout.name), taken),
+      text: stringifyWithRounding(getSerializedData(keyboard, 'kle'), 2),
+    })
+  }
+
+  if (entries.length === 0) {
+    toast.showError(
+      unreadable > 0 ? 'None of your saved layouts could be read' : 'There is nothing to download',
+      'Download Failed',
+    )
+    return
+  }
+
+  const now = new Date()
+  try {
+    saveBlob(
+      new Blob([createZip(entries, now)], { type: 'application/zip' }),
+      `kle-ng-layouts-${now.toISOString().slice(0, 10)}.zip`,
+    )
+  } catch (error) {
+    console.error('Error building the layout archive:', error)
+    toast.showError(
+      error instanceof Error ? error.message : 'Could not build the archive',
+      'Download Failed',
+    )
+    return
+  }
+
+  toast.showSuccess(
+    unreadable > 0
+      ? `Downloaded ${entries.length} of ${store.layouts.length} layouts — ${unreadable} could not be read`
+      : `Downloaded ${entries.length} ${entries.length === 1 ? 'layout' : 'layouts'}`,
+    'My Layouts',
+  )
 }
 
 const applyLayout = (layout: SavedLayout) => {

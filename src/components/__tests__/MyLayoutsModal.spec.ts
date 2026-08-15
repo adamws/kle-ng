@@ -11,7 +11,16 @@ const mocks = vi.hoisted(() => ({
   showSuccess: vi.fn(),
   showError: vi.fn(),
   showInfo: vi.fn(),
+  // Typed through the generic rather than with named parameters, so `mock.calls` is
+  // typed without declaring arguments the implementation does not use.
+  createZip: vi.fn<(entries: Array<{ name: string; text: string }>, modified?: Date) => Uint8Array>(
+    () => new Uint8Array([1, 2, 3]),
+  ),
 }))
+
+// The archive bytes are zip.spec.ts's problem; what matters here is which layouts the
+// modal packs, under what names, and with what contents.
+vi.mock('@/utils/zip', () => ({ createZip: mocks.createZip }))
 
 vi.mock('@/config/supabase', () => ({
   AUTH_STORAGE_KEY: 'kle-ng-auth',
@@ -230,6 +239,110 @@ describe('MyLayoutsModal', () => {
       const { wrapper } = mountModal([makeLayout('one')])
       await setName(wrapper, '   ')
       expect(wrapper.find('[data-testid="save-layout"]').attributes('disabled')).toBeDefined()
+    })
+  })
+
+  describe('download all', () => {
+    /** Filenames the component asked the browser to save. */
+    let downloaded: string[] = []
+
+    beforeEach(() => {
+      downloaded = []
+      // jsdom implements neither of these, and will not follow a download anyway
+      URL.createObjectURL = vi.fn(() => 'blob:mock')
+      URL.revokeObjectURL = vi.fn()
+      vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+        this: HTMLAnchorElement,
+      ) {
+        downloaded.push(this.download)
+      })
+    })
+
+    const button = (wrapper: ReturnType<typeof mountModal>['wrapper']) =>
+      wrapper.find('[data-testid="download-all-layouts"]')
+
+    /** The entries handed to createZip by the most recent click. */
+    const packed = () => {
+      // Not `.at(-1)`: tsconfig.vitest.json sets `lib: []`, so Array.prototype.at is
+      // not declared for the specs.
+      const calls = mocks.createZip.mock.calls
+      return calls[calls.length - 1]![0]
+    }
+
+    it('packs one entry per layout, named after it', async () => {
+      const { wrapper } = mountModal([makeLayout('Planck rev6'), makeLayout('Lily58')])
+
+      await button(wrapper).trigger('click')
+
+      expect(packed().map((e) => e.name)).toEqual(['Planck rev6.json', 'Lily58.json'])
+      expect(downloaded).toHaveLength(1)
+      expect(downloaded[0]).toMatch(/^kle-ng-layouts-\d{4}-\d{2}-\d{2}\.zip$/)
+    })
+
+    // Each entry has to stand on its own as an import, so it carries exactly what
+    // Export → Download JSON writes for that layout — not a bundle format.
+    it('writes each entry as ordinary KLE JSON', async () => {
+      const { wrapper } = mountModal([makeLayout('Planck rev6')])
+
+      await button(wrapper).trigger('click')
+
+      const parsed = JSON.parse(packed()[0]!.text)
+      expect(Array.isArray(parsed)).toBe(true)
+    })
+
+    it('replaces characters a filename cannot carry, and keeps entries distinct', async () => {
+      const { wrapper } = mountModal([
+        makeLayout('60% / ANSI: v2', 'a'),
+        makeLayout('60% - ANSI- v2', 'b'),
+        makeLayout('...', 'c'),
+      ])
+
+      await button(wrapper).trigger('click')
+
+      expect(packed().map((e) => e.name)).toEqual([
+        '60% - ANSI- v2.json',
+        '60% - ANSI- v2 (2).json',
+        'layout.json',
+      ])
+    })
+
+    // A backup should rescue what is readable rather than fail on the one row that is
+    // not, so an undecodable payload is skipped and reported.
+    it('skips layouts that cannot be decoded and says how many', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      const broken = { ...makeLayout('broken'), payload: 'not-a-payload' }
+      const { wrapper } = mountModal([makeLayout('good'), broken])
+
+      await button(wrapper).trigger('click')
+
+      expect(packed().map((e) => e.name)).toEqual(['good.json'])
+      expect(mocks.showSuccess).toHaveBeenCalledWith(
+        expect.stringContaining('1 could not be read'),
+        'My Layouts',
+      )
+    })
+
+    it('reports a failure instead of downloading an empty archive', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      const broken = { ...makeLayout('broken'), payload: 'not-a-payload' }
+      const { wrapper } = mountModal([broken])
+
+      await button(wrapper).trigger('click')
+
+      expect(mocks.createZip).not.toHaveBeenCalled()
+      expect(downloaded).toEqual([])
+      expect(mocks.showError).toHaveBeenCalledWith(expect.any(String), 'Download Failed')
+    })
+
+    it('is unavailable with nothing saved, or before the list has arrived', async () => {
+      expect(button(mountModal([]).wrapper).attributes('disabled')).toBeDefined()
+
+      const { wrapper, store } = mountModal([makeLayout('one')])
+      expect(button(wrapper).attributes('disabled')).toBeUndefined()
+
+      store.loading = true
+      await wrapper.vm.$nextTick()
+      expect(button(wrapper).attributes('disabled')).toBeDefined()
     })
   })
 })
