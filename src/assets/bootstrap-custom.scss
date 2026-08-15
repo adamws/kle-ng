@@ -100,10 +100,15 @@ textarea.form-control:focus {
 
 /* Header controls shrink together on narrow viewports. This lives here rather than in
    a component because the header's buttons come from several components (App.vue's
-   style block is scoped) and they have to stay the same height as each other. */
+   style block is scoped) and they have to stay the same height as each other.
+
+   The account trigger is matched by tag as well as class: its own rule is scoped, so
+   it compiles to `.account-trigger[data-v-x]` and ties this selector on specificity,
+   and being emitted after this file it would otherwise win the tie and keep its
+   full-size font while the buttons beside it shrink. */
 @media (max-width: 575.98px) {
   .app-header .btn,
-  .app-header .account-trigger {
+  .app-header button.account-trigger {
     font-size: 0.75rem;
     padding: 0.25rem 0.5rem;
   }
@@ -111,7 +116,7 @@ textarea.form-control:focus {
 
 @media (max-width: 320px) {
   .app-header .btn,
-  .app-header .account-trigger {
+  .app-header button.account-trigger {
     font-size: 0.7rem;
     padding: 0.2rem 0.4rem;
   }

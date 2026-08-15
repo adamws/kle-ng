@@ -181,6 +181,27 @@ describe('MyLayoutsModal', () => {
       expect(button().attributes('disabled')).toBeUndefined()
     })
 
+    it('waits for the refetch, so a name is never matched against a stale list', async () => {
+      // On the first open of a session the list is still in flight: saving now would
+      // miss the existing 'one' and insert a duplicate instead of updating it.
+      const { wrapper, store, save, overwrite } = mountModal([])
+      store.loading = true
+      await setName(wrapper, 'one')
+
+      expect(wrapper.find('[data-testid="save-layout"]').attributes('disabled')).toBeDefined()
+
+      store.layouts = [makeLayout('one')]
+      store.loading = false
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.find('[data-testid="save-layout"]').attributes('disabled')).toBeUndefined()
+      await wrapper.find('[data-testid="save-layout"]').trigger('click')
+
+      expect(save).not.toHaveBeenCalled()
+      expect(overwrite).not.toHaveBeenCalled()
+      expect(wrapper.find('[data-testid="confirm-action"]').exists()).toBe(true)
+    })
+
     it('cannot be triggered with an empty name', async () => {
       const { wrapper } = mountModal([makeLayout('one')])
       await setName(wrapper, '   ')

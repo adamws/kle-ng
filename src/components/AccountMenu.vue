@@ -4,6 +4,11 @@
     so unlike the account section inside it, it renders whether or not accounts are
     configured — otherwise a build without Supabase env vars would have no way to
     change the theme at all.
+
+    For the same reason `auth.busy` disables the account entries rather than the
+    trigger: signIn() leaves `busy` set on its success path (the browser is meant to
+    leave the page), so a bfcache restore after a back-navigation would otherwise
+    come back with theme switching permanently unavailable.
   -->
   <div class="dropdown">
     <button
@@ -12,7 +17,6 @@
       type="button"
       data-bs-toggle="dropdown"
       aria-expanded="false"
-      :disabled="auth.busy"
       :title="triggerLabel"
       :aria-label="triggerLabel"
     >
@@ -70,6 +74,7 @@
             <button
               class="dropdown-item d-flex align-items-center gap-2"
               data-testid="sign-out"
+              :disabled="auth.busy"
               @click="auth.signOut()"
             >
               <BiBoxArrowRight />
@@ -88,6 +93,7 @@
             <button
               class="dropdown-item d-flex align-items-center gap-2"
               data-testid="sign-in-github"
+              :disabled="auth.busy"
               @click="auth.signIn('github')"
             >
               <BiGithub />
@@ -103,6 +109,7 @@
               <button
                 class="dropdown-item d-flex align-items-center gap-2"
                 data-testid="sign-in-test-user"
+                :disabled="auth.busy"
                 @click="auth.signInAsTestUser()"
               >
                 <BiPersonCircle />
@@ -164,11 +171,6 @@ const triggerLabel = computed(() => {
   font-size: 1rem;
 }
 
-.account-trigger:disabled {
-  opacity: 0.65;
-  pointer-events: none;
-}
-
 /* Without a label the button would collapse to the height of its icon and sit short
    next to the text buttons. The strut gives it the same line box a text button has, so
    the heights track each other through the responsive font-size changes. */
@@ -191,20 +193,25 @@ const triggerLabel = computed(() => {
   object-fit: cover;
 }
 
-/* Hover, keyboard focus and the open menu are all shown on the circle itself — there
-   is no longer a surrounding shape for them to land on. */
+/* Hover and the open menu are shown on the circle itself — there is no longer a
+   surrounding shape for them to land on. Keyboard focus needs a ring rather than the
+   same treatment: signed out the circle is an icon, and recolouring it would be
+   indistinguishable from hover. The outline follows the border-radius above. */
 .account-trigger:focus {
   outline: none;
 }
 
+.account-trigger:focus-visible {
+  outline: 2px solid var(--bs-primary);
+  outline-offset: 2px;
+}
+
 .account-trigger:hover .user-avatar,
-.account-trigger:focus-visible .user-avatar,
 .account-trigger.show .user-avatar {
   box-shadow: 0 0 0 2px var(--bs-primary);
 }
 
 .account-trigger:hover svg,
-.account-trigger:focus-visible svg,
 .account-trigger.show svg {
   color: var(--bs-primary);
 }

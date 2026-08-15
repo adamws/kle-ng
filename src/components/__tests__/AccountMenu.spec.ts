@@ -67,6 +67,29 @@ describe('AccountMenu', () => {
       // 'auto' is the default in useTheme
       expect(active[0]!.text()).toBe('Auto')
     })
+
+    // signIn() leaves `busy` set on the way out to the OAuth provider, so a trigger
+    // disabled by it can come back stuck after a bfcache restore — taking the theme
+    // picker with it. Only the account entries may be gated on `busy`.
+    it('stays reachable while an auth call is in flight', async () => {
+      const pinia = createPinia()
+      setActivePinia(pinia)
+      const auth = useAuthStore()
+      const wrapper = mount(AccountMenu, { global: { plugins: [pinia] } })
+
+      auth.busy = true
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.find('[data-testid="user-menu-button"]').attributes('disabled')).toBeUndefined()
+      const themeItems = wrapper
+        .findAll('.dropdown-item')
+        .filter((i) => ['Light', 'Dark', 'Auto'].includes(i.text()))
+      expect(themeItems).toHaveLength(3)
+      themeItems.forEach((item) => expect(item.attributes('disabled')).toBeUndefined())
+
+      // The account entry it would have started is the part that waits
+      expect(wrapper.find('[data-testid="sign-in-github"]').attributes('disabled')).toBeDefined()
+    })
   })
 
   describe('signed out', () => {

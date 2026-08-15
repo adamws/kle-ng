@@ -241,9 +241,16 @@ const existingByName = computed(() => {
   return store.layouts.find((layout) => layout.name.trim().toLowerCase() === name) ?? null
 })
 
+/*
+ * `store.loading` gates this as well as `store.busy`: opening the modal refetches, and
+ * until that lands `layouts` is empty or stale, so `existingByName` would miss a match
+ * and save a duplicate instead of updating — and the confirmation it opens lives in a
+ * row the loading spinner has replaced.
+ */
 const canSave = computed(
   () =>
     !store.busy &&
+    !store.loading &&
     saveName.value.trim().length > 0 &&
     (!store.isFull || existingByName.value !== null),
 )
