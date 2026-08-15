@@ -64,6 +64,7 @@ export default defineConfig({
         collapsed: true,
         items: [
           { text: 'Development Setup', link: '/development/development-setup' },
+          { text: 'Authentication', link: '/development/authentication' },
           { text: 'Canvas Rendering Pipeline', link: '/development/canvas-rendering-pipeline' },
           { text: 'Color Theme Tool', link: '/development/color-theme-tool' },
           { text: 'Layout Export', link: '/development/layout-export' },
