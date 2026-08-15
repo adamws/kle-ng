@@ -61,22 +61,13 @@ export function isAuthConfigured(): boolean {
  * from anywhere else.
  *
  * Not exported: `getTestUser()` is the only way in, so callers cannot use these
- * without passing the gating below. `.env.local` is gitignored, so this stays
- * hardcoded to keep a fresh checkout working with no setup.
+ * without passing the gating below. These are the only test credentials that exist
+ * now, and they are hardcoded to keep a fresh checkout working with no setup.
  */
 const LOCAL_TEST_USER = {
   email: 'dev@test.local',
   password: 'password123',
 } as const
-
-/**
- * Host of the production project (see VITE_SUPABASE_URL in .env.production).
- *
- * Named here only so the test-user shortcut can refuse it outright: production is
- * the one database where a shared, publicly-readable password must never work,
- * whatever a build happens to inject. Keep in sync with .env.production.
- */
-const PRODUCTION_SUPABASE_HOST = 'cdcvedgnkamejhhowach.supabase.co'
 
 /** Hostname of the configured project, or null when unconfigured/unparseable. */
 function supabaseHostname(): string | null {
@@ -105,34 +96,19 @@ export interface TestUserCredentials {
 
 /**
  * Credentials for the "continue as test user" shortcut, or null when it must not
- * be offered.
+ * be offered — which is everywhere but a dev build against a local stack.
  *
- * Two ways to get one, and production can have neither:
+ * Preview deployments used to get a shared password account of their own, compiled
+ * in from VITE_TEST_USER_EMAIL / VITE_TEST_USER_PASSWORD. It was removed: the preview
+ * project has password sign-in disabled, so `signInWithPassword` fails there whether
+ * or not the account exists, and a shortcut that cannot work is worse than no
+ * shortcut. Preview signs in with GitHub, the same way production does.
  *
- *   preview  VITE_TEST_USER_EMAIL / VITE_TEST_USER_PASSWORD, injected at build time
- *            by .github/workflows/vercel-preview.yml. One shared account on the
- *            preview project, so signed-in features are reachable from a preview
- *            URL without real GitHub sign-in. The password is compiled into that
- *            bundle and therefore public — which is why it is scoped to a database
- *            that holds nothing but throwaway data.
- *   local    the account seeded by supabase/seed.sql, in a dev build only.
- *
- * The production host is refused first and unconditionally. Everything else here
- * depends on build-time environment, and the one mistake worth being immune to is
- * a shared password reaching real users' data.
+ * `import.meta.env.DEV` is compiled away in production, so the seeded credentials
+ * cannot reach a shipped bundle even if someone builds with a localhost URL — and
+ * `isLocalSupabase()` means no hosted project can ever match, production included.
  */
 export function getTestUser(): TestUserCredentials | null {
-  const hostname = supabaseHostname()
-  if (!hostname || hostname === PRODUCTION_SUPABASE_HOST) return null
-
-  const email = import.meta.env.VITE_TEST_USER_EMAIL
-  const password = import.meta.env.VITE_TEST_USER_PASSWORD
-  if (email && password) {
-    return { email, password, label: 'shared preview account' }
-  }
-
-  // `import.meta.env.DEV` is compiled away in production, so the seeded credentials
-  // cannot reach a shipped bundle even if someone builds with a localhost URL.
   if (import.meta.env.DEV && isLocalSupabase()) {
     return { ...LOCAL_TEST_USER, label: 'local development' }
   }

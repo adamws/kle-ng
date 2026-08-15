@@ -80,7 +80,9 @@ describe('AccountMenu', () => {
       auth.busy = true
       await wrapper.vm.$nextTick()
 
-      expect(wrapper.find('[data-testid="user-menu-button"]').attributes('disabled')).toBeUndefined()
+      expect(
+        wrapper.find('[data-testid="user-menu-button"]').attributes('disabled'),
+      ).toBeUndefined()
       const themeItems = wrapper
         .findAll('.dropdown-item')
         .filter((i) => ['Light', 'Dark', 'Auto'].includes(i.text()))

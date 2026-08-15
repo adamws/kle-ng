@@ -39,47 +39,27 @@ just a new file plus `npm run supabase:reset`.
 as it — one click, no OAuth round trip.
 
 The seeded account is used when `import.meta.env.DEV` is true *and* the configured URL is a local
-host. `DEV` is compiled away in production builds, so neither it nor its credentials can reach a
-shipped bundle, even if someone builds with a localhost URL configured — including `npm run
-preview`, which is a production build. Setting `VITE_TEST_USER_EMAIL` / `VITE_TEST_USER_PASSWORD`
-in `.env.local` overrides it with an account of your choosing.
+host — that is the whole condition, and it is the only test account that exists. `DEV` is compiled
+away in production builds, so neither it nor its credentials can reach a shipped bundle, even if
+someone builds with a localhost URL configured — including `npm run preview`, which is a production
+build. No hosted project can satisfy the local-host half either, so no deployment offers the
+shortcut.
 
 If the item is present but sign-in fails with a missing-user error, the seed has not run against
 this instance — `npm run supabase:reset`.
 
 ### Signing in on a preview deployment
 
-Previews carry the same shortcut, signing into **one shared account** on the preview project, so
-signed-in features can be tried from a preview URL without a real GitHub round trip. It appears
-only when CI compiles credentials into the build; setup, once:
+**With GitHub, the same as production.** There is no test-user shortcut on previews.
 
-1. **Create the account.** Preview project → Authentication → Users → *Add user* → *Create new
-   user*, with **Auto Confirm User** ticked. GitHub being the only OAuth provider does not get in
-   the way: `signInWithPassword` needs the Email provider (enabled by default) and nothing else.
-   *Allow new users to sign up* can stay off — that gates `signUp`, not password sign-in. Choose a
-   strong password; leaked-password protection rejects weak ones.
-2. **Optionally name it,** so the menu shows a name rather than the email address. SQL editor:
+Previews used to carry one, signing into a shared password account on the preview project via
+`VITE_TEST_USER_EMAIL` / `VITE_TEST_USER_PASSWORD` compiled in by CI. It was removed: the preview
+project has password sign-in disabled, so `signInWithPassword` fails there whether or not the
+account exists, and a menu item that cannot work is worse than none. Re-enabling it in the client
+alone will not help — the Supabase-side change is to turn on the Email provider for that project.
 
-   ```sql
-   update auth.users
-      set raw_user_meta_data = '{"user_name":"preview","full_name":"Preview Test User"}'::jsonb
-    where email = '<the address>';
-   ```
-
-3. **Add the repository secrets** `SUPABASE_TEST_USER_EMAIL_PREVIEW` and
-   `SUPABASE_TEST_USER_PASSWORD_PREVIEW`. `vercel-preview.yml` passes them as
-   `VITE_TEST_USER_*`; fork PRs get no secrets, so they resolve to empty and the shortcut is not
-   offered, exactly as with `VITE_SUPABASE_*`.
-
-Three things to be clear about:
-
-- **The password is public.** It is compiled into the preview bundle, so anyone with the preview
-  URL can read it. That is only acceptable because it unlocks nothing but a throwaway database.
-- **The account is shared.** Everyone signing in this way is the same user: one set of saved
-  layouts, one 5-layout quota, and anyone can delete anyone's.
-- **Never reuse it on production.** `getTestUser()` refuses the production host outright
-  (`PRODUCTION_SUPABASE_HOST` in `src/config/supabase.ts`, kept in sync with `.env.production`), so
-  even a misconfigured build cannot offer a shared password against real users' data.
+The repository secrets `SUPABASE_TEST_USER_EMAIL_PREVIEW` / `SUPABASE_TEST_USER_PASSWORD_PREVIEW`
+are no longer read by `vercel-preview.yml` and can be deleted, along with the account itself.
 
 ## Environments
 
@@ -88,7 +68,7 @@ Three, each with its own database. Nothing shares state.
 |                               | Database                      | Config comes from             | Sign-in                            |
 |-------------------------------|-------------------------------|-------------------------------|------------------------------------|
 | **Local**                     | `supabase start` (Docker)     | `.env.local`                  | seeded test user                   |
-| **Preview** (Vercel)          | `kle-ng-preview` free project | CI secrets, injected at build | `kle-ng-preview` OAuth, or shared test user |
+| **Preview** (Vercel)          | `kle-ng-preview` free project | CI secrets, injected at build | `kle-ng-preview` OAuth only        |
 | **Production** (GitHub Pages) | `kle-ng` free project         | `.env.production`             | `kle-ng` OAuth only                |
 
 Free plans allow **2 active projects per organisation**, so production + preview fits exactly.
@@ -106,8 +86,7 @@ npx supabase db push
 a migration lands; only the local stack applies them automatically.
 
 `seed.sql` never runs against a hosted project — seeds are local-only, so no test user is created
-in preview or production. The preview project's shared test user is created by hand, once, as
-described above.
+in preview or production, and neither offers a test-user shortcut.
 
 ## Design notes
 

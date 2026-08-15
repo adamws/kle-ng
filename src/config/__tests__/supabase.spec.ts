@@ -100,17 +100,6 @@ describe('supabase config', () => {
       resetSupabaseConfigCache()
     }
 
-    const withPreviewCredentials = () => {
-      vi.stubEnv('VITE_TEST_USER_EMAIL', 'preview@example.com')
-      vi.stubEnv('VITE_TEST_USER_PASSWORD', 'preview-secret')
-    }
-
-    beforeEach(() => {
-      // Absent unless a test opts in, as they are in every build but the preview one
-      vi.stubEnv('VITE_TEST_USER_EMAIL', '')
-      vi.stubEnv('VITE_TEST_USER_PASSWORD', '')
-    })
-
     describe('local seeded account', () => {
       it('is offered in a dev build against a local instance', () => {
         vi.stubEnv('DEV', true)
@@ -139,58 +128,32 @@ describe('supabase config', () => {
       })
     })
 
-    describe('preview credentials', () => {
-      it('are used in a production build against a hosted project', () => {
-        vi.stubEnv('DEV', false)
-        withPreviewCredentials()
-        configure(PREVIEW_URL)
-
-        expect(getTestUser()).toEqual({
-          email: 'preview@example.com',
-          password: 'preview-secret',
-          label: 'shared preview account',
-        })
-      })
-
-      it('take precedence over the seeded account', () => {
-        vi.stubEnv('DEV', true)
-        withPreviewCredentials()
-        configure('http://127.0.0.1:54321')
-
-        expect(getTestUser()?.email).toBe('preview@example.com')
-      })
-
-      it.each([
-        ['email only', 'preview@example.com', ''],
-        ['password only', '', 'preview-secret'],
-      ])('do nothing with %s', (_label, email, password) => {
-        vi.stubEnv('DEV', false)
-        vi.stubEnv('VITE_TEST_USER_EMAIL', email)
-        vi.stubEnv('VITE_TEST_USER_PASSWORD', password)
-        configure(PREVIEW_URL)
-
-        expect(getTestUser()).toBeNull()
-      })
-    })
-
-    it('is absent from an ordinary production build', () => {
+    // Preview used to compile in a shared password account of its own. It was removed
+    // because the preview project has password sign-in disabled, so it could not work;
+    // a preview build must now look exactly like production here.
+    it.each([
+      ['preview', PREVIEW_URL],
+      ['production', PRODUCTION_URL],
+    ])('is absent from a %s build', (_label, url) => {
       vi.stubEnv('DEV', false)
-      configure(PRODUCTION_URL)
+      configure(url)
 
       expect(getTestUser()).toBeNull()
+      expect(isTestSignInAvailable()).toBe(false)
     })
 
-    it('is refused against the production project even with credentials compiled in', () => {
-      vi.stubEnv('DEV', true)
-      withPreviewCredentials()
-      configure(PRODUCTION_URL)
+    // The env vars that used to carry them are gone; setting them must do nothing.
+    it('ignores VITE_TEST_USER_* if something still injects them', () => {
+      vi.stubEnv('DEV', false)
+      vi.stubEnv('VITE_TEST_USER_EMAIL', 'preview@example.com')
+      vi.stubEnv('VITE_TEST_USER_PASSWORD', 'preview-secret')
+      configure(PREVIEW_URL)
 
       expect(getTestUser()).toBeNull()
     })
 
     it('is absent when accounts are unconfigured', () => {
       vi.stubEnv('DEV', true)
-      withPreviewCredentials()
       vi.stubEnv('VITE_SUPABASE_URL', '')
       vi.stubEnv('VITE_SUPABASE_ANON_KEY', '')
       resetSupabaseConfigCache()

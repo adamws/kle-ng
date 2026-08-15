@@ -264,11 +264,13 @@ describe('auth store', () => {
       expect(client.auth.onAuthStateChange).toHaveBeenCalled()
     })
 
-    it('uses whichever credentials are configured, such as a preview deployment’s', async () => {
+    // The store takes whatever getTestUser() hands it rather than knowing the seeded
+    // account itself, so the gating stays in one place — config/supabase.ts.
+    it('uses whichever credentials are configured', async () => {
       mocks.getTestUser.mockReturnValue({
-        email: 'preview@example.com',
-        password: 'preview-secret',
-        label: 'shared preview account',
+        email: 'someone@example.com',
+        password: 'another-secret',
+        label: 'local development',
       })
       const client = fakeClient({ user: GITHUB_USER })
       mocks.getSupabaseClient.mockResolvedValue(client)
@@ -277,8 +279,8 @@ describe('auth store', () => {
       await auth.signInAsTestUser()
 
       expect(client.auth.signInWithPassword).toHaveBeenCalledWith({
-        email: 'preview@example.com',
-        password: 'preview-secret',
+        email: 'someone@example.com',
+        password: 'another-secret',
       })
       expect(auth.isSignedIn).toBe(true)
     })

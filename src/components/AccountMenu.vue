@@ -101,8 +101,9 @@
             </button>
           </li>
 
-          <!-- Local dev stack, or the shared account on a preview deployment. Never
-               production: getTestUser() refuses that project outright. -->
+          <!-- The account seeded into the local dev stack, and only that: getTestUser()
+               requires a dev build against a local instance, so no deployed build —
+               preview or production — ever offers this. -->
           <template v-if="auth.canUseTestUser">
             <li><hr class="dropdown-divider" /></li>
             <li>
