@@ -253,6 +253,9 @@ const loadPreset = async (preset: Preset) => {
     const presetData = await response.json()
 
     keyboardStore.loadKLELayout(presetData)
+    // Name the download after the preset. Without this it would fall back to
+    // 'keyboard-layout', since loading clears whatever filename came before.
+    keyboardStore.filename = preset.file.replace(/\.[^/.]+$/, '')
   } catch (error) {
     console.error('Error loading preset:', error)
     toast.showError(`Failed to load ${preset.name}`, 'Error loading preset')

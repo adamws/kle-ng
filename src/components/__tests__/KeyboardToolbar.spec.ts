@@ -84,6 +84,30 @@ describe('KeyboardToolbar', () => {
       expect(loadKLELayoutSpy).toHaveBeenCalledWith(mockPresetData)
     })
 
+    // Loading clears the filename, and this was the one caller that never set one:
+    // a preset used to keep whatever the previous layout was called, and would now
+    // otherwise download as 'keyboard-layout'.
+    it('should name the download after the preset it loaded', async () => {
+      const pinia = createPinia()
+      setActivePinia(pinia)
+      const componentStore = useKeyboardStore()
+      componentStore.filename = 'something-loaded-earlier'
+
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve([['Test']]),
+      } as Response)
+
+      const wrapper = mount(KeyboardToolbar, { global: { plugins: [pinia] } })
+      await wrapper.vm.$nextTick()
+
+      await presetItems(wrapper)[0]!.trigger('click')
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      await wrapper.vm.$nextTick()
+
+      expect(componentStore.filename).toBe('planck')
+    })
+
     it('should load available presets from presets.json', async () => {
       const wrapper = mount(KeyboardToolbar, {
         global: {

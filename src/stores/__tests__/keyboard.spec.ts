@@ -477,6 +477,36 @@ describe('Keyboard Store', () => {
       expect(store.selectedKeys).toHaveLength(0)
       expect(store.historyIndex).toBe(0) // Reset to initial state
     })
+
+    // The filename described the layout being replaced. Leaving it carried the
+    // previous layout's name into anything derived from it — export filenames, and
+    // the save-name prefill in My Layouts — for every caller that does not set one,
+    // which is presets, share links and gists.
+    it('should clear the filename on load', () => {
+      store.filename = 'previous-layout'
+
+      store.loadKLELayout([['Q']])
+
+      expect(store.filename).toBe('')
+    })
+
+    it('should clear the filename when loading internal format too', () => {
+      store.filename = 'previous-layout'
+
+      store.loadKeyboard({ keys: [new Key()], meta: new KeyboardMetadata() })
+
+      expect(store.filename).toBe('')
+    })
+
+    // Editing the JSON of the open layout is not a replacement, so its name stands.
+    it('should keep the filename when the layout is edited in place', () => {
+      store.filename = 'my-board'
+
+      store.updateLayoutFromJson([{ name: 'Edited' }, ['Q']])
+
+      expect(store.filename).toBe('my-board')
+      expect(store.metadata.name).toBe('Edited')
+    })
   })
 
   describe('mirror operations', () => {
