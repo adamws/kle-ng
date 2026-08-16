@@ -186,15 +186,50 @@
           </ul>
         </div>
 
-        <button
-          class="btn btn-primary"
-          @click="shareLayout"
-          type="button"
-          title="Copy share URL to clipboard"
-        >
-          <span class="d-none d-sm-inline">Share Link</span>
-          <span class="d-inline d-sm-none">Share</span>
-        </button>
+        <!-- Share, a split button for signed-in users. The pair lives in its own
+             nested btn-group so the dropdown <ul> is not a direct child of the outer
+             group: the corner-rounding rules below key off child position, and an
+             absolutely-positioned <ul> arriving as :last-child would silently strip
+             the rounding from Share and the caret alike. -->
+        <div class="btn-group share-group" role="group">
+          <button
+            class="btn btn-primary"
+            @click="shareLayout"
+            type="button"
+            title="Copy share URL to clipboard"
+          >
+            <span class="d-none d-sm-inline">Share Link</span>
+            <span class="d-inline d-sm-none">Share</span>
+          </button>
+
+          <!-- Short links need a session to create, so the caret only exists for
+               signed-in users — the same gate as the My Layouts button above. -->
+          <template v-if="authStore.isSignedIn">
+            <button
+              class="btn btn-primary dropdown-toggle dropdown-toggle-split"
+              data-testid="share-options"
+              data-bs-toggle="dropdown"
+              aria-expanded="false"
+              type="button"
+              :disabled="shortLinksStore.busy"
+              title="More share options"
+            >
+              <span class="visually-hidden">More share options</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li>
+                <a
+                  class="dropdown-item"
+                  data-testid="copy-short-link"
+                  href="#"
+                  @click.prevent="copyShortLink"
+                >
+                  Copy short link
+                </a>
+              </li>
+            </ul>
+          </template>
+        </div>
       </div>
     </div>
 
@@ -227,11 +262,14 @@ import QmkImportModal from './QmkImportModal.vue'
 import ViaImportModal from './ViaImportModal.vue'
 import MyLayoutsModal from './MyLayoutsModal.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useShortLinksStore } from '@/stores/short-links'
+import { buildShortLinkUrl } from '@/utils/short-links'
 
 import BiBoxArrowUpRight from 'bootstrap-icons/icons/box-arrow-up-right.svg'
 
 const keyboardStore = useKeyboardStore()
 const authStore = useAuthStore()
+const shortLinksStore = useShortLinksStore()
 
 interface Preset {
   name: string
@@ -315,6 +353,48 @@ const shareLayout = async () => {
     toast.showError('Please try again.', 'Error generating share link')
   }
 }
+
+// Short link — signed-in users only; the id is stored server-side and never expires
+const copyShortLink = async () => {
+  // A create already owns this click, and will report its own outcome. Without this,
+  // create()'s re-entrancy guard returns null for the second click and the branch below
+  // renders that as a failure — an error toast for a request that is still running and
+  // about to succeed. The caret is disabled while busy, but only from the next tick, and
+  // the dropdown item itself never is, so a quick second click does reach here.
+  if (shortLinksStore.busy) return
+
+  try {
+    const id = await shortLinksStore.create(keyboardStore.encodeCurrentLayout())
+    if (!id) {
+      toast.showError(
+        shortLinksStore.errorMessage || 'Please try again.',
+        'Could not create short link',
+      )
+      return
+    }
+
+    const shortUrl = buildShortLinkUrl(id)
+
+    // The clipboard write happens after a network round trip, so the user gesture that
+    // opened the dropdown may no longer count as transient activation — Safari in
+    // particular rejects writeText() at that point. Treat a rejection as a normal
+    // outcome and fall back to showing the link, as the no-clipboard branch of
+    // shareLayout() does.
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable')
+      await navigator.clipboard.writeText(shortUrl)
+      toast.showSuccess('The short link has been copied to your clipboard.', 'Short link copied!')
+    } catch {
+      toast.showInfo('Copy this short link to share your layout: ' + shortUrl, 'Short Link Ready', {
+        duration: 10000,
+        showCloseButton: true,
+      })
+    }
+  } catch (error) {
+    console.error('Error creating short link:', error)
+    toast.showError('Please try again.', 'Error creating short link')
+  }
+}
 </script>
 
 <style scoped>
@@ -339,8 +419,10 @@ const shareLayout = async () => {
   border-width: 2px;
 }
 
-/* Import/Export/Share button group corner rounding. The group is always exactly
-   [Import dropdown][Export dropdown][Share], so these positional rules are stable. */
+/* Import/Export/Share button group corner rounding. The outer group is always exactly
+   [Import dropdown][Export dropdown][Share group], so these positional rules are
+   stable; Share itself may be one button or a split pair, which is why its corners are
+   expressed over the nested .share-group below rather than by position out here. */
 .btn-group > .dropdown:first-child .btn {
   border-top-left-radius: 6px !important;
   border-bottom-left-radius: 6px !important;
@@ -352,9 +434,20 @@ const shareLayout = async () => {
   border-radius: 0 !important;
 }
 
-.btn-group > .btn:last-child {
+/* Share sits in a nested group because it may be a split button. :last-of-type ignores
+   the dropdown <ul>, so this works for one button (signed out, where :first-child and
+   :last-of-type are the same element) and for two. */
+.btn-group > .share-group > .btn:first-child {
   border-top-left-radius: 0 !important;
   border-bottom-left-radius: 0 !important;
+}
+
+.btn-group > .share-group > .btn:not(:last-of-type) {
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+.btn-group > .share-group > .btn:last-of-type {
   border-top-right-radius: 6px !important;
   border-bottom-right-radius: 6px !important;
 }

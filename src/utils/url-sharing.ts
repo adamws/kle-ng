@@ -260,6 +260,28 @@ export function clearUrlFromHash(): void {
   }
 }
 
+/** Every fragment prefix that initWithSample() would treat as a layout to load. */
+const LAYOUT_HASH_PREFIXES = ['#share=', '#url=', '#gist=']
+
+/**
+ * Clear the fragment, but only when it names a layout source.
+ *
+ * For a loader that wins over the fragment rather than reading it — currently only
+ * `?s=`, which is resolved before `#url=` and `#gist=` are considered. Leaving the
+ * fragment in place would mean one address producing two different layouts: the short
+ * link now, and whatever the fragment names on the next reload.
+ *
+ * Deliberately not an unconditional hash clear: an unrelated fragment is somebody
+ * else's anchor and none of this module's business.
+ */
+export function clearLayoutSourceFromUrl(): void {
+  const hash = window.location.hash
+  if (!LAYOUT_HASH_PREFIXES.some((prefix) => hash.startsWith(prefix))) return
+
+  const url = window.location.href.split('#')[0]
+  window.history.replaceState({}, document.title, url)
+}
+
 /**
  * @deprecated Use clearUrlFromHash() instead. This function is kept for backward compatibility.
  * Clear gist data from URL without page reload

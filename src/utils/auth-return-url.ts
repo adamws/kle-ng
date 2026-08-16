@@ -8,7 +8,11 @@
  *
  * `restoreReturnUrl()` runs from main.ts *before* the app is created, so the keyboard
  * store observes the restored fragment during its normal startup path
- * (`processCurrentUrl()`) and needs no knowledge of auth.
+ * (`initWithSample()`) and needs no knowledge of auth.
+ *
+ * Only the fragment is restored. The `?s=` short-link parameter deliberately does not
+ * rely on any of this: the keyboard store consumes it synchronously at startup, so it
+ * is never still in the address bar when a sign-in redirect drops the query string.
  *
  * The PKCE `?code=` query is deliberately left in place — supabase-js needs it to
  * exchange the session, and the auth store strips it once that has happened. This is

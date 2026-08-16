@@ -26,10 +26,20 @@ export interface SupabaseConfig {
 export const AUTH_STORAGE_KEY = 'kle-ng-auth'
 
 function readConfig(): SupabaseConfig | null {
-  const url = import.meta.env.VITE_SUPABASE_URL
+  const rawUrl = import.meta.env.VITE_SUPABASE_URL
   const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-  if (!url || !anonKey) {
+  if (!rawUrl || !anonKey) {
+    return null
+  }
+
+  // Normalise once, here, so every consumer gets the same base. supabase-js tolerates a
+  // trailing slash because it builds endpoints with `new URL('rest/v1', base)`, but
+  // utils/short-links.ts concatenates this string directly, where a trailing slash
+  // yields `//rest/v1/...` — a path the gateway does not route.
+  const url = rawUrl.trim().replace(/\/+$/, '')
+
+  if (!url) {
     return null
   }
 

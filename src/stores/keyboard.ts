@@ -3,11 +3,14 @@ import type { Ref } from 'vue'
 import { ref, computed, watch } from 'vue'
 import { Key, KeyboardMetadata, Keyboard, Serial } from '@adamws/kle-serial'
 import { D } from '../utils/decimal-math'
-import { toast } from '../composables/useToast'
+import { toast, beginLoadingToast } from '../composables/useToast'
 import {
   generateShareableUrl,
+  encodeLayoutToUrl,
+  decodeLayoutFromUrl,
   extractLayoutFromCurrentUrl,
   clearShareFromUrl,
+  clearLayoutSourceFromUrl,
   extractGistFromCurrentUrl,
   extractUrlFromCurrentUrl,
   fetchGistLayout,
@@ -15,6 +18,11 @@ import {
   clearUrlFromHash,
   loadErgogenKeyboard,
 } from '../utils/url-sharing'
+import {
+  takeShortLinkIdFromUrl,
+  resolveShortLinkPayload,
+  restoreShortLinkOnFailure,
+} from '../utils/short-links'
 import {
   createEmptyLabels,
   createEmptyTextColors,
@@ -691,9 +699,23 @@ export const useKeyboardStore = defineStore('keyboard', () => {
 
   // Initialize with a sample layout for development/demo (not in tests)
   const initWithSample = async () => {
+    // Read and strip ?s= before anything can await. Two reasons: the address bar must
+    // not keep an id that has already been consumed (the same way #share= is cleared),
+    // and signInWithOAuth() redirects to `origin + pathname` — dropping the query —
+    // while restoreReturnUrl() puts back only the fragment, so an id left sitting in
+    // the bar would be lost to a sign-in.
+    const shortLinkId = takeShortLinkIdFromUrl()
+
     // Always process URL-based layouts first — this must run even in test/webdriver
     // environments because e2e tests use #share= and #url= hashes for specific scenarios.
+    //
+    // #share= wins over ?s= when a URL somehow carries both: it is self-contained,
+    // needs no network, cannot fail because a project is paused, and it is the format
+    // every existing link and e2e fixture uses.
     if (loadFromShareUrl()) {
+      return
+    }
+    if (shortLinkId && (await loadFromShortLink(shortLinkId))) {
       return
     }
     if (await loadFromUrlHash()) {
@@ -1058,6 +1080,17 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     return generateShareableUrl(keyboard)
   }
 
+  /**
+   * The current layout as an lz-string compressed payload — the same encoding a
+   * `#share=` link carries, and what a short link stores server-side.
+   */
+  const encodeCurrentLayout = (): string => {
+    const keyboard = new Keyboard()
+    keyboard.keys = keys.value
+    keyboard.meta = metadata.value
+    return encodeLayoutToUrl(keyboard)
+  }
+
   const loadFromShareUrl = (): boolean => {
     try {
       const sharedLayout = extractLayoutFromCurrentUrl()
@@ -1072,6 +1105,54 @@ export const useKeyboardStore = defineStore('keyboard', () => {
       const errorMessage = error instanceof Error ? error.message : 'Failed to load shared layout'
       toast.showError(errorMessage, 'Load Failed')
       clearShareFromUrl()
+      return false
+    }
+  }
+
+  /**
+   * Resolve a `?s=` short link and load it. The id has already been taken out of the
+   * address bar by the caller.
+   *
+   * The resolved payload goes through decodeLayoutFromUrl() + loadKeyboard() like every
+   * other entry point, so the 1 MB decompression guard and the 1000-key limit both
+   * still apply — the server-side cap on `payload` is a storage limit, not a substitute
+   * for either.
+   */
+  const loadFromShortLink = async (id: string): Promise<boolean> => {
+    const loadingToast = beginLoadingToast('Loading shared layout...')
+
+    try {
+      const payload = await resolveShortLinkPayload(id)
+
+      if (payload === null) {
+        loadingToast.cancel()
+        // Short links never expire, so this is a typo or a truncated paste. Permanent,
+        // so the id stays out of the address bar — a reload cannot help.
+        toast.showError(
+          'That share link does not exist. Check that the whole link was copied.',
+          'Link Not Found',
+        )
+        return false
+      }
+
+      loadKeyboard(decodeLayoutFromUrl(payload))
+
+      // A short link supersedes any fragment that came with it: `/?s=ID#gist=X` must
+      // not load the short link now and the gist on the next reload. Only layout-bearing
+      // fragments are cleared; an unrelated anchor is left alone.
+      clearLayoutSourceFromUrl()
+
+      await loadingToast.finish()
+      toast.showSuccess('Shared layout loaded successfully!', 'Loaded')
+      return true
+    } catch (error) {
+      console.error('Error loading layout from short link:', error)
+      loadingToast.cancel()
+      restoreShortLinkOnFailure(id, error)
+
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to load the shared layout'
+      toast.showError(errorMessage, 'Load Failed')
       return false
     }
   }
@@ -1092,23 +1173,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
       }
 
       if (urlParam) {
-        const startTime = Date.now()
-        let loadingToastId: string | null = null
-        let loadingToastTimer: number | null = null
-        let isLoadingToastVisible = false
-
-        // Delay showing loading toast to avoid flicker for quick loads
-        const showLoadingToast = () => {
-          if (!isLoadingToastVisible) {
-            loadingToastId = toast.showInfo('Loading keyboard layout from URL...', 'Loading', {
-              duration: 0,
-            })
-            isLoadingToastVisible = true
-          }
-        }
-
-        // Schedule loading toast to show after 500ms
-        loadingToastTimer = window.setTimeout(showLoadingToast, 500)
+        const loadingToast = beginLoadingToast('Loading keyboard layout from URL...')
 
         try {
           let keyboard: Keyboard
@@ -1158,45 +1223,18 @@ export const useKeyboardStore = defineStore('keyboard', () => {
             clearUrlFromHash()
           }
 
-          const loadTime = Date.now() - startTime
-
-          // Clear the pending loading toast timer
-          if (loadingToastTimer) {
-            clearTimeout(loadingToastTimer)
-          }
-
-          // Handle loading toast removal with minimum display time
-          const handleToastTransition = async () => {
-            if (isLoadingToastVisible && loadingToastId) {
-              // Ensure loading toast is visible for at least 1000ms
-              const minDisplayTime = 1000
-              const remainingTime = Math.max(0, minDisplayTime - loadTime)
-
-              if (remainingTime > 0) {
-                await new Promise((resolve) => setTimeout(resolve, remainingTime))
-              }
-
-              toast.removeToast(loadingToastId)
-            }
-
-            // Show success toast
-            toast.showSuccess('Keyboard layout loaded successfully from URL!', 'Loaded')
-          }
-
-          // Handle toast transition asynchronously to not block the main loading
-          handleToastTransition().catch(console.error)
+          // Not awaited: the layout is already on screen, and the success toast is
+          // allowed to trail the minimum display time of the loading toast.
+          loadingToast
+            .finish()
+            .then(() =>
+              toast.showSuccess('Keyboard layout loaded successfully from URL!', 'Loaded'),
+            )
+            .catch(console.error)
 
           return true
         } catch (fetchError) {
-          // Clear the pending loading toast timer
-          if (loadingToastTimer) {
-            clearTimeout(loadingToastTimer)
-          }
-
-          // Remove loading toast if it was shown
-          if (isLoadingToastVisible && loadingToastId) {
-            toast.removeToast(loadingToastId)
-          }
+          loadingToast.cancel()
 
           // Show specific error based on the type
           const errorMessage =
@@ -1250,70 +1288,25 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     try {
       const gistId = extractGistFromCurrentUrl()
       if (gistId) {
-        const startTime = Date.now()
-        let loadingToastId: string | null = null
-        let loadingToastTimer: number | null = null
-        let isLoadingToastVisible = false
-
-        // Delay showing loading toast to avoid flicker for quick loads
-        const showLoadingToast = () => {
-          if (!isLoadingToastVisible) {
-            loadingToastId = toast.showInfo(
-              'Loading keyboard layout from GitHub Gist...',
-              'Loading',
-              { duration: 0 },
-            )
-            isLoadingToastVisible = true
-          }
-        }
-
-        // Schedule loading toast to show after 500ms
-        loadingToastTimer = window.setTimeout(showLoadingToast, 500)
+        const loadingToast = beginLoadingToast('Loading keyboard layout from GitHub Gist...')
 
         try {
           const gistLayout = await fetchGistLayout(gistId)
           loadKeyboard(gistLayout)
           clearGistFromUrl() // Clean up URL after loading
 
-          const loadTime = Date.now() - startTime
-
-          // Clear the pending loading toast timer
-          if (loadingToastTimer) {
-            clearTimeout(loadingToastTimer)
-          }
-
-          // Handle loading toast removal with minimum display time
-          const handleToastTransition = async () => {
-            if (isLoadingToastVisible && loadingToastId) {
-              // Ensure loading toast is visible for at least 1000ms
-              const minDisplayTime = 1000
-              const remainingTime = Math.max(0, minDisplayTime - loadTime)
-
-              if (remainingTime > 0) {
-                await new Promise((resolve) => setTimeout(resolve, remainingTime))
-              }
-
-              toast.removeToast(loadingToastId)
-            }
-
-            // Show success toast
-            toast.showSuccess('Keyboard layout loaded successfully from GitHub Gist!', 'Loaded')
-          }
-
-          // Handle toast transition asynchronously to not block the main loading
-          handleToastTransition().catch(console.error)
+          // Not awaited: the layout is already on screen, and the success toast is
+          // allowed to trail the minimum display time of the loading toast.
+          loadingToast
+            .finish()
+            .then(() =>
+              toast.showSuccess('Keyboard layout loaded successfully from GitHub Gist!', 'Loaded'),
+            )
+            .catch(console.error)
 
           return true
         } catch (fetchError) {
-          // Clear the pending loading toast timer
-          if (loadingToastTimer) {
-            clearTimeout(loadingToastTimer)
-          }
-
-          // Remove loading toast if it was shown
-          if (isLoadingToastVisible && loadingToastId) {
-            toast.removeToast(loadingToastId)
-          }
+          loadingToast.cancel()
 
           // Show specific error based on the type
           const errorMessage =
@@ -1567,17 +1560,6 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     }
   }
 
-  // Manual URL processing function for programmatic loading
-  const processCurrentUrl = async (): Promise<boolean> => {
-    // Try to load from share URL first
-    if (loadFromShareUrl()) {
-      return true
-    }
-
-    // Then try to load from gist URL
-    return await loadFromGistUrl()
-  }
-
   return {
     keys,
     selectedKeys,
@@ -1670,9 +1652,10 @@ export const useKeyboardStore = defineStore('keyboard', () => {
 
     // URL sharing
     generateShareUrl,
+    encodeCurrentLayout,
     loadFromShareUrl,
+    loadFromShortLink,
     loadFromGistUrl,
-    processCurrentUrl,
 
     // Store management
     cleanup,

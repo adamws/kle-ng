@@ -23,6 +23,7 @@ import GitHubStarPopup from './components/GitHubStarPopup.vue'
 import { useKeyboardStore } from '@/stores/keyboard'
 import { useAuthStore } from '@/stores/auth'
 import { useLayoutsStore } from '@/stores/layouts'
+import { useShortLinksStore } from '@/stores/short-links'
 import { useTheme } from '@/composables/useTheme'
 import { PRODUCTION_URL, deploymentLabel, isPreviewDeployment } from '@/config/deployment'
 import { preloadErgogenModule } from '@/utils/ergogen-loader'
@@ -39,13 +40,17 @@ const canvasRef = ref<InstanceType<typeof KeyboardCanvas>>()
 const keyboardStore = useKeyboardStore()
 const authStore = useAuthStore()
 const layoutsStore = useLayoutsStore()
+const shortLinksStore = useShortLinksStore()
 
 // Drop cached rows the moment the session ends, so a second sign-in on the same device
 // never starts with the previous user's list on screen.
 watch(
   () => authStore.isSignedIn,
   (signedIn) => {
-    if (!signedIn) layoutsStore.reset()
+    if (!signedIn) {
+      layoutsStore.reset()
+      shortLinksStore.reset()
+    }
   },
 )
 

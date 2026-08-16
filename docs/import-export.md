@@ -305,9 +305,25 @@ Supported file formats: **JSON** (KLE, VIA/Vial, QMK), **PNG** (with embedded la
 Open layouts shared via URL directly in the browser:
 
 - **kle-ng share link**: `https://editor.keyboard-tools.xyz/#share=NrDeC...`
+- **kle-ng short link**: `https://editor.keyboard-tools.xyz/?s=7kQ2mBx9Lp`
 - **Direct Gist ID**: `https://editor.keyboard-tools.xyz/#gist=<gist-id>`
 - **Universal URL format**: `https://editor.keyboard-tools.xyz/#url=<url>`
   - Supports GitHub Gist URLs and Ergogen URLs as the `url=` parameter
+
+#### Short links
+
+A share link carries the whole layout in the URL, which makes it long — often several thousand
+characters. A **short link** stores the layout on kle-ng's server instead and puts a short id in the
+URL.
+
+- **Anyone can open a short link**; creating one requires signing in.
+- **Short links never expire.**
+- Two people who shorten the same layout get the **same link** — identical layouts are stored once
+  and share an id. The id itself is random, so it cannot be worked out from a layout you hold.
+
+To create one, sign in, then use the caret next to **Share Link** and choose **Copy short link**.
+The plain **Share Link** button still produces a self-contained `#share=` URL, which needs no account
+and no server.
 
 ### GitHub Gist File Priority
 
@@ -340,6 +356,7 @@ Click the **Export** button in the toolbar to access all export options:
 | Download QMK JSON           | QMK info.json | Only available when keys have matrix coordinates                                             |
 | Download VIA JSON           | VIA/Vial JSON | Only available when VIA metadata is present                                                  |
 | Copy share link             | URL           | Generates a shareable `#share=` URL                                                          |
+| Copy short link             | URL           | Short `?s=` link stored on the server; requires sign-in, never expires                       |
 | Edit in Ergogen Web GUI     | URL (new tab) | Opens [ergogen.xyz](https://ergogen.xyz/) with the layout preloaded                          |
 | Open in Shield Wizard (ZMK) | URL (new tab) | Opens the [ZMK Shield Wizard](https://shield-wizard.genteure.com/) with the layout preloaded |
 

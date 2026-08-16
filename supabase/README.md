@@ -9,8 +9,10 @@ does without a backend.
 ```
 config.toml                             local stack configuration
 migrations/20260813120000_layouts.sql   the layouts table, 5-per-user quota, RLS
+migrations/20260816120000_short_links.sql  content-addressed ?s= share links
 seed.sql                                local test user (local only, never production)
 tests/rls-verification.sql              two-user RLS + quota verification
+tests/short-links-verification.sql      short-link grants + get-or-create verification
 ```
 
 ## Local development (default)
@@ -46,7 +48,7 @@ just a new file plus `npm run supabase:reset`.
 `start` and `reset`, and the account menu gains a **"Continue as test user"** item that signs in
 as it — one click, no OAuth round trip.
 
-The seeded account is used when `import.meta.env.DEV` is true *and* the configured URL is a local
+The seeded account is used when `import.meta.env.DEV` is true _and_ the configured URL is a local
 host — that is the whole condition, and it is the only test account that exists. `DEV` is compiled
 away in production builds, so neither it nor its credentials can reach a shipped bundle, even if
 someone builds with a localhost URL configured — including `npm run preview`, which is a production
@@ -73,11 +75,11 @@ are no longer read by `vercel-preview.yml` and can be deleted, along with the ac
 
 Three, each with its own database. Nothing shares state.
 
-|                               | Database                      | Config comes from             | Sign-in                            |
-|-------------------------------|-------------------------------|-------------------------------|------------------------------------|
-| **Local**                     | `supabase start` (Docker)     | `.env.local`                  | seeded test user                   |
-| **Preview** (Vercel)          | `kle-ng-preview` free project | CI secrets, injected at build | `kle-ng-preview` OAuth only        |
-| **Production** (GitHub Pages) | `kle-ng` free project         | `.env.production`             | `kle-ng` OAuth only                |
+|                               | Database                      | Config comes from             | Sign-in                     |
+| ----------------------------- | ----------------------------- | ----------------------------- | --------------------------- |
+| **Local**                     | `supabase start` (Docker)     | `.env.local`                  | seeded test user            |
+| **Preview** (Vercel)          | `kle-ng-preview` free project | CI secrets, injected at build | `kle-ng-preview` OAuth only |
+| **Production** (GitHub Pages) | `kle-ng` free project         | `.env.production`             | `kle-ng` OAuth only         |
 
 Free plans allow **2 active projects per organisation**, so production + preview fits exactly.
 Supabase Branching would be tidier — migrations apply from git automatically — but it requires Pro
@@ -102,7 +104,7 @@ in preview or production, and neither offers a test-user shortcut.
 the client writes directly, a client-side check would enforce nothing. The frontend reads the limit
 with `supabase.rpc('layout_quota')` rather than hardcoding it.
 
-**The quota trigger skips rows it does not own.** `BEFORE ROW` triggers run *before* RLS
+**The quota trigger skips rows it does not own.** `BEFORE ROW` triggers run _before_ RLS
 `WITH CHECK`, so a trigger that counted rows for an unverified `new.user_id` would fire on inserts
 the policy is about to reject — masking the ownership error, and leaking whether an arbitrary user
 id has reached their quota. The trigger returns early unless `new.user_id` matches `auth.uid()`. A
@@ -113,4 +115,50 @@ grant that Supabase's default privileges hand to `anon`, so both the table and t
 `anon` by name. Newer projects set `auto_expose_new_tables` off and grant nothing by default; the
 explicit grants to `authenticated` make the migration correct under either behaviour.
 
-**Account deletion.** `on delete cascade` from `auth.users` clears the table.
+**Account deletion.** `on delete cascade` from `auth.users` clears the `layouts` table. It does
+_not_ cascade to `short_links`: that reference is `on delete set null`, so deleting an account drops
+the attribution but leaves the links working. Cascading would delete links other people are already
+relying on, which "short links never expire" forbids.
+
+**Short links deduplicate on a hash, and address with a random id.** `hash` is `sha256(payload)`
+computed in the database and carries a unique index, so two users shortening a byte-identical layout
+land on the same row and the same link — deduplication is a property of the schema, not something the
+client arranges. The hash is never accepted from the client, which would otherwise let a caller point
+an id at content it does not match.
+
+`id` is a separate thing: 10 random base62 characters, not derived from the payload. Keeping the two
+apart is what lets the id be short and purely alphanumeric, and it means nobody can hash a layout
+they hold to work out whether it has already been shared. It also keeps "one row per layout" a
+database invariant — with an id-only table, deleting a row by hand could let one layout acquire two
+links.
+
+**The `short_links` table has no privileges.** Neither `anon` nor `authenticated` may touch it, and
+it carries no RLS policies — the only way in or out is `create_short_link()` / `resolve_short_link()`,
+both `SECURITY DEFINER`. This is the anti-enumeration control: a `select` grant would turn
+unguessable ids into a browsable index of every layout anyone has ever shared.
+
+**`created_by` records the first creator, for abuse attribution.** Creating a link requires a
+session, and the caller is written to `created_by` on the row they actually insert. Dedup returns the
+existing row untouched, so the second person to shorten a layout does not overwrite the column and is
+not charged for it. This is attribution for _creation_, not ownership: the link is shared by everyone
+who shortened that layout, cannot be revoked by any of them, and never expires. Nothing exposes it —
+`short_links` is unreadable to `anon` and `authenticated`, so the column is visible only to the
+service role and the SQL editor.
+
+**Creation is rate limited to 60 new links per user per rolling hour** (`short_link_rate_limit()`).
+The limit counts rows — `created_by = caller and created_at > now() - 1 hour` — rather than keeping a
+separate counter, which makes it a true sliding window and leaves nothing that could drift from the
+rows it describes. Deduplicated calls create no row and so are never counted: re-sharing one layout
+is always free. Concurrent calls from one user can both pass the check and overshoot slightly; making
+it exact would mean serialising every creation per user, and the point is to stop bulk abuse, not to
+account exactly.
+
+To find abuse, group by creator over the window:
+
+```sql
+select created_by, count(*)
+  from public.short_links
+ where created_at > now() - interval '24 hours'
+ group by created_by
+ order by count(*) desc;
+```

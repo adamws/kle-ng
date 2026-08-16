@@ -43,6 +43,38 @@ describe('supabase config', () => {
     })
   })
 
+  describe('URL normalisation', () => {
+    // utils/short-links.ts concatenates this string directly, so a trailing slash there
+    // produced `//rest/v1/...` — a path the gateway does not route. It broke anonymous
+    // short-link resolution only, while supabase-js kept working, and reported the 404
+    // as a missing migration.
+    it.each([
+      ['https://abc.supabase.co/', 'a single trailing slash'],
+      ['https://abc.supabase.co///', 'several trailing slashes'],
+      ['  https://abc.supabase.co  ', 'surrounding whitespace'],
+      ['  https://abc.supabase.co/  ', 'both at once'],
+    ])('strips %s (%s)', (url) => {
+      vi.stubEnv('VITE_SUPABASE_URL', url)
+      vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-key')
+
+      expect(getSupabaseConfig()?.url).toBe('https://abc.supabase.co')
+    })
+
+    it('leaves a path-bearing URL otherwise intact', () => {
+      vi.stubEnv('VITE_SUPABASE_URL', 'https://example.com/supabase/')
+      vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-key')
+
+      expect(getSupabaseConfig()?.url).toBe('https://example.com/supabase')
+    })
+
+    it('treats a whitespace-only URL as unconfigured', () => {
+      vi.stubEnv('VITE_SUPABASE_URL', '   ')
+      vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-key')
+
+      expect(isAuthConfigured()).toBe(false)
+    })
+  })
+
   it('allows plain http outside production, for local Supabase', () => {
     vi.stubEnv('PROD', false)
     vi.stubEnv('VITE_SUPABASE_URL', 'http://localhost:54321')

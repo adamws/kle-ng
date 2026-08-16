@@ -1,8 +1,20 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import KeyboardToolbar from '../KeyboardToolbar.vue'
 import { useKeyboardStore, Key } from '@/stores/keyboard'
+import { useAuthStore } from '@/stores/auth'
+import { useShortLinksStore } from '@/stores/short-links'
+import { toast } from '@/composables/useToast'
+
+vi.mock('@/composables/useToast', () => ({
+  toast: {
+    showError: vi.fn(),
+    showSuccess: vi.fn(),
+    showInfo: vi.fn(),
+    removeToast: vi.fn(),
+  },
+}))
 
 // Mock presets data using existing files
 vi.mock('@/data/presets.json', () => ({
@@ -177,6 +189,23 @@ describe('KeyboardToolbar', () => {
   })
 
   describe('export functionality', () => {
+    // These stubs replace globals every mount depends on, so they must be put back:
+    // without this, no test declared after this block can mount a component at all.
+    const originals = {
+      URL: global.URL,
+      Blob: global.Blob,
+      createElement: document.createElement,
+    }
+
+    afterEach(() => {
+      global.URL = originals.URL
+      global.Blob = originals.Blob
+      Object.defineProperty(document, 'createElement', {
+        value: originals.createElement,
+        writable: true,
+      })
+    })
+
     beforeEach(() => {
       // Mock URL object methods
       global.URL = {
@@ -294,6 +323,116 @@ describe('KeyboardToolbar', () => {
 
       const expectedFilename = `${store.filename || store.metadata.name || 'keyboard-layout'}.json`
       expect(expectedFilename).toBe('Layout Name.json')
+    })
+  })
+
+  describe('share menu', () => {
+    // Short links need a session to create, so the caret is gated on isSignedIn while
+    // the plain Share button stays available to everyone.
+    const signIn = (auth: ReturnType<typeof useAuthStore>) => {
+      auth.user = { id: 'u1', email: 'a@b.c', name: 'tester', avatarUrl: '' }
+    }
+
+    const mountToolbar = (pinia: ReturnType<typeof createPinia>) =>
+      mount(KeyboardToolbar, { global: { plugins: [pinia] } })
+
+    it('offers no short-link caret to a signed-out visitor', () => {
+      const pinia = createPinia()
+      setActivePinia(pinia)
+
+      const wrapper = mountToolbar(pinia)
+
+      expect(wrapper.find('[data-testid="share-options"]').exists()).toBe(false)
+      // …but Share itself is still there
+      expect(wrapper.find('.share-group .btn').exists()).toBe(true)
+    })
+
+    it('offers the caret once signed in', () => {
+      const pinia = createPinia()
+      setActivePinia(pinia)
+      signIn(useAuthStore())
+
+      const wrapper = mountToolbar(pinia)
+
+      expect(wrapper.find('[data-testid="share-options"]').exists()).toBe(true)
+      expect(wrapper.find('[data-testid="copy-short-link"]').exists()).toBe(true)
+    })
+
+    it('copies a ?s= link built from the created id', async () => {
+      const pinia = createPinia()
+      setActivePinia(pinia)
+      signIn(useAuthStore())
+
+      const shortLinks = useShortLinksStore()
+      const createSpy = vi.spyOn(shortLinks, 'create').mockResolvedValue('7kQ2mBx9Lp')
+
+      const writeText = vi.fn().mockResolvedValue(undefined)
+      Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+
+      const wrapper = mountToolbar(pinia)
+      await wrapper.find('[data-testid="copy-short-link"]').trigger('click')
+      await flushPromises()
+
+      // The payload handed over is the same encoding a #share= link carries
+      expect(createSpy).toHaveBeenCalledWith(useKeyboardStore().encodeCurrentLayout())
+      expect(writeText).toHaveBeenCalledWith(expect.stringContaining('?s=7kQ2mBx9Lp'))
+    })
+
+    it('surfaces the store error when creation fails', async () => {
+      const pinia = createPinia()
+      setActivePinia(pinia)
+      signIn(useAuthStore())
+
+      const shortLinks = useShortLinksStore()
+      vi.spyOn(shortLinks, 'create').mockImplementation(async () => {
+        shortLinks.errorMessage = 'Short links are not available on this server yet.'
+        return null
+      })
+
+      const wrapper = mountToolbar(pinia)
+      await wrapper.find('[data-testid="copy-short-link"]').trigger('click')
+      await flushPromises()
+
+      expect(toast.showError).toHaveBeenCalledWith(
+        'Short links are not available on this server yet.',
+        'Could not create short link',
+      )
+    })
+
+    it('says nothing when a create is already in flight', async () => {
+      // The dropdown item is never disabled and the caret only becomes so on the next
+      // tick, so a quick second click reaches copyShortLink(). create()'s re-entrancy
+      // guard returns null for it, which must not be reported as a failure — the call
+      // that owns the attempt shows its own toast.
+      const pinia = createPinia()
+      setActivePinia(pinia)
+      signIn(useAuthStore())
+
+      const shortLinks = useShortLinksStore()
+      shortLinks.busy = true
+      const createSpy = vi.spyOn(shortLinks, 'create')
+
+      const wrapper = mountToolbar(pinia)
+      await wrapper.find('[data-testid="copy-short-link"]').trigger('click')
+      await flushPromises()
+
+      expect(createSpy).not.toHaveBeenCalled()
+      expect(toast.showError).not.toHaveBeenCalled()
+    })
+
+    it('leaves the plain Share button producing a #share= URL', async () => {
+      const pinia = createPinia()
+      setActivePinia(pinia)
+      signIn(useAuthStore())
+
+      const writeText = vi.fn().mockResolvedValue(undefined)
+      Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+
+      const wrapper = mountToolbar(pinia)
+      await wrapper.find('.share-group > .btn').trigger('click')
+      await flushPromises()
+
+      expect(writeText).toHaveBeenCalledWith(expect.stringContaining('#share='))
     })
   })
 })

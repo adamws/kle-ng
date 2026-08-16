@@ -26,7 +26,9 @@ client-side check.
 │                                                                           │
 │  stores/auth.ts             ← Session mirror, sign-in / sign-out (Pinia)  │
 │  stores/layouts.ts          ← CRUD over the `layouts` table (Pinia)       │
+│  stores/short-links.ts      ← Creates ?s= links (Pinia); creation only    │
 │  utils/supabase-loader.ts   ← Lazy import('@supabase/supabase-js')        │
+│  utils/short-links.ts       ← ?s= parsing + raw-fetch resolution          │
 │  utils/auth-return-url.ts   ← Keeps #share= across the OAuth round trip   │
 │  utils/zip.ts               ← Stored-entry ZIP writer for "Download all"  │
 │  config/supabase.ts         ← Env vars, isAuthConfigured(), test user     │
@@ -44,6 +46,11 @@ client-side check.
 │  ├── trigger layouts_enforce_quota   (BEFORE INSERT → layout_quota() = 5) │
 │  └── trigger layouts_set_updated_at  (BEFORE UPDATE)                      │
 │  public.layout_quota()          ← RPC; the client reads the limit from it │
+│                                                                           │
+│  public.short_links             ← id, hash, payload, created_by, timestamp│
+│  ├── no policies, no grants — reachable only via the two functions        │
+│  ├── public.create_short_link() ← SECURITY DEFINER; authenticated only    │
+│  └── public.resolve_short_link()← SECURITY DEFINER; anon may execute      │
 └───────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -159,8 +166,8 @@ entry plus dashboard configuration — the store already accepts it.
               ▼
 ┌────────────────────────────┐      ┌──────────────────────────────┐
 │ App.vue onMounted          │      │ keyboardStore startup        │
-│ authStore.initialize()     │      │ processCurrentUrl() reads    │
-│ • getSupabaseClient()      │      │ the restored fragment — it   │
+│ authStore.initialize()     │      │ initWithSample() reads the   │
+│ • getSupabaseClient()      │      │ restored fragment — it       │
 │ • getSession() ⇒ PKCE      │      │ knows nothing about auth     │
 │   exchange happens here    │      └──────────────────────────────┘
 │ • applySession()           │
@@ -430,24 +437,138 @@ grant select, insert, update, delete on public.layouts to authenticated;
 
 revoke all on function public.layout_quota() from public, anon;
 grant execute on function public.layout_quota() to authenticated;
+
+revoke all on public.short_links from anon, authenticated;
+
+revoke all on function public.create_short_link(text) from public, anon;
+grant execute on function public.create_short_link(text) to authenticated;
+
+revoke all on function public.resolve_short_link(text) from public;
+grant execute on function public.resolve_short_link(text) to anon, authenticated;
+
+revoke all on function public.short_link_rate_limit() from public, anon, authenticated;
+revoke all on function public.short_link_id()         from public, anon, authenticated;
 ```
+
+The two helpers are granted to nobody. `create_short_link` is `SECURITY DEFINER`, so it runs as the
+owner and never consults the caller's privileges to call them — a grant would add no capability the
+functions need, and would only publish the rate-limit ceiling to every signed-in client. This is why
+`supabase/tests/short-links-verification.sql` reads the ceiling as the owner and stashes it with
+`set_config` before assuming a role, rather than calling `short_link_rate_limit()` as `authenticated`.
 
 `anon` is revoked **by name** on purpose: Supabase's `ALTER DEFAULT PRIVILEGES` grants `EXECUTE` on
 new public-schema functions to `anon` explicitly, and revoking from the `PUBLIC` pseudo-role does not
 remove a named grant. Being explicit also keeps the migration correct on newer projects that grant
 nothing by default.
 
+### Short links
+
+The schema lives in `supabase/migrations/20260816120000_short_links.sql`. A short link points at a
+stored layout: `https://editor.keyboard-tools.xyz/?s=7kQ2mBx9Lp`. Anyone can open one; only a
+signed-in user can create one; they never expire.
+
+```sql
+create table public.short_links (
+  id         text        primary key,     -- 10 random base62 chars, e.g. '7kQ2mBx9Lp'
+  hash       bytea       not null unique,  -- sha256(payload), computed server-side
+  payload    text        not null,         -- lz-string compressed KLE, as #share=
+  created_by uuid        references auth.users(id) on delete set null,
+  created_at timestamptz not null default now(),
+
+  constraint short_links_id_format      check (id ~ '^[0-9A-Za-z]{8,32}$'),
+  constraint short_links_payload_length check (char_length(payload) between 1 and 32768)
+);
+```
+
+Three properties shape it, and all are load-bearing:
+
+**The table is never selectable.** No role holds a privilege on it and there are no RLS policies —
+the only way in or out is `create_short_link()` / `resolve_short_link()`, both `SECURITY DEFINER`.
+A `select` grant, even one narrowed by a policy, would let anybody page through every layout anyone
+has ever shared. A short link is meant to be unguessable, not enumerable, and "unguessable" is worth
+nothing next to a `GET /rest/v1/short_links?select=*`.
+
+**One user column, and it is not ownership.** Creating a link requires a session — `auth.uid()` is
+checked _inside_ `create_short_link` at call time — and the caller is recorded in `created_by`, but
+only on the row they actually insert. It is an operator's audit trail for attributing abuse, not a
+claim on the link: no client role can read it, a dedup hit never reassigns it to the second caller,
+and there is deliberately no "my short links" list. Deleting an account is `on delete set null`
+rather than a cascade, because removing the row would break a URL other people already hold. Dedup
+is keyed on the payload alone, so two users shortening a byte-identical layout still land on the
+same id — `created_by` records who got there first and nothing more. `user_id` or `owner_id` would
+imply an ownership this table does not have, and `short-links-verification.sql` asserts neither
+exists.
+
+**Identity and address are separate columns, deliberately.** `hash` is what a layout _is_ — the
+dedup key, so two users shortening a byte-identical layout get one row and one link. `id` is only the
+short public label. Because lookup goes through `hash`, the id never has to be recomputed from the
+payload, and so it can be **random rather than derived**. That buys three things: no base64 alphabet
+in the URL (ids are `[0-9A-Za-z]` only), no prefix-collision ladder, and no way for an outsider to
+hash a layout they hold and probe whether it has been shared.
+
+Collapsing the two columns is tempting but wrong. With an id-only table the id must stay derived so
+it can be looked up, and if a row is ever deleted by hand — a takedown, say — the next call for a
+payload that had lost a prefix race would find nothing at its short id and insert a **second** row
+for the same layout. `unique(hash)` makes "one row per layout" a database invariant instead of a
+property of the function's control flow.
+
+`create_short_link(payload text)` hashes the payload itself (never trusting a client-supplied hash),
+returns the existing id when that hash is already stored — a 32-byte index probe that never reads the
+payload — and otherwise inserts under a fresh `short_link_id()`. The insert is a bare `INSERT` inside
+an exception block and **not** `on conflict do nothing`: under READ COMMITTED the latter returns no
+row and no error without waiting for a concurrent inserter, so the loop would write a second row for
+the same payload. On `unique_violation` a lookup by hash distinguishes the two causes — another
+transaction stored this payload (return their id) versus a 1-in-2^56 id collision (draw again).
+
+Creation is rate limited per user. `short_link_rate_limit()` returns the ceiling (60) as its own
+`IMMUTABLE` function so it can be changed without touching `create_short_link`, and the check runs
+only once the call is known to need a new row — a dedup hit costs the caller nothing, so re-sharing
+a layout somebody has already shortened is free however often it happens. The budget is a
+`count(*)` over the caller's rows from the last rolling hour, served by the partial
+`(created_by, created_at desc)` index, rather than a stored counter: that makes it a true sliding
+window with nothing that can drift from the rows it describes. Two concurrent calls from one user
+can both pass and overshoot slightly, which is the deliberate trade against serialising every
+creation per user — the point is to stop bulk abuse, not to account exactly. Exceeding it raises
+`short_link_rate_limit_exceeded`, which the client renders as "You have created a lot of short
+links recently."
+
+`short_link_id()` takes seven of the sixteen random bytes from `gen_random_uuid()` (core since
+PostgreSQL 13, so still no pgcrypto) and base62-encodes them to exactly 10 characters.
+
+`resolve_short_link(link_id text)` is `STABLE` and granted to `anon`. It returns `NULL` for an
+unknown id rather than raising — a mistyped URL is a normal outcome, not an error.
+
+### Resolution transport
+
+Resolution is a **raw `fetch`** to `<url>/rest/v1/rpc/resolve_short_link` in
+`src/utils/short-links.ts`, not a supabase-js call. Opening a short link is the most common action an
+_anonymous_ visitor takes, and it sits on the critical path to first paint; loading supabase-js
+(~40–50 KB) to send one POST with two headers would be the first thing to break the
+"an anonymous visitor never downloads supabase-js" property that the rest of this page describes.
+`getSupabaseConfig()` already returns `{ url, anonKey }` with no supabase-js dependency, so nothing
+else is needed. **Creation** goes through `supabase.rpc()` as usual — the user is signed in, so the
+client is already loaded.
+
+The `?s=` id is read and stripped **synchronously** at the top of `initWithSample()`, before any
+await. `signInWithOAuth()` redirects to `origin + pathname` — dropping the query — and
+`restoreReturnUrl()` restores only the fragment, so an id left in the address bar would be lost to a
+sign-in.
+
 ### Where each rule is enforced
 
-| Rule                           | Enforced by                                     | Client role                              |
-| ------------------------------ | ----------------------------------------------- | ---------------------------------------- |
-| You only see your own layouts  | RLS `layouts_select_own`                        | none — no query filters by user id       |
-| You cannot write another's row | RLS `layouts_insert_own` / `layouts_update_own` | none                                     |
-| Max 5 layouts per user         | `layouts_enforce_quota` trigger                 | `isFull` disables the button, cosmetic   |
-| Name 1–120 chars               | `layouts_name_length` check                     | `maxlength` on the input, cosmetic       |
-| Payload ≤ 32768 chars          | `layouts_payload_length` check                  | `MAX_PAYLOAD_LENGTH` pre-check, cosmetic |
-| `updated_at` / `created_at`    | `layouts_set_updated_at` trigger                | never sent                               |
-| `user_id`                      | column default `auth.uid()`                     | never sent                               |
+| Rule                                      | Enforced by                                               | Client role                              |
+| ----------------------------------------- | --------------------------------------------------------- | ---------------------------------------- |
+| You only see your own layouts             | RLS `layouts_select_own`                                  | none — no query filters by user id       |
+| You cannot write another's row            | RLS `layouts_insert_own` / `layouts_update_own`           | none                                     |
+| Max 5 layouts per user                    | `layouts_enforce_quota` trigger                           | `isFull` disables the button, cosmetic   |
+| Name 1–120 chars                          | `layouts_name_length` check                               | `maxlength` on the input, cosmetic       |
+| Payload ≤ 32768 chars                     | `layouts_payload_length` check                            | `MAX_PAYLOAD_LENGTH` pre-check, cosmetic |
+| `updated_at` / `created_at`               | `layouts_set_updated_at` trigger                          | never sent                               |
+| `user_id`                                 | column default `auth.uid()`                               | never sent                               |
+| Only signed-in users make short links     | `auth.uid()` check in `create_short_link`                 | the caret is hidden, cosmetic            |
+| Nobody can list shared layouts            | no table grant, no policy on `short_links`                | none                                     |
+| A short link id maps to one layout        | `short_links.hash` unique + server-side sha256            | never sends a hash                       |
+| Max 60 new short links per user, per hour | rolling `count(*)` on `created_by` in `create_short_link` | none — surfaced as a toast               |
 
 Note that the quota counts **inserts only**. Saving over an existing name is an update, so re-saving
 work in place stays possible at the limit — which is exactly what `MyLayoutsModal` turns the
@@ -655,15 +776,18 @@ generally are. The archive is named `kle-ng-layouts-YYYY-MM-DD.zip`.
 
 ### Unit tests
 
-| Spec                                              | Covers                                                                                                                                                                                                                                                  |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/config/__tests__/supabase.spec.ts`           | Both env vars required, HTTPS enforced in PROD only, local-instance detection, the DEV + local gate on the test user, `VITE_TEST_USER_*` ignored, memoisation                                                                                           |
-| `src/stores/__tests__/auth.spec.ts`               | `initialize()` no-ops when unconfigured and **does not load supabase-js for an anonymous visitor**, session restore, PKCE exchange + URL cleanup, provider errors, run-once, metadata fallbacks, `signIn`/`signInAsTestUser`/`signOut`/`getAccessToken` |
-| `src/stores/__tests__/layouts.spec.ts`            | snake_case mapping, quota read over RPC, fetch caching, insert without `user_id`, quota-error translation, scoped update/delete, `isFull`, `reset()`                                                                                                    |
-| `src/utils/__tests__/auth-return-url.spec.ts`     | The fragment/callback edge cases listed under [Auth Flow](#auth-flow)                                                                                                                                                                                   |
-| `src/utils/__tests__/zip.spec.ts`                 | CRC-32 vectors, central-directory round-trip, store + UTF-8 flags, MS-DOS timestamps, reproducibility, empty archive, entry-count guard                                                                                                                 |
-| `src/components/__tests__/AccountMenu.spec.ts`    | Theme entries present even unconfigured and reachable while `busy`, GitHub entry, test-user entry hidden unless available, avatar-only identification with the name only in the accessible label                                                        |
-| `src/components/__tests__/MyLayoutsModal.spec.ts` | Name prefill rules, quota messaging, row actions, save-vs-update behaviour (including waiting for the refetch), and the whole Download-all path                                                                                                         |
+| Spec                                                | Covers                                                                                                                                                                                                                                                  |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/config/__tests__/supabase.spec.ts`             | Both env vars required, HTTPS enforced in PROD only, local-instance detection, the DEV + local gate on the test user, `VITE_TEST_USER_*` ignored, memoisation                                                                                           |
+| `src/stores/__tests__/auth.spec.ts`                 | `initialize()` no-ops when unconfigured and **does not load supabase-js for an anonymous visitor**, session restore, PKCE exchange + URL cleanup, provider errors, run-once, metadata fallbacks, `signIn`/`signInAsTestUser`/`signOut`/`getAccessToken` |
+| `src/stores/__tests__/layouts.spec.ts`              | snake_case mapping, quota read over RPC, fetch caching, insert without `user_id`, quota-error translation, scoped update/delete, `isFull`, `reset()`                                                                                                    |
+| `src/utils/__tests__/short-links.spec.ts`           | Id validation, `?s=` build/take/clear (preserving `?code=` and the fragment), and the raw-fetch resolver: request shape, 200+`null` for an unknown id, 404 as a missing function, and that supabase-js is never loaded                                  |
+| `src/stores/__tests__/short-links.spec.ts`          | RPC call shape, every `describeError()` branch, `busy` lifecycle, re-entrancy, oversized payload short-circuit, unconfigured                                                                                                                            |
+| `src/stores/__tests__/keyboard-short-links.spec.ts` | `loadFromShortLink()` success / unknown id / resolver failure / decode guards, and the startup dispatch including `#share=` winning over `?s=`                                                                                                          |
+| `src/utils/__tests__/auth-return-url.spec.ts`       | The fragment/callback edge cases listed under [Auth Flow](#auth-flow)                                                                                                                                                                                   |
+| `src/utils/__tests__/zip.spec.ts`                   | CRC-32 vectors, central-directory round-trip, store + UTF-8 flags, MS-DOS timestamps, reproducibility, empty archive, entry-count guard                                                                                                                 |
+| `src/components/__tests__/AccountMenu.spec.ts`      | Theme entries present even unconfigured and reachable while `busy`, GitHub entry, test-user entry hidden unless available, avatar-only identification with the name only in the accessible label                                                        |
+| `src/components/__tests__/MyLayoutsModal.spec.ts`   | Name prefill rules, quota messaging, row actions, save-vs-update behaviour (including waiting for the refetch), and the whole Download-all path                                                                                                         |
 
 `auth.spec.ts` and `layouts.spec.ts` mock `@/config/supabase` and `@/utils/supabase-loader` with
 `vi.hoisted()` and hand a fake client to `getSupabaseClient`, so no test ever touches a real project.
@@ -689,10 +813,41 @@ stack. With the local stack up, the connection string comes from `npm run supaba
 npm run supabase:start
 psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
   -f supabase/tests/rls-verification.sql
+psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+  -f supabase/tests/short-links-verification.sql
 ```
 
-Look for `NOTICE: ALL CHECKS PASSED`. Run it against the hosted projects too after pushing a
-migration that touches policies.
+`psql` is the PostgreSQL client binary and is **not** an npm package — `npx psql` installs an
+unrelated module of that name and fails. If it is not on your PATH, run it inside the database
+container the local stack is already running (`project_id = "kle-ng"` in `supabase/config.toml`
+names it), which also guarantees a client matching the server version:
+
+```sh
+docker exec -i supabase_db_kle-ng psql -U postgres -d postgres \
+  < supabase/tests/short-links-verification.sql
+```
+
+Otherwise install it: `apt-get install postgresql-client` (Debian/Ubuntu), `pacman -S postgresql`
+(Arch), `brew install libpq` (macOS). For a hosted project, paste the file into the Supabase SQL
+editor instead.
+
+Look for `NOTICE: ALL CHECKS PASSED`. Run them against the hosted projects too after pushing a
+migration that touches policies or grants.
+
+`short-links-verification.sql` proves the grant surface rather than policy behaviour, since
+`short_links` has no policies: neither `anon` nor `authenticated` may select the table, `anon` can
+resolve but not create, two users shortening the same payload get one id and one row, the per-user
+hourly limit rejects the call after it, and `created_by` is the table's only user column — set to
+whoever inserted the row, never reassigned by a later dedup hit, and unreadable by any client role.
+
+Both scripts run entirely inside a transaction that is rolled back, so they leave no rows behind,
+and they are safe to run against a stack that already holds real data: every row assertion is
+scoped to the test's own freshly-inserted users rather than counting the whole table. Two things are
+worth knowing when editing them. Any statement that trips a privilege error aborts the whole
+transaction, so a check that reads `short_links` must run as the owner, before the script assumes a
+client role — an error there costs you every check that follows, not just its own. And `now()` is
+the transaction timestamp, so time cannot be made to pass; the rolling window is exercised by
+backdating `created_at`, which is the value the window predicate actually reads.
 
 ## Extending & Gotchas
 
@@ -719,6 +874,24 @@ migration that touches policies.
   limit, and `describeError()` still translates it. Changing the cap means editing both.
 - **`busy` stays true after `signIn()` succeeds** — the page is expected to navigate away. Anything
   new that keys off `auth.busy` must tolerate that, the way `AccountMenu` does.
+- **Short links: never grant `select` on `short_links`.** The table has no policies because it has
+  no privileges. One `select` grant turns unguessable ids into an enumerable index of every layout
+  anyone has ever shared. Read and write only through the two `SECURITY DEFINER` functions.
+- **`create_short_link` must not use `on conflict do nothing`.** Under READ COMMITTED it returns no
+  row and no error without waiting for a concurrent inserter of the same payload, so the function
+  would draw a new id and write a second row for the same hash. The bare `INSERT` inside an exception
+  block is load-bearing, as is the lookup-by-hash that tells a payload race apart from an id
+  collision.
+- **`create_short_link`'s parameter must stay named `payload`** — it is the JSON body key PostgREST
+  expects. Renaming it is an API break.
+- **`?s=` is consumed synchronously** at the top of `initWithSample()`. Do not "fix" its loss across
+  sign-in by adding `s` to `AUTH_PARAMS` or by making `restoreReturnUrl()` restore the query — that
+  would resurrect a consumed id and reload the layout over the user's edits after every sign-in.
+- **Short link ids must stay random, not derived from the payload.** Deriving them would let anyone
+  holding a candidate layout compute its id and probe whether it has been shared. Dedup goes through
+  `hash` precisely so the id does not have to be reproducible. A signed-in user can still learn that
+  _somebody_ already shared a layout by shortening it and getting an existing id back; that is
+  inherent to "same layout, same link" and is accepted.
 - **Migrations are not applied to hosted projects by CI.** `npx supabase db push` against preview
   _and_ production is a manual step whenever a migration lands.
 - **`.env.local` is gitignored; `.env.local.example` is the committed template.** A fresh clone has
