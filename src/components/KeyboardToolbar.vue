@@ -220,11 +220,11 @@
               <li>
                 <a
                   class="dropdown-item"
-                  data-testid="copy-short-link"
+                  data-testid="create-short-link"
                   href="#"
-                  @click.prevent="copyShortLink"
+                  @click.prevent="showShortLinkConfirmModal = true"
                 >
-                  Copy short link
+                  Create short link
                 </a>
               </li>
             </ul>
@@ -247,6 +247,10 @@
     <QmkImportModal :is-visible="showQmkImportModal" @close="showQmkImportModal = false" />
     <ViaImportModal :is-visible="showViaImportModal" @close="showViaImportModal = false" />
     <MyLayoutsModal :is-visible="showMyLayoutsModal" @close="showMyLayoutsModal = false" />
+    <ShortLinkConfirmModal
+      :is-visible="showShortLinkConfirmModal"
+      @close="showShortLinkConfirmModal = false"
+    />
   </div>
 </template>
 
@@ -261,9 +265,9 @@ import UrlImportModal from './UrlImportModal.vue'
 import QmkImportModal from './QmkImportModal.vue'
 import ViaImportModal from './ViaImportModal.vue'
 import MyLayoutsModal from './MyLayoutsModal.vue'
+import ShortLinkConfirmModal from './ShortLinkConfirmModal.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useShortLinksStore } from '@/stores/short-links'
-import { buildShortLinkUrl } from '@/utils/short-links'
 
 import BiBoxArrowUpRight from 'bootstrap-icons/icons/box-arrow-up-right.svg'
 
@@ -324,6 +328,7 @@ const showUrlImportModal = ref(false)
 const showQmkImportModal = ref(false)
 const showMyLayoutsModal = ref(false)
 const showViaImportModal = ref(false)
+const showShortLinkConfirmModal = ref(false)
 
 // Share
 const shareLayout = async () => {
@@ -351,48 +356,6 @@ const shareLayout = async () => {
   } catch (error) {
     console.error('Error generating share link:', error)
     toast.showError('Please try again.', 'Error generating share link')
-  }
-}
-
-// Short link — signed-in users only; the id is stored server-side and never expires
-const copyShortLink = async () => {
-  // A create already owns this click, and will report its own outcome. Without this,
-  // create()'s re-entrancy guard returns null for the second click and the branch below
-  // renders that as a failure — an error toast for a request that is still running and
-  // about to succeed. The caret is disabled while busy, but only from the next tick, and
-  // the dropdown item itself never is, so a quick second click does reach here.
-  if (shortLinksStore.busy) return
-
-  try {
-    const id = await shortLinksStore.create(keyboardStore.encodeCurrentLayout())
-    if (!id) {
-      toast.showError(
-        shortLinksStore.errorMessage || 'Please try again.',
-        'Could not create short link',
-      )
-      return
-    }
-
-    const shortUrl = buildShortLinkUrl(id)
-
-    // The clipboard write happens after a network round trip, so the user gesture that
-    // opened the dropdown may no longer count as transient activation — Safari in
-    // particular rejects writeText() at that point. Treat a rejection as a normal
-    // outcome and fall back to showing the link, as the no-clipboard branch of
-    // shareLayout() does.
-    try {
-      if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable')
-      await navigator.clipboard.writeText(shortUrl)
-      toast.showSuccess('The short link has been copied to your clipboard.', 'Short link copied!')
-    } catch {
-      toast.showInfo('Copy this short link to share your layout: ' + shortUrl, 'Short Link Ready', {
-        duration: 10000,
-        showCloseButton: true,
-      })
-    }
-  } catch (error) {
-    console.error('Error creating short link:', error)
-    toast.showError('Please try again.', 'Error creating short link')
   }
 }
 </script>

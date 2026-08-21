@@ -321,7 +321,17 @@ URL.
 - Two people who shorten the same layout get the **same link** — identical layouts are stored once
   and share an id. The id itself is random, so it cannot be worked out from a layout you hold.
 
-To create one, sign in, then use the caret next to **Share Link** and choose **Copy short link**.
+To create one, sign in, then use the caret next to **Share Link** and choose **Create short link**.
+A dialog explains the consequences before anything is stored: a short link is public, it cannot be
+deleted or withdrawn once created, and kle-ng may retain the stored layout. Creating one is only
+confirmed from that dialog — the menu item itself stores nothing.
+
+Once created, the dialog shows the link in a field with a **Copy** button and stays open until you
+close it. Nothing is written to the clipboard unless you press **Copy**, so creating a link never
+replaces what you were already holding, and the field is still there if something else overwrites
+the clipboard before you paste. Closing the dialog without saving the link is recoverable anyway:
+shortening the same layout again returns the same link.
+
 The plain **Share Link** button still produces a self-contained `#share=` URL, which needs no account
 and no server.
 
@@ -356,7 +366,7 @@ Click the **Export** button in the toolbar to access all export options:
 | Download QMK JSON           | QMK info.json | Only available when keys have matrix coordinates                                             |
 | Download VIA JSON           | VIA/Vial JSON | Only available when VIA metadata is present                                                  |
 | Copy share link             | URL           | Generates a shareable `#share=` URL                                                          |
-| Copy short link             | URL           | Short `?s=` link stored on the server; requires sign-in, never expires                       |
+| Create short link           | URL           | Short `?s=` link stored on the server; requires sign-in, public and permanent, never expires |
 | Edit in Ergogen Web GUI     | URL (new tab) | Opens [ergogen.xyz](https://ergogen.xyz/) with the layout preloaded                          |
 | Open in Shield Wizard (ZMK) | URL (new tab) | Opens the [ZMK Shield Wizard](https://shield-wizard.genteure.com/) with the layout preloaded |
 

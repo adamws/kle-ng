@@ -336,6 +336,14 @@ describe('KeyboardToolbar', () => {
     const mountToolbar = (pinia: ReturnType<typeof createPinia>) =>
       mount(KeyboardToolbar, { global: { plugins: [pinia] } })
 
+    // The menu item only opens the consent dialog; the create is behind its confirm
+    // button. Every test that wants a link created has to go through both.
+    const confirmShortLink = async (wrapper: ReturnType<typeof mountToolbar>) => {
+      await wrapper.find('[data-testid="create-short-link"]').trigger('click')
+      await wrapper.find('[data-testid="short-link-confirm"]').trigger('click')
+      await flushPromises()
+    }
+
     it('offers no short-link caret to a signed-out visitor', () => {
       const pinia = createPinia()
       setActivePinia(pinia)
@@ -355,10 +363,47 @@ describe('KeyboardToolbar', () => {
       const wrapper = mountToolbar(pinia)
 
       expect(wrapper.find('[data-testid="share-options"]').exists()).toBe(true)
-      expect(wrapper.find('[data-testid="copy-short-link"]').exists()).toBe(true)
+      expect(wrapper.find('[data-testid="create-short-link"]').exists()).toBe(true)
     })
 
-    it('copies a ?s= link built from the created id', async () => {
+    it('creates nothing until the dialog is confirmed', async () => {
+      // The whole point of the dialog: storing a layout is public and cannot be undone,
+      // so opening the menu item must not itself be the irreversible act.
+      const pinia = createPinia()
+      setActivePinia(pinia)
+      signIn(useAuthStore())
+
+      const shortLinks = useShortLinksStore()
+      const createSpy = vi.spyOn(shortLinks, 'create')
+
+      const wrapper = mountToolbar(pinia)
+      await wrapper.find('[data-testid="create-short-link"]').trigger('click')
+      await flushPromises()
+
+      expect(wrapper.find('[data-testid="short-link-confirm"]').exists()).toBe(true)
+      expect(createSpy).not.toHaveBeenCalled()
+    })
+
+    it('creates nothing when the dialog is cancelled', async () => {
+      const pinia = createPinia()
+      setActivePinia(pinia)
+      signIn(useAuthStore())
+
+      const shortLinks = useShortLinksStore()
+      const createSpy = vi.spyOn(shortLinks, 'create')
+
+      const wrapper = mountToolbar(pinia)
+      await wrapper.find('[data-testid="create-short-link"]').trigger('click')
+      await wrapper.find('[data-testid="short-link-cancel"]').trigger('click')
+      await flushPromises()
+
+      expect(createSpy).not.toHaveBeenCalled()
+      expect(wrapper.find('[data-testid="short-link-confirm"]').exists()).toBe(false)
+    })
+
+    it('stays open and shows the link once confirmed', async () => {
+      // The dialog is where the link lives now: closing on success would put a link the
+      // user has not stored anywhere behind a second create to get back.
       const pinia = createPinia()
       setActivePinia(pinia)
       signIn(useAuthStore())
@@ -366,19 +411,69 @@ describe('KeyboardToolbar', () => {
       const shortLinks = useShortLinksStore()
       const createSpy = vi.spyOn(shortLinks, 'create').mockResolvedValue('7kQ2mBx9Lp')
 
+      const wrapper = mountToolbar(pinia)
+      await confirmShortLink(wrapper)
+
+      // The payload handed over is the same encoding a #share= link carries
+      expect(createSpy).toHaveBeenCalledWith(useKeyboardStore().encodeCurrentLayout())
+
+      const field = wrapper.find('[data-testid="short-link-url"]')
+      expect(field.exists()).toBe(true)
+      expect((field.element as HTMLInputElement).value).toContain('?s=7kQ2mBx9Lp')
+      expect(wrapper.find('[data-testid="short-link-close"]').exists()).toBe(true)
+    })
+
+    it('does not touch the clipboard until Copy is pressed', async () => {
+      const pinia = createPinia()
+      setActivePinia(pinia)
+      signIn(useAuthStore())
+
+      const shortLinks = useShortLinksStore()
+      vi.spyOn(shortLinks, 'create').mockResolvedValue('7kQ2mBx9Lp')
+
       const writeText = vi.fn().mockResolvedValue(undefined)
       Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
 
       const wrapper = mountToolbar(pinia)
-      await wrapper.find('[data-testid="copy-short-link"]').trigger('click')
+      await confirmShortLink(wrapper)
+
+      // Creating a link is not consent to replace whatever the user was holding
+      expect(writeText).not.toHaveBeenCalled()
+
+      await wrapper.find('[data-testid="short-link-copy"]').trigger('click')
       await flushPromises()
 
-      // The payload handed over is the same encoding a #share= link carries
-      expect(createSpy).toHaveBeenCalledWith(useKeyboardStore().encodeCurrentLayout())
       expect(writeText).toHaveBeenCalledWith(expect.stringContaining('?s=7kQ2mBx9Lp'))
+      // The button's own "Copied" state is the feedback; a toast on top of an open
+      // dialog would report what the dialog is already showing.
+      expect(toast.showSuccess).not.toHaveBeenCalled()
+      expect(wrapper.find('[data-testid="short-link-copy"]').text()).toBe('Copied')
     })
 
-    it('surfaces the store error when creation fails', async () => {
+    it('keeps the link when the clipboard refuses the write', async () => {
+      // Losing the link because a browser blocked writeText() is the case the visible
+      // field exists to prevent, so the field must survive a failed copy.
+      const pinia = createPinia()
+      setActivePinia(pinia)
+      signIn(useAuthStore())
+
+      const shortLinks = useShortLinksStore()
+      vi.spyOn(shortLinks, 'create').mockResolvedValue('7kQ2mBx9Lp')
+
+      const writeText = vi.fn().mockRejectedValue(new Error('denied'))
+      Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+
+      const wrapper = mountToolbar(pinia)
+      await confirmShortLink(wrapper)
+      await wrapper.find('[data-testid="short-link-copy"]').trigger('click')
+      await flushPromises()
+
+      const field = wrapper.find('[data-testid="short-link-url"]')
+      expect((field.element as HTMLInputElement).value).toContain('?s=7kQ2mBx9Lp')
+      expect(wrapper.find('[data-testid="short-link-hint"]').text()).toContain('manually')
+    })
+
+    it('reports a failed create in the dialog and offers a retry', async () => {
       const pinia = createPinia()
       setActivePinia(pinia)
       signIn(useAuthStore())
@@ -390,34 +485,35 @@ describe('KeyboardToolbar', () => {
       })
 
       const wrapper = mountToolbar(pinia)
-      await wrapper.find('[data-testid="copy-short-link"]').trigger('click')
-      await flushPromises()
+      await confirmShortLink(wrapper)
 
-      expect(toast.showError).toHaveBeenCalledWith(
+      expect(wrapper.find('[data-testid="short-link-error"]').text()).toBe(
         'Short links are not available on this server yet.',
-        'Could not create short link',
       )
+      // Still on the consent stage, so there is nothing to copy and a way to try again
+      expect(wrapper.find('[data-testid="short-link-url"]').exists()).toBe(false)
+      expect(wrapper.find('[data-testid="short-link-confirm"]').text()).toContain('Try again')
     })
 
-    it('says nothing when a create is already in flight', async () => {
-      // The dropdown item is never disabled and the caret only becomes so on the next
-      // tick, so a quick second click reaches copyShortLink(). create()'s re-entrancy
-      // guard returns null for it, which must not be reported as a failure — the call
-      // that owns the attempt shows its own toast.
+    it('shows no stale link when the dialog is reopened', async () => {
       const pinia = createPinia()
       setActivePinia(pinia)
       signIn(useAuthStore())
 
       const shortLinks = useShortLinksStore()
-      shortLinks.busy = true
-      const createSpy = vi.spyOn(shortLinks, 'create')
+      vi.spyOn(shortLinks, 'create').mockResolvedValue('7kQ2mBx9Lp')
 
       const wrapper = mountToolbar(pinia)
-      await wrapper.find('[data-testid="copy-short-link"]').trigger('click')
+      await confirmShortLink(wrapper)
+      await wrapper.find('[data-testid="short-link-close"]').trigger('click')
       await flushPromises()
 
-      expect(createSpy).not.toHaveBeenCalled()
-      expect(toast.showError).not.toHaveBeenCalled()
+      await wrapper.find('[data-testid="create-short-link"]').trigger('click')
+      await flushPromises()
+
+      // Back to consent for the layout on screen now, not the last one's result
+      expect(wrapper.find('[data-testid="short-link-url"]').exists()).toBe(false)
+      expect(wrapper.find('[data-testid="short-link-confirm"]').exists()).toBe(true)
     })
 
     it('leaves the plain Share button producing a #share= URL', async () => {
