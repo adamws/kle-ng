@@ -6,7 +6,7 @@ on:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+*'
   pull_request:
-    branches: [ master ]
+    branches: [ master, develop ]
 
 jobs:
   build-and-test:
@@ -41,6 +41,86 @@ jobs:
           name: dist
           path: ./dist
           retention-days: 1
+
+  # The RLS policies and grants are the entire security boundary: the browser talks to
+  # PostgREST directly with the user's JWT, so nothing in the client enforces ownership.
+  # These two suites are what check that, and until now they were run by hand.
+  #
+  # Independent of build-and-test on purpose — it needs no bundle, and booting the stack
+  # is the slow part, so there is no reason to serialise it behind anything.
+  supabase-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Applies supabase/migrations and supabase/seed.sql on the way up, so the schema
+      # under test is the one in the repo.
+      #
+      # gotrue is deliberately NOT excluded: the suites insert fixtures into auth.users
+      # and call auth.uid(), so the auth schema has to exist. The rest of the list is
+      # only there to skip containers no psql test touches — it is an optimisation, not a
+      # requirement, so if `start` ever misbehaves the honest fix is to drop the -x flag
+      # rather than to bisect the list. kong/postgrest/postgres-meta are left in because
+      # they are small and sit closest to the CLI's own readiness checks.
+      - name: Start Supabase
+        run: >
+          npx supabase start
+          -x studio,imgproxy,edge-runtime,logflare,vector,mailpit,supavisor,realtime,storage-api
+
+      # Asked for rather than hardcoded, so a port change in config.toml cannot leave this
+      # job pointing at nothing. The credentials are the CLI's fixed local defaults and
+      # the database is thrown away with the runner, so there is nothing here to protect.
+      - name: Resolve the database URL
+        run: |
+          url=$(npx supabase status -o env | sed -n 's/^DB_URL=//p' | tr -d '"')
+          if [ -z "$url" ]; then
+            echo "::error::supabase status did not report a DB_URL"
+            npx supabase status || true
+            exit 1
+          fi
+          echo "DATABASE_URL=$url" >> "$GITHUB_ENV"
+
+      - name: Verify row level security, quotas and grants
+        run: |
+          failed=0
+          for suite in supabase/tests/*.sql; do
+            echo "::group::$suite"
+            output=$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "$suite" 2>&1) && status=0 || status=$?
+            echo "$output"
+            echo "::endgroup::"
+
+            if [ "$status" -ne 0 ]; then
+              echo "::error file=$suite::$suite failed - see the log group above"
+              failed=1
+            elif ! printf '%s' "$output" | grep -q 'ALL CHECKS PASSED'; then
+              # ON_ERROR_STOP catches a raised assertion, but not a script that ends early
+              # without reaching its final notice. Require the notice as well.
+              echo "::error file=$suite::$suite did not reach its final assertion"
+              failed=1
+            else
+              echo "$suite: ALL CHECKS PASSED"
+            fi
+          done
+          exit $failed
+
+      # Diagnostics only — must never turn a green run red, or mask the real failure.
+      - name: Collect Supabase diagnostics
+        if: failure()
+        continue-on-error: true
+        run: |
+          npx supabase status || true
+          docker ps -a || true
 
   e2e-tests:
     runs-on: ubuntu-latest
