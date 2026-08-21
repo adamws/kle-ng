@@ -85,6 +85,27 @@ Free plans allow **2 active projects per organisation**, so production + preview
 Supabase Branching would be tidier — migrations apply from git automatically — but it requires Pro
 ($25/mo plus ~$0.013 per branch-hour), which a second free project avoids entirely.
 
+### Hosted project settings
+
+`config.toml` configures the **local stack only**. Every hosted setting below lives in the Supabase
+dashboard, where nothing in this repo can review it or notice it drifting — so it is written down
+here instead. Check it against both hosted projects when touching auth.
+
+| Setting                                            | Expected                                            |
+| -------------------------------------------------- | --------------------------------------------------- |
+| Authentication → URL Configuration → Site URL       | the deployment's own origin                          |
+| Authentication → URL Configuration → Redirect URLs  | **exact URLs only, no wildcards**                    |
+| Authentication → Providers                          | GitHub only; email/password **off**                  |
+| Authentication → Attack Protection → Captcha        | **on** (signup is open, so this is the real limiter) |
+| Authentication → Sessions → JWT expiry              | 3600, matching `config.toml`                         |
+| Authentication → Sessions → Refresh token rotation  | on, reuse interval 10                                |
+| Settings → API → Rate limits                        | enabled (the only throttle on `resolve_short_link`)  |
+
+The redirect allowlist is the one to watch. Preview deployments get a fresh per-commit Vercel URL,
+which creates standing pressure to paste in something like `https://*.vercel.app` to stop chasing
+them. Do not: a wildcard there makes every page on that host a valid OAuth redirect target. Add the
+specific preview URLs, or sign in on the stable alias.
+
 ### Applying migrations
 
 ```sh
@@ -97,6 +118,38 @@ a migration lands; only the local stack applies them automatically.
 
 `seed.sql` never runs against a hosted project — seeds are local-only, so no test user is created
 in preview or production, and neither offers a test-user shortcut.
+
+## Known limitations
+
+**A short link cannot be taken back.** This is a deliberate property — see the design notes below —
+but it is worth stating as an operational risk rather than only as a design virtue:
+
+- Anyone can resolve a link anonymously, forever. There is no expiry, no revocation, and no client
+  path that deletes one. `ShortLinkConfirmModal` says so before the first write, which is where the
+  consent for it comes from.
+- `payload` is 32 KiB of unvalidated text. Nothing checks that it decompresses, or that it is a
+  layout at all, so the table will hold whatever a signed-in caller posts.
+- The ceiling per account is `short_link_rate_limit()` (60) new links per rolling hour, so roughly
+  1.9 MiB/hour, with no cap on the total. Deduplicated calls create no row and are not counted.
+- Deleting an account **nulls `created_by`** rather than cascading, so the content outlives the
+  attribution. Someone who abuses the feature and then deletes their account leaves rows nobody can
+  trace.
+
+Taking a link down is therefore a manual operator action, in the SQL editor:
+
+```sql
+-- Find it (nothing but the service role can read this table).
+select id, created_by, created_at, char_length(payload) from public.short_links where id = '<id>';
+
+-- Remove it.
+delete from public.short_links where id = '<id>';
+```
+
+Deleting frees that payload's `hash`, so the next person to shorten the same layout mints a **new**
+id — the old URL stays dead rather than coming back to life.
+
+To find bulk abuse before it needs a takedown, group by creator over the window — the query is in
+the design notes below, under "Creation is rate limited".
 
 ## Design notes
 

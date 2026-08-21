@@ -14,8 +14,15 @@
 -- (the dedup key, so two users shortening a byte-identical layout get one row and one
 -- link); `id` is only the short public label. Because lookup goes through `hash`, the
 -- id never has to be recomputed from the payload, which means it can be random rather
--- than derived — no base64 alphabet in the URL, no prefix-collision ladder, and no way
--- for an outsider to hash a layout they hold and probe whether it has been shared.
+-- than derived — no base64 alphabet in the URL, no prefix-collision ladder, and nothing
+-- an outsider can compute offline from a layout they hold.
+--
+-- Note what this does *not* buy: create_short_link's dedup probe runs before the rate
+-- limit, so somebody signed in who already holds the exact bytes can still call it and
+-- learn from the returned id that the layout has been shared. That is inherent to "same
+-- layout, same link" and is accepted (docs/development/authentication.md says so too);
+-- what the random id prevents is making that determination *without* asking us, and at
+-- scale. Do not read this paragraph as a claim that sharing is unobservable.
 --
 -- `created_by` is the first creator, for abuse attribution: without it, creation is
 -- unbounded and untraceable. It is not ownership — dedup never reassigns it, no client

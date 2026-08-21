@@ -222,6 +222,37 @@ exception
     if sqlerrm <> 'short_link_auth_required' then raise; end if;
 end $$;
 
+-- Anon must not reach the table directly either. create_short_link is the only intended
+-- write path, but that is a property of the grants, not of the function existing: the
+-- checks above would all still pass if anon were handed INSERT on the table itself.
+do $$
+begin
+  insert into public.short_links (id, hash, payload)
+  values ('anonanon01', pg_catalog.sha256('x'::bytea), 'x');
+  raise exception 'FAILED: anon inserted into short_links directly';
+exception
+  when insufficient_privilege then
+    null;  -- 42501, as intended
+end $$;
+
+do $$
+begin
+  update public.short_links set payload = 'tampered';
+  raise exception 'FAILED: anon updated short_links';
+exception
+  when insufficient_privilege then
+    null;  -- 42501, as intended
+end $$;
+
+do $$
+begin
+  delete from public.short_links;
+  raise exception 'FAILED: anon deleted from short_links';
+exception
+  when insufficient_privilege then
+    null;  -- 42501, as intended
+end $$;
+
 reset role;
 
 -- ===========================================================================
@@ -394,6 +425,38 @@ declare
 begin
   select count(*) into n from public.short_links where created_by is not null;
   raise exception 'FAILED: authenticated can read created_by';
+exception
+  when insufficient_privilege then
+    null;  -- 42501, as intended
+end $$;
+
+-- And a signed-in user has no more write access to the table than anon does. Links are
+-- immutable and unrevokable by design, which only holds while nothing but
+-- create_short_link can write here — a narrowing grant added later would not be caught
+-- by any other assertion in this file.
+do $$
+begin
+  insert into public.short_links (id, hash, payload)
+  values ('authauth01', pg_catalog.sha256('y'::bytea), 'y');
+  raise exception 'FAILED: authenticated inserted into short_links directly';
+exception
+  when insufficient_privilege then
+    null;  -- 42501, as intended
+end $$;
+
+do $$
+begin
+  update public.short_links set payload = 'tampered';
+  raise exception 'FAILED: authenticated updated short_links';
+exception
+  when insufficient_privilege then
+    null;  -- 42501, as intended
+end $$;
+
+do $$
+begin
+  delete from public.short_links;
+  raise exception 'FAILED: authenticated deleted from short_links';
 exception
   when insufficient_privilege then
     null;  -- 42501, as intended

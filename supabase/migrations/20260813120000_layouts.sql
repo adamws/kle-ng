@@ -54,6 +54,12 @@ create index layouts_user_id_updated_at_idx
 -- SECURITY DEFINER so the count is authoritative rather than whatever the caller's
 -- RLS policies happen to expose, with an empty search_path and fully qualified names
 -- (the standard hardening for definer functions).
+--
+-- The count and the insert are not atomic, so two concurrent inserts from one user can
+-- both read 4 and both commit, leaving 6 rows. Tolerated on the same grounds as the
+-- short-link rate limit (see 20260816120000_short_links.sql): closing it means
+-- serialising every insert per user, and the quota exists to bound storage, not to be
+-- exact. One extra saved layout is not worth a lock.
 -- ---------------------------------------------------------------------------
 
 create or replace function public.enforce_layout_quota()
