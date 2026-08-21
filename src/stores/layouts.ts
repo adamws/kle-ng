@@ -59,14 +59,24 @@ function toSavedLayout(row: LayoutRow): SavedLayout {
   }
 }
 
-/** Turn a PostgREST error into something the user can act on. */
+/**
+ * Turn a PostgREST error into something the user can act on.
+ *
+ * Unrecognised *server* messages are deliberately not shown. A PostgREST error carries
+ * raw Postgres text — constraint names, column names, function signatures — and putting
+ * that in a toast publishes the schema to anyone who can provoke an error. The sentinel
+ * branches below cover every message a user can act on; anything else is a developer
+ * problem, so it goes to the console instead.
+ *
+ * Errors we threw ourselves are still passed through: they are written for this UI, and
+ * `instanceof Error` is what tells them apart — supabase-js returns a plain object.
+ */
 function describeError(error: unknown, fallback: string): string {
+  const isOwnError = error instanceof Error
   const message =
     typeof error === 'object' && error !== null && 'message' in error
       ? String((error as { message: unknown }).message)
-      : error instanceof Error
-        ? error.message
-        : ''
+      : ''
 
   // Raised by the enforce_layout_quota trigger; PostgREST passes the text through.
   if (message.includes('layout_quota_exceeded')) {
@@ -78,7 +88,12 @@ function describeError(error: unknown, fallback: string): string {
   if (message.includes('layouts_payload_length')) {
     return PAYLOAD_TOO_LARGE
   }
-  return message || fallback
+  if (isOwnError) return message || fallback
+
+  if (message) {
+    console.error('Unrecognised layouts error:', message)
+  }
+  return fallback
 }
 
 export const useLayoutsStore = defineStore('layouts', () => {

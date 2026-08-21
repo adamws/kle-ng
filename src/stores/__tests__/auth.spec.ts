@@ -331,7 +331,10 @@ describe('auth store', () => {
       expect(mocks.showSuccess).toHaveBeenCalled()
     })
 
-    it('keeps the session when sign-out fails', async () => {
+    it('still ends the session when sign-out fails', async () => {
+      // A sign-out control must not fail towards "still signed in". The server call not
+      // revoking the refresh token is reported, but the session in this browser goes
+      // either way, via a local-scope sign-out that cannot fail against the network.
       localStorage.setItem('kle-ng-auth', '{}')
       const client = fakeClient({ user: GITHUB_USER })
       client.auth.signOut = vi.fn().mockResolvedValue({ error: new Error('offline') })
@@ -342,7 +345,8 @@ describe('auth store', () => {
       await auth.signOut()
 
       expect(mocks.showError).toHaveBeenCalledWith('offline', 'Sign-out Failed')
-      expect(auth.isSignedIn).toBe(true)
+      expect(client.auth.signOut).toHaveBeenCalledWith({ scope: 'local' })
+      expect(auth.isSignedIn).toBe(false)
     })
   })
 

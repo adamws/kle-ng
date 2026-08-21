@@ -275,6 +275,50 @@ describe('ImageCache', () => {
     })
   })
 
+  describe('source scheme allowlist', () => {
+    // A KLE key label may carry `<img src="...">`, and layouts arrive from share links,
+    // short links and saved rows, so this URL is attacker-controlled on every path that
+    // matters. Only schemes that can carry an image are loaded.
+    const refused = ['javascript:alert(1)', 'file:///etc/passwd', 'blob:https://x/y', 'vbscript:x']
+
+    it.each(refused)('refuses to load %s', (url) => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      cache.loadImage(url)
+
+      expect(global.Image).not.toHaveBeenCalled()
+      expect(cache.hasError(url)).toBe(true)
+      warn.mockRestore()
+    })
+
+    it('reports a refused source through onError and still releases the renderer', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const onLoad = vi.fn()
+      const onError = vi.fn()
+
+      cache.loadImage('javascript:alert(1)', onLoad, onError)
+      await vi.runAllTimersAsync()
+
+      expect(onError).toHaveBeenCalledWith('javascript:alert(1)')
+      // Scheduled exactly as a load failure is, so a hostile label cannot stall a frame.
+      expect(onLoad).toHaveBeenCalledTimes(1)
+      warn.mockRestore()
+    })
+
+    it.each([
+      ['https://example.com/a.png', 'remote icons'],
+      ['http://example.com/a.png', 'plain http'],
+      ['data:image/svg+xml;charset=utf-8,%3Csvg%2F%3E', 'SVGCache-encoded labels'],
+      ['/data/footprints/front/x.svg', 'our own relative assets'],
+      ['test.png', 'relative filenames'],
+    ])('still loads %s (%s)', (url) => {
+      cache.loadImage(url)
+
+      expect(global.Image).toHaveBeenCalledTimes(1)
+      expect(mockImageInstance.src).toBe(url)
+    })
+  })
+
   describe('isLoaded', () => {
     it('should return false for non-existent image', () => {
       expect(cache.isLoaded('non-existent.png')).toBe(false)

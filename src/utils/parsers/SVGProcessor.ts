@@ -1,8 +1,20 @@
 /**
  * SVGProcessor - Utilities for processing and validating SVG content
  *
- * Provides security features and dimension extraction for SVG content
- * used in keyboard labels and key graphics.
+ * Dimension extraction and shape validation for the SVG content that can appear in a
+ * keyboard key label.
+ *
+ * This module does NOT sanitize. It used to carry a regex denylist (`sanitizeSVG` /
+ * `validateAndSanitize`) that nothing called; it was removed rather than left as a
+ * loaded gun, because regex filtering of markup does not hold — it missed
+ * `<animate onbegin>`, `xlink:href="javascript:"`, `<foreignObject>` and most modern
+ * event attributes, so anything trusting it would have been exploitable.
+ *
+ * Label SVG is safe today because of where it ends up, not because it is cleaned:
+ * LabelParser hands it to SVGCache, which encodes it as a `data:image/svg+xml` URL for
+ * an `<img>`/`<image>`, and an image is not a scripting context. Anything that changes
+ * that — rendering label SVG through `v-html` or `innerHTML` — needs a real sanitizer
+ * (DOMPurify or equivalent), not a revival of what was here.
  *
  * @example
  * ```typescript
@@ -15,9 +27,6 @@
  * if (svgProcessor.isValidSVG(content)) {
  *   // Process SVG
  * }
- *
- * // Sanitize for security
- * const safe = svgProcessor.sanitizeSVG(untrustedSVG)
  * ```
  */
 
@@ -27,34 +36,6 @@ export interface SVGDimensions {
 }
 
 export class SVGProcessor {
-  // Dangerous SVG elements and attributes that could enable XSS
-  private readonly dangerousElements = [
-    'script',
-    'iframe',
-    'object',
-    'embed',
-    'link',
-    'style', // style can contain javascript: URLs
-  ]
-
-  private readonly dangerousAttributes = [
-    'onclick',
-    'onload',
-    'onerror',
-    'onmouseover',
-    'onmouseout',
-    'onmouseenter',
-    'onmouseleave',
-    'onfocus',
-    'onblur',
-    'onchange',
-    'oninput',
-    'onsubmit',
-    'onkeydown',
-    'onkeyup',
-    'onkeypress',
-  ]
-
   /**
    * Extract width and height dimensions from SVG content
    *
@@ -128,85 +109,6 @@ export class SVGProcessor {
     }
 
     return true
-  }
-
-  /**
-   * Sanitize SVG content by removing potentially dangerous elements and attributes
-   *
-   * Removes:
-   * - Script tags and content
-   * - Event handler attributes (onclick, onload, etc.)
-   * - Dangerous elements (iframe, object, embed, etc.)
-   * - javascript: protocol URLs
-   *
-   * @param svgContent - The SVG content to sanitize
-   * @returns Sanitized SVG content
-   *
-   * @example
-   * ```typescript
-   * sanitizeSVG('<svg onclick="alert(1)"><script>alert(1)</script></svg>')
-   * // Returns: '<svg><\/svg>' (dangerous parts removed)
-   * ```
-   */
-  public sanitizeSVG(svgContent: string): string {
-    if (!svgContent || typeof svgContent !== 'string') {
-      return ''
-    }
-
-    let sanitized = svgContent
-
-    // Remove dangerous elements and their content
-    for (const element of this.dangerousElements) {
-      // Remove both <element ...>...</element> and self-closing <element ... />
-      const pattern = new RegExp(`<${element}[^>]*>.*?<\\/${element}>`, 'gis')
-      sanitized = sanitized.replace(pattern, '')
-
-      // Remove self-closing tags
-      const selfClosingPattern = new RegExp(`<${element}[^>]*\\/>`, 'gi')
-      sanitized = sanitized.replace(selfClosingPattern, '')
-    }
-
-    // Remove dangerous event handler attributes
-    for (const attr of this.dangerousAttributes) {
-      const pattern = new RegExp(`\\s${attr}\\s*=\\s*["'][^"']*["']`, 'gi')
-      sanitized = sanitized.replace(pattern, '')
-
-      // Also handle unquoted attributes
-      const unquotedPattern = new RegExp(`\\s${attr}\\s*=\\s*[^\\s>]+`, 'gi')
-      sanitized = sanitized.replace(unquotedPattern, '')
-    }
-
-    // Remove javascript: protocol from href and xlink:href
-    sanitized = sanitized.replace(/href\s*=\s*["']javascript:[^"']*["']/gi, '')
-    sanitized = sanitized.replace(/xlink:href\s*=\s*["']javascript:[^"']*["']/gi, '')
-
-    // Remove data: URLs that might contain scripts (very dangerous)
-    sanitized = sanitized.replace(/href\s*=\s*["']data:text\/html[^"']*["']/gi, '')
-    sanitized = sanitized.replace(/xlink:href\s*=\s*["']data:text\/html[^"']*["']/gi, '')
-
-    return sanitized
-  }
-
-  /**
-   * Validate and sanitize SVG content in one step
-   *
-   * @param content - The SVG content to process
-   * @returns Sanitized SVG content, or empty string if invalid
-   *
-   * @example
-   * ```typescript
-   * const safe = validateAndSanitize(userProvidedSVG)
-   * if (safe) {
-   *   // Use safe SVG
-   * }
-   * ```
-   */
-  public validateAndSanitize(content: string): string {
-    if (!this.isValidSVG(content)) {
-      return ''
-    }
-
-    return this.sanitizeSVG(content)
   }
 
   /**

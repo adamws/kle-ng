@@ -76,7 +76,7 @@ describe('Short Links Store', () => {
       const store = useShortLinksStore()
 
       await expect(store.create('compressed')).resolves.toBeNull()
-      expect(store.errorMessage).toBe('boom')
+      expect(store.errorMessage).toBe('Could not create a short link')
 
       mocks.getSupabaseClient.mockResolvedValue(fakeClient())
       const inFlight = store.create('compressed')
@@ -92,7 +92,7 @@ describe('Short Links Store', () => {
 
       await expect(store.create('compressed')).resolves.toBeNull()
       expect(store.busy).toBe(false)
-      expect(store.errorMessage).toBe('boom')
+      expect(store.errorMessage).toBe('Could not create a short link')
     })
 
     it('fails when accounts are not configured', async () => {
@@ -147,13 +147,36 @@ describe('Short Links Store', () => {
       expect(store.errorMessage).toBe(expected)
     })
 
-    it('falls back to the raw message for anything unrecognised', async () => {
-      mocks.getSupabaseClient.mockResolvedValue(fakeClient({ error: { message: 'weird failure' } }))
+    it('hides an unrecognised server message behind the fallback', async () => {
+      // Raw PostgREST text names constraints, columns and functions. Showing it in a
+      // toast publishes the schema to anyone who can provoke an error.
+      const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
+      mocks.getSupabaseClient.mockResolvedValue(
+        fakeClient({ error: { message: 'permission denied for relation short_links' } }),
+      )
       const store = useShortLinksStore()
 
       await store.create('compressed')
 
-      expect(store.errorMessage).toBe('weird failure')
+      expect(store.errorMessage).toBe('Could not create a short link')
+      expect(store.errorMessage).not.toContain('short_links')
+      expect(logged).toHaveBeenCalledWith(
+        'Unrecognised short link error:',
+        'permission denied for relation short_links',
+      )
+      logged.mockRestore()
+    })
+
+    it('still shows a message this module raised itself', async () => {
+      // `Accounts are not configured` and friends are written for this UI, so they are
+      // not suppressed. `instanceof Error` is the discriminator: supabase-js hands back
+      // a plain object, never an Error.
+      mocks.isAuthConfigured.mockReturnValue(false)
+      const store = useShortLinksStore()
+
+      await store.create('compressed')
+
+      expect(store.errorMessage).toBe('Accounts are not configured')
     })
   })
 

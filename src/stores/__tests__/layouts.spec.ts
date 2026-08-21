@@ -149,7 +149,7 @@ describe('layouts store', () => {
 
       await expect(store.fetchAll()).resolves.toBeUndefined()
 
-      expect(store.errorMessage).toBe('network down')
+      expect(store.errorMessage).toBe('Could not load your saved layouts')
       expect(store.loaded).toBe(false)
       expect(store.loading).toBe(false)
     })
@@ -303,7 +303,7 @@ describe('layouts store', () => {
       expect(await store.remove('id-a')).toBe(false)
 
       expect(store.layouts).toHaveLength(1)
-      expect(store.errorMessage).toBe('offline')
+      expect(store.errorMessage).toBe('Could not delete this layout')
     })
   })
 

@@ -36,6 +36,24 @@ export interface AuthUser {
   avatarUrl: string
 }
 
+/**
+ * An avatar URL we are willing to put in an `<img src>`.
+ *
+ * `user_metadata` is provider-controlled, so it is checked rather than trusted. A
+ * `javascript:` URL is inert in `src` on every current browser, but the allowlist is
+ * cheap and it matches openLinkSafely() in KeyboardCanvas.vue, which does the same for
+ * `<a href>` on the label path. An unusable value degrades to the initials avatar.
+ */
+function safeAvatarUrl(raw: string): string {
+  if (!raw) return ''
+  try {
+    const { protocol } = new URL(raw, window.location.origin)
+    return protocol === 'https:' || protocol === 'http:' ? raw : ''
+  } catch {
+    return ''
+  }
+}
+
 function toAuthUser(user: User | null | undefined): AuthUser | null {
   if (!user) return null
   const meta = (user.user_metadata ?? {}) as Record<string, unknown>
@@ -51,7 +69,7 @@ function toAuthUser(user: User | null | undefined): AuthUser | null {
     id: user.id,
     email,
     name: pick('user_name', 'preferred_username', 'full_name', 'name') || email || 'Account',
-    avatarUrl: pick('avatar_url', 'picture'),
+    avatarUrl: safeAvatarUrl(pick('avatar_url', 'picture')),
   }
 }
 
@@ -212,8 +230,12 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const supabase = await getSupabaseClient()
       const { error } = await supabase.auth.signOut()
-      if (error) throw error
-      user.value = null
+      if (error) {
+        // Report it, but still end the session locally — a local sign-out touches only
+        // storage, so it cannot fail the way the network call just did.
+        await supabase.auth.signOut({ scope: 'local' }).catch(() => {})
+        throw error
+      }
       toast.showSuccess('Signed out', 'Account')
     } catch (error) {
       console.error('Error signing out:', error)
@@ -222,6 +244,11 @@ export const useAuthStore = defineStore('auth', () => {
         'Sign-out Failed',
       )
     } finally {
+      // Cleared however the call ended, so the UI and the stored credential agree. A
+      // sign-out that fails towards "still signed in" is the wrong way round: supabase-js
+      // drops the stored session on most failure paths anyway, which would otherwise
+      // leave a signed-in account on screen with no session behind it.
+      user.value = null
       busy.value = false
     }
   }

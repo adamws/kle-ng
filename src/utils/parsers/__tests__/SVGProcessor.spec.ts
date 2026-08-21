@@ -126,142 +126,6 @@ describe('SVGProcessor', () => {
     })
   })
 
-  describe('sanitizeSVG', () => {
-    it('should remove script tags and content', () => {
-      const dangerous = '<svg><script>alert("xss")</script></svg>'
-      const result = processor.sanitizeSVG(dangerous)
-
-      expect(result).not.toContain('<script')
-      expect(result).not.toContain('alert')
-    })
-
-    it('should remove onclick attribute', () => {
-      const dangerous = '<svg onclick="alert(1)"></svg>'
-      const result = processor.sanitizeSVG(dangerous)
-
-      expect(result).not.toContain('onclick')
-      expect(result).toContain('<svg')
-    })
-
-    it('should remove multiple event handlers', () => {
-      const dangerous = '<svg onclick="a()" onload="b()" onmouseover="c()"></svg>'
-      const result = processor.sanitizeSVG(dangerous)
-
-      expect(result).not.toContain('onclick')
-      expect(result).not.toContain('onload')
-      expect(result).not.toContain('onmouseover')
-    })
-
-    it('should remove iframe elements', () => {
-      const dangerous = '<svg><iframe src="evil.com"></iframe></svg>'
-      const result = processor.sanitizeSVG(dangerous)
-
-      expect(result).not.toContain('<iframe')
-    })
-
-    it('should remove object elements', () => {
-      const dangerous = '<svg><object data="evil.swf"></object></svg>'
-      const result = processor.sanitizeSVG(dangerous)
-
-      expect(result).not.toContain('<object')
-    })
-
-    it('should remove embed elements', () => {
-      const dangerous = '<svg><embed src="evil.swf"></embed></svg>'
-      const result = processor.sanitizeSVG(dangerous)
-
-      expect(result).not.toContain('<embed')
-    })
-
-    it('should remove javascript: protocol from href', () => {
-      const dangerous = '<svg><a href="javascript:alert(1)">click</a></svg>'
-      const result = processor.sanitizeSVG(dangerous)
-
-      expect(result).not.toContain('javascript:')
-    })
-
-    it('should remove javascript: from xlink:href', () => {
-      const dangerous = '<svg><use xlink:href="javascript:alert(1)"/></svg>'
-      const result = processor.sanitizeSVG(dangerous)
-
-      expect(result).not.toContain('javascript:')
-    })
-
-    it('should remove data:text/html URLs', () => {
-      const dangerous = '<svg><a href="data:text/html,<script>alert(1)</script>">click</a></svg>'
-      const result = processor.sanitizeSVG(dangerous)
-
-      expect(result).not.toContain('data:text/html')
-    })
-
-    it('should preserve safe SVG content', () => {
-      const safe = '<svg width="100" height="100"><circle cx="50" cy="50" r="40" fill="red"/></svg>'
-      const result = processor.sanitizeSVG(safe)
-
-      expect(result).toContain('<circle')
-      expect(result).toContain('cx="50"')
-      expect(result).toContain('fill="red"')
-    })
-
-    it('should handle empty input', () => {
-      expect(processor.sanitizeSVG('')).toBe('')
-      expect(processor.sanitizeSVG(null as unknown as string)).toBe('')
-      expect(processor.sanitizeSVG(undefined as unknown as string)).toBe('')
-    })
-
-    it('should remove style tags (can contain javascript:)', () => {
-      const dangerous = '<svg><style>body { background: url("javascript:alert(1)") }</style></svg>'
-      const result = processor.sanitizeSVG(dangerous)
-
-      expect(result).not.toContain('<style')
-    })
-
-    it('should handle case-insensitive dangerous elements', () => {
-      const dangerous = '<svg><SCRIPT>alert(1)</SCRIPT></svg>'
-      const result = processor.sanitizeSVG(dangerous)
-
-      expect(result).not.toContain('SCRIPT')
-      expect(result).not.toContain('alert')
-    })
-
-    it('should handle self-closing dangerous elements', () => {
-      const dangerous = '<svg><script src="evil.js"/></svg>'
-      const result = processor.sanitizeSVG(dangerous)
-
-      expect(result).not.toContain('<script')
-    })
-
-    it('should remove event handlers from nested elements', () => {
-      const dangerous = '<svg><g><circle onclick="alert(1)" r="10"/></g></svg>'
-      const result = processor.sanitizeSVG(dangerous)
-
-      expect(result).not.toContain('onclick')
-      expect(result).toContain('<circle')
-    })
-  })
-
-  describe('validateAndSanitize', () => {
-    it('should return sanitized SVG for valid input', () => {
-      const svg = '<svg onclick="alert(1)"><circle r="10"/></svg>'
-      const result = processor.validateAndSanitize(svg)
-
-      expect(result).toContain('<svg')
-      expect(result).toContain('<circle')
-      expect(result).not.toContain('onclick')
-    })
-
-    it('should return empty string for invalid SVG', () => {
-      const notSvg = '<div>not svg</div>'
-      const result = processor.validateAndSanitize(notSvg)
-
-      expect(result).toBe('')
-    })
-
-    it('should return empty string for empty input', () => {
-      expect(processor.validateAndSanitize('')).toBe('')
-    })
-  })
-
   describe('hasDimensions', () => {
     it('should return true when both dimensions present', () => {
       const svg = '<svg width="32" height="24"></svg>'
@@ -394,42 +258,30 @@ describe('SVGProcessor', () => {
     it('should have all methods available on singleton', () => {
       expect(typeof svgProcessor.extractDimensions).toBe('function')
       expect(typeof svgProcessor.isValidSVG).toBe('function')
-      expect(typeof svgProcessor.sanitizeSVG).toBe('function')
-      expect(typeof svgProcessor.validateAndSanitize).toBe('function')
       expect(typeof svgProcessor.hasDimensions).toBe('function')
       expect(typeof svgProcessor.extractViewBoxDimensions).toBe('function')
       expect(typeof svgProcessor.getDimensions).toBe('function')
     })
   })
 
-  describe('security edge cases', () => {
-    it('should handle multiple script tags', () => {
-      const dangerous = '<svg><script>a()</script><script>b()</script></svg>'
-      const result = processor.sanitizeSVG(dangerous)
-
-      expect(result).not.toContain('script')
+  describe('security', () => {
+    // The regex denylist that used to live here was removed, not replaced: it was dead
+    // code, and regex filtering of markup does not hold. Label SVG is safe because
+    // SVGCache renders it as a `data:image/svg+xml` URL in an `<img>`, which is not a
+    // scripting context. If a sanitizer is ever needed, it must be a real one.
+    it('exposes no sanitizer to be mistaken for a security boundary', () => {
+      expect((svgProcessor as unknown as Record<string, unknown>).sanitizeSVG).toBeUndefined()
+      expect(
+        (svgProcessor as unknown as Record<string, unknown>).validateAndSanitize,
+      ).toBeUndefined()
     })
 
-    it('should handle nested dangerous elements', () => {
-      const dangerous = '<svg><g><script>alert(1)</script></g></svg>'
-      const result = processor.sanitizeSVG(dangerous)
+    it('passes dangerous markup through untouched, by design', () => {
+      const dangerous = '<svg><script>alert(1)</script></svg>'
 
-      expect(result).not.toContain('script')
-    })
-
-    it('should handle event handlers with different quote styles', () => {
-      const dangerous = `<svg onclick='alert(1)' onload="eval('bad')"></svg>`
-      const result = processor.sanitizeSVG(dangerous)
-
-      expect(result).not.toContain('onclick')
-      expect(result).not.toContain('onload')
-    })
-
-    it('should handle whitespace variations in attributes', () => {
-      const dangerous = '<svg  onclick  =  "alert(1)"  ></svg>'
-      const result = processor.sanitizeSVG(dangerous)
-
-      expect(result).not.toContain('onclick')
+      // isValidSVG is a shape check, not a safety check. Stated here so a reader does
+      // not mistake a `true` for an all-clear.
+      expect(processor.isValidSVG(dangerous)).toBe(true)
     })
   })
 })

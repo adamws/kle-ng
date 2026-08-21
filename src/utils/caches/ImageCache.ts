@@ -77,6 +77,18 @@ export class ImageCache {
    * @param onError - Optional callback to call when image fails to load
    */
   public loadImage(url: string, onLoad?: () => void, onError?: (url: string) => void): void {
+    if (!this.isAllowedSource(url)) {
+      this.cache.set(url, 'error')
+      console.warn(`Refused to load image from an unsupported URL scheme: ${url}`)
+      onError?.(url)
+      // Schedule the callback anyway, so the renderer continues exactly as it does for a
+      // load failure rather than waiting on an image that will never arrive.
+      if (onLoad) {
+        renderScheduler.schedule(onLoad)
+      }
+      return
+    }
+
     // Check if already in cache
     const cached = this.cache.get(url)
     if (cached === 'loading') {
@@ -155,6 +167,28 @@ export class ImageCache {
 
     // Start loading
     img.src = url
+  }
+
+  /**
+   * Whether we are willing to put this URL in an `<img src>`.
+   *
+   * Image URLs are not all ours: a KLE key label may carry `<img src="...">`, and a
+   * layout arrives from a share link, a short link or a saved row, so the value is
+   * attacker-controlled on every one of those paths. `http`/`https` cover remote icons,
+   * `data:` covers the inline `<svg>` labels that SVGCache encodes, and everything else
+   * — `javascript:`, `file:`, `blob:` — has no legitimate use here.
+   *
+   * Relative URLs resolve against the document and so keep working. This mirrors
+   * openLinkSafely() in KeyboardCanvas.vue, which does the same for `<a href>` on the
+   * same label path.
+   */
+  private isAllowedSource(url: string): boolean {
+    try {
+      const { protocol } = new URL(url, window.location.href)
+      return protocol === 'https:' || protocol === 'http:' || protocol === 'data:'
+    } catch {
+      return false
+    }
   }
 
   /**
