@@ -609,11 +609,12 @@ unaffected.
 Three environments, each with **its own database**. Nothing shares state. See
 `supabase/README.md` for the operational detail.
 
-|                               | Database                      | Config comes from             | Sign-in                     |
-| ----------------------------- | ----------------------------- | ----------------------------- | --------------------------- |
-| **Local**                     | `supabase start` (Docker)     | `.env.local`                  | seeded test user            |
-| **Preview** (Vercel)          | `kle-ng-preview` free project | CI secrets, injected at build | `kle-ng-preview` OAuth only |
-| **Production** (GitHub Pages) | `kle-ng` free project         | `.env.production`             | `kle-ng` OAuth only         |
+|                               | Database                      | Config comes from                | Sign-in                     |
+| ----------------------------- | ----------------------------- | -------------------------------- | --------------------------- |
+| **Local**                     | `supabase start` (Docker)     | `.env.local`                     | seeded test user            |
+| **e2e** (Playwright)          | none — accounts switched off  | nothing; `VITE_SUPABASE_*` blank | n/a                         |
+| **Preview** (Vercel)          | `kle-ng-preview` free project | CI secrets, injected at build    | `kle-ng-preview` OAuth only |
+| **Production** (GitHub Pages) | `kle-ng` free project         | `.env.production`                | `kle-ng` OAuth only         |
 
 Supabase free plans allow two active projects per organisation, so production + preview fits exactly.
 Branching would be tidier but requires Pro.
@@ -664,6 +665,29 @@ VITE_DEPLOY_ENV: preview
 VITE_GIT_COMMIT_SHA: ${{ github.event_name == 'pull_request_target'
   && github.event.pull_request.head.sha || github.sha }}
 ```
+
+### e2e
+
+The suite talks to no database at all. CI's `build-and-test` job uploads the deploy bundle, then
+rebuilds over `./dist` with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` set to empty and
+uploads that as the `dist-e2e` artifact, which is what `e2e-tests` downloads. Blank wins over the
+committed values because process env beats `.env` files in Vite — the same mechanism
+`vercel-preview.yml` relies on. With no config `isAuthConfigured()` is false, so
+`resolveShortLinkPayload()` throws before it fetches and supabase-js is never loaded: there is
+nothing to send a request with.
+
+That matters because `.env.production` is committed with the **live** project's credentials, so the
+plain `vite build` the e2e job used to consume compiled them into the bundle under test.
+`e2e/short-links.spec.ts` was making real `resolve_short_link` calls against production, and when
+one failed in a retryable way `restoreShortLinkOnFailure()` put `?s=` back and failed the test's
+strip assertion.
+
+The cost is that anything needing a configured build cannot run in CI. `e2e/short-links.spec.ts`
+splits on exactly that: the tests that need a resolve to be attempted are gated on a probe of the
+page (the `sign-in-github` entry, which renders only when `auth.isConfigured`) and run against a
+dev server with a `.env.local` — the local stack, never a hosted project. They were already
+skipping in CI before this, on a `process.env.VITE_SUPABASE_URL` check that described Playwright's
+own process rather than the bundle.
 
 ### `config/deployment.ts`
 

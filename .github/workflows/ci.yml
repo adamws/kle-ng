@@ -42,6 +42,29 @@ jobs:
           path: ./dist
           retention-days: 1
 
+      # The bundle above is what the deploy job publishes, so it carries the live
+      # Supabase project out of the committed .env.production. Rebuild over it with
+      # accounts switched off for e2e: the suite has no business talking to a database,
+      # and with no config isAuthConfigured() is false, so nothing is ever sent — the
+      # short-link resolve throws before it fetches and supabase-js is never loaded.
+      #
+      # Blank rather than a stub project, and blank works because process env beats .env
+      # files in Vite — the same mechanism vercel-preview.yml relies on to keep previews
+      # off the production database. The deploy artifact is already uploaded, so
+      # overwriting ./dist here costs nothing and keeps this to one extra step.
+      - name: Build project for e2e
+        env:
+          VITE_SUPABASE_URL: ''
+          VITE_SUPABASE_ANON_KEY: ''
+        run: NODE_ENV=production npm run build-only
+
+      - name: Upload e2e build artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist-e2e
+          path: ./dist
+          retention-days: 1
+
   # The RLS policies and grants are the entire security boundary: the browser talks to
   # PostgREST directly with the user's JWT, so nothing in the client enforces ownership.
   # These two suites are what check that, and until now they were run by hand.
@@ -151,10 +174,12 @@ jobs:
       - name: Install Playwright Browser
         run: npx playwright install --with-deps ${{ matrix.project }}
 
+      # dist-e2e, not dist: same bundle minus the Supabase configuration, so the suite
+      # cannot reach the production database. Served by the usual `npm run preview`.
       - name: Download build artifacts
         uses: actions/download-artifact@v8
         with:
-          name: dist
+          name: dist-e2e
           path: ./dist
 
       - name: Create test output directory

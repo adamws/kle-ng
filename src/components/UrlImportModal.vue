@@ -18,8 +18,8 @@
               @keyup.enter="importFromUrl"
             />
             <div class="form-text">
-              Paste a link to a JSON file, GitHub Gist, Ergogen layout or a kle-ng share link. All
-              formats are automatically detected.
+              Paste a link to a JSON file, GitHub Gist, Ergogen layout, or a kle-ng share or
+              short link. All formats are automatically detected.
             </div>
           </div>
         </div>
@@ -45,6 +45,11 @@ import { useKeyboardStore } from '@/stores/keyboard'
 import { toast } from '@/composables/useToast'
 import { processJsonLayout } from '@/utils/json-layout-processor'
 import { decodeLayoutFromUrl, fetchGistLayout, loadErgogenKeyboard } from '@/utils/url-sharing'
+import {
+  SHORT_LINK_PARAM,
+  isValidShortLinkId,
+  resolveShortLinkPayload,
+} from '@/utils/short-links'
 
 interface Props {
   isVisible: boolean
@@ -129,6 +134,58 @@ const importFromShareLink = async (shareUrl: string) => {
   const layoutData = decodeLayoutFromUrl(encodedData)
 
   keyboardStore.loadKeyboard(layoutData)
+  keyboardStore.filename = 'shared-layout'
+  keyboardStore.updateBaseline()
+
+  toast.showSuccess('Layout imported from share link', 'Import Successful')
+}
+
+/**
+ * The short link id in `url`, or null when it does not carry one.
+ *
+ * Matching on `?s=` alone would be too eager: the id pattern is 8-32 alphanumerics, so
+ * an unrelated `?s=` — a search term, a session id — would be claimed and the URL would
+ * stop importing the way it does today. Requiring that the path not name a file keeps
+ * `https://example.com/layout.json?s=abcdefgh` on the direct-fetch path where it
+ * belongs, while a share link (`https://host/?s=ID`, no filename) still matches.
+ *
+ * The host is deliberately not checked, matching how `#share=` is handled. An id names
+ * a row in whichever Supabase project *this* build points at, so a link from another
+ * deployment cannot resolve here — but resolveShortLinkPayload() says so in a clearer
+ * way than a fetch of somebody's HTML page would.
+ */
+const shortLinkIdFrom = (url: string): string | null => {
+  let parsed: URL
+  try {
+    parsed = new URL(url, window.location.href)
+  } catch {
+    return null
+  }
+
+  if (/\.[a-z0-9]+$/i.test(parsed.pathname)) return null
+
+  const id = parsed.searchParams.get(SHORT_LINK_PARAM)
+  return id && isValidShortLinkId(id) ? id : null
+}
+
+/**
+ * Import a `?s=` short link.
+ *
+ * Unlike the other importers here there is no "already loaded" short circuit: the id is
+ * taken out of the address bar at startup, so the current URL never still holds one to
+ * compare against.
+ */
+const importFromShortLink = async (id: string) => {
+  const payload = await resolveShortLinkPayload(id)
+
+  if (payload === null) {
+    // Short links never expire, so this is a typo or a truncated paste.
+    throw new Error('That share link does not exist. Check that the whole link was copied.')
+  }
+
+  // Through decodeLayoutFromUrl() + loadKeyboard() like every other entry point, so the
+  // decompression guard and the key limit both still apply.
+  keyboardStore.loadKeyboard(decodeLayoutFromUrl(payload))
   keyboardStore.filename = 'shared-layout'
   keyboardStore.updateBaseline()
 
@@ -234,7 +291,13 @@ const importFromUrl = async () => {
     let url = urlImportInput.value.trim()
     url = convertGitHubBlobToRaw(url)
 
-    if (url.includes('ergogen.xyz') && url.includes('#')) {
+    // Checked before the fragment forms, matching startup: `/?s=ID#gist=X` is a short
+    // link that happens to carry a stale fragment, not a gist link.
+    const shortLinkId = shortLinkIdFrom(url)
+
+    if (shortLinkId) {
+      await importFromShortLink(shortLinkId)
+    } else if (url.includes('ergogen.xyz') && url.includes('#')) {
       await importFromErgogenUrl(url)
     } else if (url.includes('#share=')) {
       await importFromShareLink(url)
