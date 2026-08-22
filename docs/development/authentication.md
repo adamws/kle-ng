@@ -24,11 +24,16 @@ client-side check.
 │  └── MyLayoutsModal.vue     ← Save / load / rename / delete / Download all│
 │      └── LayoutThumbnail.vue ←  Preview canvas drawn from the payload     │
 │                                                                           │
+│  GistExportModal.vue        ← Export ▸ Create Gist; shows the gist URL    │
+│                                                                           │
 │  stores/auth.ts             ← Session mirror, sign-in / sign-out (Pinia)  │
 │  stores/layouts.ts          ← CRUD over the `layouts` table (Pinia)       │
 │  stores/short-links.ts      ← Creates ?s= links (Pinia); creation only    │
+│  stores/gists.ts            ← Creates gists (Pinia); creation only        │
 │  utils/supabase-loader.ts   ← Lazy import('@supabase/supabase-js')        │
 │  utils/short-links.ts       ← ?s= parsing + raw-fetch resolution          │
+│  utils/github-gists.ts      ← raw-fetch POST to api.github.com/gists      │
+│  utils/github-token.ts      ← Keeps the GitHub token (sessionStorage)     │
 │  utils/auth-return-url.ts   ← Keeps #share= across the OAuth round trip   │
 │  utils/zip.ts               ← Stored-entry ZIP writer for "Download all"  │
 │  config/supabase.ts         ← Env vars, isAuthConfigured(), test user     │
@@ -134,6 +139,7 @@ where the editor already keeps `#share=` / `#url=` / `#gist=`. The two would col
 | Configured, signed in                    | Avatar in the header, **My Layouts** in the toolbar                   |
 | `http://` URL in a production build      | Config rejected, accounts disabled, error logged                      |
 | `layoutsStore` called while unconfigured | `client()` throws `Accounts are not configured`, surfaced as an error |
+| Configured, signed in, no GitHub token   | **Create Gist** is enabled; the dialog opens on its connect step      |
 
 ## Auth Flow
 
@@ -266,6 +272,8 @@ the handshake; the store mirrors the resulting session into Vue reactivity.
   Supabase types and the identity provider stays swappable.
 - `busy: boolean` — an auth call is in flight.
 - `initialized: boolean` — `initialize()` has run.
+- `githubToken: string | null` — the GitHub OAuth token, when this session has one. Not the Supabase
+  JWT; see [GitHub Gists](#github-gists).
 
 ```ts
 interface AuthUser {
@@ -280,10 +288,11 @@ interface AuthUser {
 `full_name`, `name` in `user_metadata`, falling back to the email and then the literal `'Account'`;
 `avatarUrl` comes from `avatar_url` or `picture` (the Google shape).
 
-**Computed:** `isConfigured`, `isSignedIn`, `testUser`, `canUseTestUser`.
+**Computed:** `isConfigured`, `isSignedIn`, `hasGithubToken`, `testUser`, `canUseTestUser`.
 
-**Actions:** `initialize()`, `signIn(provider)`, `signInAsTestUser()`, `signOut()`,
-`getAccessToken()`, `cleanup()` (unsubscribes from `onAuthStateChange`).
+**Actions:** `initialize()`, `signIn(provider)`, `signInAsTestUser()`, `connectGithubGists(returnHref?)`,
+`forgetGithubToken()`, `signOut()`, `getAccessToken()`, `cleanup()` (unsubscribes from
+`onAuthStateChange`).
 
 `busy` is left **set** on `signIn()`'s success path — the browser is meant to leave the page. That is
 why `AccountMenu` disables the individual account entries rather than the dropdown trigger; see
@@ -556,19 +565,21 @@ sign-in.
 
 ### Where each rule is enforced
 
-| Rule                                      | Enforced by                                               | Client role                              |
-| ----------------------------------------- | --------------------------------------------------------- | ---------------------------------------- |
-| You only see your own layouts             | RLS `layouts_select_own`                                  | none — no query filters by user id       |
-| You cannot write another's row            | RLS `layouts_insert_own` / `layouts_update_own`           | none                                     |
-| Max 5 layouts per user                    | `layouts_enforce_quota` trigger                           | none — a full list has no vacant slot    |
-| Name 1–120 chars                          | `layouts_name_length` check                               | `maxlength` on the input, cosmetic       |
-| Payload ≤ 32768 chars                     | `layouts_payload_length` check                            | `MAX_PAYLOAD_LENGTH` pre-check, cosmetic |
-| `updated_at` / `created_at`               | `layouts_set_updated_at` trigger                          | never sent                               |
-| `user_id`                                 | column default `auth.uid()`                               | never sent                               |
-| Only signed-in users make short links     | `auth.uid()` check in `create_short_link`                 | the caret is hidden, cosmetic            |
-| Nobody can list shared layouts            | no table grant, no policy on `short_links`                | none                                     |
-| A short link id maps to one layout        | `short_links.hash` unique + server-side sha256            | never sends a hash                       |
-| Max 60 new short links per user, per hour | rolling `count(*)` on `created_by` in `create_short_link` | none — surfaced as a toast               |
+| Rule                                      | Enforced by                                               | Client role                               |
+| ----------------------------------------- | --------------------------------------------------------- | ----------------------------------------- |
+| You only see your own layouts             | RLS `layouts_select_own`                                  | none — no query filters by user id        |
+| You cannot write another's row            | RLS `layouts_insert_own` / `layouts_update_own`           | none                                      |
+| Max 5 layouts per user                    | `layouts_enforce_quota` trigger                           | none — a full list has no vacant slot     |
+| Name 1–120 chars                          | `layouts_name_length` check                               | `maxlength` on the input, cosmetic        |
+| Payload ≤ 32768 chars                     | `layouts_payload_length` check                            | `MAX_PAYLOAD_LENGTH` pre-check, cosmetic  |
+| `updated_at` / `created_at`               | `layouts_set_updated_at` trigger                          | never sent                                |
+| `user_id`                                 | column default `auth.uid()`                               | never sent                                |
+| Only signed-in users make short links     | `auth.uid()` check in `create_short_link`                 | the caret is hidden, cosmetic             |
+| Nobody can list shared layouts            | no table grant, no policy on `short_links`                | none                                      |
+| A short link id maps to one layout        | `short_links.hash` unique + server-side sha256            | never sends a hash                        |
+| Max 60 new short links per user, per hour | rolling `count(*)` on `created_by` in `create_short_link` | none — surfaced as a toast                |
+| Only you can write to your gists          | GitHub, against the `gist`-scoped OAuth token             | holds the token; menu gate is cosmetic    |
+| Gist file under 1 MB                      | GitHub (422)                                              | `MAX_GIST_FILE_BYTES` pre-check, cosmetic |
 
 Note that the quota counts **inserts only**. Saving over a layout is an update, so re-saving work in
 place stays possible at the limit — which is why the **Save** on a filled row in `MyLayoutsModal`
@@ -603,6 +614,134 @@ authenticated`, proving:
 The fixture INSERT into `auth.users` is coupled to GoTrue's schema, which drifts between versions; if
 it breaks after a Supabase upgrade, add whatever columns it now demands — the rest of the script is
 unaffected.
+
+## GitHub Gists
+
+**Export → Create Gist** writes the open layout to a gist in the user's **own** GitHub account. It
+is the only feature here whose artifact kle-ng does not own: there is no table, no migration and no
+row anywhere — the layout goes from the browser straight to `api.github.com`, and the user can edit
+or delete the gist afterwards without involving this app at all.
+
+That also makes it the only feature that needs a credential Supabase will not manage for it.
+
+### Why the token has to be kept here
+
+Supabase returns the provider's own OAuth token on the session as `session.provider_token`, and then
+deliberately forgets it:
+
+> Provider tokens are intentionally not stored in your project's database.
+
+It is not refreshed either. So `provider_token` is present on **the OAuth exchange and nowhere
+else** — every later session, including the hourly `TOKEN_REFRESHED` one, arrives without it. An
+application that wants to call GitHub later has to keep the token itself, which is all
+`utils/github-token.ts` does.
+
+```
+sign in ──────────────► no provider_token (sign-in requests no scopes)
+Create Gist, no token ─► connectGithubGists(): captureReturnUrl(#share= URL)
+                         + signInWithOAuth({ scopes: 'gist' })
+   └── redirect ───────► GitHub consent ──► ?code= ──► initialize() ──► applySession()
+                                                          └─ provider_token present → stored
+TOKEN_REFRESHED ───────► provider_token ABSENT → keep the stored one
+401 from GitHub ───────► forgetGithubToken()
+sign out / tab close ──► gone
+```
+
+**The `TOKEN_REFRESHED` branch is the load-bearing one.** A naive
+`writeGithubToken(session.provider_token)` in `applySession()` would clear the token once an hour,
+every hour, and the user would find gist export disconnected for no visible reason. Absence means
+_unchanged_, never _revoked_; revocation is only observable where it actually shows up, as a 401
+from GitHub, and `stores/gists.ts` is the one place that calls `forgetGithubToken()`.
+
+### sessionStorage, and the scope asked for on demand
+
+Two decisions that trade convenience for blast radius, both deliberate:
+
+**The token lives in `sessionStorage`**, under `kle-ng-github-token`, bound to the user id it was
+issued for. A `gist`-scoped token grants read _and write_ over the user's entire gist account,
+secret gists included — a far more valuable credential than the Supabase JWT, which reaches only
+this app's own five rows. Scoping it to the tab bounds an XSS to the session the user is actually
+in. The cost is one re-authorization round trip per new tab, which is the connect step in the
+dialog. The user-id binding matters because the tab outlives the session: a token left behind by a
+sign-out that never ran must not be picked up by whoever signs in next.
+
+**`signIn()` requests no scopes at all.** Gist access is asked for on first use, by
+`connectGithubGists()`, so a user who only ever saves layouts is never shown "kle-ng wants read and
+write access to all your gists". This ages well: classic GitHub OAuth Apps issue tokens carrying the
+union of every scope a user has granted, so after one accepted consent an ordinary sign-in already
+returns a gist-capable token.
+
+### Surviving the round trip
+
+The connect redirect leaves the page, and there is no autosave — `captureReturnUrl()` stashes
+`location.href`, which holds the layout only when it arrived as a share link. So the modal passes an
+explicit href:
+
+```ts
+gistsStore.authorize(keyboardStore.generateShareUrl())
+```
+
+`captureReturnUrl(href)` has always taken an argument; `restoreReturnUrl()` puts the fragment back
+before `createApp()`, and `initWithSample()` loads it on the ordinary startup path. Nothing new was
+needed. A `kle-ng-gist-resume` flag in sessionStorage reopens the dialog on return, and is consumed
+whether or not a token came back — a user who declined at GitHub has already been told, and must not
+find the dialog waiting on the next reload.
+
+One consequence worth knowing: picking a _different_ GitHub account at the consent screen switches
+the kle-ng account too. That is inherent to re-running OAuth, not specific to this feature.
+
+### Request and failure handling
+
+`createGist()` in `utils/github-gists.ts` is a raw `fetch` — `api.github.com` is CORS-enabled for
+this endpoint, so there is no proxy and no Edge Function. Like `utils/short-links.ts` it may not
+import supabase-js; the token arrives as a parameter precisely so the module knows nothing about
+sessions. `credentials: 'omit'`, because the bearer token is the whole authorisation and an ambient
+github.com cookie must not be able to change whose account is written to.
+
+| Signal            | Message shown                                                                                            | Token         |
+| ----------------- | -------------------------------------------------------------------------------------------------------- | ------------- |
+| 401               | "Your GitHub authorization has expired. Connect GitHub again…"                                           | **discarded** |
+| 403 / 404         | "GitHub declined the request — the gist permission may have been revoked, or you have hit a rate limit." | kept          |
+| 422               | "GitHub rejected this layout."                                                                           | kept          |
+| local `too-large` | "This layout is too large to put in a gist."                                                             | kept          |
+| network           | "Could not reach GitHub. Check your connection and try again."                                           | kept          |
+
+Only 401 discards. A 403 is as likely to be a rate limit as a missing scope, and throwing away a
+good token over a rate limit costs the user a pointless round trip. A 404 on a write with a bearer
+token means "not visible to this token", which for this endpoint is a missing scope rather than a
+missing resource, so it joins 403.
+
+`MAX_GIST_FILE_BYTES` (900 000) guards the API's refusal to create a file of 1 MB or more, measured
+in **bytes** rather than characters — legends are not ASCII, so a character count would let an
+oversized file through. Nothing in this path logs the error object: a thrown `fetch` can carry the
+request, and the request carries the `Authorization` header, so only the code and status are logged.
+
+### `GistExportModal.vue`
+
+Mounted from `KeyboardToolbar.vue` with the other toolbar modals, and built from
+`ShortLinkConfirmModal.vue` — the same hand-rolled Bootstrap markup, Escape handling, reset-on-open,
+and the rule that a backdrop click is ignored once the link is on screen. Four stages:
+
+- **connect** — shown instead of _options_ when there is no token.
+- **options** — file name (prefilled exactly as Export → Download JSON names its file), an optional
+  description, and Public/Secret defaulting to **Secret**.
+- **creating** — with the same double-click guard the short-link dialog uses, since `stage` only
+  reaches the DOM on the next tick.
+- **done** — the gist URL in a read-only field with a Copy button. Focus-and-select rather than
+  auto-copying, for the reason the short-link dialog documents.
+
+The starting stage depends on the store, so it is set **during setup rather than in `onMounted`** —
+`onMounted` runs after the first render, which would otherwise paint one step behind for a tick.
+
+The file content is `stringifyWithRounding(keyboardStore.getSerializedData('kle'), 2)`: byte-identical
+to Export → Download JSON, and therefore reimportable through the editor's existing `#gist=` loader.
+
+The **Create Gist** entry itself is hidden entirely when `auth.isConfigured` is false — an
+unconfigured build has no sign-in to offer, so the entry would be permanently dead — and rendered
+disabled with an explanatory `title` when configured but signed out. The `title` sits on the
+wrapping `<li>`, because a disabled `.dropdown-item` swallows pointer events; that matches the
+Download VIA / QMK JSON entries three lines up, rather than introducing `HintTooltip` as a second
+tooltip mechanism inside one menu.
 
 ## Environments
 
@@ -832,19 +971,23 @@ generally are. The archive is named `kle-ng-layouts-YYYY-MM-DD.zip`.
 
 ### Unit tests
 
-| Spec                                                | Covers                                                                                                                                                                                                                                                  |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/config/__tests__/supabase.spec.ts`             | Both env vars required, HTTPS enforced in PROD only, local-instance detection, the DEV + local gate on the test user, `VITE_TEST_USER_*` ignored, memoisation                                                                                           |
-| `src/stores/__tests__/auth.spec.ts`                 | `initialize()` no-ops when unconfigured and **does not load supabase-js for an anonymous visitor**, session restore, PKCE exchange + URL cleanup, provider errors, run-once, metadata fallbacks, `signIn`/`signInAsTestUser`/`signOut`/`getAccessToken` |
-| `src/stores/__tests__/layouts.spec.ts`              | snake_case mapping, quota read over RPC, fetch caching, oldest-first ordering, insert without `user_id`, quota-error translation, scoped update/delete, `isFull`, `reset()`                                                                             |
-| `src/utils/__tests__/short-links.spec.ts`           | Id validation, `?s=` build/take/clear (preserving `?code=` and the fragment), and the raw-fetch resolver: request shape, 200+`null` for an unknown id, 404 as a missing function, and that supabase-js is never loaded                                  |
-| `src/stores/__tests__/short-links.spec.ts`          | RPC call shape, every `describeError()` branch, `busy` lifecycle, re-entrancy, oversized payload short-circuit, unconfigured                                                                                                                            |
-| `src/stores/__tests__/keyboard-short-links.spec.ts` | `loadFromShortLink()` success / unknown id / resolver failure / decode guards, and the startup dispatch including `#share=` winning over `?s=`                                                                                                          |
-| `src/utils/__tests__/auth-return-url.spec.ts`       | The fragment/callback edge cases listed under [Auth Flow](#auth-flow)                                                                                                                                                                                   |
-| `src/utils/__tests__/zip.spec.ts`                   | CRC-32 vectors, central-directory round-trip, store + UTF-8 flags, MS-DOS timestamps, reproducibility, empty archive, entry-count guard                                                                                                                 |
-| `src/components/__tests__/AccountMenu.spec.ts`      | Theme entries present even unconfigured and reachable while `busy`, GitHub entry, test-user entry hidden unless available, avatar-only identification with the name only in the accessible label                                                        |
-| `src/components/__tests__/MyLayoutsModal.spec.ts`   | Fixed slot count, the order a session fixes (a delete empties in place, the next save fills that gap, reopening closes it), naming a new layout, saving into and over a slot, the current-layout marker, disabled-button explanations, and Download all |
-| `src/stores/__tests__/keyboard.spec.ts`             | `layoutGeneration` (the counter the current-layout marker is paired with): moves on `loadKeyboard`/`loadKLELayout`/`clearLayout`, and not for an edit, an undo, or `updateLayoutFromJson`                                                               |
+| Spec                                                | Covers                                                                                                                                                                                                                                                   |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/config/__tests__/supabase.spec.ts`             | Both env vars required, HTTPS enforced in PROD only, local-instance detection, the DEV + local gate on the test user, `VITE_TEST_USER_*` ignored, memoisation                                                                                            |
+| `src/stores/__tests__/auth.spec.ts`                 | `initialize()` no-ops when unconfigured and **does not load supabase-js for an anonymous visitor**, session restore, PKCE exchange + URL cleanup, provider errors, run-once, metadata fallbacks, `signIn`/`signInAsTestUser`/`signOut`/`getAccessToken`  |
+| `src/stores/__tests__/layouts.spec.ts`              | snake_case mapping, quota read over RPC, fetch caching, oldest-first ordering, insert without `user_id`, quota-error translation, scoped update/delete, `isFull`, `reset()`                                                                              |
+| `src/utils/__tests__/short-links.spec.ts`           | Id validation, `?s=` build/take/clear (preserving `?code=` and the fragment), and the raw-fetch resolver: request shape, 200+`null` for an unknown id, 404 as a missing function, and that supabase-js is never loaded                                   |
+| `src/stores/__tests__/short-links.spec.ts`          | RPC call shape, every `describeError()` branch, `busy` lifecycle, re-entrancy, oversized payload short-circuit, unconfigured                                                                                                                             |
+| `src/stores/__tests__/keyboard-short-links.spec.ts` | `loadFromShortLink()` success / unknown id / resolver failure / decode guards, and the startup dispatch including `#share=` winning over `?s=`                                                                                                           |
+| `src/utils/__tests__/auth-return-url.spec.ts`       | The fragment/callback edge cases listed under [Auth Flow](#auth-flow)                                                                                                                                                                                    |
+| `src/utils/__tests__/github-gists.spec.ts`          | Request shape and headers, `credentials: 'omit'`, secret-by-default, status→code mapping (401/403/404/422/5xx), the byte-based size guard short-circuiting before any fetch, the abort budget covering the body read, and that the token is never logged |
+| `src/utils/__tests__/github-token.spec.ts`          | Round trip, the user-id binding, clearing, an unparsable stored value, and a throwing `sessionStorage`                                                                                                                                                   |
+| `src/stores/__tests__/gists.spec.ts`                | Every `describeError()` branch, `busy` lifecycle and re-entrancy, 401 discarding the token while 403 keeps it, the resume flag, `reset()`                                                                                                                |
+| `src/components/__tests__/GistExportModal.spec.ts`  | File-name prefill chain, secret default, the connect step, the `#share=` URL carried into `authorize()`, the double-click guard, copy behaviour, and reset-on-reopen                                                                                     |
+| `src/utils/__tests__/zip.spec.ts`                   | CRC-32 vectors, central-directory round-trip, store + UTF-8 flags, MS-DOS timestamps, reproducibility, empty archive, entry-count guard                                                                                                                  |
+| `src/components/__tests__/AccountMenu.spec.ts`      | Theme entries present even unconfigured and reachable while `busy`, GitHub entry, test-user entry hidden unless available, avatar-only identification with the name only in the accessible label                                                         |
+| `src/components/__tests__/MyLayoutsModal.spec.ts`   | Fixed slot count, the order a session fixes (a delete empties in place, the next save fills that gap, reopening closes it), naming a new layout, saving into and over a slot, the current-layout marker, disabled-button explanations, and Download all  |
+| `src/stores/__tests__/keyboard.spec.ts`             | `layoutGeneration` (the counter the current-layout marker is paired with): moves on `loadKeyboard`/`loadKLELayout`/`clearLayout`, and not for an edit, an undo, or `updateLayoutFromJson`                                                                |
 
 `auth.spec.ts` and `layouts.spec.ts` mock `@/config/supabase` and `@/utils/supabase-loader` with
 `vi.hoisted()` and hand a fake client to `getSupabaseClient`, so no test ever touches a real project.
@@ -949,6 +1092,17 @@ backdating `created_at`, which is the value the window predicate actually reads.
   `hash` precisely so the id does not have to be reproducible. A signed-in user can still learn that
   _somebody_ already shared a layout by shortening it and getting an existing id back; that is
   inherent to "same layout, same link" and is accepted.
+- **Never clear the GitHub token because a session lacks `provider_token`.** Supabase populates it
+  only on the OAuth exchange, so every refreshed session is missing it. Absence means unchanged;
+  only a 401 from GitHub means revoked. Getting this wrong disconnects gist export once an hour.
+- **The GitHub token stays in `sessionStorage`, bound to the user id.** Do not move it to
+  `localStorage`, into the Supabase session, or into any database row — it grants read and write
+  over the user's whole gist account, and the tab boundary is what bounds an XSS.
+- **`signIn()` deliberately requests no scopes.** Gist access is asked for on first use by
+  `connectGithubGists()`. Adding `scopes` to `signIn()` would show every user a consent screen for
+  read/write access to all their gists just to save a layout.
+- **Nothing on the gist path may log the error object.** A thrown `fetch` can carry the request, and
+  the request carries the `Authorization` header. Log the code and status instead.
 - **Migrations are not applied to hosted projects by CI.** `npx supabase db push` against preview
   _and_ production is a manual step whenever a migration lands.
 - **`.env.local` is gitignored; `.env.local.example` is the committed template.** A fresh clone has
@@ -964,5 +1118,5 @@ backdating `created_at`, which is the value the window predicate actually reads.
 - [Development Setup](./development-setup.md) — running the editor locally.
 - [PCB Generator](./pcb-generator.md) — the other optional, env-gated integration; `config/api.ts`
   is the pattern `config/supabase.ts` follows.
-- [Layout Export](./layout-export.md) — the serialization that "Download all" reuses.
+- [Layout Export](./layout-export.md) — the serialization that "Download all" and gist export reuse.
 - `supabase/README.md` — operational runbook for the three environments.

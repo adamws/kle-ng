@@ -367,8 +367,38 @@ Click the **Export** button in the toolbar to access all export options:
 | Download VIA JSON           | VIA/Vial JSON | Only available when VIA metadata is present                                                  |
 | Copy share link             | URL           | Generates a shareable `#share=` URL                                                          |
 | Create short link           | URL           | Short `?s=` link stored on the server; requires sign-in, public and permanent, never expires |
+| Create Gist                 | GitHub Gist   | Saves the layout as a gist in **your** GitHub account; requires sign-in, secret by default   |
 | Edit in Ergogen Web GUI     | URL (new tab) | Opens [ergogen.xyz](https://ergogen.xyz/) with the layout preloaded                          |
 | Open in Shield Wizard (ZMK) | URL (new tab) | Opens the [ZMK Shield Wizard](https://shield-wizard.genteure.com/) with the layout preloaded |
+
+### Create Gist {#create-gist}
+
+**Export → Create Gist** saves the current layout as a [GitHub Gist](https://gist.github.com/) in
+your own GitHub account. You get a link back, which you can copy from the dialog.
+
+You need to be signed in with GitHub — the option is greyed out otherwise, with a tooltip saying so.
+
+The first time you use it, kle-ng asks GitHub for permission to create gists and sends you to GitHub
+to approve it. Signing in on its own does **not** request that permission, so an account you only
+use to save layouts never has access to your gists. Your current layout, unsaved edits included, is
+carried across the trip and restored when you come back. The permission is remembered for the rest
+of the browser tab; opening kle-ng in a new tab asks again.
+
+In the dialog you can set:
+
+- **File name** — defaults to the same name Download JSON would use.
+- **Description** — optional.
+- **Visibility** — **Secret** (the default) means the gist is not listed on your profile and is not
+  searchable, but anyone you give the link to can open it. **Public** lists it on your GitHub
+  profile.
+
+The gist contains a single `.json` file, byte-identical to what **Download JSON** produces, so it
+can be imported back into kle-ng — paste the gist URL into **Import → From URL**, or open
+`https://editor.keyboard-tools.xyz/#gist=<gist-id>` directly.
+
+Because the gist lives in your GitHub account, you can edit or delete it there at any time. kle-ng
+keeps no copy of it — unlike a short link, which is stored on the kle-ng server and cannot be
+withdrawn.
 
 ## Open in External Web Tools {#external-web-tools}
 
@@ -449,6 +479,18 @@ When exported, the QMK `info.json` contains two separate layout definitions:
 ### GitHub Gist Issues
 
 **GitHub Gist import fails** — GitHub API rate limits unauthenticated requests to 60 per hour per IP. If you hit the limit, wait about an hour before trying again. Alternatively, download the raw JSON and import **From File**.
+
+### Create Gist Problems
+
+**"Your GitHub authorization has expired"** — the permission was revoked on GitHub (Settings →
+Applications), or the browser tab was replaced. Use **Connect GitHub** in the dialog to grant it
+again.
+
+**"GitHub declined the request"** — either the gist permission is missing or you have created a lot
+of gists in a short time. Try connecting GitHub again; if that does not help, wait a few minutes.
+
+**"This layout is too large to put in a gist"** — GitHub's API refuses files of 1 MB or more. Use
+**Download JSON** instead.
 
 ### Ergogen Compatibility
 

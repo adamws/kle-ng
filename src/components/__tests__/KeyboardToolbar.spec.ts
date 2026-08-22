@@ -6,6 +6,22 @@ import { useKeyboardStore, Key } from '@/stores/keyboard'
 import { useAuthStore } from '@/stores/auth'
 import { useShortLinksStore } from '@/stores/short-links'
 import { toast } from '@/composables/useToast'
+import { useGistsStore } from '@/stores/gists'
+
+// Accounts are configured per test: the Create Gist entry renders only where there is a
+// sign-in to offer, and the bundle these tests run against has no VITE_SUPABASE_* at all.
+const supabaseMocks = vi.hoisted(() => ({
+  isAuthConfigured: vi.fn(() => false),
+  getTestUser: vi.fn(() => null),
+  isLocalSupabase: vi.fn(() => false),
+}))
+
+vi.mock('@/config/supabase', () => ({
+  AUTH_STORAGE_KEY: 'kle-ng-auth',
+  isAuthConfigured: supabaseMocks.isAuthConfigured,
+  getTestUser: supabaseMocks.getTestUser,
+  isLocalSupabase: supabaseMocks.isLocalSupabase,
+}))
 
 vi.mock('@/composables/useToast', () => ({
   toast: {
@@ -29,6 +45,7 @@ vi.mock('@/data/presets.json', () => ({
 describe('KeyboardToolbar', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    supabaseMocks.isAuthConfigured.mockReturnValue(false)
     setActivePinia(createPinia())
   })
 
@@ -529,6 +546,104 @@ describe('KeyboardToolbar', () => {
       await flushPromises()
 
       expect(writeText).toHaveBeenCalledWith(expect.stringContaining('#share='))
+    })
+  })
+  describe('Create Gist', () => {
+    const item = (wrapper: ReturnType<typeof mount>) =>
+      wrapper.find('[data-testid="export-create-gist"]')
+
+    const mountToolbar = (pinia: ReturnType<typeof createPinia>) =>
+      mount(KeyboardToolbar, { global: { plugins: [pinia] } })
+
+    const signIn = (auth: ReturnType<typeof useAuthStore>) => {
+      auth.user = { id: 'u1', email: 'a@b.c', name: 'tester', avatarUrl: '' }
+    }
+
+    // A build with no Supabase configuration has no sign-in to offer, so a permanently
+    // disabled entry would be dead weight in the menu.
+    it('is absent when accounts are not configured', () => {
+      const pinia = createPinia()
+      setActivePinia(pinia)
+
+      expect(item(mountToolbar(pinia)).exists()).toBe(false)
+    })
+
+    it('is present but disabled for a signed-out visitor, and says why', () => {
+      supabaseMocks.isAuthConfigured.mockReturnValue(true)
+      const pinia = createPinia()
+      setActivePinia(pinia)
+
+      const wrapper = mountToolbar(pinia)
+
+      expect((item(wrapper).element as HTMLButtonElement).disabled).toBe(true)
+      // The tooltip sits on the wrapping <li>: a disabled .dropdown-item swallows
+      // pointer events, so a title on the button itself would never be shown.
+      expect(item(wrapper).element.parentElement?.getAttribute('title')).toContain('Sign in')
+    })
+
+    it('is enabled once signed in', () => {
+      supabaseMocks.isAuthConfigured.mockReturnValue(true)
+      const pinia = createPinia()
+      setActivePinia(pinia)
+      signIn(useAuthStore())
+
+      const wrapper = mountToolbar(pinia)
+
+      expect((item(wrapper).element as HTMLButtonElement).disabled).toBe(false)
+      expect(item(wrapper).element.parentElement?.hasAttribute('title')).toBe(false)
+    })
+
+    it('opens the export dialog rather than creating anything', async () => {
+      supabaseMocks.isAuthConfigured.mockReturnValue(true)
+      const pinia = createPinia()
+      setActivePinia(pinia)
+      const auth = useAuthStore()
+      signIn(auth)
+      auth.githubToken = 'gho_token'
+      const create = vi.spyOn(useGistsStore(), 'create')
+
+      const wrapper = mountToolbar(pinia)
+      await item(wrapper).trigger('click')
+
+      expect(wrapper.find('[data-testid="gist-confirm"]').exists()).toBe(true)
+      expect(create).not.toHaveBeenCalled()
+    })
+
+    // The authorization redirect leaves and re-enters the page, so the export has to be
+    // picked back up where it left off.
+    it('reopens the dialog after returning from the authorization redirect', async () => {
+      supabaseMocks.isAuthConfigured.mockReturnValue(true)
+      const pinia = createPinia()
+      setActivePinia(pinia)
+      const auth = useAuthStore()
+      signIn(auth)
+      auth.githubToken = 'gho_token'
+      auth.initialized = true
+      vi.spyOn(useGistsStore(), 'takeResumeFlag').mockReturnValue(true)
+
+      const wrapper = mountToolbar(pinia)
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.find('[data-testid="gist-confirm"]').exists()).toBe(true)
+    })
+
+    // A user who declined at GitHub has already been told; the dialog must not be
+    // waiting for them on the next reload either.
+    it('consumes the flag without reopening when authorization was declined', async () => {
+      supabaseMocks.isAuthConfigured.mockReturnValue(true)
+      const pinia = createPinia()
+      setActivePinia(pinia)
+      const auth = useAuthStore()
+      signIn(auth)
+      auth.githubToken = null
+      auth.initialized = true
+      const take = vi.spyOn(useGistsStore(), 'takeResumeFlag').mockReturnValue(true)
+
+      const wrapper = mountToolbar(pinia)
+      await wrapper.vm.$nextTick()
+
+      expect(take).toHaveBeenCalled()
+      expect(wrapper.find('[data-testid="gist-connect"]').exists()).toBe(false)
     })
   })
 })

@@ -83,6 +83,22 @@ test.describe('Short links', () => {
     await expect(page.locator('.share-group > .btn')).toBeVisible()
   })
 
+  // Gist export shares the account gate with short links, so it is checked here rather
+  // than in a spec of its own: with no VITE_SUPABASE_* compiled in there is no sign-in to
+  // offer, and the entry must not appear at all.
+  test('offers no Create Gist entry when accounts are not configured', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.locator('.canvas-toolbar')).toBeVisible()
+    test.skip(
+      await accountsConfigured(page),
+      'this build has accounts compiled in, so the entry is expected to render',
+    )
+
+    await page.getByTestId('button-export').click()
+    await expect(page.getByTestId('export-download-json')).toBeVisible()
+    await expect(page.getByTestId('export-create-gist')).toHaveCount(0)
+  })
+
   test.describe('with accounts configured', () => {
     test.beforeEach(async ({ page }) => {
       test.skip(

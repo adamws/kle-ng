@@ -36,6 +36,7 @@ vi.mock('@/utils/auth-return-url', async (importOriginal) => ({
 }))
 
 import { useAuthStore } from '../auth'
+import { readGithubToken, writeGithubToken } from '@/utils/github-token'
 
 const GITHUB_USER = {
   id: 'user-1',
@@ -47,7 +48,10 @@ function fakeClient(session: unknown = null) {
   return {
     auth: {
       getSession: vi.fn().mockResolvedValue({ data: { session }, error: null }),
-      onAuthStateChange: vi.fn(() => ({
+      // The callback is typed rather than ignored so a test can replay what supabase-js
+      // delivers on a refresh — see the provider-token suite.
+      onAuthStateChange: vi.fn((handler: (event: string, session: unknown) => void) => ({
+        handler,
         data: { subscription: { unsubscribe: vi.fn() } },
       })),
       signInWithOAuth: vi.fn().mockResolvedValue({ error: null }),
@@ -64,6 +68,7 @@ describe('auth store', () => {
     mocks.isAuthConfigured.mockReturnValue(true)
     mocks.getTestUser.mockReturnValue(null)
     localStorage.clear()
+    sessionStorage.clear()
     window.history.replaceState({}, '', '/')
   })
 
@@ -366,6 +371,141 @@ describe('auth store', () => {
       await auth.initialize()
 
       expect(await auth.getAccessToken()).toBe('jwt-token')
+    })
+  })
+  describe('GitHub provider token', () => {
+    it('captures provider_token off the OAuth exchange', async () => {
+      localStorage.setItem('kle-ng-auth', '{}')
+      mocks.getSupabaseClient.mockResolvedValue(
+        fakeClient({ user: GITHUB_USER, provider_token: 'gho_token' }),
+      )
+      const auth = useAuthStore()
+
+      await auth.initialize()
+
+      expect(auth.githubToken).toBe('gho_token')
+      expect(auth.hasGithubToken).toBe(true)
+      expect(readGithubToken('user-1')).toBe('gho_token')
+    })
+
+    // The load-bearing case. Supabase neither stores nor refreshes provider tokens, so
+    // the hourly TOKEN_REFRESHED session has none. Clearing on absence would silently
+    // disconnect gists once an hour, which is exactly the bug this asserts against.
+    it('keeps the token when a refreshed session arrives without one', async () => {
+      localStorage.setItem('kle-ng-auth', '{}')
+      const client = fakeClient({ user: GITHUB_USER, provider_token: 'gho_token' })
+      mocks.getSupabaseClient.mockResolvedValue(client)
+      const auth = useAuthStore()
+      await auth.initialize()
+
+      // Replay what onAuthStateChange delivers on a refresh: same user, no provider_token.
+      const handler = client.auth.onAuthStateChange.mock.calls[0]![0]
+      handler('TOKEN_REFRESHED', { user: GITHUB_USER, access_token: 'new-jwt' })
+
+      expect(auth.githubToken).toBe('gho_token')
+      expect(readGithubToken('user-1')).toBe('gho_token')
+    })
+
+    // The tab outlives the session. A token left behind by a sign-out that never ran —
+    // a crash, a second tab — must not be picked up by whoever signs in next.
+    it('does not hand one user the token stored for another', async () => {
+      writeGithubToken('user-1', 'gho_token')
+      localStorage.setItem('kle-ng-auth', '{}')
+      mocks.getSupabaseClient.mockResolvedValue(
+        fakeClient({ user: { ...GITHUB_USER, id: 'user-2' } }),
+      )
+      const auth = useAuthStore()
+
+      await auth.initialize()
+
+      expect(auth.isSignedIn).toBe(true)
+      expect(auth.githubToken).toBeNull()
+    })
+
+    it('picks up a token already stored for the restored user', async () => {
+      writeGithubToken('user-1', 'gho_token')
+      localStorage.setItem('kle-ng-auth', '{}')
+      mocks.getSupabaseClient.mockResolvedValue(fakeClient({ user: GITHUB_USER }))
+      const auth = useAuthStore()
+
+      await auth.initialize()
+
+      expect(auth.githubToken).toBe('gho_token')
+    })
+
+    it('drops the token on sign-out', async () => {
+      localStorage.setItem('kle-ng-auth', '{}')
+      mocks.getSupabaseClient.mockResolvedValue(
+        fakeClient({ user: GITHUB_USER, provider_token: 'gho_token' }),
+      )
+      const auth = useAuthStore()
+      await auth.initialize()
+      expect(auth.githubToken).toBe('gho_token')
+
+      mocks.getSupabaseClient.mockResolvedValue(fakeClient(null))
+      await auth.signOut()
+
+      expect(auth.githubToken).toBeNull()
+      expect(readGithubToken('user-1')).toBeNull()
+    })
+
+    it('forgets the token when GitHub itself rejects it', async () => {
+      localStorage.setItem('kle-ng-auth', '{}')
+      mocks.getSupabaseClient.mockResolvedValue(
+        fakeClient({ user: GITHUB_USER, provider_token: 'gho_token' }),
+      )
+      const auth = useAuthStore()
+      await auth.initialize()
+
+      auth.forgetGithubToken()
+
+      expect(auth.githubToken).toBeNull()
+      expect(readGithubToken('user-1')).toBeNull()
+    })
+  })
+
+  describe('connectGithubGists', () => {
+    it('asks GitHub for the gist scope and returns to the given URL', async () => {
+      const client = fakeClient()
+      mocks.getSupabaseClient.mockResolvedValue(client)
+      const auth = useAuthStore()
+
+      await auth.connectGithubGists('https://editor.example/#share=abc')
+
+      expect(mocks.captureReturnUrl).toHaveBeenCalledWith('https://editor.example/#share=abc')
+      expect(client.auth.signInWithOAuth).toHaveBeenCalledWith({
+        provider: 'github',
+        options: { scopes: 'gist', redirectTo: `${window.location.origin}/` },
+      })
+      // The page is leaving, exactly as for signIn().
+      expect(auth.busy).toBe(true)
+    })
+
+    it('clears busy and reports the failure when the redirect cannot start', async () => {
+      const client = fakeClient()
+      client.auth.signInWithOAuth.mockResolvedValue({ error: new Error('offline') })
+      mocks.getSupabaseClient.mockResolvedValue(client)
+      const auth = useAuthStore()
+
+      await auth.connectGithubGists()
+
+      expect(mocks.showError).toHaveBeenCalledWith('offline', 'GitHub Authorization Failed')
+      expect(auth.busy).toBe(false)
+    })
+
+    // Sign-in must stay minimal: a user who only saves layouts should never be asked
+    // for read/write access to all their gists.
+    it('is the only path that requests a scope — signIn() still requests none', async () => {
+      const client = fakeClient()
+      mocks.getSupabaseClient.mockResolvedValue(client)
+      const auth = useAuthStore()
+
+      await auth.signIn('github')
+
+      expect(client.auth.signInWithOAuth).toHaveBeenCalledWith({
+        provider: 'github',
+        options: { redirectTo: `${window.location.origin}/` },
+      })
     })
   })
 })

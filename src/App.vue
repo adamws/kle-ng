@@ -24,6 +24,7 @@ import { useKeyboardStore } from '@/stores/keyboard'
 import { useAuthStore } from '@/stores/auth'
 import { useLayoutsStore } from '@/stores/layouts'
 import { useShortLinksStore } from '@/stores/short-links'
+import { useGistsStore } from '@/stores/gists'
 import { useTheme } from '@/composables/useTheme'
 import { PRODUCTION_URL, deploymentLabel, isPreviewDeployment } from '@/config/deployment'
 import { preloadErgogenModule } from '@/utils/ergogen-loader'
@@ -41,6 +42,7 @@ const keyboardStore = useKeyboardStore()
 const authStore = useAuthStore()
 const layoutsStore = useLayoutsStore()
 const shortLinksStore = useShortLinksStore()
+const gistsStore = useGistsStore()
 
 // Drop cached rows the moment the session ends, so a second sign-in on the same device
 // never starts with the previous user's list on screen.
@@ -50,6 +52,7 @@ watch(
     if (!signedIn) {
       layoutsStore.reset()
       shortLinksStore.reset()
+      gistsStore.reset()
     }
   },
 )

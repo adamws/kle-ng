@@ -60,6 +60,7 @@ export const SELECTORS = {
     FROM_FILE: '[data-testid="import-from-file"]',
     DOWNLOAD_JSON: '[data-testid="export-download-json"]',
     DOWNLOAD_PNG: '[data-testid="export-download-png"]',
+    CREATE_GIST: '[data-testid="export-create-gist"]',
   },
 
   /**

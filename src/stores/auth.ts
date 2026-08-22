@@ -4,6 +4,7 @@ import type { Session, SupabaseClient, User } from '@supabase/supabase-js'
 import { toast } from '@/composables/useToast'
 import { AUTH_STORAGE_KEY, getTestUser, isAuthConfigured } from '@/config/supabase'
 import { getSupabaseClient } from '@/utils/supabase-loader'
+import { clearGithubToken, readGithubToken, writeGithubToken } from '@/utils/github-token'
 import {
   captureReturnUrl,
   clearAuthParamsFromUrl,
@@ -95,9 +96,16 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<AuthUser | null>(null)
   const busy = ref(false)
   const initialized = ref(false)
+  /**
+   * The GitHub OAuth token, when this session has one. Not the Supabase JWT — see
+   * getAccessToken() for that. Held in sessionStorage rather than in the Supabase
+   * session, which never carries it after a refresh; utils/github-token.ts explains why.
+   */
+  const githubToken = ref<string | null>(null)
 
   const isConfigured = computed(() => isAuthConfigured())
   const isSignedIn = computed(() => user.value !== null)
+  const hasGithubToken = computed(() => githubToken.value !== null)
   const testUser = computed(() => getTestUser())
   const canUseTestUser = computed(() => testUser.value !== null)
 
@@ -105,6 +113,23 @@ export const useAuthStore = defineStore('auth', () => {
 
   const applySession = (session: Session | null) => {
     user.value = toAuthUser(session?.user)
+
+    if (!user.value) {
+      githubToken.value = null
+      return
+    }
+
+    // `provider_token` is present only on the OAuth exchange itself. Supabase neither
+    // stores nor refreshes it, so every later session — including the hourly
+    // TOKEN_REFRESHED one — arrives without it. Absence therefore means "unchanged",
+    // never "revoked": clearing here would silently disconnect gists once an hour.
+    // Revocation is handled where it is actually observable, on a 401 from GitHub.
+    if (session?.provider_token) {
+      writeGithubToken(user.value.id, session.provider_token)
+      githubToken.value = session.provider_token
+    } else {
+      githubToken.value = readGithubToken(user.value.id)
+    }
   }
 
   /**
@@ -189,6 +214,61 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
+   * Re-authorize with GitHub, adding the `gist` scope.
+   *
+   * Sign-in deliberately requests no scopes, so the ordinary token can only read the
+   * user's email. Asking for gist access on first use rather than at sign-in keeps the
+   * "kle-ng wants read and write access to all your gists" consent screen away from
+   * users who never export one. Classic GitHub OAuth Apps issue tokens carrying the
+   * union of every scope the user has granted, so once this has been accepted an
+   * ordinary sign-in returns a gist-capable token too.
+   *
+   * Like signIn(), the browser leaves the page, so this resolves only on failure and
+   * `busy` is deliberately left set on the success path.
+   *
+   * @param returnHref where the user should come back to. The fragment is the only part
+   *   that survives (see auth-return-url.ts), so pass a `#share=` URL when there is
+   *   unsaved work that would otherwise be lost to the round trip.
+   */
+  const connectGithubGists = async (returnHref?: string): Promise<void> => {
+    if (!isConfigured.value || busy.value) return
+
+    busy.value = true
+    try {
+      const supabase = await getSupabaseClient()
+
+      captureReturnUrl(returnHref)
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'github',
+        options: {
+          scopes: 'gist',
+          redirectTo: `${window.location.origin}${window.location.pathname}`,
+        },
+      })
+      if (error) throw error
+    } catch (error) {
+      console.error('Error starting GitHub authorization:', error)
+      toast.showError(
+        error instanceof Error ? error.message : 'Could not connect to GitHub',
+        'GitHub Authorization Failed',
+      )
+      busy.value = false
+    }
+  }
+
+  /**
+   * Discard the GitHub token after GitHub itself has rejected it.
+   *
+   * The only place a revoked token is observable — see the note in applySession() about
+   * why an absent `provider_token` must not be read as revocation.
+   */
+  const forgetGithubToken = (): void => {
+    clearGithubToken()
+    githubToken.value = null
+  }
+
+  /**
    * Sign in as the account `supabase/seed.sql` creates on the local stack. Available
    * only in a dev build pointed at that stack — no deployment offers it, production
    * included; see getTestUser(). Unlike the OAuth path this does not navigate away, so
@@ -249,6 +329,10 @@ export const useAuthStore = defineStore('auth', () => {
       // drops the stored session on most failure paths anyway, which would otherwise
       // leave a signed-in account on screen with no session behind it.
       user.value = null
+      // The GitHub token outlives the Supabase session unless it is dropped here: it is
+      // GitHub's credential, not Supabase's, and signOut() has no effect on it.
+      clearGithubToken()
+      githubToken.value = null
       busy.value = false
     }
   }
@@ -282,13 +366,17 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     busy,
     initialized,
+    githubToken,
     isConfigured,
     isSignedIn,
+    hasGithubToken,
     testUser,
     canUseTestUser,
     initialize,
     signIn,
     signInAsTestUser,
+    connectGithubGists,
+    forgetGithubToken,
     signOut,
     getAccessToken,
     cleanup,

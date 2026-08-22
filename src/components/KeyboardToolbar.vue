@@ -163,6 +163,24 @@
                 Download SVG
               </a>
             </li>
+            <!-- Gist export needs a GitHub account, so the item exists only where
+                 accounts do. Configured-but-signed-out is the disabled case the title
+                 explains; an unconfigured build has no sign-in to offer, so the entry
+                 would be permanently dead. -->
+            <li v-if="authStore.isConfigured" aria-hidden="true">
+              <hr class="dropdown-divider" />
+            </li>
+            <li v-if="authStore.isConfigured" :title="gistDisabledReason || undefined">
+              <button
+                class="dropdown-item"
+                type="button"
+                data-testid="export-create-gist"
+                :disabled="!!gistDisabledReason"
+                @click="showGistExportModal = true"
+              >
+                Create Gist
+              </button>
+            </li>
             <li>
               <a
                 class="dropdown-item d-flex icon-link align-items-baseline"
@@ -251,11 +269,12 @@
       :is-visible="showShortLinkConfirmModal"
       @close="showShortLinkConfirmModal = false"
     />
+    <GistExportModal :is-visible="showGistExportModal" @close="showGistExportModal = false" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { useKeyboardStore } from '@/stores/keyboard'
 import presetsMetadata from '@/data/presets.json'
 import { toast } from '@/composables/useToast'
@@ -266,14 +285,17 @@ import QmkImportModal from './QmkImportModal.vue'
 import ViaImportModal from './ViaImportModal.vue'
 import MyLayoutsModal from './MyLayoutsModal.vue'
 import ShortLinkConfirmModal from './ShortLinkConfirmModal.vue'
+import GistExportModal from './GistExportModal.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useShortLinksStore } from '@/stores/short-links'
+import { useGistsStore } from '@/stores/gists'
 
 import BiBoxArrowUpRight from 'bootstrap-icons/icons/box-arrow-up-right.svg'
 
 const keyboardStore = useKeyboardStore()
 const authStore = useAuthStore()
 const shortLinksStore = useShortLinksStore()
+const gistsStore = useGistsStore()
 
 interface Preset {
   name: string
@@ -284,7 +306,17 @@ const availablePresets = ref<Preset[]>([])
 
 onMounted(() => {
   availablePresets.value = presetsMetadata.presets || []
+  if (authStore.initialized) resumeGistExport()
 })
+
+// initialize() is awaited in App.vue's onMounted, so it usually settles after this
+// component has mounted. Whichever finishes first, the flag is consumed exactly once.
+watch(
+  () => authStore.initialized,
+  (ready) => {
+    if (ready) resumeGistExport()
+  },
+)
 
 const loadPreset = async (preset: Preset) => {
   try {
@@ -329,6 +361,35 @@ const showQmkImportModal = ref(false)
 const showMyLayoutsModal = ref(false)
 const showViaImportModal = ref(false)
 const showShortLinkConfirmModal = ref(false)
+const showGistExportModal = ref(false)
+
+/**
+ * Empty when Create Gist is usable, otherwise the reason, which doubles as the item's
+ * tooltip. One computed rather than a separate `canCreateGist`, so the button and its
+ * explanation cannot disagree — the same shape MyLayoutsModal uses for its row actions.
+ *
+ * The tooltip sits on the wrapping <li>: a disabled .dropdown-item swallows pointer
+ * events, so a title on the button itself would never be shown. Same as the VIA and QMK
+ * entries above.
+ */
+const gistDisabledReason = computed(() => {
+  if (!authStore.isSignedIn) return 'Sign in with GitHub to create a gist.'
+  if (gistsStore.busy) return 'Creating a gist…'
+  return ''
+})
+
+/**
+ * Reopen the export dialog after the GitHub authorization round trip.
+ *
+ * The flag is consumed whether or not a token came back: a user who declined at GitHub
+ * has already been told by the auth store, and must not find the dialog waiting for them
+ * on the next reload. Runs once auth has settled, since the token is captured during
+ * initialize().
+ */
+const resumeGistExport = () => {
+  if (!gistsStore.takeResumeFlag()) return
+  if (authStore.hasGithubToken) showGistExportModal.value = true
+}
 
 // Share
 const shareLayout = async () => {
