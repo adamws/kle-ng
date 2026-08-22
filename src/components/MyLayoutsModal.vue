@@ -8,17 +8,6 @@
         </div>
 
         <div class="modal-body">
-          <!-- Quota is only worth mentioning once it actually constrains the user -->
-          <div
-            v-if="store.isFull"
-            class="alert alert-warning py-2 mb-3"
-            data-testid="layouts-quota-warning"
-            role="status"
-          >
-            You have saved the maximum of {{ store.quota }} layouts. Delete one to add another, or
-            save over an existing name to update it.
-          </div>
-
           <!-- Save current layout -->
           <div class="save-row">
             <input
@@ -31,190 +20,286 @@
               :disabled="store.busy"
               @keydown.enter.prevent="saveCurrent"
             />
-            <button
-              type="button"
-              class="btn btn-primary flex-shrink-0 d-flex align-items-center justify-content-center"
-              data-testid="save-layout"
-              :disabled="!canSave"
-              :title="saveHint"
-              @click="saveCurrent"
+            <!-- The tooltip hangs on a wrapper so it still appears while the button is
+                 disabled, which is when it has the most to say. -->
+            <HintTooltip
+              class="flex-shrink-0"
+              :text="saveDisabledReason"
+              :focusable="!canSave"
+              data-testid="save-layout-tooltip"
             >
-              <BiFloppy aria-hidden="true" />
-              <span class="ms-1">{{ existingByName ? 'Update' : 'Save current' }}</span>
-            </button>
+              <button
+                type="button"
+                class="btn btn-primary d-flex align-items-center justify-content-center"
+                data-testid="save-layout"
+                :disabled="!canSave"
+                @click="saveCurrent"
+              >
+                <BiFloppy aria-hidden="true" />
+                <!-- Both labels share one grid cell, so the button keeps the width of
+                     the longer of the two and the name field beside it does not resize
+                     the moment a typed name starts matching a saved layout. -->
+                <span class="ms-1 save-label">
+                  <span class="save-label-sizer" aria-hidden="true">Save current</span>
+                  <span>{{ existingByName ? 'Update' : 'Save current' }}</span>
+                </span>
+              </button>
+            </HintTooltip>
           </div>
 
-          <div
-            v-if="store.errorMessage"
-            class="alert alert-danger py-2 mb-3"
-            data-testid="layouts-error"
-            role="alert"
-          >
-            {{ store.errorMessage }}
-          </div>
-
-          <!-- Loading -->
-          <div
-            v-if="store.loading"
-            class="text-center text-muted py-4"
-            data-testid="layouts-loading"
-          >
-            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
-            Loading your layouts…
-          </div>
-
-          <!-- Empty -->
-          <div
-            v-else-if="store.layouts.length === 0"
-            class="text-center text-muted py-4"
-            data-testid="layouts-empty"
-          >
-            <BiKeyboard class="empty-icon mb-2" aria-hidden="true" />
-            <p class="mb-0">No saved layouts yet.</p>
-            <p class="small mb-0">Save the layout you are working on to keep it here.</p>
-          </div>
-
-          <!-- List -->
-          <ul v-else class="layout-list list-unstyled mb-0" data-testid="layouts-list">
-            <li v-for="layout in store.layouts" :key="layout.id" class="layout-item">
-              <LayoutThumbnail
-                v-if="decoded(layout)"
-                :keys="decoded(layout)!.keys"
-                :metadata="decoded(layout)!.meta"
-                class="layout-item-thumb"
-              />
-              <div v-else class="layout-item-thumb is-broken" title="This layout could not be read">
-                <BiExclamationTriangle class="text-warning" aria-hidden="true" />
-              </div>
-
-              <div class="layout-item-info">
-                <template v-if="renamingId === layout.id">
-                  <input
-                    v-model="renameValue"
-                    type="text"
-                    class="form-control form-control-sm"
-                    :maxlength="MAX_NAME_LENGTH"
-                    data-testid="rename-input"
-                    @keydown.enter.prevent="commitRename(layout.id)"
-                    @keydown.esc.prevent="cancelRename"
+          <!--
+            Every slot the quota allows is on screen at all times, filled or not, so the
+            modal is the same height before and after a save, a delete, or the first
+            load of a session — nothing under the pointer moves when the list changes.
+            An empty slot is built from the same parts as a filled one, so the two are
+            exactly the same height.
+          -->
+          <div class="slot-area">
+            <ul
+              class="layout-list list-unstyled mb-0"
+              data-testid="layouts-list"
+              :aria-busy="isLoadingSlots"
+            >
+              <li
+                v-for="(layout, index) in slots"
+                :key="layout?.id ?? `slot-${index}`"
+                class="layout-item"
+                :class="{ 'layout-item-vacant': !layout }"
+                data-testid="layout-slot"
+              >
+                <template v-if="layout">
+                  <LayoutThumbnail
+                    v-if="decoded(layout)"
+                    :keys="decoded(layout)!.keys"
+                    :metadata="decoded(layout)!.meta"
+                    class="layout-item-thumb"
                   />
-                </template>
-                <template v-else>
-                  <div class="fw-medium text-truncate" :title="layout.name">{{ layout.name }}</div>
-                  <!--
-                    A pending question takes the description's line rather than sitting
-                    among the buttons. It is the widest column, so a sentence fits
-                    without being truncated, and the row keeps both its height and its
-                    column widths. It also means the question does not have to name the
-                    layout — the name is directly above it.
-                  -->
                   <div
-                    v-if="pending?.id === layout.id"
-                    class="small fw-medium text-truncate"
-                    :class="pending?.danger ? 'text-danger' : 'text-body-emphasis'"
-                    data-testid="confirm-message"
+                    v-else
+                    class="layout-item-thumb is-broken"
+                    title="This layout could not be read"
                   >
-                    {{ pending?.message }}
+                    <BiExclamationTriangle class="text-warning" aria-hidden="true" />
                   </div>
-                  <div v-else class="text-muted small text-truncate">{{ describe(layout) }}</div>
-                </template>
-              </div>
 
-              <div class="layout-item-actions">
-                <!-- Pending confirmation replaces the actions for this row -->
-                <template v-if="pending?.id === layout.id">
-                  <button
-                    type="button"
-                    class="btn btn-sm"
-                    :class="pending?.danger ? 'btn-danger' : 'btn-primary'"
-                    data-testid="confirm-action"
-                    :disabled="store.busy"
-                    @click="runPending"
-                  >
-                    {{ pending?.confirmLabel }}
-                  </button>
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-outline-secondary"
-                    data-testid="cancel-action"
-                    @click="pending = null"
-                  >
-                    Cancel
-                  </button>
+                  <div class="layout-item-info">
+                    <template v-if="renamingId === layout.id">
+                      <input
+                        v-model="renameValue"
+                        type="text"
+                        class="form-control form-control-sm"
+                        :maxlength="MAX_NAME_LENGTH"
+                        data-testid="rename-input"
+                        @keydown.enter.prevent="commitRename(layout.id)"
+                        @keydown.esc.prevent="cancelRename"
+                      />
+                    </template>
+                    <template v-else>
+                      <div class="fw-medium text-truncate" :title="layout.name">
+                        {{ layout.name }}
+                      </div>
+                      <!--
+                        A pending question takes the description's line rather than sitting
+                        among the buttons. It is the widest column, so a sentence fits
+                        without being truncated, and the row keeps both its height and its
+                        column widths. It also means the question does not have to name the
+                        layout — the name is directly above it.
+                      -->
+                      <div
+                        v-if="pending?.id === layout.id"
+                        class="small fw-medium text-truncate"
+                        :class="pending?.danger ? 'text-danger' : 'text-body-emphasis'"
+                        data-testid="confirm-message"
+                      >
+                        {{ pending?.message }}
+                      </div>
+                      <div v-else class="text-muted small text-truncate">
+                        {{ describe(layout) }}
+                      </div>
+                    </template>
+                  </div>
+
+                  <div class="layout-item-actions">
+                    <!-- Pending confirmation replaces the actions for this row -->
+                    <template v-if="pending?.id === layout.id">
+                      <button
+                        type="button"
+                        class="btn btn-sm"
+                        :class="pending?.danger ? 'btn-danger' : 'btn-primary'"
+                        data-testid="confirm-action"
+                        :disabled="store.busy"
+                        @click="runPending"
+                      >
+                        {{ pending?.confirmLabel }}
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-secondary"
+                        data-testid="cancel-action"
+                        @click="pending = null"
+                      >
+                        Cancel
+                      </button>
+                    </template>
+
+                    <template v-else-if="renamingId === layout.id">
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-primary d-flex align-items-center justify-content-center"
+                        data-testid="rename-confirm"
+                        :disabled="store.busy || !renameValue.trim()"
+                        @click="commitRename(layout.id)"
+                      >
+                        <BiCheckLg aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center"
+                        data-testid="rename-cancel"
+                        @click="cancelRename"
+                      >
+                        <BiXLg aria-hidden="true" />
+                      </button>
+                    </template>
+
+                    <template v-else>
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center"
+                        data-testid="load-layout"
+                        :disabled="store.busy || !decoded(layout)"
+                        title="Load into the editor"
+                        @click="requestLoad(layout)"
+                      >
+                        <BiBoxArrowInRight aria-hidden="true" />
+                        <span class="d-none d-sm-inline ms-1">Load</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center"
+                        data-testid="rename-layout"
+                        :disabled="store.busy"
+                        title="Rename"
+                        @click="startRename(layout)"
+                      >
+                        <BiPencil aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-danger d-flex align-items-center justify-content-center"
+                        data-testid="delete-layout"
+                        :disabled="store.busy"
+                        title="Delete"
+                        @click="requestDelete(layout)"
+                      >
+                        <BiTrash aria-hidden="true" />
+                      </button>
+                    </template>
+                  </div>
                 </template>
 
-                <template v-else-if="renamingId === layout.id">
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-primary d-flex align-items-center justify-content-center"
-                    data-testid="rename-confirm"
-                    :disabled="store.busy || !renameValue.trim()"
-                    @click="commitRename(layout.id)"
-                  >
-                    <BiCheckLg aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center"
-                    data-testid="rename-cancel"
-                    @click="cancelRename"
-                  >
-                    <BiXLg aria-hidden="true" />
-                  </button>
-                </template>
-
+                <!--
+                  A vacant slot. While the first fetch is in flight the same row pulses
+                  instead of claiming to be empty — it is not known yet whether it is.
+                -->
                 <template v-else>
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center"
-                    data-testid="load-layout"
-                    :disabled="store.busy || !decoded(layout)"
-                    title="Load into the editor"
-                    @click="requestLoad(layout)"
+                  <div
+                    class="layout-item-thumb layout-item-thumb-vacant"
+                    :class="{ 'is-pulsing': isLoadingSlots }"
+                    aria-hidden="true"
                   >
-                    <BiBoxArrowInRight aria-hidden="true" />
-                    <span class="d-none d-sm-inline ms-1">Load</span>
-                  </button>
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center"
-                    data-testid="rename-layout"
-                    :disabled="store.busy"
-                    title="Rename"
-                    @click="startRename(layout)"
-                  >
-                    <BiPencil aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-outline-danger d-flex align-items-center justify-content-center"
-                    data-testid="delete-layout"
-                    :disabled="store.busy"
-                    title="Delete"
-                    @click="requestDelete(layout)"
-                  >
-                    <BiTrash aria-hidden="true" />
-                  </button>
+                    <!-- Stands in for the thumbnail: the ghost of a keyboard, faint
+                         enough to read as the shape of what would be here. -->
+                    <svg
+                      v-if="!isLoadingSlots"
+                      class="vacant-preview"
+                      viewBox="0 0 60 24"
+                      preserveAspectRatio="xMidYMid meet"
+                    >
+                      <g fill="currentColor">
+                        <rect
+                          v-for="x in 9"
+                          :key="`a${x}`"
+                          :x="x * 6 - 3"
+                          y="3"
+                          width="5"
+                          height="5"
+                          rx="1"
+                        />
+                        <rect
+                          v-for="x in 8"
+                          :key="`b${x}`"
+                          :x="x * 6 - 1.5"
+                          y="9.5"
+                          width="5"
+                          height="5"
+                          rx="1"
+                        />
+                        <rect x="3" y="16" width="5" height="5" rx="1" />
+                        <rect x="9" y="16" width="5" height="5" rx="1" />
+                        <rect x="15" y="16" width="30" height="5" rx="1" />
+                        <rect x="46" y="16" width="5" height="5" rx="1" />
+                        <rect x="52" y="16" width="5" height="5" rx="1" />
+                      </g>
+                    </svg>
+                  </div>
+
+                  <!--
+                    The label is centred in the row, but an invisible copy of a filled
+                    row's two lines is what sets the height: below 576px the thumbnail
+                    shrinks and those lines, not it, are what a filled row is as tall as.
+                    Both occupy the same grid cell, so the sizer keeps its say while the
+                    label is free to sit in the middle.
+                  -->
+                  <div class="layout-item-info vacant-info">
+                    <div class="vacant-info-sizer" aria-hidden="true">
+                      <div>&nbsp;</div>
+                      <div class="small">&nbsp;</div>
+                    </div>
+                    <div v-if="!isLoadingSlots" class="vacant-info-label">Empty slot</div>
+                  </div>
                 </template>
-              </div>
-            </li>
-          </ul>
+              </li>
+            </ul>
+
+            <!--
+              Floated over the slots rather than placed above them: an error arrives in
+              response to a click, and in the flow it would push every row down under the
+              pointer that was just used. It is transient — the next action clears it.
+            -->
+            <div
+              v-if="store.errorMessage"
+              class="alert alert-danger py-2 slot-area-alert"
+              data-testid="layouts-error"
+              role="alert"
+            >
+              {{ store.errorMessage }}
+            </div>
+          </div>
+
+          <p v-if="isLoadingSlots" class="visually-hidden" role="status">Loading your layouts…</p>
         </div>
 
         <div class="modal-footer">
           <!-- Kept away from the per-row actions: this one is about the whole list,
                and the footer is the only place that belongs to all of it. -->
-          <button
-            type="button"
-            class="btn btn-outline-secondary me-auto d-flex align-items-center justify-content-center"
-            data-testid="download-all-layouts"
-            :disabled="store.busy || store.loading || store.layouts.length === 0"
-            title="Download every saved layout as a zip of KLE JSON files"
-            @click="downloadAll"
+          <HintTooltip
+            class="me-auto"
+            :text="downloadDisabledReason"
+            :focusable="!canDownloadAll"
+            data-testid="download-all-tooltip"
           >
-            <BiDownload aria-hidden="true" />
-            <span class="ms-1">Download all</span>
-          </button>
+            <button
+              type="button"
+              class="btn btn-outline-secondary d-flex align-items-center justify-content-center"
+              data-testid="download-all-layouts"
+              :disabled="!canDownloadAll"
+              @click="downloadAll"
+            >
+              <BiDownload aria-hidden="true" />
+              <span class="ms-1">Download all</span>
+            </button>
+          </HintTooltip>
           <button type="button" class="btn btn-secondary" @click="close">Close</button>
         </div>
       </div>
@@ -232,6 +317,7 @@ import { getSerializedData, stringifyWithRounding } from '@/utils/serialization'
 import { createZip, type ZipEntry } from '@/utils/zip'
 import { toast } from '@/composables/useToast'
 import LayoutThumbnail from './LayoutThumbnail.vue'
+import HintTooltip from './HintTooltip.vue'
 
 import BiFloppy from 'bootstrap-icons/icons/floppy.svg'
 import BiDownload from 'bootstrap-icons/icons/download.svg'
@@ -244,7 +330,6 @@ import BiPencil from 'bootstrap-icons/icons/pencil.svg'
 import BiTrash from 'bootstrap-icons/icons/trash.svg'
 import BiCheckLg from 'bootstrap-icons/icons/check-lg.svg'
 import BiXLg from 'bootstrap-icons/icons/x-lg.svg'
-import BiKeyboard from 'bootstrap-icons/icons/keyboard.svg'
 import BiExclamationTriangle from 'bootstrap-icons/icons/exclamation-triangle.svg'
 
 const props = defineProps<{ isVisible: boolean }>()
@@ -277,25 +362,59 @@ const existingByName = computed(() => {
   return store.layouts.find((layout) => layout.name.trim().toLowerCase() === name) ?? null
 })
 
-/*
+/**
+ * Why saving is unavailable, in the order the conditions are worth reporting: the
+ * transient states first, since they resolve on their own, then what the user has to do
+ * something about. Empty means the button works — `canSave` is derived from it, so the
+ * button and the explanation for it can never disagree.
+ *
  * `store.loading` gates this as well as `store.busy`: opening the modal refetches, and
  * until that lands `layouts` is empty or stale, so `existingByName` would miss a match
  * and save a duplicate instead of updating — and the confirmation it opens lives in a
  * row the loading spinner has replaced.
  */
-const canSave = computed(
-  () =>
-    !store.busy &&
-    !store.loading &&
-    saveName.value.trim().length > 0 &&
-    (!store.isFull || existingByName.value !== null),
-)
-
-const saveHint = computed(() => {
-  if (existingByName.value) return `Update "${existingByName.value.name}" with the editor contents`
-  if (store.isFull) return 'You have reached your limit — delete one to make room'
-  return undefined
+const saveDisabledReason = computed(() => {
+  if (store.loading) return 'Waiting for your saved layouts to load…'
+  if (store.busy) return 'Waiting for the previous action to finish…'
+  if (!saveName.value.trim()) return 'Enter a name for this layout first'
+  // Saving over an existing name is an update, and an update is not an insert — it
+  // stays available at the quota.
+  if (store.isFull && !existingByName.value) {
+    return `All ${store.quota} layout slots are used — delete one, or reuse a saved name to update it`
+  }
+  return ''
 })
+
+const canSave = computed(() => saveDisabledReason.value === '')
+
+const downloadDisabledReason = computed(() => {
+  if (store.loading) return 'Waiting for your saved layouts to load…'
+  if (store.busy) return 'Waiting for the previous action to finish…'
+  if (store.layouts.length === 0) return 'You have no saved layouts to download yet'
+  return ''
+})
+
+const canDownloadAll = computed(() => downloadDisabledReason.value === '')
+
+/**
+ * One entry per slot the quota allows, saved layouts first and `null` for the rest.
+ * Rendering the vacant ones is what keeps the modal a fixed size: the row count never
+ * changes, so saving or deleting swaps a row's contents instead of resizing the dialog.
+ *
+ * `Math.max` guards the case the quota has been lowered since these were saved — the
+ * extra layouts stay reachable (and deletable) rather than dropping out of the list.
+ */
+const slots = computed<(SavedLayout | null)[]>(() => {
+  const count = Math.max(store.quota, store.layouts.length)
+  return Array.from({ length: count }, (_, index) => store.layouts[index] ?? null)
+})
+
+/**
+ * Only the first fetch of a session has nothing to show: a refetch keeps the previous
+ * rows on screen until the new ones replace them, which is itself a way of not moving
+ * anything.
+ */
+const isLoadingSlots = computed(() => store.loading && store.layouts.length === 0)
 
 /**
  * Decoded payloads, cached by id so a re-render does not re-parse every row.
@@ -619,6 +738,19 @@ onUnmounted(() => {
   margin-bottom: 1rem;
 }
 
+.save-label {
+  display: inline-grid;
+  justify-items: center;
+}
+
+.save-label > * {
+  grid-area: 1 / 1;
+}
+
+.save-label-sizer {
+  visibility: hidden;
+}
+
 /*
  * The buttons here centre their contents with `d-flex align-items-center
  * justify-content-center`, the same way the download and matrix modals do. Without it
@@ -641,11 +773,26 @@ onUnmounted(() => {
   height: 1.4286em;
 }
 
-.empty-icon {
-  width: 2rem;
-  height: 2rem;
+/*
+ * The alert is taken out of the flow (see the template), so the slot area has to be its
+ * containing block.
+ */
+.slot-area {
+  position: relative;
 }
 
+.slot-area-alert {
+  position: absolute;
+  inset: auto 0 0 0;
+  margin: 0;
+  box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.2);
+}
+
+/*
+ * No `max-height` here: the list is exactly `quota` rows tall by construction, and a
+ * cap would only bite when the quota is larger than the space — in which case scrolling
+ * is still what should happen, so the modal keeps its size.
+ */
 .layout-list {
   max-height: 420px;
   overflow-y: auto;
@@ -668,6 +815,76 @@ onUnmounted(() => {
   width: 120px;
   height: 48px;
   flex-shrink: 0;
+}
+
+/*
+ * A vacant slot is drawn as the outline of a row rather than as a row: dashed and
+ * unfilled, so five of them read as space waiting to be used and not as five things.
+ */
+.layout-item-vacant {
+  border-style: dashed;
+  background: none;
+}
+
+.layout-item-thumb-vacant {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--bs-border-color);
+  border-radius: var(--bs-border-radius-sm);
+  color: var(--bs-secondary-color);
+}
+
+.vacant-preview {
+  width: 78%;
+  height: 78%;
+  opacity: 0.2;
+}
+
+.vacant-info {
+  display: grid;
+}
+
+.vacant-info > * {
+  grid-area: 1 / 1;
+}
+
+.vacant-info-sizer {
+  visibility: hidden;
+}
+
+.vacant-info-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--bs-secondary-color);
+  opacity: 0.65;
+  font-size: 0.8125rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/*
+ * Until the first fetch lands it is not known whether these slots are empty, so they
+ * pulse instead of saying so. (A Bootstrap spinner is not an option here — the
+ * `spinners` partial is not one of the ones bootstrap-custom.scss imports.)
+ */
+.layout-item-thumb-vacant.is-pulsing {
+  border-style: solid;
+  background: var(--bs-tertiary-bg);
+  animation: slot-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes slot-pulse {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .layout-item-thumb-vacant.is-pulsing {
+    animation: none;
+  }
 }
 
 .layout-item-thumb.is-broken {

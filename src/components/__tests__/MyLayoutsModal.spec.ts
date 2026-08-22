@@ -38,6 +38,7 @@ vi.mock('@/composables/useToast', () => ({
 }))
 
 import MyLayoutsModal from '../MyLayoutsModal.vue'
+import HintTooltip from '../HintTooltip.vue'
 import { useLayoutsStore, type SavedLayout } from '@/stores/layouts'
 import { useKeyboardStore } from '@/stores/keyboard'
 import { encodeLayoutToUrl } from '@/utils/url-sharing'
@@ -111,6 +112,10 @@ const openModal = async (editor: { name?: string; filename?: string }) => {
 const nameField = (wrapper: { find: (s: string) => { element: Element } }) =>
   (wrapper.find('[data-testid="save-layout-name"]').element as HTMLInputElement).value
 
+const setName = async (wrapper: ReturnType<typeof mountModal>['wrapper'], name: string) => {
+  await wrapper.find('[data-testid="save-layout-name"]').setValue(name)
+}
+
 describe('MyLayoutsModal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -160,32 +165,109 @@ describe('MyLayoutsModal', () => {
     })
   })
 
-  describe('quota', () => {
-    it('says nothing about quota while there is room', () => {
-      const { wrapper } = mountModal([makeLayout('one')])
+  /*
+   * The modal is a fixed number of slots, so it is the same height whether nothing or
+   * everything is saved — a save or a delete fills or empties a row instead of resizing
+   * the dialog under the pointer that just clicked.
+   */
+  describe('slots', () => {
+    const slots = (wrapper: ReturnType<typeof mountModal>['wrapper']) =>
+      wrapper.findAll('[data-testid="layout-slot"]')
+
+    const vacant = (wrapper: ReturnType<typeof mountModal>['wrapper']) =>
+      wrapper.findAll('.layout-item-vacant')
+
+    it('shows one slot per layout the quota allows, filled or not', () => {
+      const { wrapper } = mountModal([makeLayout('one'), makeLayout('two')])
+
+      expect(slots(wrapper)).toHaveLength(5)
+      expect(vacant(wrapper)).toHaveLength(3)
+      expect(wrapper.findAll('[data-testid="load-layout"]')).toHaveLength(2)
+    })
+
+    it('follows the quota the database returned, not a hardcoded 5', () => {
+      const { wrapper } = mountModal([makeLayout('one')], 3)
+      expect(slots(wrapper)).toHaveLength(3)
+    })
+
+    it('keeps the row count fixed as layouts come and go', async () => {
+      const { wrapper, store } = mountModal([])
+      expect(slots(wrapper)).toHaveLength(5)
+
+      store.layouts = ['a', 'b', 'c', 'd', 'e'].map((n) => makeLayout(n))
+      await wrapper.vm.$nextTick()
+      expect(slots(wrapper)).toHaveLength(5)
+      expect(vacant(wrapper)).toHaveLength(0)
+
+      store.layouts = store.layouts.slice(0, 2)
+      await wrapper.vm.$nextTick()
+      expect(slots(wrapper)).toHaveLength(5)
+    })
+
+    // A quota lowered after the fact must not hide layouts that are already saved —
+    // they would be unreachable, and undeletable.
+    it('still lists layouts that overflow a lowered quota', () => {
+      const { wrapper } = mountModal(
+        ['a', 'b', 'c'].map((n) => makeLayout(n)),
+        2,
+      )
+
+      expect(slots(wrapper)).toHaveLength(3)
+      expect(wrapper.findAll('[data-testid="load-layout"]')).toHaveLength(3)
+    })
+
+    // The slots themselves say how much room is left, and the disabled Save button says
+    // what to do about it, so the old banner — which resized the modal on the fifth
+    // save — is gone.
+    it('has no quota banner to appear at the limit', () => {
+      const { wrapper } = mountModal(['a', 'b', 'c', 'd', 'e'].map((n) => makeLayout(n)))
 
       expect(wrapper.find('[data-testid="layouts-quota-warning"]').exists()).toBe(false)
-      // The old always-on counter is gone
       expect(wrapper.find('[data-testid="layouts-quota"]').exists()).toBe(false)
       expect(wrapper.text()).not.toContain('1 / 5')
     })
 
-    it('warns only once the limit is reached, naming the real quota', () => {
-      const layouts = ['a', 'b', 'c', 'd', 'e'].map((n) => makeLayout(n))
-      const { wrapper } = mountModal(layouts)
+    // Below 576px the thumbnail shrinks and the two text lines are what set a row's
+    // height, so a vacant slot has to carry both of them or it comes out shorter than a
+    // filled one — and the modal resizes after all.
+    it('gives a vacant slot the same two text lines as a filled one', () => {
+      const { wrapper } = mountModal([])
+      const slot = wrapper.find('.layout-item-vacant')
+      // `.text()` trims the nbsp away; the point is that both line boxes exist
+      const reserved = slot.findAll('.vacant-info-sizer > div')
 
-      const warning = wrapper.find('[data-testid="layouts-quota-warning"]')
-      expect(warning.exists()).toBe(true)
-      expect(warning.text()).toContain('maximum of 5 layouts')
+      expect(reserved.map((line) => line.element.textContent)).toEqual(['\u00a0', '\u00a0'])
+      expect(slot.find('.vacant-info-label').text()).toBe('Empty slot')
+      // …and the thumbnail's stand-in occupies the space a real one would
+      expect(slot.find('.vacant-preview').exists()).toBe(true)
     })
 
-    it('reports the quota the database returned, not a hardcoded 5', () => {
-      const layouts = ['a', 'b', 'c'].map((n) => makeLayout(n))
-      const { wrapper } = mountModal(layouts, 3)
+    it('does not call a slot empty until the first fetch has landed', async () => {
+      const { wrapper, store } = mountModal([])
+      store.loading = true
+      await wrapper.vm.$nextTick()
 
-      expect(wrapper.find('[data-testid="layouts-quota-warning"]').text()).toContain(
-        'maximum of 3 layouts',
-      )
+      expect(slots(wrapper)).toHaveLength(5)
+      expect(wrapper.text()).not.toContain('Empty slot')
+      expect(wrapper.findAll('.is-pulsing')).toHaveLength(5)
+
+      store.loading = false
+      await wrapper.vm.$nextTick()
+      expect(wrapper.findAll('.is-pulsing')).toHaveLength(0)
+      expect(wrapper.text()).toContain('Empty slot')
+    })
+
+    // An error arrives in response to a click; in the flow it would push every row down
+    // under the pointer that was just used.
+    it('floats an error over the slots instead of pushing them down', async () => {
+      const { wrapper, store } = mountModal([makeLayout('one')])
+      store.errorMessage = 'Could not save this layout'
+      await wrapper.vm.$nextTick()
+
+      const alert = wrapper.find('[data-testid="layouts-error"]')
+      expect(alert.exists()).toBe(true)
+      expect(alert.classes()).toContain('slot-area-alert')
+      expect(slots(wrapper)).toHaveLength(5)
     })
   })
 
@@ -204,10 +286,6 @@ describe('MyLayoutsModal', () => {
   })
 
   describe('saving', () => {
-    const setName = async (wrapper: ReturnType<typeof mountModal>['wrapper'], name: string) => {
-      await wrapper.find('[data-testid="save-layout-name"]').setValue(name)
-    }
-
     it('inserts a new layout when the name is unused', async () => {
       const { wrapper, save, overwrite } = mountModal([makeLayout('one')])
       await setName(wrapper, 'something new')
@@ -417,6 +495,74 @@ describe('MyLayoutsModal', () => {
       store.loading = true
       await wrapper.vm.$nextTick()
       expect(button(wrapper).attributes('disabled')).toBeDefined()
+    })
+  })
+
+  /*
+   * A disabled button suppresses its own pointer events, so the hint has to come from
+   * the HintTooltip wrapper around it — these assert the text that wrapper is given,
+   * and that it becomes a tab stop only while the button it wraps cannot take focus.
+   */
+  describe('explaining an unavailable button', () => {
+    const hint = (wrapper: ReturnType<typeof mountModal>['wrapper'], testid: string) =>
+      wrapper.findComponent<typeof HintTooltip>(`[data-testid="${testid}"]`)
+
+    const saveHint = (wrapper: ReturnType<typeof mountModal>['wrapper']) =>
+      hint(wrapper, 'save-layout-tooltip')
+
+    const downloadHint = (wrapper: ReturnType<typeof mountModal>['wrapper']) =>
+      hint(wrapper, 'download-all-tooltip')
+
+    it('asks for a name when the field is empty or blank', async () => {
+      const { wrapper } = mountModal([makeLayout('one')])
+      expect(saveHint(wrapper).props('text')).toBe('Enter a name for this layout first')
+
+      await setName(wrapper, '   ')
+      expect(saveHint(wrapper).props('text')).toBe('Enter a name for this layout first')
+    })
+
+    it('names the quota when the limit is what blocks the save', async () => {
+      const { wrapper } = mountModal(['a', 'b', 'c', 'd', 'e'].map((n) => makeLayout(n)))
+      await setName(wrapper, 'a sixth one')
+
+      expect(saveHint(wrapper).props('text')).toContain('All 5 layout slots are used')
+
+      // Reusing a saved name is an update, so the quota stops being the obstacle
+      await setName(wrapper, 'c')
+      expect(saveHint(wrapper).props('text')).toBe('')
+    })
+
+    it('says the list is still loading rather than blaming the name', async () => {
+      const { wrapper, store } = mountModal([makeLayout('one')])
+      store.loading = true
+      await setName(wrapper, 'one')
+
+      expect(saveHint(wrapper).props('text')).toContain('load')
+      expect(downloadHint(wrapper).props('text')).toContain('load')
+    })
+
+    it('says there is nothing to download when nothing is saved', () => {
+      const { wrapper } = mountModal([])
+      expect(downloadHint(wrapper).props('text')).toBe('You have no saved layouts to download yet')
+    })
+
+    // A usable button needs no explanation, and a tooltip on one is just something in
+    // the way of the click.
+    it('says nothing once the button is available', async () => {
+      const { wrapper } = mountModal([makeLayout('one')])
+      await setName(wrapper, 'a new one')
+
+      expect(saveHint(wrapper).props('text')).toBe('')
+      expect(downloadHint(wrapper).props('text')).toBe('')
+    })
+
+    it('is a tab stop only while the button it wraps is disabled', async () => {
+      const { wrapper } = mountModal([makeLayout('one')])
+      expect(saveHint(wrapper).attributes('tabindex')).toBe('0')
+      expect(downloadHint(wrapper).attributes('tabindex')).toBeUndefined()
+
+      await setName(wrapper, 'a new one')
+      expect(saveHint(wrapper).attributes('tabindex')).toBeUndefined()
     })
   })
 })

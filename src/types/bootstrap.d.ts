@@ -3,7 +3,9 @@ declare module 'bootstrap/js/dist/tooltip' {
     constructor(
       element: Element,
       options?: {
-        title?: string
+        // Bootstrap resolves a function at show time, which keeps a live title
+        // reactive without re-creating the instance.
+        title?: string | (() => string)
         placement?: 'auto' | 'top' | 'bottom' | 'left' | 'right'
         trigger?: string
         container?: string | Element | false
