@@ -1,275 +1,380 @@
 <template>
-  <div v-if="isVisible" class="modal fade show d-block" tabindex="-1" @click.self="close">
+  <div
+    v-if="isVisible"
+    class="modal fade show d-block"
+    tabindex="-1"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="my-layouts-title"
+    @click.self="close"
+  >
     <div class="modal-dialog modal-dialog-centered modal-lg">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">My Layouts</h5>
+          <h5 id="my-layouts-title" class="modal-title">My Layouts</h5>
           <button type="button" class="btn-close" @click="close" aria-label="Close"></button>
         </div>
 
         <div class="modal-body">
-          <!-- Save current layout -->
-          <div class="save-row">
-            <input
-              v-model="saveName"
-              type="text"
-              class="form-control"
-              :maxlength="MAX_NAME_LENGTH"
-              placeholder="Name this layout"
-              data-testid="save-layout-name"
-              :disabled="store.busy"
-              @keydown.enter.prevent="saveCurrent"
-            />
-            <!-- The tooltip hangs on a wrapper so it still appears while the button is
-                 disabled, which is when it has the most to say. -->
-            <HintTooltip
-              class="flex-shrink-0"
-              :text="saveDisabledReason"
-              :focusable="!canSave"
-              data-testid="save-layout-tooltip"
-            >
-              <button
-                type="button"
-                class="btn btn-primary d-flex align-items-center justify-content-center"
-                data-testid="save-layout"
-                :disabled="!canSave"
-                @click="saveCurrent"
-              >
-                <BiFloppy aria-hidden="true" />
-                <!-- Both labels share one grid cell, so the button keeps the width of
-                     the longer of the two and the name field beside it does not resize
-                     the moment a typed name starts matching a saved layout. -->
-                <span class="ms-1 save-label">
-                  <span class="save-label-sizer" aria-hidden="true">Save current</span>
-                  <span>{{ existingByName ? 'Update' : 'Save current' }}</span>
-                </span>
-              </button>
-            </HintTooltip>
-          </div>
-
           <!--
             Every slot the quota allows is on screen at all times, filled or not, so the
-            modal is the same height before and after a save, a delete, or the first
-            load of a session — nothing under the pointer moves when the list changes.
-            An empty slot is built from the same parts as a filled one, so the two are
-            exactly the same height.
+            modal is the same height before and after a save, a delete, or the first load
+            of a session — nothing under the pointer moves when the list changes.
+
+            The slot is also where the writing happens. Each row carries the action that
+            targets it: Load takes the layout out, Save puts the editor contents in, and
+            every vacant row offers the same Save for a new one. There is no name field
+            above the list deciding which row is meant — the row you press is the row you
+            get, and it stays that row until the modal is closed.
           -->
-          <div class="slot-area">
-            <ul
-              class="layout-list list-unstyled mb-0"
-              data-testid="layouts-list"
-              :aria-busy="isLoadingSlots"
+          <ul
+            ref="listRef"
+            class="layout-list list-unstyled mb-0"
+            data-testid="layouts-list"
+            :aria-busy="isLoadingSlots"
+          >
+            <li
+              v-for="(layout, index) in slots"
+              :key="layout?.id ?? `slot-${index}`"
+              class="layout-item"
+              :class="{
+                'layout-item-vacant': !layout,
+                'layout-item-open': isOpenSlot(index),
+                'layout-item-current': layout && isCurrent(layout),
+              }"
+              data-testid="layout-slot"
+              @click="isOpenSlot(index) && startCreate(index)"
             >
-              <li
-                v-for="(layout, index) in slots"
-                :key="layout?.id ?? `slot-${index}`"
-                class="layout-item"
-                :class="{ 'layout-item-vacant': !layout }"
-                data-testid="layout-slot"
+              <!--
+                Thumbnail column. Drawn once for all of a row's states, so entering a
+                rename or a confirmation cannot change what is beside the text.
+              -->
+              <LayoutThumbnail
+                v-if="layout && decoded(layout)"
+                :keys="decoded(layout)!.keys"
+                :metadata="decoded(layout)!.meta"
+                class="layout-item-thumb"
+              />
+              <div
+                v-else-if="layout"
+                class="layout-item-thumb is-broken"
+                title="This layout could not be read"
               >
-                <template v-if="layout">
-                  <LayoutThumbnail
-                    v-if="decoded(layout)"
-                    :keys="decoded(layout)!.keys"
-                    :metadata="decoded(layout)!.meta"
-                    class="layout-item-thumb"
+                <BiExclamationTriangle class="text-warning" aria-hidden="true" />
+              </div>
+              <!--
+                A vacant slot's stand-in for the thumbnail: the ghost of a keyboard,
+                faint enough to read as the shape of what would be here. While the first
+                fetch is in flight it pulses instead of claiming to be empty — it is not
+                known yet whether it is.
+              -->
+              <div
+                v-else
+                class="layout-item-thumb layout-item-thumb-vacant"
+                :class="{ 'is-pulsing': isLoadingSlots }"
+                aria-hidden="true"
+              >
+                <svg
+                  v-if="!isLoadingSlots"
+                  class="vacant-preview"
+                  viewBox="0 0 60 24"
+                  preserveAspectRatio="xMidYMid meet"
+                >
+                  <g fill="currentColor">
+                    <rect
+                      v-for="x in 9"
+                      :key="`a${x}`"
+                      :x="x * 6 - 3"
+                      y="3"
+                      width="5"
+                      height="5"
+                      rx="1"
+                    />
+                    <rect
+                      v-for="x in 8"
+                      :key="`b${x}`"
+                      :x="x * 6 - 1.5"
+                      y="9.5"
+                      width="5"
+                      height="5"
+                      rx="1"
+                    />
+                    <rect x="3" y="16" width="5" height="5" rx="1" />
+                    <rect x="9" y="16" width="5" height="5" rx="1" />
+                    <rect x="15" y="16" width="30" height="5" rx="1" />
+                    <rect x="46" y="16" width="5" height="5" rx="1" />
+                    <rect x="52" y="16" width="5" height="5" rx="1" />
+                  </g>
+                </svg>
+              </div>
+
+              <!--
+                Text column. An invisible copy of a filled row's two lines shares the
+                grid cell with whatever the row is currently showing, so every state —
+                two lines, a single input, a centred label — is exactly the same height.
+                Below 576px these lines, not the thumbnail, are what a row is as tall as.
+              -->
+              <div class="layout-item-info">
+                <div class="info-sizer" aria-hidden="true">
+                  <div>&nbsp;</div>
+                  <div class="small">&nbsp;</div>
+                </div>
+
+                <!-- Filled, renaming -->
+                <div v-if="layout && renamingId === layout.id" class="info-content">
+                  <input
+                    v-model="renameValue"
+                    type="text"
+                    class="form-control form-control-sm"
+                    :maxlength="MAX_NAME_LENGTH"
+                    data-testid="rename-input"
+                    @keydown.enter.prevent="commitRename(layout.id)"
+                    @keydown.esc.prevent="cancelRename"
                   />
-                  <div
-                    v-else
-                    class="layout-item-thumb is-broken"
-                    title="This layout could not be read"
-                  >
-                    <BiExclamationTriangle class="text-warning" aria-hidden="true" />
+                </div>
+
+                <!-- Filled, idle or confirming -->
+                <div v-else-if="layout" class="info-content">
+                  <div class="layout-item-name fw-medium">
+                    <span class="text-truncate" :title="layout.name">{{ layout.name }}</span>
+                    <!--
+                      Not a `.badge`: that Bootstrap partial is not one of the ones
+                      bootstrap-custom.scss imports, so the class would render unstyled.
+                    -->
+                    <span v-if="isCurrent(layout)" class="current-tag" data-testid="current-marker">
+                      Current
+                    </span>
                   </div>
-
-                  <div class="layout-item-info">
-                    <template v-if="renamingId === layout.id">
-                      <input
-                        v-model="renameValue"
-                        type="text"
-                        class="form-control form-control-sm"
-                        :maxlength="MAX_NAME_LENGTH"
-                        data-testid="rename-input"
-                        @keydown.enter.prevent="commitRename(layout.id)"
-                        @keydown.esc.prevent="cancelRename"
-                      />
-                    </template>
-                    <template v-else>
-                      <div class="fw-medium text-truncate" :title="layout.name">
-                        {{ layout.name }}
-                      </div>
-                      <!--
-                        A pending question takes the description's line rather than sitting
-                        among the buttons. It is the widest column, so a sentence fits
-                        without being truncated, and the row keeps both its height and its
-                        column widths. It also means the question does not have to name the
-                        layout — the name is directly above it.
-                      -->
-                      <div
-                        v-if="pending?.id === layout.id"
-                        class="small fw-medium text-truncate"
-                        :class="pending?.danger ? 'text-danger' : 'text-body-emphasis'"
-                        data-testid="confirm-message"
-                      >
-                        {{ pending?.message }}
-                      </div>
-                      <div v-else class="text-muted small text-truncate">
-                        {{ describe(layout) }}
-                      </div>
-                    </template>
-                  </div>
-
-                  <div class="layout-item-actions">
-                    <!-- Pending confirmation replaces the actions for this row -->
-                    <template v-if="pending?.id === layout.id">
-                      <button
-                        type="button"
-                        class="btn btn-sm"
-                        :class="pending?.danger ? 'btn-danger' : 'btn-primary'"
-                        data-testid="confirm-action"
-                        :disabled="store.busy"
-                        @click="runPending"
-                      >
-                        {{ pending?.confirmLabel }}
-                      </button>
-                      <button
-                        type="button"
-                        class="btn btn-sm btn-outline-secondary"
-                        data-testid="cancel-action"
-                        @click="pending = null"
-                      >
-                        Cancel
-                      </button>
-                    </template>
-
-                    <template v-else-if="renamingId === layout.id">
-                      <button
-                        type="button"
-                        class="btn btn-sm btn-primary d-flex align-items-center justify-content-center"
-                        data-testid="rename-confirm"
-                        :disabled="store.busy || !renameValue.trim()"
-                        @click="commitRename(layout.id)"
-                      >
-                        <BiCheckLg aria-hidden="true" />
-                      </button>
-                      <button
-                        type="button"
-                        class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center"
-                        data-testid="rename-cancel"
-                        @click="cancelRename"
-                      >
-                        <BiXLg aria-hidden="true" />
-                      </button>
-                    </template>
-
-                    <template v-else>
-                      <button
-                        type="button"
-                        class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center"
-                        data-testid="load-layout"
-                        :disabled="store.busy || !decoded(layout)"
-                        title="Load into the editor"
-                        @click="requestLoad(layout)"
-                      >
-                        <BiBoxArrowInRight aria-hidden="true" />
-                        <span class="d-none d-sm-inline ms-1">Load</span>
-                      </button>
-                      <button
-                        type="button"
-                        class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center"
-                        data-testid="rename-layout"
-                        :disabled="store.busy"
-                        title="Rename"
-                        @click="startRename(layout)"
-                      >
-                        <BiPencil aria-hidden="true" />
-                      </button>
-                      <button
-                        type="button"
-                        class="btn btn-sm btn-outline-danger d-flex align-items-center justify-content-center"
-                        data-testid="delete-layout"
-                        :disabled="store.busy"
-                        title="Delete"
-                        @click="requestDelete(layout)"
-                      >
-                        <BiTrash aria-hidden="true" />
-                      </button>
-                    </template>
-                  </div>
-                </template>
-
-                <!--
-                  A vacant slot. While the first fetch is in flight the same row pulses
-                  instead of claiming to be empty — it is not known yet whether it is.
-                -->
-                <template v-else>
-                  <div
-                    class="layout-item-thumb layout-item-thumb-vacant"
-                    :class="{ 'is-pulsing': isLoadingSlots }"
-                    aria-hidden="true"
-                  >
-                    <!-- Stands in for the thumbnail: the ghost of a keyboard, faint
-                         enough to read as the shape of what would be here. -->
-                    <svg
-                      v-if="!isLoadingSlots"
-                      class="vacant-preview"
-                      viewBox="0 0 60 24"
-                      preserveAspectRatio="xMidYMid meet"
-                    >
-                      <g fill="currentColor">
-                        <rect
-                          v-for="x in 9"
-                          :key="`a${x}`"
-                          :x="x * 6 - 3"
-                          y="3"
-                          width="5"
-                          height="5"
-                          rx="1"
-                        />
-                        <rect
-                          v-for="x in 8"
-                          :key="`b${x}`"
-                          :x="x * 6 - 1.5"
-                          y="9.5"
-                          width="5"
-                          height="5"
-                          rx="1"
-                        />
-                        <rect x="3" y="16" width="5" height="5" rx="1" />
-                        <rect x="9" y="16" width="5" height="5" rx="1" />
-                        <rect x="15" y="16" width="30" height="5" rx="1" />
-                        <rect x="46" y="16" width="5" height="5" rx="1" />
-                        <rect x="52" y="16" width="5" height="5" rx="1" />
-                      </g>
-                    </svg>
-                  </div>
-
                   <!--
-                    The label is centred in the row, but an invisible copy of a filled
-                    row's two lines is what sets the height: below 576px the thumbnail
-                    shrinks and those lines, not it, are what a filled row is as tall as.
-                    Both occupy the same grid cell, so the sizer keeps its say while the
-                    label is free to sit in the middle.
+                    A pending question takes the description's line rather than sitting
+                    among the buttons. It is the widest column, so a sentence fits
+                    without being truncated, and the row keeps both its height and its
+                    column widths. It also means the question does not have to name the
+                    layout — the name is directly above it.
                   -->
-                  <div class="layout-item-info vacant-info">
-                    <div class="vacant-info-sizer" aria-hidden="true">
-                      <div>&nbsp;</div>
-                      <div class="small">&nbsp;</div>
-                    </div>
-                    <div v-if="!isLoadingSlots" class="vacant-info-label">Empty slot</div>
+                  <div
+                    v-if="pending?.id === layout.id"
+                    class="small fw-medium text-truncate"
+                    :class="pending?.danger ? 'text-danger' : 'text-body-emphasis'"
+                    data-testid="confirm-message"
+                  >
+                    {{ pending?.message }}
                   </div>
-                </template>
-              </li>
-            </ul>
+                  <div v-else class="text-muted small text-truncate">
+                    {{ describe(layout) }}
+                  </div>
+                </div>
 
-            <!--
-              Floated over the slots rather than placed above them: an error arrives in
-              response to a click, and in the flow it would push every row down under the
-              pointer that was just used. It is transient — the next action clears it.
-            -->
+                <!-- Vacant, naming the layout about to be saved here -->
+                <div v-else-if="isCreatingAt(index)" class="info-content">
+                  <input
+                    ref="createInputRef"
+                    v-model="createName"
+                    type="text"
+                    class="form-control form-control-sm"
+                    :maxlength="MAX_NAME_LENGTH"
+                    placeholder="Name this layout"
+                    data-testid="new-name-input"
+                    @keydown.enter.prevent="commitCreate"
+                    @keydown.esc.prevent="cancelCreate"
+                    @click.stop
+                  />
+                </div>
+
+                <!-- Vacant, idle -->
+                <div v-else class="info-content info-content-center">
+                  <div v-if="!isLoadingSlots" class="vacant-label">Empty slot</div>
+                </div>
+              </div>
+
+              <!--
+                Action column. It stops its own clicks: they would otherwise reach the
+                row, and a row that becomes vacant during the click that emptied it —
+                the delete confirmation — would read the same click as "save here".
+              -->
+              <div v-if="layout" class="layout-item-actions" @click.stop>
+                <!-- Pending confirmation replaces the actions for this row -->
+                <template v-if="pending?.id === layout.id">
+                  <button
+                    type="button"
+                    class="btn btn-sm"
+                    :class="pending?.danger ? 'btn-danger' : 'btn-primary'"
+                    data-testid="confirm-action"
+                    :disabled="store.busy"
+                    @click="runPending"
+                  >
+                    {{ pending?.confirmLabel }}
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-secondary"
+                    data-testid="cancel-action"
+                    @click="pending = null"
+                  >
+                    Cancel
+                  </button>
+                </template>
+
+                <template v-else-if="renamingId === layout.id">
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-primary d-flex align-items-center justify-content-center"
+                    data-testid="rename-confirm"
+                    :disabled="store.busy || !renameValue.trim()"
+                    @click="commitRename(layout.id)"
+                  >
+                    <BiCheckLg aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center"
+                    data-testid="rename-cancel"
+                    @click="cancelRename"
+                  >
+                    <BiXLg aria-hidden="true" />
+                  </button>
+                </template>
+
+                <template v-else>
+                  <HintTooltip
+                    :text="loadDisabledReason(layout)"
+                    :focusable="!!loadDisabledReason(layout)"
+                    data-testid="load-layout-tooltip"
+                  >
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center"
+                      data-testid="load-layout"
+                      :disabled="!!loadDisabledReason(layout)"
+                      title="Load into the editor"
+                      @click="requestLoad(layout)"
+                    >
+                      <BiBoxArrowInRight aria-hidden="true" />
+                      <span class="d-none d-sm-inline ms-1">Load</span>
+                    </button>
+                  </HintTooltip>
+                  <!--
+                    The counterpart to Load, and the only way to overwrite: the row is
+                    the destination, so nothing has to be typed to name one.
+                  -->
+                  <HintTooltip
+                    :text="writeDisabledReason"
+                    :focusable="!canWrite"
+                    data-testid="save-here-tooltip"
+                  >
+                    <button
+                      type="button"
+                      class="btn btn-sm d-flex align-items-center justify-content-center"
+                      :class="isCurrent(layout) ? 'btn-primary' : 'btn-outline-primary'"
+                      data-testid="save-here"
+                      :disabled="!canWrite"
+                      title="Replace with the editor contents"
+                      @click="requestOverwrite(layout)"
+                    >
+                      <BiFloppy aria-hidden="true" />
+                      <span class="d-none d-sm-inline ms-1">Save</span>
+                    </button>
+                  </HintTooltip>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center"
+                    data-testid="rename-layout"
+                    :disabled="store.busy"
+                    title="Rename"
+                    @click="startRename(layout)"
+                  >
+                    <BiPencil aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-danger d-flex align-items-center justify-content-center"
+                    data-testid="delete-layout"
+                    :disabled="store.busy"
+                    title="Delete"
+                    @click="requestDelete(layout)"
+                  >
+                    <BiTrash aria-hidden="true" />
+                  </button>
+                </template>
+              </div>
+
+              <div v-else-if="isCreatingAt(index)" class="layout-item-actions" @click.stop>
+                <HintTooltip
+                  :text="createDisabledReason"
+                  :focusable="!canCreate"
+                  data-testid="new-name-tooltip"
+                >
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-primary d-flex align-items-center justify-content-center"
+                    data-testid="new-name-confirm"
+                    :disabled="!canCreate"
+                    @click.stop="commitCreate"
+                  >
+                    <BiCheckLg aria-hidden="true" />
+                  </button>
+                </HintTooltip>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center"
+                  data-testid="new-name-cancel"
+                  @click.stop="cancelCreate"
+                >
+                  <BiXLg aria-hidden="true" />
+                </button>
+              </div>
+
+              <!--
+                Every vacant slot takes a save, and takes it where it stands: the row
+                order is fixed for as long as the modal is open, so a layout put in the
+                fourth slot is drawn in the fourth slot.
+              -->
+              <div v-else-if="isOpenSlot(index)" class="layout-item-actions" @click.stop>
+                <HintTooltip
+                  :text="writeDisabledReason"
+                  :focusable="!canWrite"
+                  data-testid="save-into-slot-tooltip"
+                >
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center"
+                    data-testid="save-into-slot"
+                    :disabled="!canWrite"
+                    title="Save the editor contents into this slot"
+                    @click.stop="startCreate(index)"
+                  >
+                    <BiPlusLg aria-hidden="true" />
+                    <span class="d-none d-sm-inline ms-1">Save</span>
+                  </button>
+                </HintTooltip>
+              </div>
+            </li>
+          </ul>
+
+          <!--
+            The caption is always present, so filling the last slot changes the sentence
+            and not the height. It is a caption rather than the banner it replaces because
+            that one appeared on the fifth save and pushed the whole list down.
+
+            An error takes this line rather than one of its own. It arrives in response to
+            a click, and the dialog is centred, so anything that changes the body's height
+            moves every row half that distance — under the pointer that was just used. The
+            caption is the one line here that can be spared: it says how much room is left,
+            which is not what matters while an error is on screen, and it comes back with
+            the error, which the next action clears.
+
+            It is anchored to the top of this line and grows downward into the body's
+            padding, never upward: a message long enough to wrap must not reach the last
+            row's buttons, which is exactly where a failed save leaves its name field open
+            and waiting to be tried again.
+          -->
+          <div class="caption-line">
+            <p class="small text-muted mb-0" data-testid="slot-caption">
+              {{ quotaCaption }}
+            </p>
             <div
               v-if="store.errorMessage"
-              class="alert alert-danger py-2 slot-area-alert"
+              class="alert alert-danger py-1 px-2 mb-0 small caption-line-alert"
               data-testid="layouts-error"
               role="alert"
             >
@@ -308,7 +413,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { Keyboard, type Key, type KeyboardMetadata } from '@adamws/kle-serial'
 import { useKeyboardStore } from '@/stores/keyboard'
 import { useLayoutsStore, MAX_NAME_LENGTH, type SavedLayout } from '@/stores/layouts'
@@ -320,6 +425,7 @@ import LayoutThumbnail from './LayoutThumbnail.vue'
 import HintTooltip from './HintTooltip.vue'
 
 import BiFloppy from 'bootstrap-icons/icons/floppy.svg'
+import BiPlusLg from 'bootstrap-icons/icons/plus-lg.svg'
 import BiDownload from 'bootstrap-icons/icons/download.svg'
 // box-arrow-in-right, not one of the download arrows: `download.svg` already means
 // "write a file to disk" in PlateDownloadButtons, and this loads into the editor. Its
@@ -338,9 +444,16 @@ const emit = defineEmits<{ (e: 'close'): void }>()
 const keyboardStore = useKeyboardStore()
 const store = useLayoutsStore()
 
-const saveName = ref('')
+const listRef = ref<HTMLElement>()
+// Inside v-for, so Vue hands back an array even though only one row is ever creating.
+const createInputRef = ref<HTMLInputElement[] | HTMLInputElement>()
+
 const renamingId = ref<string | null>(null)
 const renameValue = ref('')
+
+/** The slot asking for the name of the layout about to go into it, if any. */
+const creatingIndex = ref<number | null>(null)
+const createName = ref('')
 
 interface PendingAction {
   id: string
@@ -352,40 +465,41 @@ interface PendingAction {
 const pending = ref<PendingAction | null>(null)
 
 /**
- * Saving under the name of an existing layout updates that layout rather than adding a
- * second one. That is the only way to re-save work in place, so it stays available at
- * the quota — the database only counts inserts, and an update is not one.
- */
-const existingByName = computed(() => {
-  const name = saveName.value.trim().toLowerCase()
-  if (!name) return null
-  return store.layouts.find((layout) => layout.name.trim().toLowerCase() === name) ?? null
-})
-
-/**
- * Why saving is unavailable, in the order the conditions are worth reporting: the
- * transient states first, since they resolve on their own, then what the user has to do
- * something about. Empty means the button works — `canSave` is derived from it, so the
- * button and the explanation for it can never disagree.
+ * Why a write is unavailable, in the order the conditions are worth reporting. Both of
+ * these resolve on their own, which is all a user needs to know here: a save is never
+ * refused for being at the quota, because a full list has no open slot to press, and
+ * saving over a slot is an update rather than an insert — the database only counts
+ * inserts, so it stays available at the quota.
  *
- * `store.loading` gates this as well as `store.busy`: opening the modal refetches, and
- * until that lands `layouts` is empty or stale, so `existingByName` would miss a match
- * and save a duplicate instead of updating — and the confirmation it opens lives in a
- * row the loading spinner has replaced.
+ * Empty means the buttons work — `canWrite` is derived from it, so a button and the
+ * explanation for it can never disagree.
  */
-const saveDisabledReason = computed(() => {
+const writeDisabledReason = computed(() => {
   if (store.loading) return 'Waiting for your saved layouts to load…'
   if (store.busy) return 'Waiting for the previous action to finish…'
-  if (!saveName.value.trim()) return 'Enter a name for this layout first'
-  // Saving over an existing name is an update, and an update is not an insert — it
-  // stays available at the quota.
-  if (store.isFull && !existingByName.value) {
-    return `All ${store.quota} layout slots are used — delete one, or reuse a saved name to update it`
-  }
   return ''
 })
 
-const canSave = computed(() => saveDisabledReason.value === '')
+const canWrite = computed(() => writeDisabledReason.value === '')
+
+const createDisabledReason = computed(() => {
+  if (writeDisabledReason.value) return writeDisabledReason.value
+  if (!createName.value.trim()) return 'Enter a name for this layout first'
+  return ''
+})
+
+const canCreate = computed(() => createDisabledReason.value === '')
+
+/**
+ * Load has one reason of its own: a payload that will not decode. The button has always
+ * been disabled for that and has never said so, because a disabled `.btn` suppresses its
+ * own pointer events and its `title` never fires.
+ */
+const loadDisabledReason = (layout: SavedLayout) => {
+  if (store.busy) return 'Waiting for the previous action to finish…'
+  if (!decoded(layout)) return 'This layout could not be read'
+  return ''
+}
 
 const downloadDisabledReason = computed(() => {
   if (store.loading) return 'Waiting for your saved layouts to load…'
@@ -397,17 +511,71 @@ const downloadDisabledReason = computed(() => {
 const canDownloadAll = computed(() => downloadDisabledReason.value === '')
 
 /**
- * One entry per slot the quota allows, saved layouts first and `null` for the rest.
- * Rendering the vacant ones is what keeps the modal a fixed size: the row count never
- * changes, so saving or deleting swaps a row's contents instead of resizing the dialog.
+ * The order the slots are drawn in, as layout ids with `null` for a vacancy.
  *
- * `Math.max` guards the case the quota has been lowered since these were saved — the
- * extra layouts stay reachable (and deletable) rather than dropping out of the list.
+ * It is taken when the modal opens and then left alone. A delete empties its slot where
+ * it stands instead of pulling the rows beneath it up, and the next save drops into that
+ * gap: for as long as the modal is on screen a row only ever changes what is in it, never
+ * where it is. Reopening rebuilds the order from the store — oldest first — which is when
+ * the gaps close up.
+ */
+const slotOrder = ref<(string | null)[]>([])
+
+const takeSlotOrder = () => {
+  const ids = store.layouts.map((layout) => layout.id)
+  const count = Math.max(store.quota, ids.length)
+  slotOrder.value = Array.from({ length: count }, (_, index) => ids[index] ?? null)
+}
+
+const placeAt = (index: number, id: string) => {
+  while (slotOrder.value.length <= index) slotOrder.value.push(null)
+  slotOrder.value[index] = id
+}
+
+const clearSlot = (id: string) => {
+  const index = slotOrder.value.indexOf(id)
+  if (index !== -1) slotOrder.value[index] = null
+}
+
+/**
+ * One entry per slot the quota allows, in the order this session fixed, and `null` for
+ * every vacancy. Rendering the vacant ones is what keeps the modal a fixed size: the row
+ * count never changes, so saving or deleting swaps a row's contents instead of resizing
+ * the dialog.
  */
 const slots = computed<(SavedLayout | null)[]>(() => {
-  const count = Math.max(store.quota, store.layouts.length)
-  return Array.from({ length: count }, (_, index) => store.layouts[index] ?? null)
+  const unplaced = new Map(store.layouts.map((layout) => [layout.id, layout]))
+  const rows = slotOrder.value.map((id) => {
+    const layout = id ? (unplaced.get(id) ?? null) : null
+    if (layout) unplaced.delete(layout.id)
+    return layout
+  })
+
+  // Anything the store holds that the order does not — a layout saved in another tab and
+  // picked up by a refetch, or the very first render before an order has been taken —
+  // goes into the gaps rather than nowhere.
+  const stray = [...unplaced.values()]
+  for (let index = 0; index < rows.length && stray.length > 0; index += 1) {
+    if (!rows[index]) rows[index] = stray.shift()!
+  }
+  rows.push(...stray)
+
+  // Never fewer rows than the quota allows; the vacancies are what the fixed size is made
+  // of. Anything past it is a quota lowered since these were saved — those layouts stay
+  // reachable (and deletable) rather than dropping out of the list.
+  while (rows.length < store.quota) rows.push(null)
+  return rows
 })
+
+/**
+ * Every vacancy takes a save, and takes it where it stands. The order this session fixed
+ * is what decides where a new layout is drawn, so an insert can go into any empty row
+ * without disturbing the ones around it — there is no first-gap-only rule to explain.
+ */
+const isOpenSlot = (index: number) =>
+  !isLoadingSlots.value && creatingIndex.value === null && slots.value[index] === null
+
+const isCreatingAt = (index: number) => creatingIndex.value === index
 
 /**
  * Only the first fetch of a session has nothing to show: a refetch keeps the previous
@@ -416,16 +584,53 @@ const slots = computed<(SavedLayout | null)[]>(() => {
  */
 const isLoadingSlots = computed(() => store.loading && store.layouts.length === 0)
 
+const quotaCaption = computed(() => {
+  // A non-breaking space rather than nothing: until the first fetch lands the count is
+  // not known, and an empty line would be a shorter line.
+  if (isLoadingSlots.value) return '\u00a0'
+  const used = store.layouts.length
+  if (used >= store.quota) {
+    return `All ${store.quota} slots are used — save over one, or delete one to free a slot.`
+  }
+  return `${used} of ${store.quota} slots used`
+})
+
 /**
- * Decoded payloads, cached by id so a re-render does not re-parse every row.
- * A payload that fails to decode yields null and the row degrades to a placeholder
- * with Load disabled, rather than taking the whole list down.
+ * Whether this row is where the editor's work came from. Both halves matter: the id says
+ * which layout, and the token says the editor has not been handed something else since —
+ * `layoutGeneration` moves whenever the contents are replaced wholesale, so an import or
+ * a new layout retires the mark on its own. Editing does not: an edited layout is exactly
+ * the one you want to put back in its own slot.
+ */
+const isCurrent = (layout: SavedLayout) =>
+  store.activeId === layout.id && store.activeToken === keyboardStore.layoutGeneration
+
+/**
+ * Decoded payloads, so a re-render does not re-parse every row. A payload that fails to
+ * decode yields null and the row degrades to a placeholder with Load disabled, rather
+ * than taking the whole list down.
+ *
+ * Keyed by the payload and not by the layout id, which is what makes an overwrite show
+ * up. An id survives a write, so the cache had to be invalidated by hand after one — and
+ * that invalidation ran after the store mutation had already queued the re-render, so the
+ * row could redraw from the entry it was about to drop and keep the old picture on screen
+ * until something unrelated re-rendered it. Keyed by payload there is nothing to
+ * invalidate: new contents are a new key, and LayoutThumbnail watches for exactly the new
+ * `keys`/`metadata` identity a miss produces.
  */
 const decodedCache = new Map<string, { keys: Key[]; meta: KeyboardMetadata } | null>()
 
 const decoded = (layout: SavedLayout) => {
-  const cached = decodedCache.get(layout.id)
+  const cached = decodedCache.get(layout.payload)
   if (cached !== undefined) return cached
+
+  // A miss means a payload changed, so this is the moment to drop the ones nothing points
+  // at any more — otherwise every overwrite would leave its predecessor here for the rest
+  // of the session.
+  const live = new Set(store.layouts.map((saved) => saved.payload))
+  for (const key of decodedCache.keys()) {
+    if (!live.has(key)) decodedCache.delete(key)
+  }
 
   let result: { keys: Key[]; meta: KeyboardMetadata } | null = null
   try {
@@ -434,7 +639,7 @@ const decoded = (layout: SavedLayout) => {
   } catch (error) {
     console.error(`Could not decode saved layout "${layout.name}":`, error)
   }
-  decodedCache.set(layout.id, result)
+  decodedCache.set(layout.payload, result)
   return result
 }
 
@@ -460,45 +665,102 @@ const currentPayload = () => {
 }
 
 /**
- * Prefill from the layout's own name, and from nothing else — an unnamed layout opens
- * with an empty field and its placeholder.
+ * Prefill from the layout's own name, and from nothing else — an unnamed layout offers an
+ * empty field and its placeholder.
  *
  * `keyboardStore.filename` used to be the fallback, with 'Untitled layout' behind it.
  * But filename is what a download is called, not what the layout is: `loadKeyboard()`
  * never clears it and only some import paths set it, so it outlives the layout it came
- * from and proposed the previous one's name. Here that is worse than an empty field —
- * a stale name that matches something already saved turns Save into Update, and the
- * confirmation names a row the user was not thinking about.
+ * from and proposed the previous one's name. An empty field is the better default — it
+ * says nothing rather than saying something stale.
  */
 const defaultName = () => keyboardStore.metadata.name?.trim() ?? ''
 
-const saveCurrent = async () => {
-  if (!canSave.value) return
+const focusIn = (selector: string) => {
+  const target = listRef.value?.querySelector<HTMLElement>(selector)
+  target?.focus()
+  return !!target
+}
 
-  // Confirm in the row being replaced, so it is obvious which layout is about to
-  // change. The row names it, so the question does not repeat the name.
-  const existing = existingByName.value
-  if (existing) {
-    pending.value = {
-      id: existing.id,
-      message: 'Replace with the editor contents?',
-      confirmLabel: 'Update',
-      danger: false,
-      run: async () => {
-        const saved = await store.overwrite(existing.id, currentPayload())
-        if (saved) {
-          decodedCache.delete(saved.id)
-          toast.showSuccess(`Updated "${saved.name}"`, 'My Layouts')
-        }
-      },
-    }
-    return
-  }
+/**
+ * Where the first keystroke should go when the modal opens: the slot waiting to be
+ * filled, or failing that the first saved layout. Neither writes anything on Enter —
+ * both open a name field or a confirmation — so landing on one is safe.
+ *
+ * Skipped once the user has put focus somewhere themselves; the fetch this runs behind
+ * can land well after the dialog is on screen.
+ */
+const focusPrimary = () => {
+  const active = document.activeElement
+  if (active && active !== document.body && active !== document.documentElement) return
+  if (focusIn('[data-testid="save-into-slot"]')) return
+  focusIn('[data-testid="load-layout"]')
+}
 
-  const saved = await store.save(saveName.value, currentPayload())
-  if (saved) {
-    decodedCache.delete(saved.id)
-    toast.showSuccess(`Saved "${saved.name}"`, 'My Layouts')
+const startCreate = (index: number) => {
+  if (!canWrite.value || creatingIndex.value !== null) return
+  pending.value = null
+  cancelRename()
+  creatingIndex.value = index
+  createName.value = defaultName()
+  void nextTick(() => {
+    const input = createInputRef.value
+    const element = Array.isArray(input) ? input[0] : input
+    element?.focus()
+    element?.select()
+  })
+}
+
+const cancelCreate = () => {
+  creatingIndex.value = null
+  createName.value = ''
+}
+
+const commitCreate = async () => {
+  if (!canCreate.value) return
+
+  const index = creatingIndex.value
+  if (index === null) return
+
+  const saved = await store.save(createName.value, currentPayload())
+  // A failed write keeps the field open with what was typed still in it; the reason is in
+  // the alert floating over the slots.
+  if (!saved) return
+
+  cancelCreate()
+  // Into the row that was pressed, not wherever the store happens to have put it.
+  placeAt(index, saved.id)
+  store.markActive(saved.id, keyboardStore.layoutGeneration)
+  toast.showSuccess(`Saved "${saved.name}"`, 'My Layouts')
+
+  // The button that was pressed no longer exists — the slot is a filled row now. Hand
+  // focus to that row rather than dropping it back to the document.
+  await nextTick()
+  const row = listRef.value?.querySelectorAll('[data-testid="layout-slot"]')[index]
+  row?.querySelector<HTMLElement>('[data-testid="load-layout"]')?.focus()
+}
+
+/**
+ * Saving over a slot is how work is re-saved in place, and it is confirmed in the row
+ * being replaced so it is obvious which layout is about to change. The row names it, so
+ * the question does not repeat the name.
+ */
+const requestOverwrite = (layout: SavedLayout) => {
+  if (!canWrite.value) return
+  cancelCreate()
+  cancelRename()
+  pending.value = {
+    id: layout.id,
+    message: 'Replace with the editor contents?',
+    confirmLabel: 'Replace',
+    danger: false,
+    run: async () => {
+      const saved = await store.overwrite(layout.id, currentPayload())
+      if (saved) {
+        store.markActive(saved.id, keyboardStore.layoutGeneration)
+        toast.showSuccess(`Updated "${saved.name}"`, 'My Layouts')
+      }
+    },
   }
 }
 
@@ -614,6 +876,8 @@ const applyLayout = (layout: SavedLayout) => {
     // Loading a stored layout is not an unsaved change — rebaseline so the dirty
     // indicator and the beforeunload guard stay honest.
     keyboardStore.updateBaseline()
+    // The token is read after the load, not before: loadKeyboard() is what moves it.
+    store.markActive(layout.id, keyboardStore.layoutGeneration)
     toast.showSuccess(`Loaded "${layout.name}"`, 'My Layouts')
     close()
   } catch (error) {
@@ -626,6 +890,7 @@ const applyLayout = (layout: SavedLayout) => {
 }
 
 const requestLoad = (layout: SavedLayout) => {
+  cancelCreate()
   // Only interrupt when there is genuinely unsaved work to lose.
   if (keyboardStore.dirty) {
     pending.value = {
@@ -643,6 +908,7 @@ const requestLoad = (layout: SavedLayout) => {
 }
 
 const requestDelete = (layout: SavedLayout) => {
+  cancelCreate()
   pending.value = {
     id: layout.id,
     message: 'Delete this layout permanently?',
@@ -650,7 +916,8 @@ const requestDelete = (layout: SavedLayout) => {
     danger: true,
     run: async () => {
       if (await store.remove(layout.id)) {
-        decodedCache.delete(layout.id)
+        // The row empties in place; nothing below it moves up to take its number.
+        clearSlot(layout.id)
         toast.showSuccess(`Deleted "${layout.name}"`, 'My Layouts')
       }
     },
@@ -666,6 +933,7 @@ const runPending = async () => {
 
 const startRename = (layout: SavedLayout) => {
   pending.value = null
+  cancelCreate()
   renamingId.value = layout.id
   renameValue.value = layout.name
 }
@@ -691,6 +959,8 @@ const handleKeyDown = (event: KeyboardEvent) => {
     pending.value = null
   } else if (renamingId.value) {
     cancelRename()
+  } else if (creatingIndex.value !== null) {
+    cancelCreate()
   } else {
     close()
   }
@@ -702,11 +972,16 @@ watch(
     if (visible) {
       document.addEventListener('keydown', handleKeyDown)
       document.body.classList.add('modal-open')
-      saveName.value = defaultName()
       pending.value = null
       cancelRename()
+      cancelCreate()
       store.errorMessage = null
-      void store.fetchAll(true)
+      // Opening is when the gaps close up and any change from elsewhere is taken on.
+      takeSlotOrder()
+      void store.fetchAll(true).then(() => {
+        takeSlotOrder()
+        void nextTick(focusPrimary)
+      })
     } else {
       document.removeEventListener('keydown', handleKeyDown)
       document.body.classList.remove('modal-open')
@@ -718,6 +993,7 @@ onMounted(() => {
   if (props.isVisible) {
     document.addEventListener('keydown', handleKeyDown)
     document.body.classList.add('modal-open')
+    takeSlotOrder()
   }
 })
 
@@ -732,25 +1008,6 @@ onUnmounted(() => {
   background: rgba(0, 0, 0, 0.5);
 }
 
-.save-row {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.save-label {
-  display: inline-grid;
-  justify-items: center;
-}
-
-.save-label > * {
-  grid-area: 1 / 1;
-}
-
-.save-label-sizer {
-  visibility: hidden;
-}
-
 /*
  * The buttons here centre their contents with `d-flex align-items-center
  * justify-content-center`, the same way the download and matrix modals do. Without it
@@ -758,10 +1015,10 @@ onUnmounted(() => {
  * next to a label.
  *
  * Those buttons always carry text, though, and these do not: rename and delete are
- * icon-only, and Load drops its label below 576px. A flex container has no strut, so
- * an icon-only one would be only as tall as its 16px icon while its labelled neighbour
- * keeps a 20px text box, and the row would step. This restores that line box — its
- * height is .btn-sm's line-height, set in bootstrap-custom.scss.
+ * icon-only, and Load and Save drop their labels below 576px. A flex container has no
+ * strut, so an icon-only one would be only as tall as its 16px icon while its labelled
+ * neighbour keeps a 20px text box, and the row would step. This restores that line box —
+ * its height is .btn-sm's line-height, set in bootstrap-custom.scss.
  *
  * It has to be a zero-width item with no `gap` on the container: `gap` also applies
  * between the strut and the icon, which widens every icon-only button and pushes a
@@ -774,24 +1031,28 @@ onUnmounted(() => {
 }
 
 /*
- * The alert is taken out of the flow (see the template), so the slot area has to be its
- * containing block.
+ * The caption's line, and the containing block for the alert that covers it (see the
+ * template). Sized by the caption, so it is the same height with or without an error.
  */
-.slot-area {
+.caption-line {
   position: relative;
+  margin-top: 0.75rem;
 }
 
-.slot-area-alert {
+/*
+ * Top-anchored, so the overhang of a message too long for one line goes down into the
+ * modal body's padding and never up into the last row.
+ */
+.caption-line-alert {
   position: absolute;
-  inset: auto 0 0 0;
-  margin: 0;
+  inset: 0 0 auto 0;
   box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.2);
 }
 
 /*
- * No `max-height` here: the list is exactly `quota` rows tall by construction, and a
- * cap would only bite when the quota is larger than the space — in which case scrolling
- * is still what should happen, so the modal keeps its size.
+ * The cap is only reachable with a quota well past the five this was built for; the list
+ * is exactly `quota` rows tall by construction, and five of them come to about 360px.
+ * Past that scrolling is what should happen, so the dialog keeps its size.
  */
 .layout-list {
   max-height: 420px;
@@ -819,11 +1080,39 @@ onUnmounted(() => {
 
 /*
  * A vacant slot is drawn as the outline of a row rather than as a row: dashed and
- * unfilled, so five of them read as space waiting to be used and not as five things.
+ * unfilled, so the spare ones read as space waiting to be used and not as things.
  */
 .layout-item-vacant {
   border-style: dashed;
   background: none;
+}
+
+/*
+ * The one vacant slot a save can land in. Its button is what a keyboard reaches and what
+ * says precisely what will happen, but a click anywhere on a row that reads "empty" is
+ * asking for the same thing, so the whole row takes one.
+ */
+.layout-item-open {
+  cursor: pointer;
+}
+
+.layout-item-open:hover {
+  border-color: var(--bs-primary);
+  background: var(--bs-tertiary-bg);
+}
+
+.layout-item-open:hover .layout-item-thumb-vacant {
+  border-color: var(--bs-primary);
+}
+
+.layout-item-open:hover .vacant-label {
+  color: var(--bs-primary);
+  opacity: 1;
+}
+
+/* The row the editor is showing; the same accent is on its Save button. */
+.layout-item-current {
+  border-color: var(--bs-primary);
 }
 
 .layout-item-thumb-vacant {
@@ -841,22 +1130,7 @@ onUnmounted(() => {
   opacity: 0.2;
 }
 
-.vacant-info {
-  display: grid;
-}
-
-.vacant-info > * {
-  grid-area: 1 / 1;
-}
-
-.vacant-info-sizer {
-  visibility: hidden;
-}
-
-.vacant-info-label {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.vacant-label {
   color: var(--bs-secondary-color);
   opacity: 0.65;
   font-size: 0.8125rem;
@@ -895,9 +1169,59 @@ onUnmounted(() => {
   border-radius: var(--bs-border-radius-sm);
 }
 
+/*
+ * Every state of the text column shares one grid cell with an invisible copy of a filled
+ * row's two lines, so a rename editor, a name field and a centred "Empty slot" are all
+ * exactly as tall as the two lines they stand in for. Without it the single-input states
+ * are shorter than the rest below 576px, where the text and not the thumbnail is what a
+ * row is as tall as.
+ */
 .layout-item-info {
   flex: 1 1 auto;
   min-width: 0;
+  display: grid;
+}
+
+.layout-item-info > * {
+  grid-area: 1 / 1;
+}
+
+.info-sizer {
+  visibility: hidden;
+}
+
+.info-content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.info-content-center {
+  align-items: center;
+}
+
+/*
+ * The name and its marker share a line. The name is the part that gives way, so the
+ * marker keeps its size and the name truncates against it.
+ */
+.layout-item-name {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+}
+
+.current-tag {
+  flex-shrink: 0;
+  padding: 0 0.3em;
+  border: 1px solid var(--bs-primary);
+  border-radius: var(--bs-border-radius-sm);
+  color: var(--bs-primary);
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .layout-item-actions {

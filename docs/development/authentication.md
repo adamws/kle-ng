@@ -560,7 +560,7 @@ sign-in.
 | ----------------------------------------- | --------------------------------------------------------- | ---------------------------------------- |
 | You only see your own layouts             | RLS `layouts_select_own`                                  | none — no query filters by user id       |
 | You cannot write another's row            | RLS `layouts_insert_own` / `layouts_update_own`           | none                                     |
-| Max 5 layouts per user                    | `layouts_enforce_quota` trigger                           | `isFull` disables the button, cosmetic   |
+| Max 5 layouts per user                    | `layouts_enforce_quota` trigger                           | none — a full list has no vacant slot    |
 | Name 1–120 chars                          | `layouts_name_length` check                               | `maxlength` on the input, cosmetic       |
 | Payload ≤ 32768 chars                     | `layouts_payload_length` check                            | `MAX_PAYLOAD_LENGTH` pre-check, cosmetic |
 | `updated_at` / `created_at`               | `layouts_set_updated_at` trigger                          | never sent                               |
@@ -570,9 +570,9 @@ sign-in.
 | A short link id maps to one layout        | `short_links.hash` unique + server-side sha256            | never sends a hash                       |
 | Max 60 new short links per user, per hour | rolling `count(*)` on `created_by` in `create_short_link` | none — surfaced as a toast               |
 
-Note that the quota counts **inserts only**. Saving over an existing name is an update, so re-saving
-work in place stays possible at the limit — which is exactly what `MyLayoutsModal` turns the
-**Save current** button into when the typed name matches a saved one.
+Note that the quota counts **inserts only**. Saving over a layout is an update, so re-saving work in
+place stays possible at the limit — which is why the **Save** on a filled row in `MyLayoutsModal`
+stays available with every slot used, and only the vacant-slot save runs out.
 
 ### RLS verification (`supabase/tests/rls-verification.sql`)
 
@@ -751,22 +751,54 @@ way to change the theme at all.
 
 The **My Layouts** button lives in `KeyboardToolbar.vue` behind `v-if="authStore.isSignedIn"`, and
 the modal is mounted there too (not in `App.vue`, alongside the other toolbar modals). Opening it
-sets `saveName` from the layout metadata, clears any pending state, and calls `store.fetchAll(true)`.
+clears any pending state, takes the slot order, and calls `store.fetchAll(true)`.
 
-- **Save row** — name input (`maxlength` = `MAX_NAME_LENGTH`) and a button that reads **Save current**
-  or **Update** depending on `existingByName` (case-insensitive, whitespace-trimmed match against the
-  saved names). `canSave` also gates on `store.loading`, because until the refetch lands the list is
-  empty or stale and a name would be matched against it wrongly. Updating asks for confirmation
-  **inside the matching row**, so it is obvious which layout is about to change.
-- **Rows** — `LayoutThumbnail` + name + `"N keys · updated <date>"`, with **Load** / rename / delete.
-  Load asks "Discard unsaved changes?" only when `keyboardStore.dirty`. Confirmation prompts take the
-  description's line rather than sitting among the buttons, so row height and column widths hold.
-- **Quota warning** — shown only once `store.isFull`, naming `store.quota` (the value read from the
-  database, not a hardcoded 5).
-- **Escape** backs out of the innermost interaction first: pending confirmation → rename → close.
-- Decoded payloads are cached in a `Map` keyed by layout id, invalidated on save/overwrite/delete. A
-  payload that will not decode yields `null`, and the row degrades to a placeholder with **Load**
-  disabled rather than taking the whole list down.
+**The slot is the destination.** There is no name field above the list deciding which row a save
+means: every row carries the action that targets it, so the row pressed is the row written.
+
+- **Rows** — `LayoutThumbnail` + name + `"N keys · updated <date>"`, with **Load** / **Save** /
+  rename / delete. **Save** on a filled row asks "Replace with the editor contents?" and keeps the
+  slot's name; renaming is a separate action. Load asks "Discard unsaved changes?" only when
+  `keyboardStore.dirty`. Confirmation prompts take the description's line rather than sitting among
+  the buttons, so row height and column widths hold.
+- **Vacant rows** — each is a destination in its own right: the whole row takes a click, and its
+  button turns the row into a name field (prefilled from the layout metadata, empty rather than
+  falling back to `filename`) with ✓/✗. `.layout-item-actions` stops its own clicks, or the delete
+  confirmation would empty a row and then be read again by the row as "save here".
+- **A fixed order per session** (`slotOrder`) — layout ids with `null` for a vacancy, taken on open
+  and then left alone. A delete empties its slot **where it stands** instead of pulling the rows
+  beneath it up, and the next save drops into that gap; a row only ever changes what is in it, never
+  where it is, for as long as the modal is on screen. Reopening rebuilds the order from the store —
+  oldest first, `created_at` ascending — which is when the gaps close up. Layouts the order does not
+  know about (another tab, a refetch) fall into the gaps rather than disappearing.
+- **Slot caption** — always present, so filling the last slot changes the sentence (`3 of 5 slots
+used` → `All 5 slots are used — save over one, or delete one to free a slot.`) and not the height.
+  It replaces a banner that appeared on the fifth save and pushed the whole list down. `store.quota`
+  is the value read from the database, not a hardcoded 5. An error takes this line too, absolutely
+  positioned over the caption and anchored to the top of it: the dialog is centred, so a line that
+  appears in the flow moves every row half its height, and a line that grows upward would cover the
+  buttons of the last row — which is where a failed save leaves its name field waiting to be tried
+  again.
+- **The current-layout marker** — `store.activeId` plus `store.activeToken`, set on Load and on a
+  successful save. The token is `keyboardStore.layoutGeneration`, which moves whenever the editor's
+  contents are replaced wholesale — `loadKeyboard()` (so every import, preset, share link and gist),
+  `clearLayout()`, the sample layout — so a new layout retires the mark without the layouts store
+  having to watch the editor. Editing does not retire it, and neither does an undo or the JSON
+  panel's **Apply**: the mark says where the work came from, not that it is untouched since, and an
+  edited layout is exactly the one you want to put back in its own slot. `layoutGeneration` is
+  deliberately not `resetViewTrigger`, which moves at the same three places today but exists to make
+  the canvas recentre — a view reset added for some other reason must not retire a mark. The marked
+  row gets a `Current` tag and the filled (rather than outline) **Save**. The tag is not a `.badge` —
+  that Bootstrap partial is not imported.
+- **Escape** backs out of the innermost interaction first: pending confirmation → rename → naming a
+  new layout → close.
+- Decoded payloads are cached in a `Map` keyed by **the payload**, not by the layout id. An id
+  survives an overwrite, so an id-keyed cache had to be invalidated by hand — and that ran after the
+  store mutation had already queued the re-render, so a row could redraw from the entry about to be
+  dropped and keep the old picture. Keyed by payload there is nothing to invalidate: new contents are
+  a new key, and a miss is also when entries nothing points at any more are swept. A payload that
+  will not decode yields `null`, and the row degrades to a placeholder with **Load** disabled rather
+  than taking the whole list down.
 
 ### `LayoutThumbnail.vue`
 
@@ -804,14 +836,15 @@ generally are. The archive is named `kle-ng-layouts-YYYY-MM-DD.zip`.
 | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `src/config/__tests__/supabase.spec.ts`             | Both env vars required, HTTPS enforced in PROD only, local-instance detection, the DEV + local gate on the test user, `VITE_TEST_USER_*` ignored, memoisation                                                                                           |
 | `src/stores/__tests__/auth.spec.ts`                 | `initialize()` no-ops when unconfigured and **does not load supabase-js for an anonymous visitor**, session restore, PKCE exchange + URL cleanup, provider errors, run-once, metadata fallbacks, `signIn`/`signInAsTestUser`/`signOut`/`getAccessToken` |
-| `src/stores/__tests__/layouts.spec.ts`              | snake_case mapping, quota read over RPC, fetch caching, insert without `user_id`, quota-error translation, scoped update/delete, `isFull`, `reset()`                                                                                                    |
+| `src/stores/__tests__/layouts.spec.ts`              | snake_case mapping, quota read over RPC, fetch caching, oldest-first ordering, insert without `user_id`, quota-error translation, scoped update/delete, `isFull`, `reset()`                                                                             |
 | `src/utils/__tests__/short-links.spec.ts`           | Id validation, `?s=` build/take/clear (preserving `?code=` and the fragment), and the raw-fetch resolver: request shape, 200+`null` for an unknown id, 404 as a missing function, and that supabase-js is never loaded                                  |
 | `src/stores/__tests__/short-links.spec.ts`          | RPC call shape, every `describeError()` branch, `busy` lifecycle, re-entrancy, oversized payload short-circuit, unconfigured                                                                                                                            |
 | `src/stores/__tests__/keyboard-short-links.spec.ts` | `loadFromShortLink()` success / unknown id / resolver failure / decode guards, and the startup dispatch including `#share=` winning over `?s=`                                                                                                          |
 | `src/utils/__tests__/auth-return-url.spec.ts`       | The fragment/callback edge cases listed under [Auth Flow](#auth-flow)                                                                                                                                                                                   |
 | `src/utils/__tests__/zip.spec.ts`                   | CRC-32 vectors, central-directory round-trip, store + UTF-8 flags, MS-DOS timestamps, reproducibility, empty archive, entry-count guard                                                                                                                 |
 | `src/components/__tests__/AccountMenu.spec.ts`      | Theme entries present even unconfigured and reachable while `busy`, GitHub entry, test-user entry hidden unless available, avatar-only identification with the name only in the accessible label                                                        |
-| `src/components/__tests__/MyLayoutsModal.spec.ts`   | Name prefill rules, quota messaging, row actions, save-vs-update behaviour (including waiting for the refetch), and the whole Download-all path                                                                                                         |
+| `src/components/__tests__/MyLayoutsModal.spec.ts`   | Fixed slot count, the order a session fixes (a delete empties in place, the next save fills that gap, reopening closes it), naming a new layout, saving into and over a slot, the current-layout marker, disabled-button explanations, and Download all |
+| `src/stores/__tests__/keyboard.spec.ts`             | `layoutGeneration` (the counter the current-layout marker is paired with): moves on `loadKeyboard`/`loadKLELayout`/`clearLayout`, and not for an edit, an undo, or `updateLayoutFromJson`                                                               |
 
 `auth.spec.ts` and `layouts.spec.ts` mock `@/config/supabase` and `@/utils/supabase-loader` with
 `vi.hoisted()` and hand a fake client to `getSupabaseClient`, so no test ever touches a real project.

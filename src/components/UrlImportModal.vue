@@ -18,8 +18,8 @@
               @keyup.enter="importFromUrl"
             />
             <div class="form-text">
-              Paste a link to a JSON file, GitHub Gist, Ergogen layout, or a kle-ng share or
-              short link. All formats are automatically detected.
+              Paste a link to a JSON file, GitHub Gist, Ergogen layout, or a kle-ng share or short
+              link. All formats are automatically detected.
             </div>
           </div>
         </div>
@@ -45,11 +45,7 @@ import { useKeyboardStore } from '@/stores/keyboard'
 import { toast } from '@/composables/useToast'
 import { processJsonLayout } from '@/utils/json-layout-processor'
 import { decodeLayoutFromUrl, fetchGistLayout, loadErgogenKeyboard } from '@/utils/url-sharing'
-import {
-  SHORT_LINK_PARAM,
-  isValidShortLinkId,
-  resolveShortLinkPayload,
-} from '@/utils/short-links'
+import { SHORT_LINK_PARAM, isValidShortLinkId, resolveShortLinkPayload } from '@/utils/short-links'
 
 interface Props {
   isVisible: boolean

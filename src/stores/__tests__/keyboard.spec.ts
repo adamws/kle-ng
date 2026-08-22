@@ -498,6 +498,49 @@ describe('Keyboard Store', () => {
       expect(store.filename).toBe('')
     })
 
+    /*
+     * `layoutGeneration` is how anything outside the editor tells "this is still the
+     * layout you were given" from "this is a different one now" — My Layouts pairs it
+     * with a saved layout's id to mark the row the editor's work came from. It is kept
+     * apart from `resetViewTrigger`, which moves at the same three places today but
+     * exists to make the canvas recentre.
+     */
+    describe('layoutGeneration', () => {
+      it('moves when the contents are replaced wholesale', () => {
+        const start = store.layoutGeneration
+
+        store.loadKLELayout([['Q']])
+        expect(store.layoutGeneration).toBe(start + 1)
+
+        store.loadKeyboard({ keys: [new Key()], meta: new KeyboardMetadata() })
+        expect(store.layoutGeneration).toBe(start + 2)
+
+        store.clearLayout()
+        expect(store.layoutGeneration).toBe(start + 3)
+      })
+
+      /*
+       * Editing is not being handed something else. Applying JSON is the case worth
+       * pinning down: it replaces every key in one go, but it preserves the undo history
+       * precisely because it edits the open layout rather than replacing it — so a mark
+       * that says where the work came from should survive it, as it survives an undo.
+       */
+      it('does not move for an edit, an undo, or applying JSON', () => {
+        store.loadKLELayout([['Q']])
+        const generation = store.layoutGeneration
+
+        store.addKey()
+        expect(store.layoutGeneration).toBe(generation)
+
+        store.undo()
+        expect(store.layoutGeneration).toBe(generation)
+
+        store.updateLayoutFromJson([['Q', 'W']])
+        expect(store.keys).toHaveLength(2)
+        expect(store.layoutGeneration).toBe(generation)
+      })
+    })
+
     // Editing the JSON of the open layout is not a replacement, so its name stands.
     it('should keep the filename when the layout is edited in place', () => {
       store.filename = 'my-board'

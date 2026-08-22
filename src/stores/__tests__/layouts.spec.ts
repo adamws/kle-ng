@@ -48,6 +48,7 @@ function fakeClient(options: FakeOptions = {}) {
   const calls = {
     insert: [] as unknown[],
     update: [] as unknown[],
+    order: [] as unknown[][],
     eq: [] as unknown[][],
     deletes: 0,
   }
@@ -56,7 +57,10 @@ function fakeClient(options: FakeOptions = {}) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const builder: any = {}
   builder.select = vi.fn(() => builder)
-  builder.order = vi.fn(() => builder)
+  builder.order = vi.fn((column: string, options: unknown) => {
+    calls.order.push([column, options])
+    return builder
+  })
   builder.single = vi.fn(() => builder)
   builder.eq = vi.fn((column: string, value: unknown) => {
     calls.eq.push([column, value])
@@ -166,6 +170,43 @@ describe('layouts store', () => {
   })
 
   describe('save', () => {
+    /*
+     * A layout's position in the list is decided when it is created and nothing
+     * afterwards moves it: the modal draws the list as a row of slots, and sorting by
+     * `updated_at` — as this used to — put a layout at the top the moment it was saved,
+     * dragging the row that had just been clicked out from under the pointer.
+     */
+    it('reads them oldest first, so a slot keeps its place', async () => {
+      const client = fakeClient({ select: { data: [ROW_A, ROW_B], error: null } })
+      mocks.getSupabaseClient.mockResolvedValue(client)
+      const store = useLayoutsStore()
+
+      await store.fetchAll()
+
+      // The database does the ordering; this keeps what it returned
+      expect(client.calls.order).toEqual([['created_at', { ascending: true }]])
+      expect(store.layouts.map((layout) => layout.id)).toEqual(['id-a', 'id-b'])
+    })
+
+    it('appends a new layout rather than putting it at the top', async () => {
+      const client = fakeClient({ insert: { data: ROW_B, error: null } })
+      mocks.getSupabaseClient.mockResolvedValue(client)
+      const store = useLayoutsStore()
+      store.layouts = [
+        {
+          id: 'id-a',
+          name: 'Alpha',
+          payload: 'payload-a',
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-02T00:00:00Z',
+        },
+      ]
+
+      await store.save('Beta', 'payload-b')
+
+      expect(store.layouts.map((layout) => layout.id)).toEqual(['id-a', 'id-b'])
+    })
+
     it('inserts without a user_id — the schema defaults it from the JWT', async () => {
       const client = fakeClient({ insert: { data: ROW_A, error: null } })
       mocks.getSupabaseClient.mockResolvedValue(client)

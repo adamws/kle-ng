@@ -117,6 +117,25 @@ export const useKeyboardStore = defineStore('keyboard', () => {
 
   const resetViewTrigger = ref(0) // Incremented when layout changes to trigger view reset
 
+  /**
+   * Counts wholesale replacements of the editor's contents: `loadKeyboard()` — which is
+   * every import, preset, share link and gist — `clearLayout()`, and the sample layout.
+   *
+   * It is how something outside the editor tells "this is still the layout you were
+   * given" from "this is a different one now" without watching the keys themselves. My
+   * Layouts pairs it with a saved layout's id to mark the row the editor came from.
+   *
+   * Editing is deliberately not a replacement, so this does not move for a key edit, an
+   * undo, or `updateLayoutFromJson()`: that path preserves the undo history precisely
+   * because it edits the open layout rather than replacing it. What its readers mark is
+   * where the work came from, not that it is untouched since.
+   *
+   * Kept apart from `resetViewTrigger`, which moves at the same three places today, on
+   * purpose: that one exists to make the canvas recentre, and a view reset added for
+   * some unrelated reason must not silently retire a mark that means something else.
+   */
+  const layoutGeneration = ref(0)
+
   const canvasMode = ref<'select' | 'mirror-h' | 'mirror-v' | 'rotate' | 'move-exactly'>('select')
   const moveStep = ref(0.25)
 
@@ -600,6 +619,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
       saveState()
       updateBaseline()
       resetViewTrigger.value++ // Trigger view reset (will preserve zoom, reset pan only)
+      layoutGeneration.value++
 
       // Clear render caches when loading new layout
       clearRenderCaches()
@@ -641,6 +661,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     saveState()
     updateBaseline()
     resetViewTrigger.value++ // Trigger view reset
+    layoutGeneration.value++
   }
 
   /**
@@ -761,6 +782,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
       saveState()
       updateBaseline()
       resetViewTrigger.value++
+      layoutGeneration.value++
     } catch (error) {
       console.error('Error loading sample layout:', error)
       saveState()
@@ -1570,6 +1592,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     history,
     dirty,
     resetViewTrigger,
+    layoutGeneration,
 
     // Toolbar state
     canvasMode,

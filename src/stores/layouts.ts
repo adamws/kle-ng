@@ -104,6 +104,30 @@ export const useLayoutsStore = defineStore('layouts', () => {
   const loaded = ref(false)
   const errorMessage = ref<string | null>(null)
 
+  /**
+   * Which saved layout the editor's work came from, if any: the slot a Load came from, or
+   * the one a save has just written to. The modal marks that row so re-saving your work
+   * is a matter of pressing the button you can see rather than remembering where it came
+   * from.
+   *
+   * `activeToken` is what keeps the mark honest. It holds the value
+   * `keyboardStore.layoutGeneration` had when the mark was set, and that counter moves
+   * whenever the editor's contents are replaced wholesale — an import, a preset, a share
+   * link, a new layout. Comparing the two retires the mark on its own, without this store
+   * having to watch the editor.
+   *
+   * Editing does not retire it, deliberately, and neither does an undo: the mark says
+   * where the work came from, not that it is untouched since. That is what makes it
+   * useful — an edited layout is exactly the one you want to put back in its own slot.
+   */
+  const activeId = ref<string | null>(null)
+  const activeToken = ref<number | null>(null)
+
+  const markActive = (id: string | null, token: number | null = null) => {
+    activeId.value = id
+    activeToken.value = token
+  }
+
   const count = computed(() => layouts.value.length)
   const isFull = computed(() => count.value >= quota.value)
 
@@ -124,9 +148,16 @@ export const useLayoutsStore = defineStore('layouts', () => {
     return true
   }
 
-  /** Newest first, matching the (user_id, updated_at desc) index. */
+  /**
+   * Oldest first, which is what makes a row a slot: a layout's position is decided when
+   * it is created and nothing afterwards moves it.
+   *
+   * This used to sort by `updatedAt` descending. That put a layout at the top of the list
+   * the moment it was written, so saving into the fourth slot dragged it to the first and
+   * pushed every other row down — under the pointer that had just clicked it.
+   */
   const sortInPlace = () => {
-    layouts.value.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    layouts.value.sort((a, b) => a.createdAt.localeCompare(b.createdAt))
   }
 
   const fetchAll = async (force = false): Promise<void> => {
@@ -145,7 +176,10 @@ export const useLayoutsStore = defineStore('layouts', () => {
       const { data, error } = await supabase
         .from('layouts')
         .select(COLUMNS)
-        .order('updated_at', { ascending: false })
+        // Ascending by creation, matching sortInPlace(): the list is a row of slots and a
+        // slot keeps its place. The (user_id, updated_at desc) index still serves the user
+        // filter, and at a five-row quota the sort itself costs nothing.
+        .order('created_at', { ascending: true })
       if (error) throw error
 
       layouts.value = ((data ?? []) as LayoutRow[]).map(toSavedLayout)
@@ -176,7 +210,9 @@ export const useLayoutsStore = defineStore('layouts', () => {
       if (error) throw error
 
       const saved = toSavedLayout(data as LayoutRow)
-      layouts.value.unshift(saved)
+      // Appended, not unshifted: a new layout belongs in the slot it was saved into,
+      // which is the first vacant one — the end of the list.
+      layouts.value.push(saved)
       sortInPlace()
       return saved
     } catch (error) {
@@ -244,6 +280,7 @@ export const useLayoutsStore = defineStore('layouts', () => {
       if (error) throw error
 
       layouts.value = layouts.value.filter((layout) => layout.id !== id)
+      if (activeId.value === id) markActive(null)
       return true
     } catch (error) {
       console.error('Error deleting layout:', error)
@@ -261,6 +298,7 @@ export const useLayoutsStore = defineStore('layouts', () => {
     loading.value = false
     busy.value = false
     errorMessage.value = null
+    markActive(null)
   }
 
   return {
@@ -270,6 +308,9 @@ export const useLayoutsStore = defineStore('layouts', () => {
     busy,
     loaded,
     errorMessage,
+    activeId,
+    activeToken,
+    markActive,
     count,
     isFull,
     fetchAll,
