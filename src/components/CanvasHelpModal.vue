@@ -202,6 +202,7 @@
 
 <script setup lang="ts">
 import BaseHelpModal from './BaseHelpModal.vue'
+import BiBook from 'bootstrap-icons/icons/book.svg'
 import BiMouse from 'bootstrap-icons/icons/mouse.svg'
 import BiBoxArrowUpRight from 'bootstrap-icons/icons/box-arrow-up-right.svg'
 import BiLightbulb from 'bootstrap-icons/icons/lightbulb.svg'
