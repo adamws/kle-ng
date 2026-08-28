@@ -9,13 +9,13 @@ The canvas editor is the main working area of kle-ng. It provides a full set of 
 
 The toolbar on the left side of the canvas contains the main editing tools:
 
-|                                                                           Icon                                                                           | Tool                                                | Description                                                                                                                                                       |
-| :------------------------------------------------------------------------------------------------------------------------------------------------------: | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|        <img src="/selection-tool-icon-light.png" class="light-only" alt="" /><img src="/selection-tool-icon-dark.png" class="dark-only" alt="" />        | [**Selection Tool**](#selection-tool)               | Select, move, resize keys                                                                                                                                         |
-|     <img src="/move-exactly-tool-icon-light.png" class="light-only" alt="" /><img src="/move-exactly-tool-icon-dark.png" class="dark-only" alt="" />     | [**Move Exactly Tool**](#move-exactly-tool)         | Move keys by a precise amount                                                                                                                                     |
-| <img src="/rotate-selection-tool-icon-light.png" class="light-only" alt="" /><img src="/rotate-selection-tool-icon-dark.png" class="dark-only" alt="" /> | [**Rotate Selection Tool**](#rotate-selection-tool) | Rotate selected keys around anchor points                                                                                                                         |
-|           <img src="/mirror-tool-icon-light.png" class="light-only" alt="" /><img src="/mirror-tool-icon-dark.png" class="dark-only" alt="" />           | [**Mirror Tool**](#mirror-tool)                     | Create mirrored copies of selected keys                                                                                                                           |
-|           <img src="/extra-tools-icon-light.png" class="light-only" alt="" /><img src="/extra-tools-icon-dark.png" class="dark-only" alt="" />           | [**Extra Tools**](#extra-tools)                     | [Legend Tools](#legend-tools), [Matrix Coordinates](#add-switch-matrix-coordinates), [Move Rotation Origins](#move-rotation-origins), [Theme Tools](#theme-tools) |
+|                                                                           Icon                                                                           | Tool                                                | Description                                                                                                                                                                                                                                   |
+| :------------------------------------------------------------------------------------------------------------------------------------------------------: | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|        <img src="/selection-tool-icon-light.png" class="light-only" alt="" /><img src="/selection-tool-icon-dark.png" class="dark-only" alt="" />        | [**Selection Tool**](#selection-tool)               | Select, move, resize keys                                                                                                                                                                                                                     |
+|     <img src="/move-exactly-tool-icon-light.png" class="light-only" alt="" /><img src="/move-exactly-tool-icon-dark.png" class="dark-only" alt="" />     | [**Move Exactly Tool**](#move-exactly-tool)         | Move keys by a precise amount                                                                                                                                                                                                                 |
+| <img src="/rotate-selection-tool-icon-light.png" class="light-only" alt="" /><img src="/rotate-selection-tool-icon-dark.png" class="dark-only" alt="" /> | [**Rotate Selection Tool**](#rotate-selection-tool) | Rotate selected keys around anchor points                                                                                                                                                                                                     |
+|           <img src="/mirror-tool-icon-light.png" class="light-only" alt="" /><img src="/mirror-tool-icon-dark.png" class="dark-only" alt="" />           | [**Mirror Tool**](#mirror-tool)                     | Create mirrored copies of selected keys                                                                                                                                                                                                       |
+|           <img src="/extra-tools-icon-light.png" class="light-only" alt="" /><img src="/extra-tools-icon-dark.png" class="dark-only" alt="" />           | [**Extra Tools**](#extra-tools)                     | [Legend Tools](#legend-tools), [Matrix Coordinates](#add-switch-matrix-coordinates), [Move Rotation Origins](#move-rotation-origins), [Theme Tools](#theme-tools), [Sanitize Layout](#sanitize-layout), [Character Picker](#character-picker) |
 
 ## Mouse Controls {#mouse-controls}
 
@@ -118,13 +118,14 @@ Create mirrored copies of selected keys with the **Mirror Tool**. Choose a mirro
 
 ## Extra Tools {#extra-tools}
 
-Extra tools are grouped under a single button in the left toolbar. There are five:
+Extra tools are grouped under a single button in the left toolbar. There are six:
 
 1. **Legend Tools** — bulk legend editing
 2. **Add Switch Matrix Coordinates** — assign VIA-style row/column labels
 3. **Move Rotation Origins** — recalculate key positions with a new rotation reference point
 4. **Theme Tools** — apply color themes to the layout
 5. **Sanitize Layout** — find and clean up redundant JSON properties and layout offsets
+6. **Character Picker** — search and insert special characters into labels
 
 ### Legend Tools
 
@@ -220,6 +221,21 @@ Each rule shows a count of how many keys or properties it would affect. Rules wi
 
 ::: tip
 Applying fixes creates a single undo step, so <kbd>Ctrl</kbd>+<kbd>Z</kbd> reverts everything the tool changed at once.
+:::
+
+### Character Picker
+
+The **Character Picker** lets you search and insert symbols and special characters — accented letters, arrows, Greek and Cyrillic letters, math symbols, and more — directly into a key's labels without leaving the editor. Open it from **Extra Tools → Character Picker**.
+
+<img src="/character-picker-panel-light.png" class="docs-screenshot light-only" alt="Character Picker panel" />
+<img src="/character-picker-panel-dark.png" class="docs-screenshot dark-only" alt="Character Picker panel" />
+
+Select a key, then click into the label position you want to fill. Type in the search box to find a character by name (e.g. "heart", "alpha", "copy"), or browse by category using the tabs above the grid. Click a character tile to insert it at the cursor position in the active label — the panel stays open so you can insert several characters in a row. With multiple keys selected, the character is inserted into the same label position on all of them.
+
+Recently used characters appear in their own row above the grid for quick reuse.
+
+::: tip
+Hover a character tile to see its name and Unicode code point.
 :::
 
 ## Label Search {#label-search}

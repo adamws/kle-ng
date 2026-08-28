@@ -42,6 +42,10 @@ Each label position has an independent **color picker** next to the input field.
 
 Use **Clear all** to remove all labels at once from either the top or front face.
 
+::: tip
+Need a symbol that's not on your keyboard? Use **Extra Tools → [Character Picker](./layout-editor#character-picker)** to search and insert special characters directly into a label.
+:::
+
 ## Text Size
 
 **Default Text Size** applies to all labels on the selected key(s) that don't have a per-label size set. Values range from 1 (smallest) to 9 (largest).
