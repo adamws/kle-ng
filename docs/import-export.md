@@ -357,25 +357,29 @@ Click the **Export** button in the toolbar to access all export options:
 
 ### Available Export Formats
 
-| Option                      | Format        | Notes                                                                                        |
-| --------------------------- | ------------- | -------------------------------------------------------------------------------------------- |
-| Download JSON               | KLE JSON      | Standard KLE format                                                                          |
-| Download PNG                | PNG           | Canvas-quality image with embedded layout data                                               |
-| Download HTML               | HTML          | Self-contained keyboard render                                                               |
-| Download SVG                | SVG           | Vector graphics                                                                              |
-| Download QMK JSON           | QMK info.json | Only available when keys have matrix coordinates                                             |
-| Download VIA JSON           | VIA/Vial JSON | Only available when VIA metadata is present                                                  |
-| Copy share link             | URL           | Generates a shareable `#share=` URL                                                          |
-| Create short link           | URL           | Short `?s=` link stored on the server; requires sign-in, public and permanent, never expires |
-| Edit in Ergogen Web GUI     | URL (new tab) | Opens [ergogen.xyz](https://ergogen.xyz/) with the layout preloaded                          |
-| Open in Shield Wizard (ZMK) | URL (new tab) | Opens the [ZMK Shield Wizard](https://shield-wizard.genteure.com/) with the layout preloaded |
+| Option                                    | Format                                             | Notes                                                                                                                                                                         |
+| ----------------------------------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Download JSON                             | KLE JSON                                           | Standard KLE format                                                                                                                                                           |
+| Download PNG                              | PNG                                                | Canvas-quality image with embedded layout data                                                                                                                                |
+| Download HTML                             | HTML                                               | Self-contained keyboard render                                                                                                                                                |
+| Download SVG                              | SVG                                                | Vector graphics                                                                                                                                                               |
+| Download QMK JSON                         | QMK info.json                                      | Only available when keys have matrix coordinates                                                                                                                              |
+| Download VIA JSON                         | VIA/Vial JSON                                      | Only available when VIA metadata is present                                                                                                                                   |
+| Download keymap-drawer Layout             | keymap-drawer physical layout JSON                 | Automatically resolves reading order and rotation origins — no manual re-order step                                                                                           |
+| Download keymap-drawer Starter Kit (.zip) | keymap-drawer layout JSON + `keymap.yaml` skeleton | Ready-to-edit starting point for [keymap-drawer](https://github.com/caksoylar/keymap-drawer)                                                                                  |
+| Copy share link                           | URL                                                | Generates a shareable `#share=` URL                                                                                                                                           |
+| Create short link                         | URL                                                | Short `?s=` link stored on the server; requires sign-in, public and permanent, never expires                                                                                  |
+| Edit in Ergogen Web GUI                   | URL (new tab)                                      | Opens [ergogen.xyz](https://ergogen.xyz/) with the layout preloaded                                                                                                           |
+| Open in Shield Wizard (ZMK)               | URL (new tab)                                      | Opens the [ZMK Shield Wizard](https://shield-wizard.genteure.com/) with the layout preloaded                                                                                  |
+| Open in keymap-drawer Web App             | URL (new tab) + JSON download                      | Opens [keymap-drawer's web app](https://caksoylar.github.io/keymap-drawer) with a starter keymap preloaded; also downloads the layout JSON for its "Layout override" uploader |
 
 ## Open in External Web Tools {#external-web-tools}
 
-Two Export options hand the current layout off to an external web app instead of producing a file. kle-ng encodes the layout into the target app's URL (compressed KLE data in the URL hash) and opens it in a new tab, so there is no file to download or paste.
+Three Export options hand the current layout off to an external web app instead of only producing a file. kle-ng encodes the layout into the target app's URL and opens it in a new tab.
 
-- **Edit in Ergogen Web GUI** — opens [ergogen.xyz](https://ergogen.xyz/) with the layout loaded as an Ergogen config.
-- **Open in Shield Wizard (ZMK)** — opens the [ZMK Shield Wizard](https://shield-wizard.genteure.com/), which builds a **physical layout** from your keys so you can configure a custom [ZMK](https://zmk.dev/) shield without writing code.
+- **Edit in Ergogen Web GUI** — opens [ergogen.xyz](https://ergogen.xyz/) with the layout loaded as an Ergogen config. Fully self-contained: the layout travels in the URL, nothing else to do.
+- **Open in Shield Wizard (ZMK)** — opens the [ZMK Shield Wizard](https://shield-wizard.genteure.com/), which builds a **physical layout** from your keys so you can configure a custom [ZMK](https://zmk.dev/) shield without writing code. Also fully self-contained.
+- **Open in keymap-drawer Web App** — opens [keymap-drawer's web app](https://caksoylar.github.io/keymap-drawer) with a starter `keymap.yaml` preloaded. Unlike the other two, this one needs one extra manual step — see below.
 
 ### Shield Wizard (ZMK) hand-off {#zmk-wizard}
 
@@ -387,6 +391,18 @@ When you choose **Open in Shield Wizard (ZMK)**:
 
 ::: info Matrix row/col is inferred
 kle-ng sends physical geometry (positions, sizes, rotations), not matrix wiring. The Shield Wizard derives each key's **row/col from physical position** by default. If you need deterministic matrix coordinates, give every key a `row,col` legend before exporting (the same top-left `row,col` annotation used for [QMK export](#qmk-export)) — the wizard honors those legends when **all** keys have them, and otherwise falls back to geometry inference.
+:::
+
+### keymap-drawer Web App hand-off {#keymap-drawer-web-app}
+
+When you choose **Open in keymap-drawer Web App**:
+
+1. A new tab opens at [caksoylar.github.io/keymap-drawer](https://caksoylar.github.io/keymap-drawer) with its YAML editor pre-filled with a starter keymap — the same `layout`/`layers`/`combos` scaffold as the [Starter Kit](#keymap-drawer-export) download, referencing a `<name>-keymap-drawer.json` layout file.
+2. The matching layout JSON downloads automatically to your computer.
+3. **One manual step is unavoidable here**: unlike the Ergogen and ZMK Wizard hand-offs, the web app has no way to receive actual key geometry through a URL — its `qmk_info_json` field only ever accepts a real file. Drop the file from step 2 into the web app's **Layout override** panel (next to the visualization) to see your keyboard's shape. Until you do, the app shows a `FileNotFoundError` for the placeholder filename — that's expected.
+
+::: info Why not fully self-contained like the others?
+Ergogen and the ZMK Shield Wizard can decode full key geometry from their own URL directly. keymap-drawer's web app can only pre-fill the YAML _text_ this way — physical layout data has to come from an uploaded file, a limitation of the app itself rather than something kle-ng's encoding can work around.
 :::
 
 ## QMK Export {#qmk-export}
@@ -439,6 +455,48 @@ When exported, the QMK `info.json` contains two separate layout definitions:
 
 - `LAYOUT_iso`: all shared keys + keys tagged with layout 0
 - `LAYOUT_ansi`: all shared keys + keys tagged with layout 1
+
+## keymap-drawer Export {#keymap-drawer-export}
+
+[keymap-drawer](https://github.com/caksoylar/keymap-drawer) renders a visual diagram of a keymap from a YAML file, but it has no native KLE import — its own docs point users at a third-party web tool to convert a KLE layout into its physical-layout format, including a manual "Re-order" step to fix key ordering. kle-ng exports directly to that format and resolves ordering and rotation automatically, so no external tool or manual re-ordering is needed.
+
+Available from the Export menu:
+
+- **Download keymap-drawer Layout** — a single physical-layout JSON file, ready to reference from a keymap-drawer `qmk_info_json:` field.
+- **Download keymap-drawer Starter Kit (.zip)** — the same layout JSON plus a minimal `keymap.yaml` that already points at it, with one empty tap-legend placeholder per key for you to fill in.
+- **Open in keymap-drawer Web App** — opens [keymap-drawer's own web app](https://caksoylar.github.io/keymap-drawer) with the same starter keymap preloaded in its editor, and downloads the layout JSON alongside it. See [Open in External Web Tools](#keymap-drawer-web-app) for the one manual step this needs. Requires a browser with the [Compression Streams API](https://developer.mozilla.org/en-US/docs/Web/API/Compression_Streams_API) (all current browsers).
+
+All three are enabled whenever the layout has at least one non-decal, non-ghost key — unlike QMK/VIA export, **no matrix annotation is required**, since kle-ng derives everything keymap-drawer needs from the keys' physical geometry.
+
+### What gets exported
+
+Only the fields keymap-drawer's `qmk_info_json` format reads are included: `x`, `y` (top-left corner, key units), `w`, `h` (omitted when `1`), and `r`/`rx`/`ry` (omitted entirely when the key isn't rotated). Labels, colors, profile, stepped/ISO secondary rectangles, and homing nubs have no equivalent in keymap-drawer's physical layout and are dropped — keymap-drawer only draws the primary key rectangle.
+
+::: info Rotation origin is always explicit
+keymap-drawer's docs note that when `rx`/`ry` are omitted, it rotates a key around its own **center** — a different default than other KLE-adjacent tools use, which can silently misplace rotated keys. kle-ng sidesteps this by always emitting `rx` and `ry` whenever a key is rotated, so there's no ambiguity to fall into.
+:::
+
+### Automatic reading order
+
+keymap-drawer does no reordering of its own: the position of each key in the physical-layout array becomes the index that a keymap YAML's `layers` entries and `combos[].key_positions` reference. A KLE layout's raw key order is just creation/edit order, which — especially on split boards or layouts with thumb clusters added out of sequence — often isn't row-major.
+
+kle-ng resolves this automatically before export:
+
+- If every key has a unique `row,col` legend (the same annotation used for [QMK export](#qmk-export)), that ordering is used as-is.
+- Otherwise, keys are ordered by the same row-major, rotation-aware clustering used for automatic matrix annotation — grouping into rows by position and sorting each row left to right, so split halves and rotated thumb clusters interleave correctly without any manual re-ordering step.
+
+### Using the output
+
+Point a keymap-drawer `keymap.yaml` at the downloaded layout file:
+
+```yaml
+layout:
+  qmk_info_json: my-board-keymap-drawer.json
+layers:
+  default: [...]
+```
+
+Then fill in `layers` (and any `combos`) — index `0` is the first key in the downloaded file, in the same order described above. See keymap-drawer's [Physical Layouts](https://github.com/caksoylar/keymap-drawer/blob/main/PHYSICAL_LAYOUTS.md) and [Keymap YAML Spec](https://github.com/caksoylar/keymap-drawer/blob/main/KEYMAP_SPEC.md) docs for the full format.
 
 ## Troubleshooting Import/Export Issues
 

@@ -7,10 +7,18 @@ import { createPngWithKleLayout } from '@/utils/png-metadata'
 import { embedKleLayoutInImageData } from '@/utils/pixel-metadata'
 import { convertKleToVia } from '@/utils/via-import'
 import { convertKleToQmk, formatQmkJson } from '@/utils/qmk-export'
+import {
+  convertKleToKeymapDrawerLayout,
+  formatKeymapDrawerLayoutJson,
+  buildKeymapDrawerYamlSkeleton,
+  buildKeymapDrawerWebAppUrl,
+  isKeymapDrawerWebAppShareSupported,
+} from '@/utils/keymap-drawer-export'
 import { stringifyWithRounding } from '@/utils/serialization'
 import { encodeKeyboardToErgogenUrl } from '@/utils/ergogen-loader'
 import { encodeKeyboardToZmkWizardUrl } from '@/utils/url-sharing'
 import { normalizeLayoutInput, htmlLayoutRenderer, svgLayoutRenderer } from '@/utils/layout-export'
+import { createZip, type ZipEntry } from '@/utils/zip'
 import type { ExtendedKeyboardMetadata } from '@/utils/json-layout-processor'
 
 interface SaveFilePickerWindow {
@@ -45,6 +53,10 @@ export function useKeyboardExport() {
     () => !!(keyboardStore.metadata as ExtendedKeyboardMetadata)._kleng_via_data,
   )
   const canExportQmk = computed(() => keyboardStore.isViaAnnotated)
+  const canExportKeymapDrawer = computed(() => keyboardStore.keys.some((k) => !k.decal && !k.ghost))
+  const canOpenKeymapDrawerWebApp = computed(
+    () => canExportKeymapDrawer.value && isKeymapDrawerWebAppShareSupported(),
+  )
 
   const downloadJson = () => {
     const data = keyboardStore.getSerializedData('kle')
@@ -111,6 +123,55 @@ export function useKeyboardExport() {
     URL.revokeObjectURL(url)
   }
 
+  const downloadKeymapDrawerLayout = () => {
+    const kleData = keyboardStore.getSerializedData('kle')
+    const layout = convertKleToKeymapDrawerLayout(kleData)
+
+    if (!layout) {
+      toast.showError(
+        'Add at least one non-decal, non-ghost key.',
+        'Cannot export keymap-drawer layout',
+      )
+      return
+    }
+
+    const blob = new Blob([formatKeymapDrawerLayoutJson(layout)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}-keymap-drawer.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const downloadKeymapDrawerStarterKit = () => {
+    const kleData = keyboardStore.getSerializedData('kle')
+    const layout = convertKleToKeymapDrawerLayout(kleData)
+
+    if (!layout) {
+      toast.showError(
+        'Add at least one non-decal, non-ghost key.',
+        'Cannot export keymap-drawer starter kit',
+      )
+      return
+    }
+
+    const base = keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'
+    const layoutFilename = `${base}-keymap-drawer.json`
+    const entries: ZipEntry[] = [
+      { name: layoutFilename, text: formatKeymapDrawerLayoutJson(layout) },
+      { name: `${base}-keymap.yaml`, text: buildKeymapDrawerYamlSkeleton(layout, layoutFilename) },
+    ]
+
+    const blob = new Blob([createZip(entries)], { type: 'application/zip' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${base}-keymap-drawer.zip`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const exportToErgogenWebGui = async () => {
     try {
       if (keyboardStore.keys.length === 0) {
@@ -153,6 +214,49 @@ export function useKeyboardExport() {
         error instanceof Error ? error.message : 'Failed to export to ZMK Shield Wizard'
       toast.showError(errorMessage, 'Export Failed')
     }
+  }
+
+  const openInKeymapDrawerWebApp = async () => {
+    const kleData = keyboardStore.getSerializedData('kle')
+    const layout = convertKleToKeymapDrawerLayout(kleData)
+
+    if (!layout) {
+      toast.showError(
+        'Add at least one non-decal, non-ghost key.',
+        'Cannot open in keymap-drawer Web App',
+      )
+      return
+    }
+
+    const base = keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'
+    const layoutFilename = `${base}-keymap-drawer.json`
+
+    try {
+      const webAppUrl = await buildKeymapDrawerWebAppUrl(layout, layoutFilename)
+      window.open(webAppUrl, '_blank', 'noopener,noreferrer')
+    } catch (error) {
+      console.error('Error opening keymap-drawer Web App:', error)
+      toast.showError('Failed to open keymap-drawer Web App', 'Export Failed')
+      return
+    }
+
+    // The web app's qmk_info_json field only ever resolves a file path or an upload —
+    // it can't be inlined into the URL — so the physical layout has to be dropped into
+    // the web app's own "Layout override" uploader once it opens. Download it now so
+    // it's sitting in the user's Downloads folder ready for that.
+    const blob = new Blob([formatKeymapDrawerLayoutJson(layout)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = layoutFilename
+    a.click()
+    URL.revokeObjectURL(url)
+
+    toast.showInfo(
+      `Downloaded ${layoutFilename} — drop it into the "Layout override" panel in the new tab to see your keyboard's shape.`,
+      'keymap-drawer Web App opened',
+      { duration: 8000 },
+    )
   }
 
   // Renders the current keyboard to a PNG blob with the embedded KLE-Layout
@@ -406,12 +510,17 @@ export function useKeyboardExport() {
   return {
     canExportVia,
     canExportQmk,
+    canExportKeymapDrawer,
+    canOpenKeymapDrawerWebApp,
     downloadJson,
     downloadKleInternalJson,
     downloadViaJson,
     downloadQmkJson,
+    downloadKeymapDrawerLayout,
+    downloadKeymapDrawerStarterKit,
     exportToErgogenWebGui,
     exportToZmkWizard,
+    openInKeymapDrawerWebApp,
     downloadPng,
     copyPngToClipboard,
     generateLayoutPngBlob,

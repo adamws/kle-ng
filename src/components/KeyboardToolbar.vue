@@ -133,6 +133,36 @@
                 Download QMK JSON
               </button>
             </li>
+            <li
+              :title="
+                !canExportKeymapDrawer ? 'Add at least one non-decal, non-ghost key.' : undefined
+              "
+            >
+              <button
+                class="dropdown-item"
+                type="button"
+                data-testid="export-keymap-drawer-layout"
+                :disabled="!canExportKeymapDrawer"
+                @click="downloadKeymapDrawerLayout"
+              >
+                Download keymap-drawer Layout
+              </button>
+            </li>
+            <li
+              :title="
+                !canExportKeymapDrawer ? 'Add at least one non-decal, non-ghost key.' : undefined
+              "
+            >
+              <button
+                class="dropdown-item"
+                type="button"
+                data-testid="export-keymap-drawer-starter-kit"
+                :disabled="!canExportKeymapDrawer"
+                @click="downloadKeymapDrawerStarterKit"
+              >
+                Download keymap-drawer Starter Kit (.zip)
+              </button>
+            </li>
             <li>
               <a
                 class="dropdown-item"
@@ -182,6 +212,25 @@
               >
                 Open in Shield Wizard (ZMK) <BiBoxArrowUpRight class="bi" aria-hidden="true" />
               </a>
+            </li>
+            <li
+              :title="
+                !canOpenKeymapDrawerWebApp
+                  ? !canExportKeymapDrawer
+                    ? 'Add at least one non-decal, non-ghost key.'
+                    : 'Your browser does not support the compression this needs (Compression Streams API).'
+                  : undefined
+              "
+            >
+              <button
+                class="dropdown-item d-flex icon-link align-items-baseline"
+                type="button"
+                data-testid="export-keymap-drawer-web-app"
+                :disabled="!canOpenKeymapDrawerWebApp"
+                @click="openInKeymapDrawerWebApp"
+              >
+                Open in keymap-drawer Web App <BiBoxArrowUpRight class="bi" aria-hidden="true" />
+              </button>
             </li>
           </ul>
         </div>
@@ -308,12 +357,17 @@ const loadPreset = async (preset: Preset) => {
 const {
   canExportVia,
   canExportQmk,
+  canExportKeymapDrawer,
+  canOpenKeymapDrawerWebApp,
   downloadJson,
   downloadKleInternalJson,
   downloadViaJson,
   downloadQmkJson,
+  downloadKeymapDrawerLayout,
+  downloadKeymapDrawerStarterKit,
   exportToErgogenWebGui,
   exportToZmkWizard,
+  openInKeymapDrawerWebApp,
   downloadPng,
   downloadHtmlFile,
   downloadSvgFile,
