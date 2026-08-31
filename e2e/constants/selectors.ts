@@ -250,4 +250,22 @@ export const SELECTORS = {
     RESULTS_TAB_3D: '[data-testid="plate-results-tab-3d"]',
     THREE_CANVAS: '[data-testid="plate-3d-canvas"]',
   },
+
+  /**
+   * Curve Layout tool
+   */
+  CURVE_LAYOUT: {
+    PANEL: '[data-testid="curve-layout-panel"]',
+    OVERLAY: '[data-testid="curve-layout-overlay"]',
+    HANDLE: (index: number) => `[data-testid="curve-layout-handle-${index}"]`,
+    BEND: '[data-testid="curve-layout-bend"]',
+    BEND_VALUE: '[data-testid="curve-layout-bend-value"] input',
+    GAP: '[data-testid="curve-layout-gap"] input',
+    FOLLOW: '[data-testid="curve-layout-follow"]',
+    ALLOW_OVERLAPS: '[data-testid="curve-layout-allow-overlaps"]',
+    RESET: '[data-testid="curve-layout-reset"]',
+    APPLY: '[data-testid="curve-layout-apply"]',
+    CANCEL: '[data-testid="curve-layout-cancel"]',
+    CLOSE: '[data-testid="curve-layout-close"]',
+  },
 } as const

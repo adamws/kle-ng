@@ -3,6 +3,7 @@ import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import CanvasToolbar from '../CanvasToolbar.vue'
 import { useKeyboardStore } from '@/stores/keyboard'
+import { useCurveLayoutStore } from '@/stores/curveLayout'
 
 describe('CanvasToolbar', () => {
   beforeEach(() => {
@@ -89,6 +90,47 @@ describe('CanvasToolbar', () => {
       // Standard keys have width2/height2 equal to width/height (not undefined)
       expect(newKey!.width2).toBe(1)
       expect(newKey!.height2).toBe(1)
+    })
+  })
+
+  describe('Curve Layout entry', () => {
+    const mountToolbar = () => mount(CanvasToolbar, { global: { plugins: [createPinia()] } })
+
+    const curveLayoutItem = (wrapper: ReturnType<typeof mountToolbar>) =>
+      wrapper.findAll('.dropdown-item').find((item) => item.text() === 'Curve Layout')
+
+    it('is enabled once there are keys to bend, with or without a selection', async () => {
+      const wrapper = mountToolbar()
+      const store = useKeyboardStore()
+
+      // Nothing to bend yet.
+      expect(curveLayoutItem(wrapper)?.attributes('disabled')).toBeDefined()
+
+      store.addKey()
+      store.selectedKeys.length = 0
+      await wrapper.vm.$nextTick()
+
+      expect(curveLayoutItem(wrapper)?.attributes('disabled')).toBeUndefined()
+    })
+
+    it('is disabled while the tool is already open', async () => {
+      // The panel floats rather than blocking the toolbar, so this entry stays clickable while
+      // an edit is live. Re-opening would snapshot the preview as the original.
+      const wrapper = mountToolbar()
+      const store = useKeyboardStore()
+      store.addKey()
+      await wrapper.vm.$nextTick()
+
+      const curve = useCurveLayoutStore()
+      curve.begin()
+      await wrapper.vm.$nextTick()
+
+      expect(curveLayoutItem(wrapper)?.attributes('disabled')).toBeDefined()
+
+      curve.cancel()
+      await wrapper.vm.$nextTick()
+
+      expect(curveLayoutItem(wrapper)?.attributes('disabled')).toBeUndefined()
     })
   })
 

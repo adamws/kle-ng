@@ -102,6 +102,19 @@
         :scrollTop="containerScrollTop"
       />
 
+      <!-- Curve Layout Overlay -->
+      <CurveLayoutOverlay
+        :visible="keyboardStore.canvasMode === 'curve' && curveLayoutStore.isActive"
+        :canvasWidth="canvasWidth"
+        :canvasHeight="canvasHeight"
+        :zoom="zoom"
+        :unit="renderOptions.unit"
+        :coordinateOffset="dragCoordinateOffset ?? getCoordinateSystemOffset()"
+        :scrollLeft="containerScrollLeft"
+        :scrollTop="containerScrollTop"
+        @drag-state-change="handleCurveDragStateChange"
+      />
+
       <!-- Debug Overlay (development mode only) -->
       <DebugOverlay
         v-if="isDevMode"
@@ -150,6 +163,12 @@
     @angle-change="handleRotationAngleChange"
   />
 
+  <!-- Curve Layout control panel -->
+  <CurveLayoutPanel
+    :visible="keyboardStore.canvasMode === 'curve' && curveLayoutStore.isActive"
+    @close="keyboardStore.setCanvasMode('select')"
+  />
+
   <!-- Move Exactly control modal -->
   <MoveExactlyModal
     :visible="keyboardStore.canvasMode === 'move-exactly' && keyboardStore.selectedKeys.length > 0"
@@ -178,6 +197,7 @@ import { collapseToQmkLayout } from '@/utils/qmk-layout-options'
 import { useMatrixDrawingStore } from '@/stores/matrix-drawing'
 import { useFontStore } from '@/stores/font'
 import { useLayoutEditorSettingsStore } from '@/stores/layoutEditorSettings'
+import { useCurveLayoutStore } from '@/stores/curveLayout'
 import { CanvasRenderer, type RenderOptions } from '@/utils/canvas-renderer'
 import { mirrorKeys as mirrorKeysUtil, type MirrorAxis } from '@/utils/keyboard-transformations'
 import { renderScheduler } from '@/utils/utils/RenderScheduler'
@@ -190,6 +210,8 @@ import { parseJsonString } from '@/utils/serialization'
 import { toast } from '@/composables/useToast'
 import RotationControlModal from '@/components/RotationControlModal.vue'
 import MoveExactlyModal from '@/components/MoveExactlyModal.vue'
+import CurveLayoutOverlay from '@/components/CurveLayoutOverlay.vue'
+import CurveLayoutPanel from '@/components/CurveLayoutPanel.vue'
 import MatrixAnnotationOverlay from '@/components/MatrixAnnotationOverlay.vue'
 import DebugOverlay from '@/components/DebugOverlay.vue'
 import DebugControlButton from '@/components/DebugControlButton.vue'
@@ -214,6 +236,7 @@ const keyboardStore = useKeyboardStore()
 const matrixDrawingStore = useMatrixDrawingStore()
 const fontStore = useFontStore()
 const layoutEditorSettingsStore = useLayoutEditorSettingsStore()
+const curveLayoutStore = useCurveLayoutStore()
 const keySearch = useKeySearch()
 const { copyPngToClipboard } = useKeyboardExport()
 
@@ -344,6 +367,25 @@ watch(
 )
 
 const dragCoordinateOffset = ref<{ x: number; y: number } | null>(null)
+const isCurveHandleDragging = ref(false)
+
+/**
+ * Hold the viewport still while a curve handle is being dragged, then reconcile on release.
+ * Reuses `dragCoordinateOffset`, which already exists for exactly this purpose during key drags.
+ */
+const handleCurveDragStateChange = (dragging: boolean) => {
+  if (dragging) {
+    dragCoordinateOffset.value = getCoordinateSystemOffset()
+    isCurveHandleDragging.value = true
+    return
+  }
+
+  isCurveHandleDragging.value = false
+  updateContainerWidth()
+  updateCanvasSize()
+  dragCoordinateOffset.value = null
+  renderScheduler.schedule(renderKeyboard)
+}
 
 // Rotation points interaction state
 const hoveredRotationPointId = ref<string | null>(null)
@@ -409,6 +451,10 @@ const canvasCursor = computed(() => {
   }
   if (keyboardStore.canvasMode === 'mirror-h' || keyboardStore.canvasMode === 'mirror-v') {
     return keyboardStore.selectedKeys.length > 0 ? 'copy' : 'not-allowed'
+  }
+  if (keyboardStore.canvasMode === 'curve') {
+    // The curve tool owns the canvas: only its handles are interactive.
+    return 'default'
   }
   if (keyboardStore.canvasMode === 'move-exactly') {
     return keyboardStore.selectedKeys.length > 0 ? 'move' : 'not-allowed'
@@ -638,7 +684,13 @@ watch(keySearch.matchingKeys, () => {
 // Watch for mirror tool mode changes to update canvas size
 watch(
   () => keyboardStore.canvasMode,
-  async () => {
+  async (mode, previousMode) => {
+    // Leaving the curve tool by any route — another tool, a keyboard shortcut — discards the
+    // preview. Apply and Cancel both clear `isActive` first, so this only fires for an edit the
+    // user navigated away from without deciding.
+    if (previousMode === 'curve' && mode !== 'curve' && curveLayoutStore.isActive) {
+      curveLayoutStore.cancel()
+    }
     await nextTick()
     updateCanvasSize()
     renderScheduler.schedule(renderKeyboard)
@@ -770,6 +822,12 @@ const getCoordinateSystemOffset = () => {
 let isUpdatingCanvasSize = false
 
 const updateCanvasSize = () => {
+  // A curve preview changes the key bounds on every pointer sample. Resizing here would move
+  // the canvas origin out from under the held handle, so the pointer would suddenly address a
+  // different curve coordinate and the drag would chase itself. Freeze the viewport geometry
+  // for the whole handle drag and reconcile it once on release.
+  if (isCurveHandleDragging.value) return
+
   if (isUpdatingCanvasSize) {
     return
   }
@@ -1171,6 +1229,10 @@ const handleCanvasClick = (event: MouseEvent) => {
   if (!renderer.value) return
   if (keyboardStore.isLayoutPreviewMode) return
 
+  // The curve tool owns the canvas while it is open — clicking must not change the selection
+  // it is operating on.
+  if (keyboardStore.canvasMode === 'curve') return
+
   // Handle rotation mode - ONLY allow rotation point clicks, disable all other interactions
   if (keyboardStore.canvasMode === 'rotate') {
     const pos = getCanvasPosition(event)
@@ -1285,6 +1347,11 @@ const handleMouseDown = (event: MouseEvent) => {
 
   // In rotate mode, disable all mouse down interactions (no key selection/dragging)
   if (keyboardStore.canvasMode === 'rotate') {
+    return
+  }
+
+  // Same for the curve tool: dragging a key would fight the live preview.
+  if (keyboardStore.canvasMode === 'curve') {
     return
   }
 
@@ -1662,6 +1729,14 @@ const handleCanvasBlur = () => {
 }
 
 const handleKeyDown = async (event: KeyboardEvent) => {
+  // The curve tool owns the canvas while it is open, keyboard included. Opening it focuses the
+  // canvas, so every shortcut here is live over the preview: undo and paste replace `keys` with
+  // fresh objects while the tool still holds references to the old ones, leaving its snapshot
+  // pointing at keys the store has thrown away, and delete/nudge edit geometry the preview
+  // overwrites on the next solve. Escape and Enter still reach the panel's own document-level
+  // handler, which is where the tool's shortcuts live.
+  if (keyboardStore.canvasMode === 'curve') return
+
   // Escape clears shift-click anchor
   if (event.key === 'Escape' && shiftClickAnchor.value) {
     shiftClickAnchor.value = null

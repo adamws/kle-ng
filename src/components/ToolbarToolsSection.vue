@@ -113,6 +113,7 @@ import BiSymmetryVertical from 'bootstrap-icons/icons/symmetry-vertical.svg'
 import BiSymmetryHorizontal from 'bootstrap-icons/icons/symmetry-horizontal.svg'
 import BiChevronDown from 'bootstrap-icons/icons/chevron-down.svg'
 import BiTools from 'bootstrap-icons/icons/tools.svg'
+import type { CanvasMode } from '@/stores/keyboard'
 
 interface ExtraTool {
   id: string
@@ -131,7 +132,7 @@ defineProps<{
 }>()
 
 defineEmits<{
-  'set-mode': [mode: 'select' | 'mirror-h' | 'mirror-v' | 'rotate' | 'move-exactly']
+  'set-mode': [mode: CanvasMode]
   'select-mirror-mode': [mode: 'mirror-v' | 'mirror-h']
   'execute-extra-tool': [tool: ExtraTool]
 }>()

@@ -53,6 +53,12 @@ export { Key, Keyboard, KeyboardMetadata, type Array12 } from '@adamws/kle-seria
 // localStorage key for persisting lock rotations setting
 const LOCK_ROTATIONS_KEY = 'kle-ng-lock-rotations'
 
+/**
+ * Interaction mode of the layout canvas. Modes other than 'select' take over pointer handling
+ * so their own tool owns clicks and drags.
+ */
+export type CanvasMode = 'select' | 'mirror-h' | 'mirror-v' | 'rotate' | 'move-exactly' | 'curve'
+
 export interface KeyboardState {
   keys: Key[]
   selectedKeys: Key[]
@@ -62,7 +68,7 @@ export interface KeyboardState {
   historyIndex: number
   history: { keys: Key[]; metadata: KeyboardMetadata }[]
   dirty: boolean
-  canvasMode: 'select' | 'mirror-h' | 'mirror-v' | 'rotate' | 'move-exactly'
+  canvasMode: CanvasMode
   moveStep: number
   lockRotations: boolean
   mouseDragMode: 'none' | 'key-move' | 'rect-select'
@@ -141,7 +147,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
    */
   const layoutGeneration = ref(0)
 
-  const canvasMode = ref<'select' | 'mirror-h' | 'mirror-v' | 'rotate' | 'move-exactly'>('select')
+  const canvasMode = ref<CanvasMode>('select')
   const moveStep = ref(0.25)
 
   // Initialize lockRotations from localStorage
@@ -809,7 +815,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
   }
 
   // Toolbar actions
-  const setCanvasMode = (mode: 'select' | 'mirror-h' | 'mirror-v' | 'rotate' | 'move-exactly') => {
+  const setCanvasMode = (mode: CanvasMode) => {
     const previousMode = canvasMode.value
     canvasMode.value = mode
     // Reset any ongoing operations when switching modes

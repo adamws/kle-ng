@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { Key } from '@adamws/kle-serial'
 import KeyboardCanvas from '../KeyboardCanvas.vue'
 import { useKeyboardStore } from '@/stores/keyboard'
+import { useCurveLayoutStore } from '@/stores/curveLayout'
 
 // Mock window methods
 const mockDispatchEvent = vi.fn()
@@ -285,6 +286,57 @@ describe('KeyboardCanvas', () => {
       })
 
       canvas.dispatchEvent(keyEvent)
+      await wrapper.vm.$nextTick()
+
+      expect(addKeySpy).toHaveBeenCalled()
+    })
+
+    it('should ignore canvas shortcuts while the curve tool owns the canvas', async () => {
+      // Opening the tool focuses the canvas, so every shortcut here is live over the preview.
+      // Undo and paste swap `keys` for fresh objects while the tool still holds the old ones,
+      // stranding its snapshot; delete and the nudges edit geometry the next solve overwrites.
+      const pinia = createPinia()
+      setActivePinia(pinia)
+      const componentStore = useKeyboardStore()
+      componentStore.addKey()
+
+      const wrapper = mount(KeyboardCanvas, {
+        global: {
+          plugins: [pinia],
+        },
+      })
+      await wrapper.vm.$nextTick()
+
+      const curve = useCurveLayoutStore()
+      curve.begin()
+      componentStore.setCanvasMode('curve')
+      await wrapper.vm.$nextTick()
+
+      const undoSpy = vi.spyOn(componentStore, 'undo')
+      const addKeySpy = vi.spyOn(componentStore, 'addKey')
+      const deleteSpy = vi.spyOn(componentStore, 'deleteKeys')
+
+      const canvas = wrapper.find('canvas').element
+      canvas.focus()
+      for (const init of [
+        { key: 'z', ctrlKey: true },
+        { key: 'A' },
+        { key: 'Delete' },
+      ] satisfies KeyboardEventInit[]) {
+        canvas.dispatchEvent(
+          new KeyboardEvent('keydown', { ...init, bubbles: true, cancelable: true }),
+        )
+      }
+      await wrapper.vm.$nextTick()
+
+      expect(undoSpy).not.toHaveBeenCalled()
+      expect(addKeySpy).not.toHaveBeenCalled()
+      expect(deleteSpy).not.toHaveBeenCalled()
+
+      // ...and they come back when the tool gives the canvas up.
+      componentStore.setCanvasMode('select')
+      await wrapper.vm.$nextTick()
+      canvas.dispatchEvent(new KeyboardEvent('keydown', { key: 'A', bubbles: true }))
       await wrapper.vm.$nextTick()
 
       expect(addKeySpy).toHaveBeenCalled()
