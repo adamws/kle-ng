@@ -9,13 +9,13 @@ The canvas editor is the main working area of kle-ng. It provides a full set of 
 
 The toolbar on the left side of the canvas contains the main editing tools:
 
-|                                                                           Icon                                                                           | Tool                                                | Description                                                                                                                                                                                                                                   |
-| :------------------------------------------------------------------------------------------------------------------------------------------------------: | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|        <img src="/selection-tool-icon-light.png" class="light-only" alt="" /><img src="/selection-tool-icon-dark.png" class="dark-only" alt="" />        | [**Selection Tool**](#selection-tool)               | Select, move, resize keys                                                                                                                                                                                                                     |
-|     <img src="/move-exactly-tool-icon-light.png" class="light-only" alt="" /><img src="/move-exactly-tool-icon-dark.png" class="dark-only" alt="" />     | [**Move Exactly Tool**](#move-exactly-tool)         | Move keys by a precise amount                                                                                                                                                                                                                 |
-| <img src="/rotate-selection-tool-icon-light.png" class="light-only" alt="" /><img src="/rotate-selection-tool-icon-dark.png" class="dark-only" alt="" /> | [**Rotate Selection Tool**](#rotate-selection-tool) | Rotate selected keys around anchor points                                                                                                                                                                                                     |
-|           <img src="/mirror-tool-icon-light.png" class="light-only" alt="" /><img src="/mirror-tool-icon-dark.png" class="dark-only" alt="" />           | [**Mirror Tool**](#mirror-tool)                     | Create mirrored copies of selected keys                                                                                                                                                                                                       |
-|           <img src="/extra-tools-icon-light.png" class="light-only" alt="" /><img src="/extra-tools-icon-dark.png" class="dark-only" alt="" />           | [**Extra Tools**](#extra-tools)                     | [Legend Tools](#legend-tools), [Matrix Coordinates](#add-switch-matrix-coordinates), [Move Rotation Origins](#move-rotation-origins), [Theme Tools](#theme-tools), [Sanitize Layout](#sanitize-layout), [Character Picker](#character-picker) |
+|                                                                           Icon                                                                           | Tool                                                | Description                                                                                                                                                                                                                                                                  |
+| :------------------------------------------------------------------------------------------------------------------------------------------------------: | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|        <img src="/selection-tool-icon-light.png" class="light-only" alt="" /><img src="/selection-tool-icon-dark.png" class="dark-only" alt="" />        | [**Selection Tool**](#selection-tool)               | Select, move, resize keys                                                                                                                                                                                                                                                    |
+|     <img src="/move-exactly-tool-icon-light.png" class="light-only" alt="" /><img src="/move-exactly-tool-icon-dark.png" class="dark-only" alt="" />     | [**Move Exactly Tool**](#move-exactly-tool)         | Move keys by a precise amount                                                                                                                                                                                                                                                |
+| <img src="/rotate-selection-tool-icon-light.png" class="light-only" alt="" /><img src="/rotate-selection-tool-icon-dark.png" class="dark-only" alt="" /> | [**Rotate Selection Tool**](#rotate-selection-tool) | Rotate selected keys around anchor points                                                                                                                                                                                                                                    |
+|           <img src="/mirror-tool-icon-light.png" class="light-only" alt="" /><img src="/mirror-tool-icon-dark.png" class="dark-only" alt="" />           | [**Mirror Tool**](#mirror-tool)                     | Create mirrored copies of selected keys                                                                                                                                                                                                                                      |
+|           <img src="/extra-tools-icon-light.png" class="light-only" alt="" /><img src="/extra-tools-icon-dark.png" class="dark-only" alt="" />           | [**Extra Tools**](#extra-tools)                     | [Curve Layout](#curve-layout), [Legend Tools](#legend-tools), [Matrix Coordinates](#add-switch-matrix-coordinates), [Move Rotation Origins](#move-rotation-origins), [Theme Tools](#theme-tools), [Sanitize Layout](#sanitize-layout), [Character Picker](#character-picker) |
 
 ## Mouse Controls {#mouse-controls}
 
@@ -118,14 +118,69 @@ Create mirrored copies of selected keys with the **Mirror Tool**. Choose a mirro
 
 ## Extra Tools {#extra-tools}
 
-Extra tools are grouped under a single button in the left toolbar. There are six:
+Extra tools are grouped under a single button in the left toolbar. There are seven:
 
-1. **Legend Tools** — bulk legend editing
-2. **Add Switch Matrix Coordinates** — assign VIA-style row/column labels
-3. **Move Rotation Origins** — recalculate key positions with a new rotation reference point
-4. **Theme Tools** — apply color themes to the layout
-5. **Sanitize Layout** — find and clean up redundant JSON properties and layout offsets, and warn about overlapping keys
-6. **Character Picker** — search and insert special characters into labels
+1. **Curve Layout** — bend selected keys around an editable curve
+2. **Legend Tools** — bulk legend editing
+3. **Add Switch Matrix Coordinates** — assign VIA-style row/column labels
+4. **Move Rotation Origins** — recalculate key positions with a new rotation reference point
+5. **Theme Tools** — apply color themes to the layout
+6. **Sanitize Layout** — find and clean up redundant JSON properties and layout offsets, and warn about overlapping keys
+7. **Character Picker** — search and insert special characters into labels
+
+### Curve Layout
+
+The **Curve Layout** tool bends a block of selected keys around an editable curve — for curved
+rows, thumb arcs, and fanned clusters. Open it from **Extra Tools → Curve Layout**.
+
+The tool bends the keys you have selected, or the whole layout when nothing is selected.
+
+A dashed spine appears on the canvas with four handles: the two filled ones are the ends, the two
+hollow ones shape the bend. Drag any of them, or use the **Bend** slider to move both shaping
+handles at once. The layout updates live.
+
+**Keys never overlap.** Each key keeps its own distance from the spine, and the spacing _along_
+the curve is stretched by exactly the amount the curve compresses it — so the tightest row comes
+out at its original pitch and nothing is ever squeezed into its neighbour. Keys that started in
+the same column stay in a straight line and share one rotation origin, which keeps the exported
+JSON compact. The panel shows a running "no overlaps" status.
+
+On a deep bend the outer rows do open up. That is unavoidable: rows further from the centre of a
+curve simply have more distance to cover, exactly as on a physically curved keyboard. The tool
+adds no more spread than the geometry requires.
+
+| Control                   | Description                                                                                                                                              |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Bend**                  | Moves both shaping handles together, as a percentage of the block's own length, for symmetric curves without dragging handles                            |
+| **Gap**                   | Extra breathing room along the curve, in U. Distance from the spine is each key's own and is carried through untouched, so this spaces columns, not rows |
+| **Follow curve rotation** | Rotates keys to match the curve direction. Turn it off to keep keys upright — the block then shears along the curve instead of turning onto it           |
+| **Allow overlaps**        | Keeps the curve at its tightest and accepts overlapping keys. Usually needed for staggered layouts — see below                                           |
+| **Reset**                 | Returns the spine to straight, which restores the original layout                                                                                        |
+
+Keys that do not fit inside the drawn curve continue in a straight line past its ends, along the
+direction the curve was heading — so a long row never piles up at the endpoint.
+
+#### Allow overlaps
+
+Most ordinary keyboards cannot be curved without some overlap. A 6.25U spacebar or a 2.75U shift
+is a long rigid bar: once the rows around it curve away, it fouls them, and no amount of spacing
+along the curve helps. Left to itself the tool would refuse a standard staggered layout at every
+bend, however gentle.
+
+**Allow overlaps** lifts that restriction. The curve is placed at its tightest — the same geometry
+you would get if overlaps were impossible — and **Apply** is enabled regardless. The status line
+still reports how many pairs overlap, so nothing is hidden; you are choosing to accept them. This
+is the setting to reach for on any layout with wide keys.
+
+With it off, the tool guarantees no new overlaps and disables **Apply** when it cannot deliver one.
+Two situations make that impossible even for uniform layouts: bending so far that the radius
+approaches half the block's depth, where the inner rows would turn inside out; and keeping keys
+upright, since two keys in one column have no room to give. In both cases the panel says so and
+shows you the tightest arrangement, which is exactly what allowing overlaps would produce.
+
+**Apply** (or `Enter`) commits the layout as a single undoable change. **Cancel** (or `Escape`)
+restores the keys exactly as they were. The result is ordinary key geometry, so it exports,
+re-imports and undoes like any other edit.
 
 ### Legend Tools
 

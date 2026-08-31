@@ -117,9 +117,10 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
-import { useKeyboardStore } from '@/stores/keyboard'
+import { useKeyboardStore, type CanvasMode } from '@/stores/keyboard'
 import { useLayoutEditorSettingsStore } from '@/stores/layoutEditorSettings'
 import { useCharacterPickerStore } from '@/stores/characterPicker'
+import { useCurveLayoutStore } from '@/stores/curveLayout'
 import { SPECIAL_KEYS, type SpecialKeyTemplate } from '@/data/specialKeys'
 import LegendToolsPanel from './LegendToolsPanel.vue'
 import RotationOriginsPanel from './RotationOriginsPanel.vue'
@@ -135,6 +136,7 @@ import ToolbarHistorySection from './ToolbarHistorySection.vue'
 const keyboardStore = useKeyboardStore()
 const layoutEditorSettingsStore = useLayoutEditorSettingsStore()
 const characterPickerStore = useCharacterPickerStore()
+const curveLayoutStore = useCurveLayoutStore()
 
 // Special keys data
 const specialKeys = SPECIAL_KEYS
@@ -169,6 +171,21 @@ interface ExtraTool {
 const extraTools = computed((): ExtraTool[] => {
   const isPreview = keyboardStore.isLayoutPreviewMode
   return [
+    {
+      id: 'curve-layout',
+      name: 'Curve Layout',
+      description:
+        keyboardStore.selectedKeys.length === 0
+          ? 'Bend all keys around an editable curve'
+          : 'Bend selected keys around an editable curve',
+      // Needs keys to bend, but not a selection: with nothing selected it takes the whole
+      // layout, the same way Legend Tools and Move Rotation Origins do.
+      disabled: isPreview || keyboardStore.keys.length === 0,
+      action: () => {
+        curveLayoutStore.begin()
+        setMode('curve')
+      },
+    },
     {
       id: 'legend-tools',
       name: 'Legend Tools',
@@ -254,7 +271,7 @@ const requestCanvasFocus = () => {
   window.dispatchEvent(new CustomEvent('request-canvas-focus'))
 }
 
-const setMode = (mode: 'select' | 'mirror-h' | 'mirror-v' | 'rotate' | 'move-exactly') => {
+const setMode = (mode: CanvasMode) => {
   keyboardStore.setCanvasMode(mode)
   requestCanvasFocus()
 }
