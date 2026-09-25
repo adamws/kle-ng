@@ -58,10 +58,11 @@ At construction (`__post_init__`) the keyboard is split:
    `(labels[0], centerX, centerY, decal, sm)`, where `center = (x + width/2, y + height/2)` and `sm`
    is the switch-mount type. Decal keys are skipped (they anchor nothing and pass through untouched).
 2. **Group** every key by `option → choice → [keys]`.
-3. For each option group, take the **choice-0 anchor** = the top-left key (`min` by `(x, y)`) of that
-   option's default variant. For every non-zero `choice`, compute that choice's own top-left
-   `group_anchor` and translate **all** of the choice's keys by `anchor - group_anchor`, so the
-   alternative cluster overlays the default cluster's real location.
+3. For each option group, take the **anchor** = the top-left key (`min` by `(x, y)`) of that option's
+   **anchor choice**: choice 0 when the group defines one, otherwise the group's lowest defined
+   choice (see [§7](#7-option-groups-without-a-choice-0)). For every other `choice`, compute that
+   choice's own top-left `group_anchor` and translate **all** of the choice's keys by
+   `anchor - group_anchor`, so the alternative cluster overlays the anchor cluster's real location.
 4. After translation, compute each key's signature; keep it as an alternative only if the signature
    is **unseen** (this drops exact duplicates — e.g. the middle of a 3U+3U split that coincides with a
    7U spacebar).
@@ -93,7 +94,7 @@ helper.
 ### `collapseToLayoutChoices(keys, choices)` — single variant (canvas preview)
 
 Given a `Map<option, choice>`, returns the **one** layout the user selected: base keys plus the chosen
-variant of each option group, with non-zero choices translated onto the choice-0 anchor and
+variant of each option group, with the other choices translated onto the anchor choice and
 de-duplicated. Ghost/decal keys with no option are dropped. Used by `KeyboardCanvas.vue`'s
 `keysForRender` for the layout-option preview toolbar.
 
@@ -117,8 +118,9 @@ A faithful port of kbplacer's `collapse()`:
 - **Seed** the dedup set from the non-decal pass-through keys using the signature
   `` `${labels[0]}|${cx}|${cy}|${decal}|${sm}` `` (rotated center rounded to 4 decimals, `sm`
   included to mirror kbplacer).
-- For each option group, translate every non-zero choice onto the choice-0 anchor (`minXY`) and append
-  it only when its post-translation signature is unseen. Decal keys are never emitted as alternatives.
+- For each option group, translate every non-zero choice onto the anchor choice (`anchorChoiceOf` +
+  `minXY`) and append it only when its post-translation signature is unseen. Decal keys are never
+  emitted as alternatives.
 - Return `passThrough ⧺ keptAlternatives`.
 
 The input array is never mutated (keys are shallow-cloned; only scalar `x`/`y` are adjusted).
@@ -151,9 +153,34 @@ Alternative (choice 1): two 1U keys `3,13` and `3,14`, drawn offset at `x = 13` 
 `collapseViaLayout`:
 
 - Pass-through keeps the 2U backspace at `x = 14`.
-- Choice-0 anchor = `(14, 0)`; choice-1 anchor = `(13, 0)` → delta `(+1, 0)`.
+- Anchor choice = 0, its anchor = `(14, 0)`; choice-1 anchor = `(13, 0)` → delta `(+1, 0)`.
 - Split-left moves `13 → 14`; split-right moves `14 → 15`.
 - No signature collision → both split keys are kept.
 
 Result: the plate has cutouts for the 2U backspace **and** the two 1U split keys at their true matrix
 positions — a plate that physically supports either backspace configuration.
+
+---
+
+## 7. Option groups without a choice 0
+
+A group is **not** required to define choice 0. When it does not, the annotated keys do not exist in
+the default layout and only appear once their option is selected — the encoding for an _optional_ key,
+e.g. a 2U key at the top right that some builds omit entirely.
+
+Such a group has nothing to collapse onto, so it is anchored on its **lowest defined choice**
+(`anchorChoiceOf` in `layout-options.ts`, `anchor_choice` in kbplacer's `collapse()`). Consequences:
+
+- The lowest choice's keys stay exactly where they were drawn, and are still emitted so the PCB and
+  plate keep a switch for them.
+- Any higher choice in the same group is translated onto that anchor, preserving the rule that all
+  choices of a group occupy the same physical spot.
+- In the single-variant preview, selecting choice 0 of such a group yields **no** keys for it — the
+  key is correctly absent (`collapseToLayoutChoicePlacements` keeps its `choiceMap.get(0) ?? []`
+  fallback for exactly this reason).
+- `getLayoutOptionGroups` seeds every group's choice set with `0`, so the option toolbar still offers
+  a "no key" choice.
+
+kbplacer used to raise `ValueError: min() iterable argument is empty` from `collapse()` on these
+layouts, because `_get_layout_options()` returns a `defaultdict` and `choices[0]` silently produced an
+empty list. Both implementations now share the anchor-choice rule.

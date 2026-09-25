@@ -13,6 +13,9 @@
  *
  * Always import parseOptionChoice from matrix-validation.ts (the Key-taking variant),
  * NOT from qmk-export.ts (which takes a string and is scoped to that module).
+ *
+ * A group is anchored on choice 0 when it defines one, otherwise on its lowest
+ * defined choice - see anchorChoiceOf. kbplacer applies the same rule.
  */
 
 import type { Key } from '@/stores/keyboard'
@@ -139,15 +142,20 @@ export function collapseToLayoutChoicePlacements(
     }
   }
 
-  // For each option group pick the right choice and translate non-zero choices.
+  // For each option group pick the right choice and translate the others onto
+  // the anchor choice.
   for (const [option, choiceMap] of optionGroups) {
     const targetChoice = choices.get(option) ?? 0
+    // Falling back to choice 0 is deliberate: a group with no choice-0 keys
+    // describes a key that is absent from the default layout, so selecting
+    // choice 0 there must yield nothing.
     const choiceKeys = choiceMap.get(targetChoice) ?? choiceMap.get(0) ?? []
+    const anchorChoice = anchorChoiceOf(choiceMap)
 
     let dx = 0
     let dy = 0
-    if (targetChoice !== 0) {
-      const anchor = minXY(choiceMap.get(0) ?? [])
+    if (targetChoice !== anchorChoice) {
+      const anchor = minXY(choiceMap.get(anchorChoice) ?? [])
       const groupAnchor = minXY(choiceKeys)
       if (anchor && groupAnchor) {
         dx = anchor.x - groupAnchor.x
@@ -231,8 +239,11 @@ export function collapseViaLayout(keys: Key[]): Key[] {
   // and keep only keys not already present (de-duplicating coincident alternatives).
   const alternatives: Key[] = []
   for (const choiceMap of optionGroups.values()) {
-    const anchor = minXY(choiceMap.get(0) ?? [])
+    const anchor = minXY(choiceMap.get(anchorChoiceOf(choiceMap)) ?? [])
     for (const [choice, choiceKeys] of choiceMap) {
+      // Choice-0 keys are already in passThrough. When the anchor choice is
+      // not 0 its own keys still run through here with a zero delta, which is
+      // what emits them as alternatives.
       if (choice === 0) continue
       const groupAnchor = minXY(choiceKeys)
       const dx = anchor && groupAnchor ? anchor.x - groupAnchor.x : 0
@@ -285,6 +296,20 @@ function placementCenter(placement: KeyPlacement): { x: number; y: number } {
   const { key, x, y } = placement
   if (x === key.x && y === key.y) return getKeyCenter(key)
   return getKeyCenter({ ...key, x, y })
+}
+
+/**
+ * The choice a group is anchored on: choice 0 when the group defines it,
+ * otherwise its lowest defined choice.
+ *
+ * A group with no choice-0 keys encodes a key that does not exist in the
+ * default layout and only appears once its option is selected. There is
+ * nothing to collapse such a group onto, so it anchors on itself and its keys
+ * stay where they were drawn. kbplacer's collapse() applies the same rule.
+ */
+function anchorChoiceOf(choiceMap: Map<number, Key[]>): number {
+  if (choiceMap.has(0)) return 0
+  return Math.min(...choiceMap.keys())
 }
 
 function minXY(keys: Key[]): { x: number; y: number } | null {

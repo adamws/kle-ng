@@ -215,4 +215,120 @@ test.describe('Import from Preset', () => {
         .toBeGreaterThan(0)
     })
   })
+
+  // --------------------------------------------------------
+  // Group 3: presets that ship with more than one set of legends
+  // --------------------------------------------------------
+  test.describe('Multilingual presets', () => {
+    const slot = (page: Page, name: string) =>
+      page
+        .locator('.preset-card-slot')
+        .filter({ has: page.locator(`[data-preset-name="${name}"]`) })
+
+    // ANSI 104 is the same physical board whether its keycaps are printed US-English
+    // or Polish, so it is one card with an optional control — not two cards.
+    test('TC-PRESET-020 — only a multilingual card carries the language control', async ({
+      page,
+    }) => {
+      await presets(page).openPresetModal()
+
+      const toggle = slot(page, 'ANSI 104').locator(SELECTORS.PRESET.LANGUAGE_TOGGLE)
+      await expect(toggle).toBeVisible()
+      await expect(toggle).toHaveAttribute('data-preset-languages', '2')
+      // It names the language a plain click would load.
+      await expect(toggle).toContainText('EN')
+
+      await expect(slot(page, 'ISO 105').locator(SELECTORS.PRESET.LANGUAGE_TOGGLE)).toHaveCount(0)
+    })
+
+    // The reason the chooser is not a modal: the default case must stay one click.
+    test('TC-PRESET-021 — clicking the card loads the default in one click', async ({ page }) => {
+      await presets(page).selectPresetFromModal('ANSI 104')
+
+      await expect(page.locator(SELECTORS.PRESET.LANGUAGE_MENU)).toBeHidden()
+      await expect(page.locator(SELECTORS.PRESET.MODAL)).toBeHidden()
+      await expectKeyCount(page, 104)
+    })
+
+    test('TC-PRESET-022 — the control opens a menu without loading anything', async ({ page }) => {
+      const before = await currentKeyCount(page)
+
+      const menu = await presets(page).openLanguageMenu('ANSI 104')
+
+      await expect(menu.locator(SELECTORS.PRESET.LANGUAGE_OPTION)).toHaveText([/English/, /Polish/])
+      // The library stays open behind the menu, and nothing has been imported.
+      await expect(page.locator(SELECTORS.PRESET.MODAL)).toBeVisible()
+      expect(await currentKeyCount(page)).toBe(before)
+    })
+
+    test('TC-PRESET-023 — Escape closes the menu first, then the library', async ({ page }) => {
+      const menu = await presets(page).openLanguageMenu('ANSI 104')
+
+      await page.keyboard.press('Escape')
+      await expect(menu).toBeHidden()
+      await expect(page.locator(SELECTORS.PRESET.MODAL)).toBeVisible()
+
+      await page.keyboard.press('Escape')
+      await expect(page.locator(SELECTORS.PRESET.MODAL)).toBeHidden()
+    })
+
+    test('TC-PRESET-024 — clicking away dismisses the menu and keeps the library open', async ({
+      page,
+    }) => {
+      const menu = await presets(page).openLanguageMenu('ANSI 104')
+
+      await page.locator(SELECTORS.PRESET.SEARCH).click()
+
+      await expect(menu).toBeHidden()
+      await expect(page.locator(SELECTORS.PRESET.MODAL)).toBeVisible()
+    })
+
+    // Picking stages a choice; it must not import on its own, or a language could
+    // never be looked at and reconsidered.
+    test('TC-PRESET-025 — picking a language stages it without importing', async ({ page }) => {
+      const before = await currentKeyCount(page)
+      const menu = await presets(page).openLanguageMenu('ANSI 104')
+
+      await menu.locator(SELECTORS.PRESET.LANGUAGE_OPTION, { hasText: 'Polish' }).click()
+
+      await expect(menu).toBeHidden()
+      await expect(page.locator(SELECTORS.PRESET.MODAL)).toBeVisible()
+      expect(await currentKeyCount(page)).toBe(before)
+      // The card now advertises what a click would load.
+      await expect(slot(page, 'ANSI 104').locator(SELECTORS.PRESET.LANGUAGE_TOGGLE)).toContainText(
+        'PL',
+      )
+    })
+
+    test('TC-PRESET-028 — clicking the card then imports the staged language', async ({ page }) => {
+      await presets(page).selectPresetFromModal('ANSI 104', { language: 'Polish' })
+
+      await expect(page.locator(SELECTORS.PRESET.MODAL)).toBeHidden()
+      // Same board, different legends — the key count cannot change.
+      await expectKeyCount(page, 104)
+    })
+
+    // The shortlist is a one-click shortcut; making it ask would cost every user a
+    // click to answer a question most of them do not have.
+    test('TC-PRESET-026 — the shortlist loads the default without asking', async ({ page }) => {
+      await presets(page).selectPreset('ANSI 104')
+
+      await expect(page.locator(SELECTORS.PRESET.LANGUAGE_MENU)).toBeHidden()
+      await expectKeyCount(page, 104)
+    })
+
+    // The menu is positioned from a rect read once, so it must not survive a scroll
+    // of the grid underneath it.
+    test('TC-PRESET-027 — scrolling the grid dismisses the menu', async ({ page }) => {
+      const menu = await presets(page).openLanguageMenu('ANSI 104')
+
+      await page.locator('.preset-scroll-area').evaluate((el) => {
+        el.scrollTop = 200
+        el.dispatchEvent(new Event('scroll'))
+      })
+
+      await expect(menu).toBeHidden()
+      await expect(page.locator(SELECTORS.PRESET.MODAL)).toBeVisible()
+    })
+  })
 })

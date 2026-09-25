@@ -77,7 +77,7 @@
                  separates the two groups, so no divider above it. Only the curated few
                  are listed; the rest are behind "From Preset" above. -->
             <li><h6 class="dropdown-header">Top Presets</h6></li>
-            <li v-for="preset in TOP_PRESETS" :key="preset.file" data-testid="import-from-preset">
+            <li v-for="preset in TOP_PRESETS" :key="preset.id" data-testid="import-from-preset">
               <a class="dropdown-item" href="#" @click.prevent="loadPreset(preset)">
                 {{ preset.name }}
               </a>

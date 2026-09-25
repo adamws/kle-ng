@@ -1,89 +1,108 @@
 {
   "presets": [
     {
+      "id": "blank",
       "name": "Blank Layout",
       "file": "blank.json",
       "description": "Empty canvas",
       "keywords": ["empty", "scratch", "new", "none"]
     },
     {
+      "id": "ansi-104",
       "name": "ANSI 104",
-      "file": "ansi-104.json",
+      "defaultLanguage": "en",
+      "languages": [
+        { "code": "en", "name": "English", "file": "ansi-104/en.json" },
+        { "code": "pl", "name": "Polish", "file": "ansi-104/pl.json" }
+      ],
       "description": "Full-size ANSI with numpad",
       "keywords": ["full size", "fullsize", "us", "100%"]
     },
     {
+      "id": "ansi-104-big-ass-enter",
       "name": "ANSI 104 (big-ass enter)",
       "file": "ansi-104-big-ass-enter.json",
       "keywords": ["full size", "fullsize", "bae", "enter"]
     },
     {
+      "id": "iso-105",
       "name": "ISO 105",
       "file": "iso-105.json",
       "description": "Full-size ISO with numpad",
       "keywords": ["full size", "fullsize", "european", "uk", "100%"]
     },
     {
+      "id": "default-60",
       "name": "Default 60%",
       "file": "default-60.json",
       "description": "60% ANSI",
       "keywords": ["compact", "poker", "gh60"]
     },
     {
+      "id": "iso-60",
       "name": "ISO 60%",
       "file": "iso-60.json",
       "description": "60% ISO",
       "keywords": ["compact", "european", "uk"]
     },
     {
+      "id": "multilayout-60-via",
       "name": "Multilayout 60% (VIA)",
       "file": "multilayout-60-via.json",
       "description": "60% with VIA layout options",
       "keywords": ["via", "options", "multilayout", "compact"]
     },
     {
+      "id": "ortho-4-12-qmk",
       "name": "Ortho 4x12 (QMK)",
       "file": "ortho-4-12-qmk.json",
       "description": "Ordered grid with QMK matrix labels",
       "keywords": ["ortholinear", "grid", "qmk", "40%"]
     },
     {
+      "id": "planck",
       "name": "Planck",
       "file": "planck.json",
       "description": "40% ortholinear",
       "keywords": ["ortholinear", "grid", "4x12", "40%"]
     },
     {
+      "id": "ergodox",
       "name": "ErgoDox",
       "file": "ergodox.json",
       "description": "Split columnar with thumb clusters",
       "keywords": ["split", "ergonomic", "columnar"]
     },
     {
+      "id": "kinesis-advantage",
       "name": "Kinesis Advantage",
       "file": "kinesis-advantage.json",
       "description": "Contoured concave well",
       "keywords": ["split", "ergonomic", "bowl", "contoured"]
     },
     {
+      "id": "atreus",
       "name": "Atreus",
       "file": "atreus.json",
       "description": "Compact unibody split",
       "keywords": ["split", "ergonomic", "columnar", "40%"]
     },
     {
+      "id": "absolem",
       "name": "Absolem (ergogen)",
       "file": "absolem.json",
       "description": "Split choc board generated with ergogen",
       "keywords": ["split", "ergonomic", "ergogen", "choc"]
     },
     {
+      "id": "keychron-q1",
       "name": "Keychron Q1",
       "file": "keychron-q1.json",
       "description": "75% with rotary knob",
       "keywords": ["75%", "knob", "encoder", "compact"]
     },
     {
+      "id": "symbolics-spacecadet",
       "name": "Symbolics Space Cadet",
       "file": "symbolics-spacecadet.json",
       "description": "Historical Lisp machine keyboard",

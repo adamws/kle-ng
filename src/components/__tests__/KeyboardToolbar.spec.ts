@@ -18,15 +18,23 @@ vi.mock('@/composables/useToast', () => ({
   },
 }))
 
-// Mock presets data using existing files. Both are in TOP_PRESET_FILES, since the
+// Mock presets data using existing files. Both are in TOP_PRESET_IDS, since the
 // dropdown lists only the curated shortlist; ansi-104 precedes default-60 there, so
 // these arrive in the order they are written here.
 vi.mock('@/data/presets.json', () => ({
   default: {
     presets: [
-      { name: 'Test Layout 1', file: 'ansi-104.json' },
-      { name: 'Test Layout 2', file: 'default-60.json' },
-      { name: 'Not Promoted', file: 'ergodox.json' },
+      { id: 'ansi-104', name: 'Test Layout 1', file: 'ansi-104.json' },
+      {
+        id: 'default-60',
+        name: 'Test Layout 2',
+        defaultLanguage: 'en',
+        languages: [
+          { code: 'en', name: 'English', file: 'default-60/en.json' },
+          { code: 'pl', name: 'Polish', file: 'default-60/pl.json' },
+        ],
+      },
+      { id: 'ergodox', name: 'Not Promoted', file: 'ergodox.json' },
     ],
   },
 }))
@@ -151,6 +159,30 @@ describe('KeyboardToolbar', () => {
       await wrapper.vm.$nextTick()
 
       expect(componentStore.filename).toBe('ansi-104')
+    })
+
+    // The shortlist is a one-click shortcut, and a multilingual preset must not turn
+    // it into two. Choosing a language is offered only on the card in "From Preset".
+    it('should load the default language of a multilingual preset without asking', async () => {
+      const pinia = createPinia()
+      setActivePinia(pinia)
+      const componentStore = useKeyboardStore()
+
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve([['Test']]),
+      } as Response)
+
+      const wrapper = mount(KeyboardToolbar, { global: { plugins: [pinia] } })
+      await wrapper.vm.$nextTick()
+
+      await presetItems(wrapper)[1]!.trigger('click')
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      await wrapper.vm.$nextTick()
+
+      expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('default-60/en.json'))
+      expect(componentStore.filename).toBe('default-60-en')
+      expect(wrapper.find('[data-testid="preset-language-menu"]').exists()).toBe(false)
     })
 
     it('should list the curated presets from presets.json in promotion order', async () => {

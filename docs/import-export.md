@@ -296,7 +296,7 @@ Click the **Import** button in the toolbar and select:
 
 **From VIA** — Search and import any keyboard directly from a curated index of VIA-ready keyboards. A searchable list is loaded from [`https://adamws.github.io/keyboard-pcbs/keyboard_list.json`](https://adamws.github.io/keyboard-pcbs/keyboard_list.json). Type to filter with fuzzy search, select a keyboard, and click **Import** (or double-click an entry). The keyboard's VIA layout JSON is fetched from the [`the-via/keyboards` GitHub repository](https://github.com/the-via/keyboards) (`v3/` directory), converted to KLE format automatically, and VIA metadata is preserved. This is equivalent to downloading a VIA layout JSON and using **From File**, but without the manual steps.
 
-**From Preset** — Browse the layouts that ship with kle-ng as a grid of cards, each showing a live preview of the board. Click a card to load it. The Import menu also lists a few presets directly, under **Top Presets**, as a shortcut; **From Preset** opens the whole library. See [Starting from a preset](#presets).
+**From Preset** — Browse the layouts that ship with kle-ng as a grid of cards, each showing a live preview of the board. Click a card to load it. A card marked with a globe ships with more than one set of legends; clicking the card still loads it straight away, and the globe in its corner is there if you want a different language first. The Import menu also lists a few presets directly, under **Top Presets**, as a shortcut; **From Preset** opens the whole library. See [Starting from a preset](#presets).
 
 ### Starting from a preset {#presets}
 
@@ -304,7 +304,19 @@ kle-ng ships a library of ready-made layouts — full-size ANSI and ISO, 60% var
 
 The **Import** menu lists the most commonly used ones under **Top Presets**, so the layouts most people start from are one click away. **Import → From Preset** opens the complete library in a grid. Each card draws the actual layout with the same renderer as the editor canvas, so you can tell boards apart at a glance; previews load as cards scroll into view. Type in the search box to filter by name or by keyword — `ortho`, `split`, `60%`, `empty` — and click a card to load it.
 
-Loading a preset replaces the current layout, clears the undo history, and establishes a new clean baseline, so the unsaved-changes indicator resets. Save your work first if you still need it. The preset's name becomes the default download filename.
+#### Presets in several languages
+
+A keyboard is not tied to one set of legends — an ANSI 104 board is the same board whether its keycaps are printed US-English or Polish. Presets that ship with more than one set carry a small control in the bottom corner of their card, beside the key count, showing a globe and the language they will load — like `🌐 EN`.
+
+Choosing a language is optional. **Click the card and it loads immediately**, in the language the control names — exactly like any other preset.
+
+To load a different one, click the globe first. A short menu lists the alternatives; picking one **does not import anything** — it just changes what that card will load, and the control updates to show it (`🌐 PL`). You can open the menu again and change your mind as often as you like. Clicking the card is what actually imports, so the choice is never made for you by accident.
+
+The key layout is identical across every language of a preset; only the printing on the keys changes. That is why the card shows a single preview and a single key count no matter which language you pick.
+
+The language applies to that import alone. It is **not** stored in the layout, so nothing about it is exported, shared or saved — pick a different language and you simply get a different import. **Top Presets** in the Import menu always loads the preset's default language.
+
+Loading a preset replaces the current layout, clears the undo history, and establishes a new clean baseline, so the unsaved-changes indicator resets. Save your work first if you still need it. The preset's name becomes the default download filename; for a preset with several languages, the chosen language is part of that name (`ansi-104-pl`).
 
 ### Drag and Drop
 

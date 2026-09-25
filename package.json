@@ -28,7 +28,8 @@
     "supabase:status": "supabase status",
     "lint": "eslint . --fix",
     "format": "prettier --log-level silent --write src/ e2e/ docs/",
-    "generate:character-entities": "node scripts/generate-character-entities.mjs"
+    "generate:character-entities": "node scripts/generate-character-entities.mjs",
+    "generate:presets": "node scripts/generate-presets-manifest.mjs"
   },
   "dependencies": {
     "@adamws/kle-serial": "github:adamws/kle-serial2#v0.19.0",

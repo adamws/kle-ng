@@ -71,6 +71,7 @@ export default defineConfig({
           { text: 'Matrix Annotation', link: '/development/matrix-annotation' },
           { text: 'Plate Generator', link: '/development/plate-generator' },
           { text: 'PCB Generator', link: '/development/pcb-generator' },
+          { text: 'Preset Library', link: '/development/preset-library' },
         ],
       },
     ],

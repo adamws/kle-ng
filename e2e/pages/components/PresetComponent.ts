@@ -12,10 +12,16 @@ import { SELECTORS } from '../../constants/selectors'
  * `selectPreset()` spans both: it clicks the shortlist entry when there is one and
  * otherwise goes through the modal, so callers only ever name the preset they want.
  *
+ * Some presets ship with more than one set of legends. Clicking such a card loads it
+ * in one click; the alternatives live behind an optional control in the card's corner
+ * which only STAGES a choice — the card still has to be clicked to import. Pass
+ * `language` to set it first.
+ *
  * @example
  * const preset = new PresetComponent(page, waitHelpers)
  * await preset.selectPreset('ANSI 104')          // from the shortlist
  * await preset.selectPreset('Kinesis Advantage') // via the modal, transparently
+ * await preset.selectPresetFromModal('ANSI 104', { language: 'Polish' })
  */
 export class PresetComponent {
   private readonly dropdownButton: Locator
@@ -31,7 +37,7 @@ export class PresetComponent {
    * Select a keyboard layout preset by name, from wherever it lives
    * @param presetName - Name of the preset (e.g., 'ANSI 104', 'ISO 105', 'Planck')
    */
-  async selectPreset(presetName: string): Promise<void> {
+  async selectPreset(presetName: string, { language }: { language?: string } = {}): Promise<void> {
     await this.openDropdown()
 
     // Wait for dropdown items to be visible
@@ -46,7 +52,7 @@ export class PresetComponent {
       await expect(shortlistItem).toBeVisible()
       await shortlistItem.click()
     } else {
-      await this.selectPresetFromModal(presetName, { menuAlreadyOpen: true })
+      await this.selectPresetFromModal(presetName, { menuAlreadyOpen: true, language })
     }
 
     // Wait for preset to load
@@ -67,8 +73,13 @@ export class PresetComponent {
    * Pick a preset from the library modal by name
    * @param presetName - Name of the preset
    * @param options.menuAlreadyOpen - Skip opening the Import menu; it is already open
+   * @param options.language - Display name of the language to import, for a
+   *   multilingual preset (e.g. 'Polish')
    */
-  async selectPresetFromModal(presetName: string, { menuAlreadyOpen = false } = {}): Promise<void> {
+  async selectPresetFromModal(
+    presetName: string,
+    { menuAlreadyOpen = false, language }: { menuAlreadyOpen?: boolean; language?: string } = {},
+  ): Promise<void> {
     const modal = menuAlreadyOpen
       ? await this.openPresetModalFromOpenMenu()
       : await this.openPresetModal()
@@ -79,8 +90,39 @@ export class PresetComponent {
     await modal.locator(SELECTORS.PRESET.SEARCH).fill(presetName)
     const card = modal.locator(`${SELECTORS.PRESET.CARD}[data-preset-name="${presetName}"]`)
     await expect(card).toBeVisible()
+
+    if (language !== undefined) {
+      const menu = await this.openLanguageMenu(presetName, { modalAlreadyOpen: true })
+      await menu.locator(SELECTORS.PRESET.LANGUAGE_OPTION, { hasText: language }).click()
+      await expect(menu).toBeHidden()
+      // Staging only — the import is still the click on the card below.
+      await expect(modal).toBeVisible()
+    }
+
     await card.click()
     await expect(modal).toBeHidden()
+  }
+
+  /**
+   * Open a card's language menu, leaving it open
+   * @param presetName - Name of the preset
+   * @param options.modalAlreadyOpen - The library modal is open and already filtered
+   * @returns The menu locator, already visible
+   */
+  async openLanguageMenu(presetName: string, { modalAlreadyOpen = false } = {}): Promise<Locator> {
+    if (!modalAlreadyOpen) {
+      const modal = await this.openPresetModal()
+      await modal.locator(SELECTORS.PRESET.SEARCH).fill(presetName)
+    }
+
+    const slot = this.page
+      .locator('.preset-card-slot')
+      .filter({ has: this.page.locator(`[data-preset-name="${presetName}"]`) })
+    await slot.locator(SELECTORS.PRESET.LANGUAGE_TOGGLE).click()
+
+    const menu = this.page.locator(SELECTORS.PRESET.LANGUAGE_MENU)
+    await expect(menu).toBeVisible()
+    return menu
   }
 
   /**
