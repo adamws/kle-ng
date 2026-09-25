@@ -8,6 +8,7 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import { deploymentLabel } from './config/deployment'
 import { restoreReturnUrl } from './utils/auth-return-url'
+import { loadMarksFont } from './utils/label-fonts'
 
 // Put back the URL fragment that an OAuth redirect dropped, before anything reads the
 // location. The keyboard store picks up #share= / #url= / #gist= during its normal
@@ -18,6 +19,10 @@ restoreReturnUrl()
 if (deploymentLabel) {
   document.title = `[${deploymentLabel}] ${document.title}`
 }
+
+// Fetch the legend marks font early. Canvases do not wait for it; the editor redraws
+// when it arrives (see KeyboardCanvas), and later previews find it already loaded.
+void loadMarksFont()
 
 const app = createApp(App)
 const pinia = createPinia()

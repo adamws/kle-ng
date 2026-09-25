@@ -237,6 +237,19 @@ Printed bare, such a mark has no width: it floats off the cap or lands on a neig
 The classification comes from a table xkbprint generates from Unicode's `UnicodeData.txt`
 (`scripts/gen-ucsmark.awk`).
 
+Drawing the circle is only half of it: the font must also know where a mark sits on `◌`.
+kle-ng's label fonts (Helvetica, Arial) have neither glyph, and common fallbacks such as DejaVu
+Sans have no mark anchors on U+25CC, so the mark collides with the circle. Every legend font stack
+is therefore led by `"KLE Marks"` (`withMarksFont()` in `src/utils/label-fonts.ts`), a 14 KB
+subset of SIL's Andika, renamed as its license requires, whose `@font-face` `unicode-range`
+covers only U+25CC and the Latin combining-mark blocks. Ordinary legends never use it. Andika
+was chosen because it positions every mark on `◌`, overlays included. Noto Sans, tried first,
+draws dead_stroke's `◌̸` beside the circle instead of through it. A canvas does not wait for
+web fonts, so `main.ts` starts the load and the editor redraws on `document.fonts`
+`loadingdone`. `src/assets/fonts/README.md` records the font's source, and
+`scripts/generate-marks-font.mjs` rebuilds it. SVG and HTML exports do not embed
+it, so there the result depends on the viewer's fonts.
+
 `ansi-104/en.json` regenerated from the `us` layout is byte-identical to the hand-made file it
 was cut from, which is the check that the transplant loses nothing. The ISO presets default to
 `en-GB`, from the `gb` layout, which is what they were printed in before. That payload now

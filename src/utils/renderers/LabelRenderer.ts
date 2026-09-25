@@ -6,6 +6,7 @@ import { svgCache } from '../caches/SVGCache'
 import { LinkTracker, linkTracker } from './LinkTracker'
 import type { LabelPosition } from '../label-positions'
 import { LABEL_POSITIONS } from '../label-positions'
+import { DEFAULT_LABEL_FONT_FAMILY, withMarksFont } from '../label-fonts'
 export type { LabelPosition }
 export const labelPositions = LABEL_POSITIONS
 
@@ -149,8 +150,8 @@ export class LabelRenderer {
 
       const fontSize = this.calculateFontSize(key, index)
 
-      // Use font from options or fall back to default
-      const fontFamily = options.fontFamily || '"Helvetica Neue", Helvetica, Arial, sans-serif'
+      // Font from options or the default, led by the dotted-circle marks font
+      const fontFamily = withMarksFont(options.fontFamily || DEFAULT_LABEL_FONT_FAMILY)
       ctx.font = `${fontSize}px ${fontFamily}`
 
       // Apply new baseline positioning only to top labels (0-8), keep original for front labels (9-11)
@@ -276,8 +277,8 @@ export class LabelRenderer {
 
       const fontSize = this.calculateFontSize(key, index)
 
-      // Use font from options or fall back to default
-      const fontFamily = options.fontFamily || '"Helvetica Neue", Helvetica, Arial, sans-serif'
+      // Font from options or the default, led by the dotted-circle marks font
+      const fontFamily = withMarksFont(options.fontFamily || DEFAULT_LABEL_FONT_FAMILY)
       ctx.font = `${fontSize}px ${fontFamily}`
 
       // Render only top labels (0-8) - rotary encoder has no front face, front labels not supported

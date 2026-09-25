@@ -2349,6 +2349,15 @@ onUnmounted(() => {
   }
 })
 
+// A canvas never waits for a web font: legends drawn before one arrives use a fallback.
+// Redraw when any font finishes loading, notably the "KLE Marks" dotted-circle font
+// that main.ts starts fetching at startup (see utils/label-fonts.ts).
+const onFontsLoaded = () => {
+  if (renderer.value) renderScheduler.schedule(renderKeyboard)
+}
+onMounted(() => document.fonts?.addEventListener?.('loadingdone', onFontsLoaded))
+onUnmounted(() => document.fonts?.removeEventListener?.('loadingdone', onFontsLoaded))
+
 const props = defineProps<{
   settingsOpen?: boolean
 }>()

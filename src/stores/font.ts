@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { toast } from '@/composables/useToast'
+import { DEFAULT_LABEL_FONT_FAMILY } from '@/utils/label-fonts'
 
 /**
  * Font Store
@@ -28,7 +29,7 @@ export interface FontSettings {
 
 // Default font (matches current hardcoded font)
 const DEFAULT_FONT: FontSettings = {
-  fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+  fontFamily: DEFAULT_LABEL_FONT_FAMILY,
 }
 
 export const useFontStore = defineStore('font', () => {
