@@ -216,10 +216,26 @@ Only the typing keys are localized (`TLDE`, `AE01–12`, `AD01–12`, `AC01–11
 plus `LSGT` on ISO and the numpad decimal `KPDL`). Modifiers, F-keys and navigation keep this
 repo's wording (`Backspace`, `Win`), so every language reads the same outside the letters.
 
+The right Alt is the one modifier that follows the layout, but only in which of this repo's two
+labels it gets: `AltGr` where the layout binds it to `ISO_Level3_Shift` (Polish, German, UK and
+most European layouts), `Alt` otherwise (`us`, `ru`, `ja`). xkbprint's own legend only decides
+the choice. It cannot be found in a preset by its legend, since both Alt keys read `Alt` on a
+US-printed board, so the template takes the second Alt key in reading order.
+
 The substitution works on the raw JSON string because xkbprint's legend string is in the slot
 order top-left, bottom-left, top-right, bottom-right, which is also the serialized order under
 KLE's default alignment `a:4`. So shift, base and the two AltGr levels land in the four corners
 without deserializing anything. The generator refuses a placeholder under any other alignment.
+
+A legend that is a lone combining mark is drawn on a dotted circle `◌` by xkbprint itself. Every
+dead key is shown this way, as its combining accent on the circle: `dead_circumflex` is `◌̂`, not a
+spacing `^`. Spacing forms exist for the common accents but not for all (`dead_belowdot`,
+`dead_hook`), and mixing the two made one key show an accent bare beside another on a circle.
+A plain `^` on a legend is therefore always a real character, never a dead key. The circle also
+carries the vowel signs and tone marks of Arabic, Hebrew, Thai, Devanagari and similar scripts.
+Printed bare, such a mark has no width: it floats off the cap or lands on a neighbouring legend.
+The classification comes from a table xkbprint generates from Unicode's `UnicodeData.txt`
+(`scripts/gen-ucsmark.awk`).
 
 `ansi-104/en.json` regenerated from the `us` layout is byte-identical to the hand-made file it
 was cut from, which is the check that the transplant loses nothing. The ISO presets default to
