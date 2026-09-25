@@ -109,14 +109,25 @@ canvas, which a clone could not do.
 
 ### `collapseViaLayout(keys)` — superset (plate, matches PCB)
 
-A faithful port of kbplacer's `collapse()`:
+A port of kbplacer's `collapse()` — same repositioning, but a **geometric** de-duplication
+signature (see below):
 
 - **Pass-through** (the default layout): every key with no `option,choice` **or** `choice === 0`,
   cloned as-is. Crucially, **ghost and decal keys are preserved** — the plate outline path relies on
   ghost keys to shape a tight outline, so unlike `collapseToLayoutChoices` they must not be dropped.
 - **Seed** the dedup set from the non-decal pass-through keys using the signature
-  `` `${labels[0]}|${cx}|${cy}|${decal}|${sm}` `` (rotated center rounded to 4 decimals, `sm`
-  included to mirror kbplacer).
+  `cx | cy | width | height | width2 | height2 | x2 | y2 | rotation_angle | stabRotation |
+switchRotation | decal | sm` (rotated center rounded to 4 decimals).
+  - This differs from kbplacer on purpose. kbplacer's signature (`labels[0]`, center, `decal`,
+    `sm`) suits PCB footprints: the same matrix label at the same center really is the same switch.
+    A plate also depends on key size and stabilizer orientation. A 1.75U and a 2.25U key can share
+    a label and a center but only one of them needs a stab cutout, so a label-based signature would
+    drop the stab (issue #79). The matrix label is left out entirely because it has no effect on
+    any cutout.
+  - The kept alternative's **switch** cutout coincides with the one already there. `buildPlate`
+    de-duplicates switch cutouts (center, rotation, `switchRotation`, `sm`) and stab cutouts
+    (center, total rotation, width, height) itself, so coincident paths are never emitted. This
+    also covers keys stacked by hand in non-VIA layouts.
 - For each option group, translate every non-zero choice onto the choice-0 anchor (`minXY`) and append
   it only when its post-translation signature is unseen. Decal keys are never emitted as alternatives.
 - Return `passThrough ⧺ keptAlternatives`.
@@ -157,3 +168,12 @@ Alternative (choice 1): two 1U keys `3,13` and `3,14`, drawn offset at `x = 13` 
 
 Result: the plate has cutouts for the 2U backspace **and** the two 1U split keys at their true matrix
 positions — a plate that physically supports either backspace configuration.
+
+### Same position, different size (issue #79)
+
+Choice 0: `1.25U, 1.75U (0,1), 1.5U`. Choice 1: `1U, 2.25U (0,1), 1.25U`.
+
+- Choice-1 anchor moves onto choice 0, so the 2.25U key lands at `x = 1`, center `2.125`, which is
+  the center of the 1.75U key at `x = 1.25`.
+- Same label, same center, different width → signatures differ → the 2.25U key is kept.
+- `buildPlate` emits one switch cutout at that position (the two coincide) plus the 2.25U stab.

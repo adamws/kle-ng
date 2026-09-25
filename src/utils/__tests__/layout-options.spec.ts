@@ -263,7 +263,7 @@ describe('collapseToLayoutChoices', () => {
 })
 
 // ---------------------------------------------------------------------------
-// collapseViaLayout (superset — matches kbplacer PCB collapse)
+// collapseViaLayout (superset — kbplacer-style repositioning, geometric dedup)
 // ---------------------------------------------------------------------------
 
 describe('collapseViaLayout', () => {
@@ -310,14 +310,49 @@ describe('collapseViaLayout', () => {
     const d0a = makeKey('8,0', '0,0', 0, 0)
     const d0b = makeKey('8,1', '0,0', 1, 0)
     // Alternative group (choice 1): one key coincident with d0a, one distinct.
-    const c1a = makeKey('8,0', '0,1', 0, 0) // same matrix + center as d0a → dropped
-    const c1b = makeKey('8,2', '0,1', 1, 0) // distinct matrix → kept
+    const c1a = makeKey('8,0', '0,1', 0, 0) // same geometry as d0a → dropped
+    const c1b = makeKey('8,2', '0,1', 2, 0) // distinct position → kept
     const result = collapseViaLayout([d0a, d0b, c1a, c1b])
 
     // d0a, d0b, and c1b — the coincident c1a is de-duplicated away.
     expect(result).toHaveLength(3)
     expect(result.filter((k) => k.labels[0] === '8,0')).toHaveLength(1)
     expect(result.some((k) => k.labels[0] === '8,2')).toBe(true)
+  })
+
+  it('de-duplicates coincident keys regardless of matrix label', () => {
+    // A plate only cares about geometry: same size at the same spot is the same cutout.
+    const base = makeKey('0,0', '0,0', 0, 0)
+    const alt = makeKey('5,5', '0,1', 0, 0)
+    expect(collapseViaLayout([base, alt])).toHaveLength(1)
+  })
+
+  it('keeps a same-center alternative that differs in size (issue #79)', () => {
+    // Choice 0: 1.25U + 1.75U; choice 1: 1U + 2.25U. The middle keys share matrix
+    // label and center, but only the 2.25U one needs a stabilizer.
+    const d0a = makeKey('0,0', '0,0', 0, 0)
+    d0a.width = 1.25
+    const d0b = makeKey('0,1', '0,0', 1.25, 0)
+    d0b.width = 1.75
+    const c1a = makeKey('0,0', '0,1', 0, 1)
+    const c1b = makeKey('0,1', '0,1', 1, 1)
+    c1b.width = 2.25
+    const result = collapseViaLayout([d0a, d0b, c1a, c1b])
+
+    const middle = result.filter((k) => k.labels[0] === '0,1')
+    expect(middle.map((k) => k.width).sort()).toEqual([1.75, 2.25])
+    const wide = middle.find((k) => k.width === 2.25)!
+    expect(wide.x).toBe(1)
+    expect(wide.y).toBe(0)
+  })
+
+  it('keeps a same-center alternative that differs in stabilizer rotation', () => {
+    const base = makeKey('0,0', '0,0', 0, 0)
+    base.width = 2
+    const alt = makeKey('0,0', '0,1', 0, 0)
+    alt.width = 2
+    alt.stabRotation = 180
+    expect(collapseViaLayout([base, alt])).toHaveLength(2)
   })
 
   it('preserves ghost and decal keys that carry no option/choice', () => {

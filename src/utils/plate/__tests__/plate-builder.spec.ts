@@ -703,6 +703,44 @@ describe('Plate Builder – DXF stabilizer cutouts', () => {
   })
 })
 
+describe('Plate Builder – stacked keys', () => {
+  const options: PlateBuilderOptions = {
+    cutoutType: 'cherry-mx-basic',
+    stabilizerType: 'mx-basic',
+  }
+
+  it('same-center keys of different width share one switch cutout but keep the stab (issue #79)', async () => {
+    // 1.75U (no stab) and 2.25U (stab) centered at the same switch position.
+    const keys = [createKey({ x: 1.25, y: 0, width: 1.75 }), createKey({ x: 1, y: 0, width: 2.25 })]
+    const result = await buildPlate(keys, options)
+    const polylines = parseDxfPolylines(result.dxfContent)
+
+    // One 14x14 switch cutout + the 2.25U stab pair.
+    expect(polylines).toHaveLength(3)
+    const switches = polylines.filter((p) => {
+      const d = polylineDimensions(p)
+      return d.width === 14 && d.height === 14
+    })
+    expect(switches).toHaveLength(1)
+  })
+
+  it('identical stacked keys produce a single switch and stab cutout', async () => {
+    const keys = [createKey({ x: 0, y: 0, width: 2 }), createKey({ x: 0, y: 0, width: 2 })]
+    const result = await buildPlate(keys, options)
+    expect(parseDxfPolylines(result.dxfContent)).toHaveLength(3)
+  })
+
+  it('same-center keys with different stab rotation keep both stabs', async () => {
+    const keys = [
+      createKey({ x: 0, y: 0, width: 2 }),
+      createKey({ x: 0, y: 0, width: 2, stabRotation: 90 }),
+    ]
+    const result = await buildPlate(keys, options)
+    // One switch + two stab pairs.
+    expect(parseDxfPolylines(result.dxfContent)).toHaveLength(5)
+  })
+})
+
 describe('Plate Builder – rotary encoder cutouts (sm === rot_ec11)', () => {
   /** True when every vertex lies (approximately) on a circle of the given radius. */
   function isCircular(vertices: { x: number; y: number }[], radius: number): boolean {

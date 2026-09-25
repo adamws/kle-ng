@@ -169,6 +169,16 @@ const KEY_SORT = (a: Key, b: Key) => {
 }
 
 /**
+ * Identity of a placed cutout, rounded so float noise from key-position math
+ * doesn't split geometrically identical cutouts.
+ */
+function geometrySignature(...parts: (number | string)[]): string {
+  return parts
+    .map((part) => (typeof part === 'number' ? Math.round(part * 10000) / 10000 : part))
+    .join('|')
+}
+
+/**
  * Filter keys to only those that should have switch/stab cutouts.
  * Excludes decal keys and ghost keys.
  */
@@ -859,6 +869,15 @@ export async function buildPlate(
   const namedGeoms: JscadNamedGeom[] = []
   const stabBacksideCuts: BacksideCut3D[] = []
 
+  // Stacked keys (alternative layouts, or collapsed VIA layout options) can share a
+  // switch position while differing in size. Each switch/stab cutout is emitted
+  // once per distinct geometry so the output never contains coincident paths
+  // (which a laser would cut twice). Indices of emitted switches are remembered
+  // for the per-switch backside features further down.
+  const switchSignatures = new Set<string>()
+  const stabSignatures = new Set<string>()
+  const emittedSwitchIndices = new Set<number>()
+
   for (let i = 0; i < cutoutPositions.length; i++) {
     const position = cutoutPositions[i]
     const key = cutoutKeys[i]
@@ -869,6 +888,19 @@ export async function buildPlate(
     const keyCenterX = position.centerX + position.width / 2
     const keyCenterY = position.centerY + position.height / 2
 
+    const switchSignature = geometrySignature(
+      keyCenterX,
+      keyCenterY,
+      position.rotationAngle,
+      key?.switchRotation || 0,
+      key?.sm ?? '',
+    )
+    const isNewSwitch = !switchSignatures.has(switchSignature)
+    if (isNewSwitch) {
+      switchSignatures.add(switchSignature)
+      emittedSwitchIndices.add(i)
+    }
+
     // --- Rotary encoder override (sm === 'rot_ec11') ---
     // Encoders never get a stabilizer or Cherry MX snap notch. The cutout shape
     // depends on the mounting style:
@@ -877,6 +909,7 @@ export async function buildPlate(
     //  • Handwired build: circular screw-in cutout (kerf-compensated) plus a
     //    15×15mm backside clearance pocket (added later, 3D only).
     if (key?.sm === ENCODER_SWITCH_MOUNT) {
+      if (!isNewSwitch) continue
       const label = sanitizeLabel(key)
       const varName = `switch_${i}`
 
@@ -942,80 +975,83 @@ export async function buildPlate(
       continue
     }
 
-    // --- Maker.js side (SVG/DXF, unchanged) ---
-    const cutoutModel = await positionCutout(
-      position,
-      cutoutType,
-      filletRadius,
-      sizeAdjust,
-      customCutoutWidth,
-      customCutoutHeight,
-      key?.switchRotation || 0,
-    )
-    cutoutModels[`cutout_${i}`] = cutoutModel
-
-    // --- JSCAD side (STL + script) ---
-    const gen = getCutoutGenerator(cutoutType, customCutoutWidth, customCutoutHeight)
-    const w = gen.width - sizeAdjust
-    const h = gen.height - sizeAdjust
-    const switchRotDeg = position.rotationAngle - (key?.switchRotation || 0)
-
     const label = key ? sanitizeLabel(key) : ''
-    const size = key ? `${key.width ?? 1}u` : ''
-    const switchComment = [label ? `"${label}"` : '', size].filter(Boolean).join(' ')
-    const varName = `switch_${i}`
 
-    let switchGeom: Geom2
-    let scriptLines: string[]
-    if (cutoutType === 'cherry-mx-openable') {
-      switchGeom = placeGeom2(
-        createCherryMxOpenableGeom({ width: w, height: h, filletRadius, sizeAdjust }),
-        keyCenterX,
-        keyCenterY,
-        switchRotDeg,
+    if (isNewSwitch) {
+      // --- Maker.js side (SVG/DXF, unchanged) ---
+      const cutoutModel = await positionCutout(
+        position,
+        cutoutType,
+        filletRadius,
+        sizeAdjust,
+        customCutoutWidth,
+        customCutoutHeight,
+        key?.switchRotation || 0,
       )
-      scriptLines = buildCherryMxOpenableScript(
-        varName,
-        { width: w, height: h, filletRadius, sizeAdjust },
-        keyCenterX,
-        keyCenterY,
-        switchRotDeg,
-        switchComment,
-      )
-    } else if (cutoutType === 'cherry-mx-alps-hybrid') {
-      switchGeom = placeGeom2(
-        createCherryMxAlpsHybridGeom({ width: w, height: h, filletRadius }),
-        keyCenterX,
-        keyCenterY,
-        switchRotDeg,
-      )
-      scriptLines = buildCherryMxAlpsHybridScript(
-        varName,
-        { width: w, height: h, filletRadius },
-        keyCenterX,
-        keyCenterY,
-        switchRotDeg,
-        switchComment,
-      )
-    } else {
-      // rectangle-based switch types (cherry-mx-basic, alps, choc, custom, …)
-      switchGeom = placeGeom2(
-        createRectangleSwitchGeom({ width: w, height: h, filletRadius }),
-        keyCenterX,
-        keyCenterY,
-        switchRotDeg,
-      )
-      scriptLines = buildRectangleSwitchScript(
-        varName,
-        { width: w, height: h, filletRadius },
-        keyCenterX,
-        keyCenterY,
-        switchRotDeg,
-        switchComment,
-        scriptShapeRegistry,
-      )
+      cutoutModels[`cutout_${i}`] = cutoutModel
+
+      // --- JSCAD side (STL + script) ---
+      const gen = getCutoutGenerator(cutoutType, customCutoutWidth, customCutoutHeight)
+      const w = gen.width - sizeAdjust
+      const h = gen.height - sizeAdjust
+      const switchRotDeg = position.rotationAngle - (key?.switchRotation || 0)
+
+      const size = key ? `${key.width ?? 1}u` : ''
+      const switchComment = [label ? `"${label}"` : '', size].filter(Boolean).join(' ')
+      const varName = `switch_${i}`
+
+      let switchGeom: Geom2
+      let scriptLines: string[]
+      if (cutoutType === 'cherry-mx-openable') {
+        switchGeom = placeGeom2(
+          createCherryMxOpenableGeom({ width: w, height: h, filletRadius, sizeAdjust }),
+          keyCenterX,
+          keyCenterY,
+          switchRotDeg,
+        )
+        scriptLines = buildCherryMxOpenableScript(
+          varName,
+          { width: w, height: h, filletRadius, sizeAdjust },
+          keyCenterX,
+          keyCenterY,
+          switchRotDeg,
+          switchComment,
+        )
+      } else if (cutoutType === 'cherry-mx-alps-hybrid') {
+        switchGeom = placeGeom2(
+          createCherryMxAlpsHybridGeom({ width: w, height: h, filletRadius }),
+          keyCenterX,
+          keyCenterY,
+          switchRotDeg,
+        )
+        scriptLines = buildCherryMxAlpsHybridScript(
+          varName,
+          { width: w, height: h, filletRadius },
+          keyCenterX,
+          keyCenterY,
+          switchRotDeg,
+          switchComment,
+        )
+      } else {
+        // rectangle-based switch types (cherry-mx-basic, alps, choc, custom, …)
+        switchGeom = placeGeom2(
+          createRectangleSwitchGeom({ width: w, height: h, filletRadius }),
+          keyCenterX,
+          keyCenterY,
+          switchRotDeg,
+        )
+        scriptLines = buildRectangleSwitchScript(
+          varName,
+          { width: w, height: h, filletRadius },
+          keyCenterX,
+          keyCenterY,
+          switchRotDeg,
+          switchComment,
+          scriptShapeRegistry,
+        )
+      }
+      namedGeoms.push({ varName, geom: switchGeom, scriptLines })
     }
-    namedGeoms.push({ varName, geom: switchGeom, scriptLines })
 
     // Create stabilizer cutout if enabled
     if (stabilizerType !== 'none' && key) {
@@ -1024,6 +1060,16 @@ export async function buildPlate(
       const totalStabRotation = position.rotationAngle - (key.stabRotation || 0)
       const stabKeyCenterX = D.add(position.centerX, D.div(position.width, 2))
       const stabKeyCenterY = D.add(position.centerY, D.div(position.height, 2))
+
+      const stabSignature = geometrySignature(
+        stabKeyCenterX,
+        stabKeyCenterY,
+        totalStabRotation,
+        keyWidth,
+        keyHeight,
+      )
+      if (stabSignatures.has(stabSignature)) continue
+      stabSignatures.add(stabSignature)
 
       // Maker.js stab model (SVG/DXF)
       let stabModel: MakerJs.IModel | null
@@ -1375,7 +1421,7 @@ export async function buildPlate(
         if (feature.type === 'cherry-mx-snap-notch') {
           for (let i = 0; i < cutoutPositions.length; i++) {
             const position = cutoutPositions[i]
-            if (!position) continue
+            if (!position || !emittedSwitchIndices.has(i)) continue
             // Encoders are not Cherry MX switches — no snap notch.
             if (cutoutKeys[i]?.sm === ENCODER_SWITCH_MOUNT) continue
             const keyCenterX = position.centerX + position.width / 2
@@ -1399,7 +1445,7 @@ export async function buildPlate(
       if (rotaryEncoderHandwired) {
         for (let i = 0; i < cutoutPositions.length; i++) {
           const position = cutoutPositions[i]
-          if (!position) continue
+          if (!position || !emittedSwitchIndices.has(i)) continue
           if (cutoutKeys[i]?.sm !== ENCODER_SWITCH_MOUNT) continue
           const keyCenterX = position.centerX + position.width / 2
           const keyCenterY = position.centerY + position.height / 2

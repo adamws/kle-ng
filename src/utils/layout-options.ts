@@ -181,9 +181,12 @@ export function collapseToLayoutChoicePlacements(
  * repositioned to overlay its true matrix location.
  *
  * This is the superset counterpart to collapseToLayoutChoices (which keeps only a
- * single chosen variant). It mirrors kbplacer's MatrixAnnotatedKeyboard.collapse()
- * (kicad-kbplacer/kbplacer/kle_serial.py, lines ~456-510) so that a generated plate
- * physically supports every layout option — matching the PCB backend.
+ * single chosen variant). The repositioning mirrors kbplacer's
+ * MatrixAnnotatedKeyboard.collapse() (kicad-kbplacer/kbplacer/kle_serial.py,
+ * lines ~456-510) so that a generated plate physically supports every layout
+ * option — matching the PCB backend. De-duplication differs: kbplacer keys on the
+ * matrix label (right for switch footprints), while a plate keys on cutout
+ * geometry, so alternatives differing only in size/stabilizer are kept.
  *
  * Unlike collapseToLayoutChoices, ghost and decal keys are preserved as-is (the plate
  * outline path relies on ghost keys). The input array is NOT mutated.
@@ -194,12 +197,30 @@ export function collapseToLayoutChoicePlacements(
  * @returns New key array: default keys + repositioned, de-duplicated alternatives
  */
 export function collapseViaLayout(keys: Key[]): Key[] {
-  // De-duplication signature: matrix coord + rotated center + decal + switch-mount.
+  // De-duplication signature: everything that shapes a plate cutout — rotated
+  // center, key size (incl. secondary rectangle, which drives stabilizers),
+  // rotations and switch mount. The matrix label is deliberately NOT part of it:
+  // the same label at the same center can still need a different stabilizer
+  // (e.g. 1.75U vs 2.25U alternatives, issue #79).
   const signature = (key: Key): string => {
     const center = getKeyCenter(key)
     const cx = Math.round(center.x * 10000) / 10000
     const cy = Math.round(center.y * 10000) / 10000
-    return `${key.labels[0]}|${cx}|${cy}|${key.decal}|${key.sm}`
+    return [
+      cx,
+      cy,
+      key.width,
+      key.height,
+      key.width2,
+      key.height2,
+      key.x2,
+      key.y2,
+      key.rotation_angle || 0,
+      key.stabRotation || 0,
+      key.switchRotation || 0,
+      key.decal,
+      key.sm,
+    ].join('|')
   }
 
   // Group keys carrying an option/choice by option → choice (choice 0 kept as anchor).
