@@ -312,7 +312,9 @@ ANSI 104, Default 60%, ISO 105 and ISO 60% are available in every language X11 s
 
 Choosing a language is optional. **Click the card and it loads immediately**, in the language the control names — exactly like any other preset.
 
-To load a different one, click the globe first. A short menu lists the alternatives; picking one **does not import anything** — it just changes what that card will load, and the control updates to show it (`🌐 PL`). You can open the menu again and change your mind as often as you like. Clicking the card is what actually imports, so the choice is never made for you by accident.
+To load a different one, click the globe first. A menu lists the alternatives; picking one **does not import anything** — it just changes what that card will load, and the control updates to show it (`🌐 PL`). You can open the menu again and change your mind as often as you like. Clicking the card is what actually imports, so the choice is never made for you by accident.
+
+The list is long, so you can type to get through it: with the menu open, type the start of a language's name (`pol` for Polish) or its code (`pl`) and press Enter. Typing a letter on the globe control itself opens the menu and jumps straight there.
 
 The key layout is identical across every language of a preset; only the printing on the keys changes. That is why the card shows a single preview and a single key count no matter which language you pick.
 

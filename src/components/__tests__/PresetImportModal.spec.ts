@@ -458,7 +458,7 @@ describe('PresetImportModal', () => {
         expect(document.activeElement).toBe(options(wrapper)[0]!.element)
       })
 
-      it('keeps the menu open on a second ArrowDown and focuses the first option', async () => {
+      it('keeps the menu open on a second ArrowDown and focuses the current option', async () => {
         await toggle(wrapper).trigger('keydown', { key: 'ArrowDown' })
         await flushPromises()
         ;(toggle(wrapper).element as HTMLElement).focus()
@@ -468,6 +468,85 @@ describe('PresetImportModal', () => {
 
         expect(menu(wrapper).exists()).toBe(true)
         expect(document.activeElement).toBe(options(wrapper)[0]!.element)
+      })
+
+      // Type-ahead can only hear keys while focus is inside the menu, so a mouse open
+      // has to move focus in as well -- onto the language the card is set to.
+      it('moves focus onto the current language when opened with the mouse', async () => {
+        const mouseClick = () =>
+          toggle(wrapper).element.dispatchEvent(
+            new MouseEvent('click', { bubbles: true, detail: 1 }),
+          )
+        mouseClick()
+        await flushPromises()
+        await options(wrapper)[1]!.trigger('click')
+        await flushPromises()
+
+        mouseClick()
+        await flushPromises()
+
+        expect(document.activeElement).toBe(options(wrapper)[1]!.element)
+      })
+
+      const typeInMenu = (key: string, init: KeyboardEventInit = {}) => {
+        const event = new KeyboardEvent('keydown', {
+          key,
+          bubbles: true,
+          cancelable: true,
+          ...init,
+        })
+        ;(document.activeElement as HTMLElement).dispatchEvent(event)
+        return event
+      }
+
+      it('jumps to a language by its first letter', async () => {
+        await toggle(wrapper).trigger('click')
+        await flushPromises()
+
+        const event = typeInMenu('p')
+        await flushPromises()
+
+        expect(event.defaultPrevented).toBe(true)
+        expect(document.activeElement).toBe(options(wrapper)[1]!.element)
+        // Moving focus is not picking: nothing is staged yet.
+        expect(toggle(wrapper).text()).toContain('EN')
+      })
+
+      it('opens the menu and jumps when a letter is typed on the toggle', async () => {
+        await toggle(wrapper).trigger('keydown', { key: 'p' })
+        await flushPromises()
+
+        expect(menu(wrapper).exists()).toBe(true)
+        expect(document.activeElement).toBe(options(wrapper)[1]!.element)
+      })
+
+      it('leaves modifier shortcuts to the browser', async () => {
+        await toggle(wrapper).trigger('click')
+        await flushPromises()
+
+        const event = typeInMenu('p', { ctrlKey: true })
+        await flushPromises()
+
+        expect(event.defaultPrevented).toBe(false)
+        expect(document.activeElement).toBe(options(wrapper)[0]!.element)
+      })
+
+      it('starts a new search after a pause in typing', async () => {
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+        try {
+          await toggle(wrapper).trigger('click')
+          await flushPromises()
+
+          typeInMenu('p')
+          // Within the window "pe" matches nothing, so focus would stay on Polish.
+          vi.advanceTimersByTime(600)
+          typeInMenu('e')
+          await flushPromises()
+
+          expect(document.activeElement).toBe(options(wrapper)[0]!.element)
+        } finally {
+          vi.useRealTimers()
+        }
       })
 
       // Otherwise focus drops onto the page behind the modal once the menu is gone.

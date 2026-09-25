@@ -93,6 +93,11 @@
                   <span
                     class="preset-card-meta small text-muted"
                     :class="{ 'preset-card-meta-inset': languageCount(entry.preset) > 1 }"
+                    :style="
+                      languageCount(entry.preset) > 1
+                        ? { '--lang-code-chars': selectedLanguageCode(entry.preset).length }
+                        : undefined
+                    "
                     >{{ metaLine(entry.preset) }}</span
                   >
                 </button>
@@ -113,8 +118,8 @@
                   aria-haspopup="menu"
                   :aria-label="`${entry.preset.name}: legends, currently ${selectedLanguageName(entry.preset)}`"
                   :title="`Legends: ${selectedLanguageName(entry.preset)} — click to change`"
-                  @click.stop="toggleLanguageMenu(entry.preset, $event, $event.detail === 0)"
-                  @keydown.down.prevent="openLanguageMenu(entry.preset, $event)"
+                  @click.stop="toggleLanguageMenu(entry.preset, $event)"
+                  @keydown="handleToggleKeydown(entry.preset, $event)"
                 >
                   <BiGlobe2 class="preset-lang-globe" aria-hidden="true" />
                   <span class="preset-lang-code">{{ selectedLanguageCode(entry.preset) }}</span>
@@ -162,25 +167,40 @@
       :style="langMenuStyle"
       :aria-label="`Legends for ${openLanguagePreset.name}`"
     >
-      <button
+      <template
         v-for="(language, index) in presetLanguages(openLanguagePreset)"
         :key="language.code"
-        type="button"
-        role="menuitem"
-        class="preset-lang-option"
-        data-testid="preset-language-option"
-        :data-language-code="language.code"
-        @click="pickLanguage(language.code)"
-        @keydown="handleMenuKeydown($event, index)"
       >
-        <span class="preset-lang-option-name text-truncate">{{ language.name }}</span>
-        <span class="preset-lang-option-code">{{ language.code }}</span>
-        <BiCheck2
-          v-if="language.code === selectedLanguageCodeRaw(openLanguagePreset)"
-          class="preset-lang-option-check"
-          aria-hidden="true"
+        <button
+          type="button"
+          role="menuitem"
+          class="preset-lang-option"
+          data-testid="preset-language-option"
+          :data-language-code="language.code"
+          @click="pickLanguage(language.code)"
+          @keydown="handleMenuKeydown($event, index)"
+        >
+          <span class="preset-lang-option-name text-truncate">{{ language.name }}</span>
+          <span class="preset-lang-option-code">{{ language.code }}</span>
+          <!-- A fixed slot on every row, so the check never pushes one code out of the column. -->
+          <span class="preset-lang-option-mark">
+            <BiCheck2
+              v-if="language.code === selectedLanguageCodeRaw(openLanguagePreset)"
+              class="preset-lang-option-check"
+              aria-hidden="true"
+            />
+          </span>
+        </button>
+        <!--
+          The default is pinned first and the rest are alphabetical; without a rule it
+          reads as one mis-sorted entry. Not worth it for a two-language menu.
+        -->
+        <div
+          v-if="index === 0 && languageCount(openLanguagePreset) > 2"
+          role="separator"
+          class="preset-lang-separator"
         />
-      </button>
+      </template>
     </div>
   </div>
 </template>
@@ -201,6 +221,7 @@ import {
   type Preset,
   type PresetPreview,
 } from '@/utils/presets'
+import { isTypeaheadKey, typeaheadIndex } from '@/utils/typeahead'
 import LayoutThumbnail from './LayoutThumbnail.vue'
 import BiExclamationTriangle from 'bootstrap-icons/icons/exclamation-triangle.svg'
 import BiGlobe2 from 'bootstrap-icons/icons/globe2.svg'
@@ -256,6 +277,12 @@ const openLanguageId = computed(() => openLanguagePreset.value?.id ?? null)
 const langMenuRef = ref<HTMLElement | null>(null)
 const langMenuStyle = ref<Record<string, string>>({})
 let langTrigger: HTMLElement | null = null
+
+// Type-ahead state for the open menu: what has been typed so far, and the timer that
+// clears it after a pause. Reset whenever the menu closes.
+const TYPEAHEAD_RESET_MS = 500
+let typeaheadBuffer = ''
+let typeaheadTimer: ReturnType<typeof setTimeout> | undefined
 
 /* -------------------------------------------------------------------------- */
 /* Search                                                                      */
@@ -481,32 +508,59 @@ const load = async (preset: Preset, language?: string) => {
 /* The optional language menu                                                  */
 /* -------------------------------------------------------------------------- */
 
-// `focusFirst` is set for keyboard activation: Enter and Space arrive as a click with
-// `detail === 0`, and a keyboard user expects to land on the first option, as with
-// ArrowDown, rather than be left on the toggle with the menu hanging off it.
-const toggleLanguageMenu = (preset: Preset, event: Event, focusFirst = false) => {
+const toggleLanguageMenu = (preset: Preset, event: Event) => {
   if (openLanguagePreset.value?.id === preset.id) {
     closeLanguageMenu()
     return
   }
-  openLanguageMenu(preset, event, focusFirst)
+  openLanguageMenu(preset, event)
 }
 
-/** Opens (or keeps open) this card's menu. ArrowDown on the toggle never closes it. */
-const openLanguageMenu = (preset: Preset, event: Event, focusFirst = true) => {
+/**
+ * Opens (or keeps open) this card's menu. ArrowDown on the toggle never closes it.
+ *
+ * Focus always moves in, onto the language the card is set to, however the menu was
+ * opened. With ~90 languages, type-ahead is the way through the list, and it can only
+ * hear keys while focus is inside; `:focus-visible` keeps the ring off for mouse
+ * users. Landing on the current choice rather than the first option also scrolls a
+ * staged language deep in the list into view when the menu is reopened.
+ */
+const openLanguageMenu = (preset: Preset, event: Event) => {
   if (openLanguagePreset.value?.id === preset.id) {
-    if (focusFirst) firstMenuItem()?.focus()
+    selectedMenuItem()?.focus()
     return
   }
   langTrigger = event.currentTarget as HTMLElement
   openLanguagePreset.value = preset
   void nextTick(() => {
     positionLanguageMenu()
-    if (focusFirst) firstMenuItem()?.focus()
+    selectedMenuItem()?.focus()
+  })
+}
+
+/**
+ * The toggle's own keys: ArrowDown opens the menu, and a letter opens it and jumps
+ * straight to the first matching language, so "p","o" from the card reaches Polish.
+ */
+const handleToggleKeydown = (preset: Preset, event: KeyboardEvent) => {
+  if (event.key === 'ArrowDown') {
+    event.preventDefault()
+    openLanguageMenu(preset, event)
+    return
+  }
+  if (!isTypeaheadKey(event, true)) return
+  event.preventDefault()
+  const key = event.key
+  openLanguageMenu(preset, event)
+  // Runs after openLanguageMenu's own nextTick has focused the current option.
+  void nextTick(() => {
+    const items = menuItems()
+    typeahead(key, items.indexOf(document.activeElement as HTMLButtonElement))
   })
 }
 
 const closeLanguageMenu = ({ refocus = false } = {}) => {
+  resetTypeahead()
   if (!openLanguagePreset.value) return
   const trigger = langTrigger
   openLanguagePreset.value = null
@@ -553,13 +607,51 @@ const positionLanguageMenu = () => {
   }
 }
 
-const firstMenuItem = () =>
-  langMenuRef.value?.querySelector<HTMLButtonElement>('.preset-lang-option') ?? null
+const menuItems = () =>
+  Array.from(langMenuRef.value?.querySelectorAll<HTMLButtonElement>('.preset-lang-option') ?? [])
+
+/** The option for the language the open card is set to; the first one as a fallback. */
+const selectedMenuItem = () => {
+  const preset = openLanguagePreset.value
+  const items = menuItems()
+  if (!preset) return items[0] ?? null
+  const code = selectedLanguageCodeRaw(preset)
+  return items.find((item) => item.dataset.languageCode === code) ?? items[0] ?? null
+}
+
+const resetTypeahead = () => {
+  typeaheadBuffer = ''
+  clearTimeout(typeaheadTimer)
+  typeaheadTimer = undefined
+}
+
+/**
+ * Adds one typed character and moves focus to the option it now points at. Names are
+ * matched first, then codes, so "pl" and "Polish" both work but a code never beats a
+ * name. A key that matches nothing leaves focus where it is.
+ */
+const typeahead = (key: string, current: number) => {
+  const preset = openLanguagePreset.value
+  if (!preset) return
+  typeaheadBuffer += key
+  clearTimeout(typeaheadTimer)
+  typeaheadTimer = setTimeout(resetTypeahead, TYPEAHEAD_RESET_MS)
+
+  const languages = presetLanguages(preset).map((language) => ({
+    label: language.name,
+    alias: language.code,
+  }))
+  const index = typeaheadIndex(languages, typeaheadBuffer, current)
+  if (index !== -1) menuItems()[index]?.focus()
+}
 
 const handleMenuKeydown = (event: KeyboardEvent, index: number) => {
-  const items = Array.from(
-    langMenuRef.value?.querySelectorAll<HTMLButtonElement>('.preset-lang-option') ?? [],
-  )
+  if (isTypeaheadKey(event, typeaheadBuffer === '')) {
+    event.preventDefault()
+    typeahead(event.key, index)
+    return
+  }
+  const items = menuItems()
   switch (event.key) {
     case 'ArrowDown':
       event.preventDefault()
@@ -665,6 +757,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  resetTypeahead()
   document.removeEventListener('keydown', handleKeyDown)
   document.body.classList.remove('modal-open')
   document.removeEventListener('click', handleDocumentClick)
@@ -716,6 +809,17 @@ onUnmounted(() => {
   .preset-lang-toggle {
     right: 0.375rem;
     bottom: 0.375rem;
+  }
+
+  /* A 140px card cannot fit "104 keys" beside a full "🌐 EN-GB ▾". The caret goes
+     rather than the globe: the globe is what says "language", and the chip still
+     reads as a control by its pill and border. */
+  .preset-lang-caret {
+    display: none;
+  }
+
+  .preset-card-meta-inset {
+    padding-right: calc(2.3125rem + var(--lang-code-chars, 2) * 0.46rem);
   }
 }
 
@@ -809,9 +913,12 @@ onUnmounted(() => {
   z-index: 1;
   display: inline-flex;
   align-items: center;
-  gap: 0.1875rem;
-  padding: 0.125rem 0.25rem 0.125rem 0.3125rem;
-  font-size: 0.6875rem;
+  gap: 0.25rem;
+  /* 24px tall: the WCAG 2.5.8 minimum target, reached by the chip itself rather than
+     an invisible hit area, so what you see is what you can press. */
+  min-height: 1.5rem;
+  padding: 0 0.375rem 0 0.4375rem;
+  font-size: 0.75rem;
   font-weight: 600;
   line-height: 1;
   color: var(--bs-secondary-color);
@@ -836,16 +943,21 @@ onUnmounted(() => {
 .preset-lang-globe,
 .preset-lang-caret {
   fill: currentColor;
+  /* Whole pixels, never shrunk, never cropped. The globe's outline touches its 16x16
+     viewBox edge, so at a fractional size (0.8em of 11px was 8.8px) pixel snapping
+     shaved the circle flat on one side, worst at 1x DPR. */
+  flex-shrink: 0;
+  overflow: visible;
 }
 
 .preset-lang-globe {
-  width: 0.8em;
-  height: 0.8em;
+  width: 12px;
+  height: 12px;
 }
 
 .preset-lang-caret {
-  width: 0.55em;
-  height: 0.55em;
+  width: 8px;
+  height: 8px;
   opacity: 0.7;
 }
 
@@ -898,15 +1010,34 @@ onUnmounted(() => {
   color: var(--bs-secondary-color);
 }
 
+.preset-lang-option-mark {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 0.875em;
+}
+
 .preset-lang-option-check {
   width: 0.875em;
   height: 0.875em;
   fill: var(--bs-primary);
 }
 
-/* Reserves the corner so a long key count cannot run under the language chip. */
+.preset-lang-separator {
+  height: 1px;
+  margin: 0.25rem 0.5rem;
+  background: var(--bs-border-color);
+}
+
+/* Reserves the corner so the key count cannot run under the language chip. The chip
+   is as wide as its code ("EN" is 60px, "EN-GB" 82px, a staged "MS-ARAB" wider still),
+   so the reservation follows the code's length: a fixed part for the padding, globe
+   and caret, plus about 7.4px per character (measured: 22px across the 3 extra characters of "EN-GB"). The ellipsis is the backstop that
+   keeps a card from ever wrapping onto a second line and changing height. */
 .preset-card-meta-inset {
-  padding-right: 3.75rem;
+  padding-right: calc(3.0625rem + var(--lang-code-chars, 2) * 0.46rem);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .preset-card-name {

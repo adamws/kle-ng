@@ -296,6 +296,20 @@ toggle, because otherwise it lands on `<body>` and the grid's arrow-key navigati
 relative to the focused card — stops responding. The backdrop handler carries the same guard, so
 the click that dismisses a menu does not also close the modal behind it.
 
+**Focus always moves into the menu, onto the card's current language**, whether it was opened
+by mouse or keyboard. Type-ahead can only hear keys while focus is inside the menu, and with ~90
+languages it is the main way through the list. Starting on the current choice rather than the
+first option also brings a staged language deep in the list into view when the menu reopens.
+`:focus-visible` keeps the ring off for mouse users.
+
+**Type-ahead** follows the WAI-ARIA APG menu pattern, with the matching in
+`src/utils/typeahead.ts` and the buffer in the component. Keys typed within 500 ms build a prefix
+(`p`,`o` → Polish). Pressing one letter repeatedly cycles through its matches. Matching ignores case
+and diacritics. Names are matched before codes, so `pl` finds Polish but a code never beats a
+name. A letter typed on the toggle opens the menu and jumps. Space activates the focused option
+unless a multi-word name is being typed, and modifier chords are left to the browser. Moving focus
+never stages anything: Enter or a click does.
+
 ## Card affordance
 
 The toggle shows a globe, the **default language's code**, and a caret — `🌐 EN ▾`. Naming the
@@ -311,6 +325,17 @@ fixed-height thumb box, so the card's dimensions do not change and the grid does
 
 The meta line stays one short string — it has to survive a 140 px card on a phone — so the
 fuller phrasing goes into the card's `title` instead.
+
+**Sizing.** The chip is 24 px tall, the WCAG 2.5.8 minimum target, reached by the chip itself
+rather than an invisible hit area. Its icons are whole-pixel sizes (globe 12 px, caret 8 px) with
+`flex-shrink: 0` and `overflow: visible`. The globe's outline touches its viewBox edge, so at a
+fractional size (it used to be 0.8em = 8.8 px) pixel snapping shaved the circle flat.
+
+The chip's width follows its code (`EN` 60 px, `EN-GB` 82 px, a staged `MS-ARAB` about 100 px), so the
+key count's corner reservation (`.preset-card-meta-inset`) is computed from the code's length via
+a `--lang-code-chars` custom property rather than fixed. On a phone the caret is dropped to keep
+`105 keys` beside `🌐 EN-GB`. The line never wraps: an ellipsis is the backstop, and it shows only
+for the longest codes on the narrowest cards.
 
 ## Search excludes language names
 

@@ -317,6 +317,27 @@ test.describe('Import from Preset', () => {
       await expectKeyCount(page, 104)
     })
 
+    // With ~90 languages, arrowing through the list is not a real option; typing is.
+    test('TC-PRESET-029 — typing a name jumps to it after a mouse open', async ({ page }) => {
+      const before = await currentKeyCount(page)
+      const menu = await presets(page).openLanguageMenu('ANSI 104')
+      // The pinned default is set apart from the alphabetical rest.
+      await expect(menu.locator('[role="separator"]')).toHaveCount(1)
+
+      await page.keyboard.type('pol')
+      await expect(
+        menu.locator(SELECTORS.PRESET.LANGUAGE_OPTION, { hasText: 'Polish' }),
+      ).toBeFocused()
+      await page.keyboard.press('Enter')
+
+      await expect(menu).toBeHidden()
+      await expect(slot(page, 'ANSI 104').locator(SELECTORS.PRESET.LANGUAGE_TOGGLE)).toContainText(
+        'PL',
+      )
+      // Enter stages the language; only the card imports.
+      expect(await currentKeyCount(page)).toBe(before)
+    })
+
     // The shortlist is a one-click shortcut; making it ask would cost every user a
     // click to answer a question most of them do not have.
     test('TC-PRESET-026 — the shortlist loads the default without asking', async ({ page }) => {
