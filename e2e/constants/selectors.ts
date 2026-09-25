@@ -122,6 +122,14 @@ export const SELECTORS = {
     CARD: '[data-testid="preset-card"]',
     COUNT: '[data-testid="preset-count"]',
     EMPTY_STATE: '[data-testid="preset-empty-state"]',
+    /**
+     * The optional language control in a card's corner. Only cards whose preset
+     * ships with several sets of legends have one; clicking the card itself always
+     * loads the default without going near this.
+     */
+    LANGUAGE_TOGGLE: '[data-testid="preset-language-toggle"]',
+    LANGUAGE_MENU: '[data-testid="preset-language-menu"]',
+    LANGUAGE_OPTION: '[data-testid="preset-language-option"]',
   },
 
   /**

@@ -7,10 +7,10 @@ import { resolve } from 'path'
 const TEST_CASES = [
   ['ortho-4-12-qmk.json', 'ortho-4-12-qmk-internal.json'],
   ['ansi-104-big-ass-enter.json', 'ansi-104-big-ass-enter-internal.json'],
-  ['ansi-104.json', 'ansi-104-internal.json'],
+  ['ansi-104/en.json', 'ansi-104-internal.json'],
   ['atreus.json', 'atreus-internal.json'],
   ['ergodox.json', 'ergodox-internal.json'],
-  ['iso-105.json', 'iso-105-internal.json'],
+  ['iso-105/en-GB.json', 'iso-105-internal.json'],
   ['kinesis-advantage.json', 'kinesis-advantage-internal.json'],
   ['symbolics-spacecadet.json', 'symbolics-spacecadet-internal.json'],
 ] as const

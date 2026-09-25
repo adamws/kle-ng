@@ -371,3 +371,82 @@ describe('collapseViaLayout', () => {
     expect(result).toHaveLength(1)
   })
 })
+
+// ---------------------------------------------------------------------------
+// Option groups without a choice-0 (optional keys)
+// ---------------------------------------------------------------------------
+
+/**
+ * A group that defines no choice 0 describes a key which is absent from the
+ * default layout. kbplacer used to crash on such layouts
+ * (`min() iterable argument is empty` in MatrixAnnotatedKeyboard.collapse);
+ * both implementations now anchor the group on its lowest defined choice.
+ */
+describe('layout option group without choice 0', () => {
+  /** Three base keys plus one optional 2U key that only exists in choice 1. */
+  function makeOptionalKeyFixture(): Key[] {
+    const base = [makeKey('0,0', '', 0, 0), makeKey('0,1', '', 1, 0), makeKey('0,2', '', 2, 0)]
+    const optional = makeKey('0,3', '0,1', 10, 0)
+    optional.width = 2
+    return [...base, optional]
+  }
+
+  /** Zero-less group with two choices: one 2U key, or two 1U keys below it. */
+  function makeTwoChoiceFixture(): Key[] {
+    const base = makeKey('0,0', '', 0, 0)
+    const choice1 = makeKey('0,3', '0,1', 10, 0)
+    choice1.width = 2
+    const choice2a = makeKey('0,3', '0,2', 10, 2)
+    const choice2b = makeKey('0,4', '0,2', 11, 2)
+    return [base, choice1, choice2a, choice2b]
+  }
+
+  it('still reports choice 0 as available for the group', () => {
+    const groups = getLayoutOptionGroups(makeOptionalKeyFixture())
+    expect(groups).toEqual([{ option: 0, choices: [0, 1] }])
+  })
+
+  it('collapseViaLayout keeps the optional key at the position it was drawn at', () => {
+    const result = collapseViaLayout(makeOptionalKeyFixture())
+    expect(result).toHaveLength(4)
+    const optional = result.find((k) => k.labels[0] === '0,3')
+    expect(optional).toBeDefined()
+    expect(optional!.x).toBe(10)
+    expect(optional!.y).toBe(0)
+  })
+
+  it('collapseViaLayout anchors remaining choices on the lowest defined choice', () => {
+    const result = collapseViaLayout(makeTwoChoiceFixture())
+    // base + choice-1 key + both choice-2 keys
+    expect(result).toHaveLength(4)
+    const choice1 = result.find((k) => k.labels[8] === '0,1')
+    expect([choice1!.x, choice1!.y]).toEqual([10, 0])
+    // choice-1 anchor = (10,0); choice-2 anchor = (10,2) → delta (0,-2)
+    const choice2a = result.find((k) => k.labels[0] === '0,3' && k.labels[8] === '0,2')
+    const choice2b = result.find((k) => k.labels[0] === '0,4')
+    expect([choice2a!.x, choice2a!.y]).toEqual([10, 0])
+    expect([choice2b!.x, choice2b!.y]).toEqual([11, 0])
+  })
+
+  it('collapseToLayoutChoices hides the optional key when choice 0 is selected', () => {
+    const result = collapseToLayoutChoices(makeOptionalKeyFixture(), new Map([[0, 0]]))
+    expect(result).toHaveLength(3)
+    expect(result.some((k) => k.labels[0] === '0,3')).toBe(false)
+  })
+
+  it('collapseToLayoutChoices shows the optional key in place when its choice is selected', () => {
+    const result = collapseToLayoutChoices(makeOptionalKeyFixture(), new Map([[0, 1]]))
+    expect(result).toHaveLength(4)
+    const optional = result.find((k) => k.labels[0] === '0,3')
+    expect([optional!.x, optional!.y]).toEqual([10, 0])
+  })
+
+  it('collapseToLayoutChoices moves a later choice onto the lowest defined choice', () => {
+    const result = collapseToLayoutChoices(makeTwoChoiceFixture(), new Map([[0, 2]]))
+    expect(result).toHaveLength(3)
+    const choice2a = result.find((k) => k.labels[0] === '0,3')
+    const choice2b = result.find((k) => k.labels[0] === '0,4')
+    expect([choice2a!.x, choice2a!.y]).toEqual([10, 0])
+    expect([choice2b!.x, choice2b!.y]).toEqual([11, 0])
+  })
+})
