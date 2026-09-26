@@ -181,7 +181,7 @@
           @keydown="handleMenuKeydown($event, index)"
         >
           <span class="preset-lang-option-name text-truncate">{{ language.name }}</span>
-          <span class="preset-lang-option-code">{{ language.code }}</span>
+          <span class="preset-lang-option-code">{{ languageCodeLabel(language.code) }}</span>
           <!-- A fixed slot on every row, so the check never pushes one code out of the column. -->
           <span class="preset-lang-option-mark">
             <BiCheck2
@@ -215,6 +215,7 @@ import {
   ALL_PRESETS,
   applyPreset,
   defaultLanguageOf,
+  languageCodeLabel,
   loadPresetPreview,
   presetLanguages,
   presetPayload,
@@ -352,7 +353,8 @@ const languageCount = (preset: Preset) => presetLanguages(preset).length
 /** The language this card is currently set to — its own default until changed. */
 const selectedLanguageCodeRaw = (preset: Preset) =>
   selectedLanguages.value[preset.id] ?? defaultLanguageOf(preset)?.code ?? ''
-const selectedLanguageCode = (preset: Preset) => selectedLanguageCodeRaw(preset).toUpperCase()
+const selectedLanguageCode = (preset: Preset) =>
+  languageCodeLabel(selectedLanguageCodeRaw(preset)).toUpperCase()
 const selectedLanguageName = (preset: Preset) =>
   presetLanguages(preset).find((language) => language.code === selectedLanguageCodeRaw(preset))
     ?.name ?? ''

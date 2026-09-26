@@ -308,7 +308,7 @@ The **Import** menu lists the most commonly used ones under **Top Presets**, so 
 
 A keyboard is not tied to one set of legends — an ANSI 104 board is the same board whether its keycaps are printed US-English or Polish. Presets that ship with more than one set carry a small control in the bottom corner of their card, beside the key count, showing a globe and the language they will load — like `🌐 EN`.
 
-ANSI 104, Default 60%, ISO 105 and ISO 60% are available in every language X11 ships a keyboard layout for. Their legends come from those layouts, including the AltGr characters printed on the right-hand side of a key. The ISO boards default to UK English (`🌐 EN-GB`).
+ANSI 104, Default 60%, ISO 105 and ISO 60% are available in every language X11 ships a keyboard layout for. Their legends come from those layouts, including the AltGr characters printed on the right-hand side of a key. English is kept plain by default, base and Shift only: the ANSI boards default to US English (`🌐 EN`) and the ISO boards to British English (`🌐 EN-GB`). The versions with AltGr characters are in the menu as **English (US, International)** and **British English (Extended)**.
 
 Choosing a language is optional. **Click the card and it loads immediately**, in the language the control names — exactly like any other preset.
 

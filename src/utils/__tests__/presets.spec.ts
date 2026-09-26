@@ -18,6 +18,7 @@ import {
   defaultLanguageOf,
   fetchPresetData,
   isMultilingual,
+  languageCodeLabel,
   presetFilename,
   presetLanguages,
   presetPayload,
@@ -178,6 +179,19 @@ describe('preset catalogue', () => {
     it('flattens a language payload path', () => {
       expect(presetFilename('ansi-104/pl.json')).toBe('ansi-104-pl')
       expect(presetFilename('ansi-104/en.json')).toBe('ansi-104-en')
+    })
+  })
+
+  describe('languageCodeLabel', () => {
+    it('shows an ordinary code as is', () => {
+      expect(languageCodeLabel('pl')).toBe('pl')
+      expect(languageCodeLabel('en-GB')).toBe('en-GB')
+      expect(languageCodeLabel('es-419')).toBe('es-419')
+    })
+
+    // In full, a private-use tag crowds the key count off a phone-sized card.
+    it('shortens a private-use tag to language plus suffix', () => {
+      expect(languageCodeLabel('en-US-x-intl')).toBe('en-intl')
     })
   })
 

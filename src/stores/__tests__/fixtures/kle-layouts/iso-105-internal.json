@@ -509,7 +509,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["¬", "", "", "", "", "", "`", "", "|"],
+      "labels": ["¬", "", "", "", "", "", "`"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -540,7 +540,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["!", "", "¡", "", "", "", "1", "", "¹"],
+      "labels": ["!", "", "", "", "", "", "1"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -571,7 +571,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["\"", "", "⅛", "", "", "", "2", "", "²"],
+      "labels": ["\"", "", "", "", "", "", "2"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -602,7 +602,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["£", "", "", "", "", "", "3", "", "³"],
+      "labels": ["£", "", "", "", "", "", "3"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -633,7 +633,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["$", "", "¼", "", "", "", "4", "", "€"],
+      "labels": ["$", "", "", "", "", "", "4"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -664,7 +664,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["%", "", "⅜", "", "", "", "5", "", "½"],
+      "labels": ["%", "", "", "", "", "", "5"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -695,7 +695,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["^", "", "⅝", "", "", "", "6", "", "¾"],
+      "labels": ["^", "", "", "", "", "", "6"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -726,7 +726,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["&", "", "⅞", "", "", "", "7", "", "{"],
+      "labels": ["&", "", "", "", "", "", "7"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -757,7 +757,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["*", "", "™", "", "", "", "8", "", "["],
+      "labels": ["*", "", "", "", "", "", "8"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -788,7 +788,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["(", "", "±", "", "", "", "9", "", "]"],
+      "labels": ["(", "", "", "", "", "", "9"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -819,7 +819,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": [")", "", "°", "", "", "", "0", "", "}"],
+      "labels": [")", "", "", "", "", "", "0"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -850,7 +850,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["_", "", "¿", "", "", "", "-", "", "\\"],
+      "labels": ["_", "", "", "", "", "", "-"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -881,7 +881,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["+", "", "◌̨", "", "", "", "=", "", "◌̧"],
+      "labels": ["+", "", "", "", "", "", "="],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1191,7 +1191,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["Q", "", "Ω", "", "", "", "", "", "@"],
+      "labels": ["Q"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1222,7 +1222,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["W", "", "§", "", "", "", "", "", "ſ"],
+      "labels": ["W"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1284,7 +1284,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["R", "", "®", "", "", "", "", "", "¶"],
+      "labels": ["R"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1315,7 +1315,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["T", "", "Ŧ"],
+      "labels": ["T"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1346,7 +1346,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["Y", "", "¥", "", "", "", "", "", "←"],
+      "labels": ["Y"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1377,7 +1377,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["U", "", "↑", "", "", "", "", "", "↓"],
+      "labels": ["U"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1408,7 +1408,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["I", "", "ı", "", "", "", "", "", "→"],
+      "labels": ["I"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1439,7 +1439,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["O", "", "Ø"],
+      "labels": ["O"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1470,7 +1470,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["P", "", "Þ"],
+      "labels": ["P"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1501,7 +1501,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["{", "", "◌̊", "", "", "", "[", "", "◌̈"],
+      "labels": ["{", "", "", "", "", "", "["],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1532,7 +1532,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["}", "", "◌̄", "", "", "", "]", "", "◌̃"],
+      "labels": ["}", "", "", "", "", "", "]"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1842,7 +1842,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["A", "", "Æ"],
+      "labels": ["A"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1873,7 +1873,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["S", "", "ẞ", "", "", "", "", "", "ß"],
+      "labels": ["S"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1904,7 +1904,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["D", "", "Ð"],
+      "labels": ["D"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1935,7 +1935,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["F", "", "ª", "", "", "", "", "", "đ"],
+      "labels": ["F"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1966,7 +1966,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["G", "", "Ŋ"],
+      "labels": ["G"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -1997,7 +1997,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["H", "", "Ħ"],
+      "labels": ["H"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2028,7 +2028,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["J", "", "◌̛", "", "", "", "", "", "◌̉"],
+      "labels": ["J"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2059,7 +2059,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["K", "", "&", "", "", "", "", "", "ĸ"],
+      "labels": ["K"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2090,7 +2090,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["L", "", "Ł"],
+      "labels": ["L"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2121,7 +2121,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": [":", "", "◌̋", "", "", "", ";", "", "◌́"],
+      "labels": [":", "", "", "", "", "", ";"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2152,7 +2152,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["@", "", "◌̌", "", "", "", "'", "", "◌̂"],
+      "labels": ["@", "", "", "", "", "", "'"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2183,7 +2183,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["~", "", "◌̆", "", "", "", "#", "", "◌̀"],
+      "labels": ["~", "", "", "", "", "", "#"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2338,7 +2338,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["|", "", "¦", "", "", "", "\\"],
+      "labels": ["|", "", "", "", "", "", "\\"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2369,7 +2369,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["Z", "", "<", "", "", "", "", "", "«"],
+      "labels": ["Z"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2400,7 +2400,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["X", "", ">", "", "", "", "", "", "»"],
+      "labels": ["X"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2431,7 +2431,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["C", "", "©", "", "", "", "", "", "¢"],
+      "labels": ["C"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2462,7 +2462,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["V", "", "‚", "", "", "", "", "", "„"],
+      "labels": ["V"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2493,7 +2493,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["B", "", "‘", "", "", "", "", "", "“"],
+      "labels": ["B"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2524,7 +2524,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["N", "", "’", "", "", "", "", "", "”"],
+      "labels": ["N"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2555,7 +2555,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["M", "", "º", "", "", "", "", "", "µ"],
+      "labels": ["M"],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2586,7 +2586,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["<", "", "×", "", "", "", ",", "", "•"],
+      "labels": ["<", "", "", "", "", "", ","],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2617,7 +2617,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": [">", "", "÷", "", "", "", ".", "", "·"],
+      "labels": [">", "", "", "", "", "", "."],
       "textColor": [],
       "textSize": [],
       "default": {
@@ -2648,7 +2648,7 @@
     },
     {
       "color": "#cccccc",
-      "labels": ["?", "", "◌̇", "", "", "", "/", "", "◌̣"],
+      "labels": ["?", "", "", "", "", "", "/"],
       "textColor": [],
       "textSize": [],
       "default": {

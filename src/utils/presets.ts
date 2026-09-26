@@ -117,6 +117,17 @@ export function defaultLanguageOf(preset: Preset): PresetLanguage | undefined {
 }
 
 /**
+ * The short form of a language code shown on the card chip and in the menu. A second
+ * printing of one language uses a private-use tag (`en-US-x-intl`), which in full is
+ * long enough to crowd the key count off a phone-sized card; it is shown as language
+ * plus private-use suffix (`en-intl`). Every other code is shown as is.
+ */
+export function languageCodeLabel(code: string): string {
+  const [main = '', privateUse] = code.split('-x-')
+  return privateUse ? `${main.split('-')[0]}-${privateUse}` : code
+}
+
+/**
  * The payload path for a preset in a language, and the only place the manifest's
  * `file` fields are read — which is what keeps `Preset.file` being optional from
  * becoming a `string | undefined` cliff across the components.

@@ -24,6 +24,11 @@
         { "code": "bs", "name": "Bosnian", "file": "ansi-104/bs.json" },
         { "code": "pt-BR", "name": "Brazilian Portuguese", "file": "ansi-104/pt-BR.json" },
         { "code": "en-GB", "name": "British English", "file": "ansi-104/en-GB.json" },
+        {
+          "code": "en-GB-x-ext",
+          "name": "British English (Extended)",
+          "file": "ansi-104/en-GB-x-ext.json"
+        },
         { "code": "bg", "name": "Bulgarian", "file": "ansi-104/bg.json" },
         { "code": "my", "name": "Burmese", "file": "ansi-104/my.json" },
         { "code": "fr-CA", "name": "Canadian French", "file": "ansi-104/fr-CA.json" },
@@ -44,6 +49,11 @@
         { "code": "en-NG", "name": "English (Nigeria)", "file": "ansi-104/en-NG.json" },
         { "code": "en-PH", "name": "English (Philippines)", "file": "ansi-104/en-PH.json" },
         { "code": "en-ZA", "name": "English (South Africa)", "file": "ansi-104/en-ZA.json" },
+        {
+          "code": "en-US-x-intl",
+          "name": "English (US, International)",
+          "file": "ansi-104/en-US-x-intl.json"
+        },
         { "code": "eo", "name": "Esperanto", "file": "ansi-104/eo.json" },
         { "code": "et", "name": "Estonian", "file": "ansi-104/et.json" },
         { "code": "pt-PT", "name": "European Portuguese", "file": "ansi-104/pt-PT.json" },
@@ -128,6 +138,11 @@
         { "code": "be", "name": "Belarusian", "file": "iso-105/be.json" },
         { "code": "bs", "name": "Bosnian", "file": "iso-105/bs.json" },
         { "code": "pt-BR", "name": "Brazilian Portuguese", "file": "iso-105/pt-BR.json" },
+        {
+          "code": "en-GB-x-ext",
+          "name": "British English (Extended)",
+          "file": "iso-105/en-GB-x-ext.json"
+        },
         { "code": "bg", "name": "Bulgarian", "file": "iso-105/bg.json" },
         { "code": "my", "name": "Burmese", "file": "iso-105/my.json" },
         { "code": "fr-CA", "name": "Canadian French", "file": "iso-105/fr-CA.json" },
@@ -149,6 +164,11 @@
         { "code": "en-NG", "name": "English (Nigeria)", "file": "iso-105/en-NG.json" },
         { "code": "en-PH", "name": "English (Philippines)", "file": "iso-105/en-PH.json" },
         { "code": "en-ZA", "name": "English (South Africa)", "file": "iso-105/en-ZA.json" },
+        {
+          "code": "en-US-x-intl",
+          "name": "English (US, International)",
+          "file": "iso-105/en-US-x-intl.json"
+        },
         { "code": "eo", "name": "Esperanto", "file": "iso-105/eo.json" },
         { "code": "et", "name": "Estonian", "file": "iso-105/et.json" },
         { "code": "pt-PT", "name": "European Portuguese", "file": "iso-105/pt-PT.json" },
@@ -228,6 +248,11 @@
         { "code": "bs", "name": "Bosnian", "file": "default-60/bs.json" },
         { "code": "pt-BR", "name": "Brazilian Portuguese", "file": "default-60/pt-BR.json" },
         { "code": "en-GB", "name": "British English", "file": "default-60/en-GB.json" },
+        {
+          "code": "en-GB-x-ext",
+          "name": "British English (Extended)",
+          "file": "default-60/en-GB-x-ext.json"
+        },
         { "code": "bg", "name": "Bulgarian", "file": "default-60/bg.json" },
         { "code": "my", "name": "Burmese", "file": "default-60/my.json" },
         { "code": "fr-CA", "name": "Canadian French", "file": "default-60/fr-CA.json" },
@@ -248,6 +273,11 @@
         { "code": "en-NG", "name": "English (Nigeria)", "file": "default-60/en-NG.json" },
         { "code": "en-PH", "name": "English (Philippines)", "file": "default-60/en-PH.json" },
         { "code": "en-ZA", "name": "English (South Africa)", "file": "default-60/en-ZA.json" },
+        {
+          "code": "en-US-x-intl",
+          "name": "English (US, International)",
+          "file": "default-60/en-US-x-intl.json"
+        },
         { "code": "eo", "name": "Esperanto", "file": "default-60/eo.json" },
         { "code": "et", "name": "Estonian", "file": "default-60/et.json" },
         { "code": "pt-PT", "name": "European Portuguese", "file": "default-60/pt-PT.json" },
@@ -326,6 +356,11 @@
         { "code": "be", "name": "Belarusian", "file": "iso-60/be.json" },
         { "code": "bs", "name": "Bosnian", "file": "iso-60/bs.json" },
         { "code": "pt-BR", "name": "Brazilian Portuguese", "file": "iso-60/pt-BR.json" },
+        {
+          "code": "en-GB-x-ext",
+          "name": "British English (Extended)",
+          "file": "iso-60/en-GB-x-ext.json"
+        },
         { "code": "bg", "name": "Bulgarian", "file": "iso-60/bg.json" },
         { "code": "my", "name": "Burmese", "file": "iso-60/my.json" },
         { "code": "fr-CA", "name": "Canadian French", "file": "iso-60/fr-CA.json" },
@@ -347,6 +382,11 @@
         { "code": "en-NG", "name": "English (Nigeria)", "file": "iso-60/en-NG.json" },
         { "code": "en-PH", "name": "English (Philippines)", "file": "iso-60/en-PH.json" },
         { "code": "en-ZA", "name": "English (South Africa)", "file": "iso-60/en-ZA.json" },
+        {
+          "code": "en-US-x-intl",
+          "name": "English (US, International)",
+          "file": "iso-60/en-US-x-intl.json"
+        },
         { "code": "eo", "name": "Esperanto", "file": "iso-60/eo.json" },
         { "code": "et", "name": "Estonian", "file": "iso-60/et.json" },
         { "code": "pt-PT", "name": "European Portuguese", "file": "iso-60/pt-PT.json" },

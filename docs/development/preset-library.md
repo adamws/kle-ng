@@ -184,6 +184,24 @@ This matters because the upstream source uses XKB names, which do not map mechan
 `us`→`en`, `gb`→`en-GB`, `latam`→`es-419`, `ara`→`ar`. That mapping is editorial and belongs to
 whatever imports the XKB output — the generator only ever reads codes off filenames.
 
+A second printing of one language, which no region subtag describes, takes a private-use tag.
+English is the case that needs it. Both English defaults stay plain, base and Shift only, so
+that most users get the keycaps they expect, and the AltGr-rich printings are opt-in:
+
+| Code           | Name                        | Source                                  |
+| -------------- | --------------------------- | --------------------------------------- |
+| `en`           | English                     | `us` (defines no AltGr level)           |
+| `en-US-x-intl` | English (US, International) | `us(altgr-intl)`: US base/Shift + AltGr |
+| `en-GB`        | British English             | `gb` with the AltGr legends dropped     |
+| `en-GB-x-ext`  | British English (Extended)  | `gb` in full                            |
+
+The plain `en-GB` comes from the `basic` option in xkbprint's `languages.tsv`, which keeps only
+the left column of every legend. "Extended" is the name Windows gives its AltGr-rich UK layout.
+`Intl` cannot name a private-use tag, so those display names are registered by hand in
+`scripts/data/language-names.json`. On the card chip and in the menu, `languageCodeLabel()`
+shortens such a tag to language plus suffix (`EN-INTL`, `EN-EXT`), because the full tag would
+crowd the key count off a phone-sized card.
+
 ### Display names are resolved at build time, never in the browser
 
 `Intl.DisplayNames` output depends on the host's ICU data, so deriving names at runtime would
@@ -252,8 +270,7 @@ it, so there the result depends on the viewer's fonts.
 
 `ansi-104/en.json` regenerated from the `us` layout is byte-identical to the hand-made file it
 was cut from, which is the check that the transplant loses nothing. The ISO presets default to
-`en-GB`, from the `gb` layout, which is what they were printed in before. That payload now
-carries AltGr legends too.
+the plain `en-GB`, which likewise equals the hand-made ISO 105 and ISO 60% it replaced.
 
 ### Regenerating
 
