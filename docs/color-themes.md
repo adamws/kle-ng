@@ -2,8 +2,8 @@
 
 The Theme Tools panel supports custom themes defined as JSON. This page documents the theme format and matcher syntax.
 
-<img src="/theme-tools-modal-light.png" class="light-only" alt="Theme tools modal" />
-<img src="/theme-tools-modal-dark.png" class="dark-only" alt="Theme tools modal" />
+<img src="/theme-tools-modal-light.png" class="docs-screenshot light-only" alt="Theme tools modal" />
+<img src="/theme-tools-modal-dark.png" class="docs-screenshot dark-only" alt="Theme tools modal" />
 
 ## Theme JSON Structure
 

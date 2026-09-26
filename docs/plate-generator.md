@@ -143,6 +143,11 @@ The 3D preview displays a rendered view of the plate geometry. The bottom-right 
 - **Wireframe** — Renders the plate in wireframe mode, useful for inspecting internal geometry and backside features
 - **Reset view** — Button to reset the camera to the auto-fit position
 
+<img src="/plate-generator-3d-preview-light.png" class="docs-screenshot light-only" alt="Plate Generator with the 3D results tab open, showing a solid plate with switch and stabilizer cutouts and the Solid, Wireframe and Reset view controls" />
+<img src="/plate-generator-3d-preview-dark.png" class="docs-screenshot dark-only" alt="Plate Generator with the 3D results tab open, showing a solid plate with switch and stabilizer cutouts and the Solid, Wireframe and Reset view controls" />
+
+The 3D view needs an outline. While **Outline** is set to **None**, the 3D tab asks you to enable one, and the **Download STL** and **Download JSCAD** buttons are hidden.
+
 The camera position is preserved across plate regenerations. Click **Reset view** to return to the default auto-fit view after panning or rotating.
 
 ## JSON Settings {#json-settings}
@@ -152,6 +157,9 @@ The **JSON** tab provides direct access to plate settings as formatted JSON. Thi
 - Edit multiple settings at once
 - Share or version-control configurations as files
 - Build or modify settings programmatically
+
+<img src="/plate-generator-json-tab-light.png" class="docs-screenshot light-only" alt="Plate Generator JSON tab with Apply, Reset, Download and Upload buttons above the settings JSON and an In sync status bar" style="max-width:374px" />
+<img src="/plate-generator-json-tab-dark.png" class="docs-screenshot dark-only" alt="Plate Generator JSON tab with Apply, Reset, Download and Upload buttons above the settings JSON and an In sync status bar" style="max-width:374px" />
 
 ### Using the JSON Editor
 

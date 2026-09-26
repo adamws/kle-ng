@@ -22,6 +22,9 @@ The **Key Properties** panel is enabled whenever one or more keys are selected. 
 
 Click the **Advanced** button to expose secondary position and size fields (X2, Y2, Width2, Height2). These define a second rectangular region combined with the primary one to produce non-rectangular key shapes such as ISO Enter and Big-Ass Enter. Most users do not need to use these directly.
 
+<img src="/key-properties-advanced-light.png" class="docs-screenshot light-only" alt="Key Properties in advanced mode for an ISO Enter key: X2 -0.25, Width 1.25, Height 2, Width2 1.5, Height2 1" />
+<img src="/key-properties-advanced-dark.png" class="docs-screenshot dark-only" alt="Key Properties in advanced mode for an ISO Enter key: X2 -0.25, Width 1.25, Height 2, Width2 1.5, Height2 1" />
+
 ## Labels
 
 Each key has up to **12 label positions**: 9 positions on the **top face** of the keycap (the part you see when looking down) and 3 positions on the **front face** (the vertical edge facing you when typing).

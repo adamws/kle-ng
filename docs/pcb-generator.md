@@ -66,6 +66,9 @@ The automatic router attempts to connect switches to diodes using a basic algori
 
 The **JSON** tab shows the current switch, diode, routing, and LED settings as an editable JSON document, so you can save a configuration as a preset and reuse or share it.
 
+<img src="/pcb-generator-json-tab-light.png" class="docs-screenshot light-only" alt="PCB Generator JSON tab showing switch, stabilizer, diode and routing settings as JSON" style="max-width:372px" />
+<img src="/pcb-generator-json-tab-dark.png" class="docs-screenshot dark-only" alt="PCB Generator JSON tab showing switch, stabilizer, diode and routing settings as JSON" style="max-width:372px" />
+
 - **Edit** — Change values directly in the editor and click **Apply** (or press `Ctrl+Enter`) to update the form. Invalid JSON is flagged in the status bar and cannot be applied; **Reset** discards your edits.
 - **Download** — Save the current settings as `pcb-settings.json`.
 - **Upload** — Load a previously saved `pcb-settings.json`. Valid files are applied immediately; invalid files are loaded into the editor so you can correct them.

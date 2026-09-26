@@ -180,6 +180,9 @@ When a multi-layout QMK file is loaded, a **QMK Layout Preview toolbar** appears
 - An **"all" button** — shows all imported keys in the flat editable view
 - **Numbered buttons** — one per QMK layout (0, 1, 2 …). Hover over a button to see the full layout name (e.g., `LAYOUT_iso`)
 
+<img src="/qmk-layout-toolbar-light.png" class="docs-screenshot light-only" alt="Ortho 4x12 layout with the QMK layout preview toolbar below the canvas: all, 0 and 1 buttons; two bottom-row keys carry the layout tags 1 and 0" />
+<img src="/qmk-layout-toolbar-dark.png" class="docs-screenshot dark-only" alt="Ortho 4x12 layout with the QMK layout preview toolbar below the canvas: all, 0 and 1 buttons; two bottom-row keys carry the layout tags 1 and 0" />
+
 Click a numbered button to enter **preview mode** for that layout. In preview mode only keys belonging to that layout are shown, the canvas is read-only, and a hint reads _"QMK layout preview (readonly) — switch to all to edit"_. Click **"all"** to return to the normal editable view.
 
 The toolbar is hidden for single-layout keyboards and for keyboards without QMK membership tags.
@@ -195,6 +198,9 @@ See [QMK Export](#qmk-export) below for detailed information.
 The **Import → From QMK** and **Import → From VIA** modals show a preview of the layout next to
 the search results, so you can tell boards apart without loading each one into the editor and
 losing your current work.
+
+<img src="/qmk-import-preview-light.png" class="docs-screenshot light-only" alt="Import from QMK dialog with planck/rev6 selected and its LAYOUT_ortho_4x12 variant previewed, 1 of 5" />
+<img src="/qmk-import-preview-dark.png" class="docs-screenshot dark-only" alt="Import from QMK dialog with planck/rev6 selected and its LAYOUT_ortho_4x12 variant previewed, 1 of 5" />
 
 Hover a result (or move to it with the arrow keys) and kle-ng downloads that keyboard's definition
 in the background and draws it using the same renderer as the main canvas. A loading bar appears
@@ -283,6 +289,9 @@ kle-ng supports multiple import methods:
 
 Click the **Import** button in the toolbar and select:
 
+<img src="/import-menu-light.png" class="docs-screenshot light-only" alt="Import menu listing From File, From URL, From QMK, From VIA, From Preset and the Top Presets" style="float:right; margin-left:16px" />
+<img src="/import-menu-dark.png" class="docs-screenshot dark-only" alt="Import menu listing From File, From URL, From QMK, From VIA, From Preset and the Top Presets" style="float:right; margin-left:16px" />
+
 **From File** — Browse for a file on your computer. Supported formats: JSON (KLE, VIA/Vial, QMK), PNG (with embedded layout data), Ergogen YAML
 
 **From URL** — Enter any of the supported URL formats:
@@ -361,20 +370,26 @@ GitHub API has rate limits for unauthenticated requests. If you encounter rate l
 
 Click the **Export** button in the toolbar to access all export options:
 
+<img src="/export-menu-light.png" class="docs-screenshot light-only" alt="Export menu with download options for JSON, KLE internal JSON, VIA JSON, QMK JSON, PNG, HTML and SVG, and links to Ergogen and the ZMK Shield Wizard" />
+<img src="/export-menu-dark.png" class="docs-screenshot dark-only" alt="Export menu with download options for JSON, KLE internal JSON, VIA JSON, QMK JSON, PNG, HTML and SVG, and links to Ergogen and the ZMK Shield Wizard" />
+
 ### Available Export Formats
 
 | Option                      | Format        | Notes                                                                                        |
 | --------------------------- | ------------- | -------------------------------------------------------------------------------------------- |
 | Download JSON               | KLE JSON      | Standard KLE format                                                                          |
+| Download KLE Internal JSON  | KLE JSON      | Internal format with metadata: an object with `meta` and a `keys` array, one entry per key   |
 | Download PNG                | PNG           | Canvas-quality image with embedded layout data                                               |
 | Download HTML               | HTML          | Self-contained keyboard render                                                               |
 | Download SVG                | SVG           | Vector graphics                                                                              |
 | Download QMK JSON           | QMK info.json | Only available when keys have matrix coordinates                                             |
 | Download VIA JSON           | VIA/Vial JSON | Only available when VIA metadata is present                                                  |
-| Copy share link             | URL           | Generates a shareable `#share=` URL                                                          |
-| Create short link           | URL           | Short `?s=` link stored on the server; requires sign-in, public and permanent, never expires |
 | Edit in Ergogen Web GUI     | URL (new tab) | Opens [ergogen.xyz](https://ergogen.xyz/) with the layout preloaded                          |
 | Open in Shield Wizard (ZMK) | URL (new tab) | Opens the [ZMK Shield Wizard](https://shield-wizard.genteure.com/) with the layout preloaded |
+
+Share links are not in the Export menu. The **Share Link** button next to it copies a shareable
+`#share=` URL, and when you are signed in, its caret offers **Create short link** — see
+[Short links](#short-links).
 
 ## Open in External Web Tools {#external-web-tools}
 

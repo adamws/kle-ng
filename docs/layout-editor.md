@@ -127,6 +127,9 @@ Extra tools are grouped under a single button in the left toolbar. There are six
 5. **Sanitize Layout** — find and clean up redundant JSON properties and layout offsets, and warn about overlapping keys
 6. **Character Picker** — search and insert special characters into labels
 
+<img src="/extra-tools-menu-light.png" class="docs-screenshot light-only" alt="Extra Tools menu opened from the left toolbar, listing the six tools" />
+<img src="/extra-tools-menu-dark.png" class="docs-screenshot dark-only" alt="Extra Tools menu opened from the left toolbar, listing the six tools" />
+
 ### Legend Tools
 
 Legend tools provide quick canvas-oriented label editing in four modes:
@@ -137,6 +140,13 @@ Legend tools provide quick canvas-oriented label editing in four modes:
 | **Remove** | Remove labels by type (letters, numbers, accents…) or by position on the key     |
 | **Align**  | Change label alignment                                                           |
 | **Move**   | Move labels from one position to another                                         |
+
+In **Remove** mode, each category button deletes that kind of legend from the selected keys, or
+from every key when nothing is selected. The key diagram below the buttons removes whatever sits
+in the position you click.
+
+<img src="/legend-tools-remove-light.png" class="docs-screenshot light-only" alt="Legend Tools in Remove mode: category buttons from All to Decals, a Remove by Position key diagram and the number of affected keys" />
+<img src="/legend-tools-remove-dark.png" class="docs-screenshot dark-only" alt="Legend Tools in Remove mode: category buttons from All to Decals, a Remove by Position key diagram and the number of affected keys" />
 
 |                  Edit Mode                   |                  Move Mode                   |
 | :------------------------------------------: | :------------------------------------------: |
@@ -184,12 +194,15 @@ The tool operates on selected keys, or on all keys if nothing is selected. Two m
 - **Use key centers** — Calculates and sets the rotation origin to the geometric center of each key individually.
 - **Manual position** — Sets the rotation origin to a fixed X/Y coordinate (in U) for all affected keys.
 
+<img src="/move-rotation-origins-panel-light.png" class="docs-screenshot light-only" alt="Move Rotation Origins panel with Use key centers checked and the X and Y position fields" />
+<img src="/move-rotation-origins-panel-dark.png" class="docs-screenshot dark-only" alt="Move Rotation Origins panel with Use key centers checked and the X and Y position fields" />
+
 ### Theme Tools
 
 The **Theme Tools** panel applies color themes to the entire layout in bulk. Open it from **Extra Tools → Theme Tools**.
 
-<img src="/theme-tools-modal-light.png" class="light-only" alt="Theme tools modal" />
-<img src="/theme-tools-modal-dark.png" class="dark-only" alt="Theme tools modal" />
+<img src="/theme-tools-modal-light.png" class="docs-screenshot light-only" alt="Theme tools modal" />
+<img src="/theme-tools-modal-dark.png" class="docs-screenshot dark-only" alt="Theme tools modal" />
 
 Choose from several built-in themes in the dropdown:
 
@@ -209,6 +222,9 @@ See [Color Themes](./color-themes) for the full theme format, matcher syntax ref
 ### Sanitize Layout
 
 The **Sanitize Layout** tool scans the layout for redundant data and non-normalized values, and lets you clean them up in bulk. Open it from **Extra Tools → Sanitize Layout**.
+
+<img src="/sanitize-layout-panel-light.png" class="docs-screenshot light-only" alt="Sanitize Layout panel reporting one whitespace-only label, one stale rotation origin and one overlapping key pair, with Rescan, Close and Apply Fixes buttons" style="max-width:440px" />
+<img src="/sanitize-layout-panel-dark.png" class="docs-screenshot dark-only" alt="Sanitize Layout panel reporting one whitespace-only label, one stale rotation origin and one overlapping key pair, with Rescan, Close and Apply Fixes buttons" style="max-width:440px" />
 
 Scanning happens automatically when the panel opens, and issues are grouped into three categories:
 
@@ -249,7 +265,10 @@ Hover a character tile to see its name and Unicode code point.
 
 ## Label Search {#label-search}
 
-Press <kbd>/</kbd> to open the label search bar. Type to find keys by their label text. Matches are highlighted on the canvas. Use <kbd>Enter</kbd> or the up/down arrows to cycle through matches. Press <kbd>Escape</kbd> or <kbd>/</kbd> again to close.
+Press <kbd>/</kbd>, or click the magnifying-glass button in the top-right corner of the canvas, to open the label search bar. Type to find keys by their label text. Matches are highlighted on the canvas. Use <kbd>Enter</kbd> or the up/down arrows to cycle through matches. Press <kbd>Escape</kbd> or <kbd>/</kbd> again to close.
+
+<img src="/label-search-light.png" class="docs-screenshot light-only" alt="Label search for Pg showing match 1 of 2: PgUp is the current match and PgDn is also highlighted" />
+<img src="/label-search-dark.png" class="docs-screenshot dark-only" alt="Label search for Pg showing match 1 of 2: PgUp is the current match and PgDn is also highlighted" />
 
 ::: tip
 To export a PNG with search match highlighting visible, keep the search bar open before using **Export → Download PNG**.
@@ -257,9 +276,13 @@ To export a PNG with search match highlighting visible, keep the search bar open
 
 ## Canvas Settings {#canvas-settings}
 
-A settings panel is accessible from the toolbar (gear icon). Current settings:
+A settings panel opens from the gear button in the top-right corner of the canvas. Current settings:
 
-| Setting             | Description                                                         |
-| ------------------- | ------------------------------------------------------------------- |
-| **Show grid**       | Toggles a dot grid on the canvas aligned to the current step size   |
-| **Highlight Color** | Color used to indicate selected keys. Click the swatch to change it |
+<img src="/canvas-settings-panel-light.png" class="docs-screenshot light-only" alt="Layout Editor settings panel with Show grid, Allow label overflow and Highlight Color" style="max-width:300px" />
+<img src="/canvas-settings-panel-dark.png" class="docs-screenshot dark-only" alt="Layout Editor settings panel with Show grid, Allow label overflow and Highlight Color" style="max-width:300px" />
+
+| Setting                  | Description                                                                                             |
+| ------------------------ | ------------------------------------------------------------------------------------------------------- |
+| **Show grid**            | Toggles a dot grid on the canvas aligned to the current step size                                       |
+| **Allow label overflow** | Draws a word that is too long for its key in full, past the key edge, instead of shortening it with `…` |
+| **Highlight Color**      | Color used to indicate selected keys. Click the swatch to change it                                     |
