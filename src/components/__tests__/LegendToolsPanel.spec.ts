@@ -105,6 +105,36 @@ describe('LegendToolsPanel', () => {
       expect(key.labels.every((label) => label === '')).toBe(true)
     })
 
+    it('removes accents with Others', async () => {
+      const key = new Key()
+      key.labels = [
+        '◌̂', // dead circumflex on a dotted circle
+        '◌̀',
+        '◌̣̇', // two marks on one circle
+        '́', // a bare combining mark
+        'é', // decomposed é
+        'A',
+        '1',
+        '^',
+        '',
+        '',
+        '',
+        '',
+      ]
+      store.keys = [key]
+      store.selectedKeys = [key]
+
+      const othersButton = wrapper
+        .findAll('.btn-outline-danger')
+        .find((button) => button.text().includes('Others'))
+      expect(othersButton).toBeDefined()
+      await othersButton!.trigger('click')
+
+      expect(key.labels.slice(0, 5)).toEqual(['', '', '', '', ''])
+      // Letters, digits and a plain spacing caret are not accents.
+      expect(key.labels.slice(5, 8)).toEqual(['A', '1', '^'])
+    })
+
     it('shows correct count for all keys when none selected', async () => {
       store.keys = [new Key(), new Key(), new Key()]
       store.selectedKeys = []

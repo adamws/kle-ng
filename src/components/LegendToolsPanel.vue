@@ -328,8 +328,12 @@ const legendCategories: LegendCategory[] = [
   {
     id: 'others',
     label: 'Others',
-    regex: /^[^A-Za-z0-9`~!@#$%^&*()_=+\[\]{}|;':",./<>?\\-]$|^[A-Za-z\s][A-Za-z\s]+$|&#.*|&.*?;/,
-    tooltip: 'Remove other legend types (multi-character text, entities, etc.) from selected keys.',
+    // The last alternative is one character carrying combining marks: a dead-key accent
+    // on a dotted circle (`◌̂`) or a decomposed accented letter (`e` + U+0301).
+    regex:
+      /^[^A-Za-z0-9`~!@#$%^&*()_=+\[\]{}|;':",./<>?\\-]$|^[A-Za-z\s][A-Za-z\s]+$|&#.*|&.*?;|^[^\s\p{M}]?\p{M}+$/u,
+    tooltip:
+      'Remove other legend types (multi-character text, accents, entities, etc.) from selected keys.',
   },
   {
     id: 'decals',
