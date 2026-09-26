@@ -41,6 +41,7 @@ export default defineConfig({
           { text: 'Keyboard Metadata', link: '/keyboard-metadata' },
           { text: 'Keyboard Summary', link: '/keyboard-summary' },
           { text: 'Import & Export', link: '/import-export' },
+          { text: 'Presets', link: '/presets' },
         ],
       },
       {

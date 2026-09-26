@@ -217,7 +217,7 @@ keyboards that define more than one layout, arrows under the preview step throug
 Cycling variants is preview-only; importing always loads the complete layout, and you pick the
 variant you want afterwards from the layout toolbar below the canvas.
 
-The [preset library](#presets) uses the same renderer, but draws every card as it scrolls into
+The [preset library](./presets) uses the same renderer, but draws every card as it scrolls into
 view rather than on hover — the preset payloads ship with kle-ng, so there is no download to
 wait for or abandon.
 
@@ -296,31 +296,7 @@ Click the **Import** button in the toolbar and select:
 
 **From VIA** — Search and import any keyboard directly from a curated index of VIA-ready keyboards. A searchable list is loaded from [`https://adamws.github.io/keyboard-pcbs/keyboard_list.json`](https://adamws.github.io/keyboard-pcbs/keyboard_list.json). Type to filter with fuzzy search, select a keyboard, and click **Import** (or double-click an entry). The keyboard's VIA layout JSON is fetched from the [`the-via/keyboards` GitHub repository](https://github.com/the-via/keyboards) (`v3/` directory), converted to KLE format automatically, and VIA metadata is preserved. This is equivalent to downloading a VIA layout JSON and using **From File**, but without the manual steps.
 
-**From Preset** — Browse the layouts that ship with kle-ng as a grid of cards, each showing a live preview of the board. Click a card to load it. A card marked with a globe ships with more than one set of legends; clicking the card still loads it straight away, and the globe in its corner is there if you want a different language first. The Import menu also lists a few presets directly, under **Top Presets**, as a shortcut; **From Preset** opens the whole library. See [Starting from a preset](#presets).
-
-### Starting from a preset {#presets}
-
-kle-ng ships a library of ready-made layouts — full-size ANSI and ISO, 60% variants, ortholinear boards, split and ergonomic boards, and a blank canvas.
-
-The **Import** menu lists the most commonly used ones under **Top Presets**, so the layouts most people start from are one click away. **Import → From Preset** opens the complete library in a grid. Each card draws the actual layout with the same renderer as the editor canvas, so you can tell boards apart at a glance; previews load as cards scroll into view. Type in the search box to filter by name or by keyword — `ortho`, `split`, `60%`, `empty` — and click a card to load it.
-
-#### Presets in several languages
-
-A keyboard is not tied to one set of legends — an ANSI 104 board is the same board whether its keycaps are printed US-English or Polish. Presets that ship with more than one set carry a small control in the bottom corner of their card, beside the key count, showing a globe and the language they will load — like `🌐 EN`.
-
-ANSI 104, Default 60%, ISO 105 and ISO 60% are available in every language X11 ships a keyboard layout for. Their legends come from those layouts, including the AltGr characters printed on the right-hand side of a key. English is kept plain by default, base and Shift only: the ANSI boards default to US English (`🌐 EN`) and the ISO boards to British English (`🌐 EN-GB`). The versions with AltGr characters are in the menu as **English (US, International)** and **British English (Extended)**.
-
-Choosing a language is optional. **Click the card and it loads immediately**, in the language the control names — exactly like any other preset.
-
-To load a different one, click the globe first. A menu lists the alternatives; picking one **does not import anything** — it just changes what that card will load, and the control updates to show it (`🌐 PL`). You can open the menu again and change your mind as often as you like. Clicking the card is what actually imports, so the choice is never made for you by accident.
-
-The list is long, so you can type to get through it: with the menu open, type the start of a language's name (`pol` for Polish) or its code (`pl`) and press Enter. Typing a letter on the globe control itself opens the menu and jumps straight there.
-
-The key layout is identical across every language of a preset; only the printing on the keys changes. That is why the card shows a single preview and a single key count no matter which language you pick.
-
-The language applies to that import alone. It is **not** stored in the layout, so nothing about it is exported, shared or saved — pick a different language and you simply get a different import. **Top Presets** in the Import menu always loads the preset's default language.
-
-Loading a preset replaces the current layout, clears the undo history, and establishes a new clean baseline, so the unsaved-changes indicator resets. Save your work first if you still need it. The preset's name becomes the default download filename; for a preset with several languages, the chosen language is part of that name (`ansi-104-pl`).
+**From Preset** — Browse the ready-made layouts that ship with kle-ng and load one with a click. Some presets are available in many languages. See [Presets](./presets).
 
 ### Drag and Drop
 

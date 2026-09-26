@@ -81,7 +81,7 @@ The physical size of 1U is **19.05 mm** by default (Cherry MX standard). You can
 
 ### Starting Out
 
-1. **New layout** — The editor starts with a sample layout. Use the toolbar to import an existing layout, pick a ready-made board with **Import → From Preset** (see [Starting from a preset](./import-export#presets)), or start editing.
+1. **New layout** — The editor starts with a sample layout. Use the toolbar to import an existing layout, pick a ready-made board with **Import → From Preset** (see [Presets](./presets)), or start editing.
 2. **Select keys** — Click a key on the canvas to select it. Click and drag to select multiple keys.
 3. **Edit properties** — With a key selected, adjust its properties (size, color, labels) in the **Key Properties** panel.
 
