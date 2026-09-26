@@ -41,6 +41,9 @@ Letter keys show only the capital letter, as printed keycaps do. The letter is t
 
 **Japanese (Kana)** is the exception: its right-hand corners show kana instead of AltGr characters.
 
-Dead keys are drawn on a dotted circle (`◌̂`), so you can tell them apart from ordinary characters such as `^`. A dead key types nothing by itself; it adds its accent to the next letter you type.
+<img src="/preset-dead-key-light.png" class="docs-screenshot light-only" alt="German ^ key: the circumflex dead key drawn on a dotted circle, with °, ″ and ′" style="max-width:120px; float:right; margin-left:16px" />
+<img src="/preset-dead-key-dark.png" class="docs-screenshot dark-only" alt="German ^ key: the circumflex dead key drawn on a dotted circle, with °, ″ and ′" style="max-width:120px; float:right; margin-left:16px" />
+
+Dead keys are drawn with their accent on a dotted circle (◌), so you can tell them apart from ordinary characters such as `^`. A dead key types nothing by itself; it adds its accent to the next letter you type. On the German `^` key on the right, the circumflex in the bottom-left corner is a dead key; the other three characters are not.
 
 The language only affects the legends; the key positions are the same in every language. It is not saved in the layout, but it becomes part of the default file name (`ansi-104-pl`).
