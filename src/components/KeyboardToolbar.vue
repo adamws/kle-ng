@@ -15,6 +15,7 @@
         title="Your saved layouts"
         @click="showMyLayoutsModal = true"
       >
+        <BiCollection class="me-1" aria-hidden="true" />
         <span class="d-none d-sm-inline">My Layouts</span>
         <span class="d-inline d-sm-none">Layouts</span>
       </button>
@@ -282,6 +283,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useShortLinksStore } from '@/stores/short-links'
 
 import BiBoxArrowUpRight from 'bootstrap-icons/icons/box-arrow-up-right.svg'
+import BiCollection from 'bootstrap-icons/icons/collection.svg'
 
 const keyboardStore = useKeyboardStore()
 const authStore = useAuthStore()
