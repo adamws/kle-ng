@@ -38,6 +38,7 @@ user in the picker that only the printing changes. `presets.spec.ts` enforces it
 | `public/data/presets/`                  | The KLE payloads, fetched on demand                  |
 | `src/utils/presets.ts`                  | Catalogue accessors and the single load path         |
 | `src/components/PresetImportModal.vue`  | The browse grid, its previews, and the language menu |
+| `src/utils/typeahead.ts`                | Type-ahead matching for the language menu            |
 | `src/components/KeyboardToolbar.vue`    | The Import menu and its shortlist                    |
 | `scripts/generate-presets-manifest.mjs` | Regenerates the manifest from the directory          |
 | `scripts/lib/presets-manifest.mjs`      | The scan and merge logic, shared with the tests      |
@@ -278,7 +279,8 @@ draws dead_stroke's `◌̸` beside the circle instead of through it. A canvas do
 web fonts, so `main.ts` starts the load and the editor redraws on `document.fonts`
 `loadingdone`. `src/assets/fonts/README.md` records the font's source, and
 `scripts/generate-marks-font.mjs` rebuilds it. SVG and HTML exports do not embed
-it, so there the result depends on the viewer's fonts.
+it, so there the result depends on the viewer's fonts. The rendering side is described under
+[Canvas Rendering Pipeline → LabelRenderer](./canvas-rendering-pipeline.md#labelrenderer).
 
 `ansi-104/en.json` regenerated from the `us` layout is byte-identical to the hand-made file it
 was cut from, which is the check that the transplant loses nothing. The plain `en-GB` likewise
@@ -314,21 +316,21 @@ nothing is noise. For example, `cn` and `kr` are US-printed, and `at` equals `de
 
 ### Bundle size
 
-There are 86 languages across four presets, and the manifest is a static import, so the language
-lists add roughly 25 KB to the bundle before compression. The exit is still the one described
-under `presetPayload()`: lazy-load the lists behind `presetLanguages()`.
+There are 100 languages on each of the four presets (400 payloads), and the manifest is a static
+import, so the language lists add roughly 25 KB to the bundle before compression. The exit is
+still the one described under `presetPayload()`: lazy-load the lists behind `presetLanguages()`.
 
 ## The language menu
 
 The menu is a plain popup owned by `PresetImportModal`, not a component of its own and not a
-modal. Three details are load-bearing:
+modal. Several details are load-bearing:
 
 **The toggle is a sibling of the card, not a child.** The card is a `<button>`, and a `<button>`
 may not legally contain another one — browsers break the nesting and the inner control stops
 being reliably clickable. So each grid item is a `.preset-card-slot` wrapper holding the card
-button and, when the preset has languages, the toggle positioned in its bottom-right corner,
-beside the key count — it is a fact about what you are about to load, not an overlay on the
-artwork. The toggle's click handler carries `.stop`, without which every attempt to change the
+button and, when the preset has more than one language, the toggle positioned in its
+bottom-right corner, beside the key count — it is a fact about what you are about to load, not an
+overlay on the artwork. The toggle's click handler carries `.stop`, without which every attempt to change the
 language would also import the card.
 
 **Staged choices live in `selectedLanguages`**, a `Record<preset id, code>` on the modal. Absent
@@ -356,7 +358,7 @@ relative to the focused card — stops responding. The backdrop handler carries 
 the click that dismisses a menu does not also close the modal behind it.
 
 **Focus always moves into the menu, onto the card's current language**, whether it was opened
-by mouse or keyboard. Type-ahead can only hear keys while focus is inside the menu, and with ~90
+by mouse or keyboard. Type-ahead can only hear keys while focus is inside the menu, and with 100
 languages it is the main way through the list. Starting on the current choice rather than the
 first option also brings a staged language deep in the list into view when the menu reopens.
 `:focus-visible` keeps the ring off for mouse users.
@@ -369,18 +371,29 @@ name. A letter typed on the toggle opens the menu and jumps. Space activates the
 unless a multi-word name is being typed, and modifier chords are left to the browser. Moving focus
 never stages anything: Enter or a click does.
 
+**Tab closes the menu** rather than walking through its options, which are reached with the arrow
+keys, Home and End. The menu is gone before the browser would move focus, so focus is returned to
+the toggle explicitly; letting Tab through would drop it onto the page behind the modal.
+
+**The default is set apart.** It is pinned first and the rest are sorted by display name
+(`orderLanguages()` in the generator), so without a separator it reads as one mis-sorted entry.
+The separator is drawn only when there are more than two languages. The check mark on the staged
+language sits in a fixed-width slot on every row, so the codes stay in one column.
+
 ## Card affordance
 
-The toggle shows a globe, the **default language's code**, and a caret — `🌐 EN ▾`. Naming the
-code rather than a count ("2 languages") is deliberate: it answers the question a user actually
-has in front of a card they are about to click, which is _what will I get?_, and it advertises
-that there is something to change without demanding they find out.
+The toggle shows a globe, the **code of the language the card will load** (the default until
+another is staged), and a caret — `🌐 EN ▾`. Naming the code rather than a count ("2 languages")
+is deliberate: it answers the question a user actually has in front of a card they are about to
+click, which is _what will I get?_, and it advertises that there is something to change without
+demanding they find out.
 
 It is styled from scratch: **Bootstrap's `badge` partial is not compiled into this app** (nor is
 `spinners`), so `.badge` would render as unstyled text. The background is `--bs-body-bg` rather
 than the translucent `--bs-secondary-bg`, because the chip overlaps the preview and a
-see-through chip over key legends is unreadable. It is absolutely positioned over the existing
-fixed-height thumb box, so the card's dimensions do not change and the grid does not reflow.
+see-through chip over key legends is unreadable. It is absolutely positioned against the
+`.preset-card-slot`, in the corner of the card's meta line, so the card's dimensions do not change
+and the grid does not reflow.
 
 The meta line stays one short string — it has to survive a 140 px card on a phone — so the
 fuller phrasing goes into the card's `title` instead.
@@ -406,19 +419,21 @@ Revisit only if presets ever get per-language cards.
 
 ```bash
 npx vitest run src/utils/__tests__/presets.spec.ts \
+               src/utils/__tests__/typeahead.spec.ts \
                src/components/__tests__/PresetImportModal.spec.ts \
                src/components/__tests__/KeyboardToolbar.spec.ts
 npx playwright test e2e/import-preset.spec.ts --project chromium
 node scripts/generate-presets-manifest.mjs --check
 ```
 
-| Spec                                                 | What it holds down                                                                                                                                                                               |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `src/utils/__tests__/presets.spec.ts`                | Runs against the **real** manifest: manifest ↔ directory in both directions, `TOP_PRESET_IDS` resolution, the geometry invariant, manifest freshness, `presetPayload` fallbacks, download naming |
-| `src/components/__tests__/PresetImportModal.spec.ts` | One-click default load, the toggle not loading the card under it, menu contents, staging without importing, restaging before committing, Escape ordering, dismissal on re-filter                 |
-| `src/components/__tests__/KeyboardToolbar.spec.ts`   | The shortlist loads the default language and never opens a menu                                                                                                                                  |
-| `src/stores/__tests__/kle-roundtrip.spec.ts`         | Reads payload paths off disk directly — update it when a payload moves                                                                                                                           |
-| `e2e/import-preset.spec.ts`                          | TC-PRESET-020…028 cover the control end to end: one-click default, menu contents, staging without importing, two-Escape ordering, click-away, and dismissal on scroll                            |
+| Spec                                                 | What it holds down                                                                                                                                                                                               |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/utils/__tests__/presets.spec.ts`                | Runs against the **real** manifest: manifest ↔ directory in both directions, `TOP_PRESET_IDS` resolution, the geometry invariant, manifest freshness, `presetPayload` fallbacks, download naming                 |
+| `src/utils/__tests__/typeahead.spec.ts`              | Prefix matching, same-letter cycling, case and diacritic folding, names before codes, which keys feed the buffer                                                                                                 |
+| `src/components/__tests__/PresetImportModal.spec.ts` | One-click default load, the toggle not loading the card under it, menu contents, staging without importing, restaging before committing, Escape ordering, dismissal on re-filter, focus on open, type-ahead, Tab |
+| `src/components/__tests__/KeyboardToolbar.spec.ts`   | The shortlist loads the default language and never opens a menu                                                                                                                                                  |
+| `src/stores/__tests__/kle-roundtrip.spec.ts`         | Reads payload paths off disk directly — update it when a payload moves                                                                                                                                           |
+| `e2e/import-preset.spec.ts`                          | TC-PRESET-020…029 cover the control end to end: one-click default, menu contents, staging without importing, two-Escape ordering, click-away, dismissal on scroll, and type-ahead after a mouse open             |
 
 Two of these are worth understanding rather than just running:
 
@@ -434,6 +449,7 @@ language shows up as an extra `languages[]` entry and fails.
 
 ## Related documentation
 
-- [Import and Export](../import-export.md) — the user-facing description of the Import menu and the preset library
-- [Canvas Rendering Pipeline](./canvas-rendering-pipeline.md) — `LayoutPreviewRenderer`, which draws the card thumbnails
+- [Presets](../presets.md) — the user-facing description of the preset library and its languages
+- [Import and Export](../import-export.md) — the user-facing description of the Import menu
+- [Canvas Rendering Pipeline](./canvas-rendering-pipeline.md) — `LayoutPreviewRenderer`, which draws the card thumbnails, and the legend font stack that draws dotted-circle legends
 - [Layout Export](./layout-export.md) — the KLE label model the payloads use, including the 12 label positions

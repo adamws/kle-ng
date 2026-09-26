@@ -90,6 +90,7 @@ The rendering pipeline follows a **layered architecture**:
        │  - LinkTracker (link hit testing)        │
        │  - RotationRenderer (rotation UI)        │
        │  - useKeySearch (search state)           │
+       │  - label-fonts (legend font stack)       │
        └───────┬──────────────────────────────────┘
                │
        ┌───────▼──────────────────────────────────┐
@@ -652,6 +653,52 @@ Vertical alignment (by row):
    [Allow Label Overflow Setting](#allow-label-overflow-setting))
 4. **Multi-line**: Respect line breaks from `<br>` tags
 5. **Max lines**: Calculate `Math.floor(availableHeight / lineHeight)`
+
+**Font Stack and the Marks Font**:
+
+Both public entry points, `drawKeyLabels()` and `drawRotaryEncoderLabels()`, build the label font
+the same way:
+
+```typescript
+// src/utils/label-fonts.ts
+export const DEFAULT_LABEL_FONT_FAMILY = '"Helvetica Neue", Helvetica, Arial, sans-serif'
+export const MARKS_FONT_FAMILY = '"KLE Marks"'
+
+// src/utils/renderers/LabelRenderer.ts
+const fontFamily = withMarksFont(options.fontFamily || DEFAULT_LABEL_FONT_FAMILY)
+ctx.font = `${fontSize}px ${fontFamily}` // e.g. 12px "KLE Marks", "Helvetica Neue", …
+```
+
+`withMarksFont()` prepends `"KLE Marks"` to whatever stack it is given, a layout's own font
+included, and is idempotent. The font exists for legends that draw a lone combining mark on
+U+25CC DOTTED CIRCLE (`◌̉`, `◌̸`), which the localized presets use for dead keys and vowel signs.
+The label fonts have neither glyph, so the browser falls back per glyph, and the common fallbacks
+place the mark wrongly: DejaVu Sans has no mark anchors on U+25CC, so the mark collides with the
+circle, and Noto Sans draws overlays such as `◌̸` beside the circle rather than through it.
+"KLE Marks" is a ~14 KB subset of SIL's Andika, which gets both right.
+
+Putting it first in every stack is safe because its `@font-face` in `src/assets/main.css` has a
+`unicode-range` limited to U+25CC and the combining-mark blocks. Every other character, `J` or
+`é` included, still comes from the label font. The circle and its mark are one string passed to a
+single `fillText()`, so they are shaped together. The unicode range must stay in step with
+`RANGES` in `scripts/generate-marks-font.mjs`; `src/assets/fonts/README.md` records the source
+and how to rebuild the font.
+
+A canvas never waits for a web font: text drawn before the font arrives uses the fallback and
+stays that way until something redraws it. Two pieces handle this:
+
+- `main.ts` calls `loadMarksFont()` at startup without awaiting it, so the download starts before
+  any legend needs it. It calls `document.fonts.load()` and resolves `false` instead of rejecting,
+  because a missing marks font only costs the fallback rendering.
+- `KeyboardCanvas.vue` listens for `document.fonts` `loadingdone` and schedules `renderKeyboard`
+  through the `RenderScheduler`. A layout imported while the font is pending is drawn at once with
+  the fallback and corrected when the font lands. The listener reacts to any font that finishes
+  loading, not only this one.
+
+Offscreen renderers ([Headless Layout Preview](#headless-layout-preview), the preset card
+thumbnails) do not listen for `loadingdone`. They rely on the font having been loaded at startup,
+so only a preview drawn in the first moments after page load can show the fallback. The SVG and
+HTML exports do not embed the font either, so there the result depends on the viewer's fonts.
 
 ---
 
@@ -2324,7 +2371,18 @@ console.log(`Loaded: ${stats.loaded}, Errors: ${stats.errors}`)
 - Check available space: `params.textcapwidth`, `params.textcapheight`
 - Verify wrapping algorithm is enabled
 
-**5. Slow rendering or drag lag**
+**5. Accent or vowel sign misplaced on a dotted circle (`◌`)**
+
+**Cause**: The "KLE Marks" font is not loaded, so the circle and mark came from a system fallback
+
+**Solution**:
+
+- Check `[...document.fonts].some((f) => f.family.includes('KLE Marks') && f.status === 'loaded')`
+- Check that `@font-face` for "KLE Marks" in `src/assets/main.css` still resolves
+  `./fonts/kle-marks.woff2` and that its `unicode-range` covers the mark in question
+- An offscreen preview drawn before the font loaded is not redrawn; the editor canvas is
+
+**6. Slow rendering or drag lag**
 
 **Cause**: Too many re-renders, large layouts, or render scheduler issues
 
@@ -2439,14 +2497,29 @@ v1 constraint: only `labels[8]` is used as the option/choice discriminator. Keys
 
 Returns a new key array representing the keyboard as it looks with the given choice selected for each option group. The function:
 
-1. Deep-clones the input via `JSON.parse(JSON.stringify(keys))` — the source array is never mutated.
-2. Collects all keys that have no `option,choice` annotation (always included).
-3. For each option group in `choices`: selects the target choice (falls back to choice 0 if the requested index is absent).
-4. For non-zero choices, translates the chosen keys to overlay the choice-0 anchor:
-   - `anchor` = `minXY` of choice-0 keys
+1. Delegates to `collapseToLayoutChoicePlacements()`, which works on the original keys and returns
+   `KeyPlacement`s (`{ key, x, y }`) — the adjusted position beside the untouched `Key`.
+   `collapseToLayoutChoices()` then shallow-clones each placed key with its new `x`/`y`, so the
+   source array and the store's key objects are never mutated.
+2. Collects all non-ghost, non-decal keys that have no `option,choice` annotation (always included).
+3. For each option group: selects the target choice from `choices` (an option absent from the map
+   means choice 0, and a requested choice the group does not define falls back to choice 0).
+4. Translates the chosen keys onto the group's **anchor choice** — choice 0 when the group defines
+   it, otherwise its lowest defined choice (`anchorChoiceOf()`):
+   - `anchor` = `minXY` of the anchor choice's keys
    - `groupAnchor` = `minXY` of chosen-choice keys
-   - applies `(anchor − groupAnchor)` as a `(dx, dy)` offset to each chosen key
+   - applies `(anchor − groupAnchor)` as a `(dx, dy)` offset to each chosen key; the anchor choice
+     itself is not moved
 5. Deduplicates the result by `(labels[0], rotated-center-x, rotated-center-y, decal)`.
+
+A group with no choice-0 keys describes a key that is absent from the default layout and appears
+only when one of its options is selected. There is nothing to collapse it onto, so it anchors on
+its lowest choice and those keys stay where they were drawn. Selecting choice 0 for such a group
+yields no keys, which is the point: the default layout does not have that key. The fallback to
+choice 0 in step 3 is deliberate for the same reason. `getLayoutOptionGroups()` still reports `0`
+among the group's `choices`, so the toolbar offers the "without this key" option. kbplacer's
+`collapse()` applies the same anchoring rule, and `collapseViaLayout()` (the superset collapse used
+by the plate generator) uses `anchorChoiceOf()` too.
 
 The `Map<number, number>` approach allows all option groups to be resolved in a single call, matching the multi-group selection the toolbar exposes.
 
@@ -2644,6 +2717,11 @@ Three details worth knowing:
 
 Instances are reusable — the canvas and `CanvasRenderer` are allocated once and reused, so scanning
 down a list of results does not allocate a canvas per hover.
+
+Unlike the editor, the preview does not redraw when a web font finishes loading. Dotted-circle
+legends depend on the "KLE Marks" font that `main.ts` starts loading at startup, so a preview drawn
+before it arrives keeps the fallback rendering (see
+[Font Stack and the Marks Font](#labelrenderer) under LabelRenderer).
 
 ### Variants
 
@@ -2998,6 +3076,51 @@ being ellipsis-truncated. Off by default, so existing layouts render unchanged.
 
 3. **Off by default** — matches `showGrid`'s default and keeps existing exported/shared layouts
    visually identical unless a user opts in.
+
+---
+
+### Dotted-Circle Legend Font (Commits 25d1932, ccbf57c)
+
+The localized presets draw dead keys and vowel signs as a combining mark on U+25CC (`◌̂`, `◌̸`).
+Label rendering now leads every font stack with a bundled "KLE Marks" font so the mark sits on
+the circle whatever fonts the system has. See [LabelRenderer](#labelrenderer) for the mechanism.
+
+**New files**:
+
+- `src/utils/label-fonts.ts` — `DEFAULT_LABEL_FONT_FAMILY`, `MARKS_FONT_FAMILY`,
+  `withMarksFont()`, `loadMarksFont()`
+- `src/assets/fonts/kle-marks.woff2` — the font, with `OFL.txt` and a `README.md` on its origin
+- `scripts/generate-marks-font.mjs` — rebuilds the font from `Andika-Regular.ttf` (needs
+  `subset-font`, installed with `--no-save`; it is not a project dependency)
+- `src/utils/__tests__/label-fonts.spec.ts` — the stack order, idempotence, `loadMarksFont()`
+  failure handling, and a recording context that checks every `ctx.font` `LabelRenderer` sets
+
+**Modified files**:
+
+- `src/utils/renderers/LabelRenderer.ts` — both entry points wrap the font family in
+  `withMarksFont()`
+- `src/stores/font.ts` — the default font setting now reads `DEFAULT_LABEL_FONT_FAMILY`, so the
+  store and the renderer cannot disagree on the default
+- `src/assets/main.css` — the `@font-face` rule with its `unicode-range`
+- `src/main.ts` — starts `loadMarksFont()` without blocking
+- `src/components/KeyboardCanvas.vue` — redraws on `document.fonts` `loadingdone`
+- `e2e/key-rendering.spec.ts` — "Dotted-Circle Legends": a screenshot of marks above, below and
+  through the circle, and a test that holds the font request and checks the canvas changes once
+  it is released
+
+**Key design decisions**:
+
+1. **A `unicode-range` face first in the stack, not a font per legend** — the renderer does not
+   need to know which legends contain marks. The browser picks the font per character, and the
+   range keeps it from touching anything else.
+
+2. **Andika, renamed** — Noto Sans was tried first and draws overlay marks beside the circle.
+   "Andika" is a Reserved Font Name under the OFL and a subset is a Modified Version, so the
+   generator renames the family and keeps the copyright and license records.
+
+3. **Redraw rather than wait** — blocking the first render on a font download would delay every
+   layout for the sake of a few legends. The editor draws immediately and redraws on
+   `loadingdone`.
 
 ---
 

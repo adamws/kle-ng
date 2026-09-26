@@ -58,10 +58,11 @@ At construction (`__post_init__`) the keyboard is split:
    `(labels[0], centerX, centerY, decal, sm)`, where `center = (x + width/2, y + height/2)` and `sm`
    is the switch-mount type. Decal keys are skipped (they anchor nothing and pass through untouched).
 2. **Group** every key by `option → choice → [keys]`.
-3. For each option group, take the **choice-0 anchor** = the top-left key (`min` by `(x, y)`) of that
-   option's default variant. For every non-zero `choice`, compute that choice's own top-left
-   `group_anchor` and translate **all** of the choice's keys by `anchor - group_anchor`, so the
-   alternative cluster overlays the default cluster's real location.
+3. For each option group, take the **anchor** = the top-left key (`min` by `(x, y)`) of that
+   option's default variant — choice 0, or the group's lowest choice when it has no choice 0 (see
+   [Groups with no choice 0](#groups-with-no-choice-0)). For every non-zero `choice`, compute that
+   choice's own top-left `group_anchor` and translate **all** of the choice's keys by
+   `anchor - group_anchor`, so the alternative cluster overlays the default cluster's real location.
 4. After translation, compute each key's signature; keep it as an alternative only if the signature
    is **unseen** (this drops exact duplicates — e.g. the middle of a 3U+3U split that coincides with a
    7U spacebar).
@@ -93,8 +94,8 @@ helper.
 ### `collapseToLayoutChoices(keys, choices)` — single variant (canvas preview)
 
 Given a `Map<option, choice>`, returns the **one** layout the user selected: base keys plus the chosen
-variant of each option group, with non-zero choices translated onto the choice-0 anchor and
-de-duplicated. Ghost/decal keys with no option are dropped. Used by `KeyboardCanvas.vue`'s
+variant of each option group, translated onto the group's anchor choice and de-duplicated. An
+option missing from the map falls back to choice 0; in a group with no choice 0 that yields no keys. Ghost/decal keys with no option are dropped. Used by `KeyboardCanvas.vue`'s
 `keysForRender` for the layout-option preview toolbar.
 
 ### `collapseToLayoutChoicePlacements(keys, choices)` — the same, without cloning
@@ -128,11 +129,22 @@ switchRotation | decal | sm` (rotated center rounded to 4 decimals).
     de-duplicates switch cutouts (center, rotation, `switchRotation`, `sm`) and stab cutouts
     (center, total rotation, width, height) itself, so coincident paths are never emitted. This
     also covers keys stacked by hand in non-VIA layouts.
-- For each option group, translate every non-zero choice onto the choice-0 anchor (`minXY`) and append
+- For each option group, translate every non-zero choice onto the anchor choice (`minXY`) and append
   it only when its post-translation signature is unseen. Decal keys are never emitted as alternatives.
+  In a group with no choice 0 the anchor choice's own keys go through this loop with a zero delta,
+  which is what emits them.
 - Return `passThrough ⧺ keptAlternatives`.
 
 The input array is never mutated (keys are shallow-cloned; only scalar `x`/`y` are adjusted).
+
+### Groups with no choice 0
+
+Every function here picks a group's anchor with `anchorChoiceOf()`: choice 0 when the group
+defines it, otherwise its lowest defined choice. A group with no choice-0 keys describes a key
+that does not exist in the default layout and only appears once its option is selected. There is
+nothing to collapse such a group onto, so it anchors on itself and its keys stay where they were
+drawn; the other choices of the group are translated onto it as usual. kbplacer's `collapse()`
+applies the same rule, so plate and PCB still agree.
 
 ---
 

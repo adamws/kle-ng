@@ -11,7 +11,7 @@ Loading a preset replaces the current layout and clears the undo history, so sav
 
 ## Languages {#languages}
 
-**ANSI 104**, **ISO 105**, **Default 60%** and **ISO 60%** come in about 90 languages. The legends follow the layouts shipped with X11, including AltGr characters.
+**ANSI 104**, **ISO 105**, **Default 60%** and **ISO 60%** come in 100 languages. The legends follow the layouts shipped with X11, including AltGr characters.
 
 <img src="/preset-language-menu-light.png" class="docs-screenshot light-only" alt="Language menu of the ANSI 104 card with Polish highlighted" style="max-width:320px" />
 <img src="/preset-language-menu-dark.png" class="docs-screenshot dark-only" alt="Language menu of the ANSI 104 card with Polish highlighted" style="max-width:320px" />

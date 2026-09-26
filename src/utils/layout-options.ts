@@ -86,9 +86,11 @@ export function getLayoutOptionGroups(keys: Key[], viaLabels?: unknown): LayoutO
 /**
  * Collapse a key array to show the keys matching a per-option choice map.
  * Keys in option groups not present in the map fall back to choice 0.
- * Positions of non-zero-choice keys are translated to overlay the choice-0 anchor.
+ * Positions of the chosen keys are translated to overlay the group's anchor
+ * choice (choice 0, or the lowest choice when the group has none - see
+ * anchorChoiceOf).
  *
- * The input array is NOT mutated — a deep clone is always made first.
+ * The input array is NOT mutated — each returned key is a shallow clone.
  *
  * @param keys - Source key array (not mutated)
  * @param choices - Map of option → chosen choice index
