@@ -397,8 +397,9 @@ const setupObserver = () => {
   teardownObserver()
   if (!gridRef.value) return
 
-  // No IntersectionObserver (jsdom): the catalogue is a handful of small
-  // same-origin files, so loading all of them is a fine degenerate path.
+  // No IntersectionObserver (jsdom): previews fetch one small same-origin payload
+  // per preset (the default language only, however many a preset has), so loading
+  // all of them is a fine degenerate path.
   if (typeof IntersectionObserver === 'undefined') {
     for (const preset of ALL_PRESETS) void ensurePreview(preset)
     return
