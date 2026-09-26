@@ -202,6 +202,16 @@ the left column of every legend. "Extended" is the name Windows gives its AltGr-
 shortens such a tag to language plus suffix (`EN-INTL`, `EN-EXT`), because the full tag would
 crowd the key count off a phone-sized card.
 
+Japanese has the same pattern for a different reason. XKB's `jp` is romaji only, because
+Japanese text comes from an input method, while a JIS keycap also prints kana. The option
+**Japanese (Kana)** (`ja-x-kana`) composes `jp,jp(kana)` as two groups, with the `dual` option,
+and puts the kana in the right-hand column. XKB has nothing equivalent for Korean (it defines no
+Hangul jamo) or for Chinese (mainland keycaps are US-printed), so those are not offered.
+
+Several languages are reachable only as a variant of another country's XKB layout and are listed
+that way: India's InScript layouts (`in(tam)`, `in(tel)`, `in(ben)` for `bn-IN`, and so on)
+beside Hindi's `in`, and Tibetan and Uyghur as `cn(tib)` and `cn(ug)`.
+
 ### Display names are resolved at build time, never in the browser
 
 `Intl.DisplayNames` output depends on the host's ICU data, so deriving names at runtime would
@@ -250,9 +260,11 @@ dead key is shown this way, as its combining accent on the circle: `dead_circumf
 spacing `^`. Spacing forms exist for the common accents but not for all (`dead_belowdot`,
 `dead_hook`), and mixing the two made one key show an accent bare beside another on a circle.
 A plain `^` on a legend is therefore always a real character, never a dead key. The circle also
-carries the vowel signs and tone marks of Arabic, Hebrew, Thai, Devanagari and similar scripts.
-Printed bare, such a mark has no width: it floats off the cap or lands on a neighbouring legend.
-The classification comes from a table xkbprint generates from Unicode's `UnicodeData.txt`
+carries the vowel signs and tone marks of Arabic, Hebrew, Thai, Devanagari, Tamil and similar
+scripts, spacing ones included. A nonspacing mark printed bare has no width: it floats off the
+cap or lands on a neighbouring legend. A spacing vowel sign such as Tamil `ா` renders, but beside
+nonspacing signs on the circle it made one key row mix two styles. The classification (Unicode
+general category M) comes from a table xkbprint generates from `UnicodeData.txt`
 (`scripts/gen-ucsmark.awk`).
 
 Drawing the circle is only half of it: the font must also know where a mark sits on `◌`.
