@@ -14,14 +14,6 @@
               {{ versionText }}
             </a>
           </div>
-          Successor of
-          <a
-            href="https://www.keyboard-layout-editor.com/"
-            target="_blank"
-            class="text-decoration-none"
-            >Keyboard Layout Editor
-          </a>
-          <br />
           <a href="https://keyboard-tools.xyz" target="_blank" class="text-decoration-none">
             keyboard-tools.xyz</a
           >
