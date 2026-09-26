@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import { promises as fs } from 'fs'
 import path from 'path'
 import { CanvasTestHelper } from './helpers/canvas-test-helpers'
@@ -724,6 +724,63 @@ test.describe('Key Rendering Tests', () => {
         // URL gets normalized with trailing slash
         expect(windowOpenCalls[0]?.url).toBe('https://example.com/')
       })
+    })
+  })
+
+  // Legends such as ◌̉ (dead_hook) are drawn with the bundled "KLE Marks" font, which
+  // knows where each mark sits on U+25CC; system fallbacks collide the mark with the
+  // circle or, for overlays like ◌̸, draw it beside the circle. See utils/label-fonts.ts.
+  test.describe('Dotted-Circle Legends', () => {
+    const marksFontLoaded = () =>
+      [...document.fonts].some((f) => f.family.includes('KLE Marks') && f.status === 'loaded')
+    const canvasPixels = (page: Page) =>
+      page.getByTestId('canvas-main').evaluate((c: HTMLCanvasElement) => c.toDataURL())
+
+    test('marks above, below and through the circle', async ({ page }) => {
+      await helper.addKey()
+      await helper.setKeySize(2, 2)
+      // Only U+25CC and marks, so every glyph comes from the bundled font and the
+      // snapshot does not depend on the fonts installed on the machine.
+      await helper.setKeyLabel('topLeft', '◌̉')
+      await helper.setKeyLabel('topRight', '◌̸')
+      await helper.setKeyLabel('bottomLeft', '◌̣')
+      await helper.setKeyLabel('bottomRight', '◌̂')
+      for (const position of ['topLeft', 'topRight', 'bottomLeft', 'bottomRight'] as const) {
+        await helper.setLabelTextSize(position, 7)
+      }
+      await page.waitForFunction(marksFontLoaded)
+      await helper.waitForRender()
+
+      // A misplaced mark is a few dozen pixels; the default 5% would not notice.
+      await expect(helper.getCanvas()).toHaveScreenshot('labels-dotted-circle-marks.png', {
+        maxDiffPixelRatio: 0.005,
+      })
+    })
+
+    // A canvas never waits for a web font: a legend drawn first uses a fallback and must
+    // be redrawn once the marks font arrives.
+    test('redraws a legend drawn before the marks font arrived', async ({ page }) => {
+      let release!: () => void
+      const held = new Promise<void>((resolve) => (release = resolve))
+      await page.route('**/kle-marks*.woff2', async (route) => {
+        await held
+        await route.continue()
+      })
+      // The held font request also holds the window load event, which the app itself
+      // never waits for.
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      await helper.waitForRender()
+
+      await helper.addKey()
+      await helper.setKeyLabel('center', '◌̉')
+      await helper.setLabelTextSize('center', 7)
+      await helper.waitForRender()
+      expect(await page.evaluate(marksFontLoaded)).toBe(false)
+      const beforeFont = await canvasPixels(page)
+
+      release()
+      await page.waitForFunction(marksFontLoaded)
+      await expect.poll(() => canvasPixels(page)).not.toBe(beforeFont)
     })
   })
 
