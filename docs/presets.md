@@ -18,7 +18,7 @@ Loading a preset replaces the current layout and clears the undo history, so sav
 
 To pick a language, click the globe button in the card's corner (`🌐 EN`) and choose one from the list, then click the card to load it. Clicking the card without opening the list loads the default language. You can type in the list to jump to a language by name or code, for example `pol` or `pl` for Polish.
 
-The defaults are kept plain, with only the base and Shift legends: US English on the ANSI boards and British English on the ISO boards. For more legends, choose **English (US, International)** or **British English (Extended)**, which add the AltGr layer. For Japanese, **Japanese (Kana)** adds kana next to the romaji.
+The default is US English on every board, kept plain with only the base and Shift legends. For a UK printing, choose **British English**. For more legends, choose **English (US, International)** or **British English (Extended)**, which add the AltGr layer. For Japanese, **Japanese (Kana)** adds kana next to the romaji.
 
 <img src="/preset-ansi-104-polish-light.png" class="docs-screenshot light-only" alt="ANSI 104 preset loaded in Polish" />
 <img src="/preset-ansi-104-polish-dark.png" class="docs-screenshot dark-only" alt="ANSI 104 preset loaded in Polish" />

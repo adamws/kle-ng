@@ -137,9 +137,9 @@
     {
       "id": "iso-105",
       "name": "ISO 105",
-      "defaultLanguage": "en-GB",
+      "defaultLanguage": "en",
       "languages": [
-        { "code": "en-GB", "name": "British English", "file": "iso-105/en-GB.json" },
+        { "code": "en", "name": "English", "file": "iso-105/en.json" },
         { "code": "sq", "name": "Albanian", "file": "iso-105/sq.json" },
         { "code": "am", "name": "Amharic", "file": "iso-105/am.json" },
         { "code": "ar", "name": "Arabic", "file": "iso-105/ar.json" },
@@ -151,6 +151,7 @@
         { "code": "be", "name": "Belarusian", "file": "iso-105/be.json" },
         { "code": "bs", "name": "Bosnian", "file": "iso-105/bs.json" },
         { "code": "pt-BR", "name": "Brazilian Portuguese", "file": "iso-105/pt-BR.json" },
+        { "code": "en-GB", "name": "British English", "file": "iso-105/en-GB.json" },
         {
           "code": "en-GB-x-ext",
           "name": "British English (Extended)",
@@ -171,7 +172,6 @@
         { "code": "dv", "name": "Divehi", "file": "iso-105/dv.json" },
         { "code": "nl", "name": "Dutch", "file": "iso-105/nl.json" },
         { "code": "dz", "name": "Dzongkha", "file": "iso-105/dz.json" },
-        { "code": "en", "name": "English", "file": "iso-105/en.json" },
         { "code": "en-GH", "name": "English (Ghana)", "file": "iso-105/en-GH.json" },
         { "code": "en-IE", "name": "English (Ireland)", "file": "iso-105/en-IE.json" },
         { "code": "en-NG", "name": "English (Nigeria)", "file": "iso-105/en-NG.json" },
@@ -379,9 +379,9 @@
     {
       "id": "iso-60",
       "name": "ISO 60%",
-      "defaultLanguage": "en-GB",
+      "defaultLanguage": "en",
       "languages": [
-        { "code": "en-GB", "name": "British English", "file": "iso-60/en-GB.json" },
+        { "code": "en", "name": "English", "file": "iso-60/en.json" },
         { "code": "sq", "name": "Albanian", "file": "iso-60/sq.json" },
         { "code": "am", "name": "Amharic", "file": "iso-60/am.json" },
         { "code": "ar", "name": "Arabic", "file": "iso-60/ar.json" },
@@ -393,6 +393,7 @@
         { "code": "be", "name": "Belarusian", "file": "iso-60/be.json" },
         { "code": "bs", "name": "Bosnian", "file": "iso-60/bs.json" },
         { "code": "pt-BR", "name": "Brazilian Portuguese", "file": "iso-60/pt-BR.json" },
+        { "code": "en-GB", "name": "British English", "file": "iso-60/en-GB.json" },
         {
           "code": "en-GB-x-ext",
           "name": "British English (Extended)",
@@ -413,7 +414,6 @@
         { "code": "dv", "name": "Divehi", "file": "iso-60/dv.json" },
         { "code": "nl", "name": "Dutch", "file": "iso-60/nl.json" },
         { "code": "dz", "name": "Dzongkha", "file": "iso-60/dz.json" },
-        { "code": "en", "name": "English", "file": "iso-60/en.json" },
         { "code": "en-GH", "name": "English (Ghana)", "file": "iso-60/en-GH.json" },
         { "code": "en-IE", "name": "English (Ireland)", "file": "iso-60/en-IE.json" },
         { "code": "en-NG", "name": "English (Nigeria)", "file": "iso-60/en-NG.json" },

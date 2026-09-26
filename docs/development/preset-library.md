@@ -281,8 +281,9 @@ web fonts, so `main.ts` starts the load and the editor redraws on `document.font
 it, so there the result depends on the viewer's fonts.
 
 `ansi-104/en.json` regenerated from the `us` layout is byte-identical to the hand-made file it
-was cut from, which is the check that the transplant loses nothing. The ISO presets default to
-the plain `en-GB`, which likewise equals the hand-made ISO 105 and ISO 60% it replaced.
+was cut from, which is the check that the transplant loses nothing. The plain `en-GB` likewise
+equals the hand-made ISO 105 and ISO 60% it replaced. Every multilingual preset, ISO included,
+defaults to `en`.
 
 ### Regenerating
 

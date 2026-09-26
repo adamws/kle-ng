@@ -240,9 +240,9 @@ test.describe('Import from Preset', () => {
       // It names the language a plain click would load.
       await expect(toggle).toContainText('EN')
 
-      // ISO boards default to the UK printing they have always shipped with.
-      await expect(slot(page, 'ISO 105').locator(SELECTORS.PRESET.LANGUAGE_TOGGLE)).toContainText(
-        'EN-GB',
+      // Every multilingual board defaults to plain English, ISO ones included.
+      await expect(slot(page, 'ISO 105').locator(SELECTORS.PRESET.LANGUAGE_TOGGLE)).toHaveText(
+        /^\s*EN\s*$/,
       )
       await expect(slot(page, 'Planck').locator(SELECTORS.PRESET.LANGUAGE_TOGGLE)).toHaveCount(0)
     })
