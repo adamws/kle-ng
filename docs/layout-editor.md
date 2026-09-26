@@ -134,7 +134,7 @@ Legend tools provide quick canvas-oriented label editing in four modes:
 | Mode       | Description                                                                      |
 | ---------- | -------------------------------------------------------------------------------- |
 | **Edit**   | Direct label assignment with auto-advancement to next key after <kbd>Enter</kbd> |
-| **Remove** | Remove all labels at the selected label position                                 |
+| **Remove** | Remove labels by type (letters, numbers, accents…) or by position on the key     |
 | **Align**  | Change label alignment                                                           |
 | **Move**   | Move labels from one position to another                                         |
 

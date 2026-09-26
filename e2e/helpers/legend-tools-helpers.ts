@@ -159,6 +159,15 @@ export class LegendToolsHelper {
     return this.page.getByTestId(`category-button-${categoryId}`)
   }
 
+  /**
+   * Get the remove button for one legend position in the Remove tab's keycap.
+   *
+   * @param position - Legend position index (0-11, 9-11 being the front legends)
+   */
+  getRemovePositionButton(position: number): Locator {
+    return this.page.getByTestId(`remove-position-${position}`)
+  }
+
   // ============================================================================
   // Locator Getters - Align Tab Elements
   // ============================================================================
@@ -359,6 +368,20 @@ export class LegendToolsHelper {
       'All' | 'Alphas' | 'Numbers' | 'Punctuation' | 'Function' | 'Specials' | 'Others' | 'Decals',
   ): Promise<void> {
     await this.getCategoryButton(category).click()
+  }
+
+  /**
+   * Remove the legend at one position from the affected keys.
+   *
+   * @param position - Legend position index (0-11)
+   *
+   * @example
+   * ```typescript
+   * await legendHelper.removeLegendsAtPosition(1) // top center
+   * ```
+   */
+  async removeLegendsAtPosition(position: number): Promise<void> {
+    await this.getRemovePositionButton(position).click()
   }
 
   /**

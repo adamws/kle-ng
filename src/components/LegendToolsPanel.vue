@@ -151,6 +151,18 @@
               </div>
             </div>
           </div>
+
+          <h6
+            class="fw-bold text-center mb-2"
+            style="font-size: 0.9rem; color: var(--bs-text-primary)"
+          >
+            Remove by Position
+          </h6>
+          <LegendPositionRemover
+            :available="positionsWithLegends"
+            size="small"
+            @remove="removeLegendsAt"
+          />
         </div>
 
         <!-- Align Legends Tab -->
@@ -236,6 +248,7 @@ import { useKeyboardStore, type Key } from '@/stores/keyboard'
 import { useDraggablePanel } from '@/composables/useDraggablePanel'
 import LabelPositionPicker from './LabelPositionPicker.vue'
 import AlignmentPicker from './AlignmentPicker.vue'
+import LegendPositionRemover from './LegendPositionRemover.vue'
 
 import BiGripVertical from 'bootstrap-icons/icons/grip-vertical.svg'
 import BiWrench from 'bootstrap-icons/icons/wrench.svg'
@@ -382,6 +395,17 @@ const canMove = computed(() => {
 })
 
 // Methods
+const clearLabel = (key: Key, index: number) => {
+  key.labels[index] = ''
+  // Clear text formatting too
+  if (key.textColor && key.textColor[index]) {
+    key.textColor[index] = ''
+  }
+  if (key.textSize && key.textSize[index]) {
+    key.textSize[index] = 0
+  }
+}
+
 const removeLegends = (category: LegendCategory) => {
   const targetKeys =
     keyboardStore.selectedKeys.length > 0 ? keyboardStore.selectedKeys : keyboardStore.keys
@@ -393,19 +417,32 @@ const removeLegends = (category: LegendCategory) => {
       for (let i = 0; i < 12; i++) {
         const label = key.labels[i]
         if (label && category.regex.test(label)) {
-          key.labels[i] = ''
-          // Clear text formatting too
-          if (key.textColor && key.textColor[i]) {
-            key.textColor[i] = ''
-          }
-          if (key.textSize && key.textSize[i]) {
-            key.textSize[i] = 0
-          }
+          clearLabel(key, i)
         }
       }
     }
   })
 
+  keyboardStore.markDirty()
+}
+
+// Like the categories other than Decals, removal by position leaves decal keys alone.
+const positionTargetKeys = computed(() =>
+  (keyboardStore.selectedKeys.length > 0 ? keyboardStore.selectedKeys : keyboardStore.keys).filter(
+    (key) => !key.decal,
+  ),
+)
+
+const positionsWithLegends = computed(() =>
+  Array.from({ length: 12 }, (_, i) => positionTargetKeys.value.some((key) => !!key.labels[i])),
+)
+
+const removeLegendsAt = (position: number) => {
+  const targetKeys = positionTargetKeys.value.filter((key) => key.labels[position])
+  if (targetKeys.length === 0) return
+
+  keyboardStore.saveToHistory()
+  targetKeys.forEach((key) => clearLabel(key, position))
   keyboardStore.markDirty()
 }
 

@@ -731,6 +731,32 @@ test.describe('Legend Tools Panel', () => {
       expect(jsonData.length).toBeGreaterThan(0)
     })
 
+    test('should verify JSON after removing legends by position', async () => {
+      // Setup: Add key with labels in two positions
+      await canvasHelper.addKey()
+      await waitHelpers.waitForDoubleAnimationFrame()
+      await canvasHelper.setKeyLabel('topLeft', 'A')
+      await canvasHelper.setKeyLabel('topCenter', 'B')
+
+      await legendHelper.openPanel()
+      await legendHelper.switchToRemoveTab()
+
+      // Only the positions that hold a legend can be removed
+      await expect(legendHelper.getRemovePositionButton(0)).toBeEnabled()
+      await expect(legendHelper.getRemovePositionButton(1)).toBeEnabled()
+      await expect(legendHelper.getRemovePositionButton(4)).toBeDisabled()
+
+      // Remove the top center legend
+      await legendHelper.removeLegendsAtPosition(1)
+      await expect(legendHelper.getRemovePositionButton(1)).toBeDisabled()
+
+      // Export and verify only the top left legend remains
+      const jsonData = await legendHelper.exportAndVerifyJSON('remove-position-test.json')
+      const jsonString = JSON.stringify(jsonData)
+      expect(jsonString.includes('A')).toBe(true)
+      expect(jsonString.includes('B')).toBe(false)
+    })
+
     test('should handle import-remove-export round trip', async ({ page }) => {
       const importHelper = new ImportExportHelper(page, waitHelpers)
 

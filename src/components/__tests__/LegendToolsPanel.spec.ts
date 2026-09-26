@@ -135,6 +135,110 @@ describe('LegendToolsPanel', () => {
       expect(key.labels.slice(5, 8)).toEqual(['A', '1', '^'])
     })
 
+    describe('Remove by position', () => {
+      const positionButton = (position: number) =>
+        wrapper.find(`[data-testid="remove-position-${position}"]`)
+
+      const keyWith = (labels: Record<number, string>, decal = false) => {
+        const key = new Key()
+        for (const [position, label] of Object.entries(labels)) {
+          key.labels[Number(position)] = label
+        }
+        key.decal = decal
+        return key
+      }
+
+      it('shows a remove button for each of the 12 positions', () => {
+        for (let i = 0; i < 12; i++) {
+          expect(positionButton(i).exists()).toBe(true)
+        }
+      })
+
+      it('removes the legend at that position only', async () => {
+        const key = keyWith({ 0: '@', 6: '2', 8: '²', 9: 'Fn' })
+        key.textColor[6] = '#ff0000'
+        key.textSize[6] = 5
+        store.keys = [key]
+        store.selectedKeys = [key]
+        await wrapper.vm.$nextTick()
+
+        const saveToHistorySpy = vi.spyOn(store, 'saveToHistory')
+        const markDirtySpy = vi.spyOn(store, 'markDirty')
+
+        await positionButton(6).trigger('click')
+
+        expect(saveToHistorySpy).toHaveBeenCalledOnce()
+        expect(markDirtySpy).toHaveBeenCalledOnce()
+        expect(key.labels[6]).toBe('')
+        expect(key.textColor[6]).toBe('')
+        expect(key.textSize[6]).toBe(0)
+        expect(key.labels[0]).toBe('@')
+        expect(key.labels[8]).toBe('²')
+        expect(key.labels[9]).toBe('Fn')
+      })
+
+      it('removes front legends', async () => {
+        const key = keyWith({ 0: 'A', 10: 'Home' })
+        store.keys = [key]
+        await wrapper.vm.$nextTick()
+
+        await positionButton(10).trigger('click')
+
+        expect(key.labels[10]).toBe('')
+        expect(key.labels[0]).toBe('A')
+      })
+
+      it('acts on the selected keys only when there is a selection', async () => {
+        const selected = keyWith({ 4: 'X' })
+        const other = keyWith({ 4: 'Y' })
+        store.keys = [selected, other]
+        store.selectedKeys = [selected]
+        await wrapper.vm.$nextTick()
+
+        await positionButton(4).trigger('click')
+
+        expect(selected.labels[4]).toBe('')
+        expect(other.labels[4]).toBe('Y')
+      })
+
+      it('acts on every key when nothing is selected, but never on decals', async () => {
+        const first = keyWith({ 2: 'a' })
+        const second = keyWith({ 2: 'b' })
+        const decal = keyWith({ 2: 'logo' }, true)
+        store.keys = [first, second, decal]
+        store.selectedKeys = []
+        await wrapper.vm.$nextTick()
+
+        await positionButton(2).trigger('click')
+
+        expect(first.labels[2]).toBe('')
+        expect(second.labels[2]).toBe('')
+        expect(decal.labels[2]).toBe('logo')
+      })
+
+      it('disables the positions no affected key has a legend at', async () => {
+        const decal = keyWith({ 5: 'logo' }, true)
+        store.keys = [keyWith({ 0: 'Q', 11: 'F' }), decal]
+        await wrapper.vm.$nextTick()
+
+        expect(positionButton(0).attributes('disabled')).toBeUndefined()
+        expect(positionButton(11).attributes('disabled')).toBeUndefined()
+        expect(positionButton(1).attributes('disabled')).toBeDefined()
+        // A decal's legend does not count: removal by position skips decals.
+        expect(positionButton(5).attributes('disabled')).toBeDefined()
+      })
+
+      it('disables a position once its legends are removed', async () => {
+        store.keys = [keyWith({ 3: 'Tab' })]
+        await wrapper.vm.$nextTick()
+        expect(positionButton(3).attributes('disabled')).toBeUndefined()
+
+        await positionButton(3).trigger('click')
+
+        expect(positionButton(3).attributes('disabled')).toBeDefined()
+      })
+    })
+
     it('shows correct count for all keys when none selected', async () => {
       store.keys = [new Key(), new Key(), new Key()]
       store.selectedKeys = []
