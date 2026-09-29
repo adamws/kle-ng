@@ -143,7 +143,7 @@ An unknown code falls back rather than throwing: a stale link or a hand-typed co
 the board, not break the modal.
 
 This is also the hook for the change this design will eventually need. The manifest is a static
-import, so it ships in the JS bundle; at ~100 languages that is roughly +6 KB per multilingual
+import, so it ships in the JS bundle; at ~120 languages that is roughly +7.5 KB per multilingual
 preset. The exit is to move the language lists into a lazily fetched file and keep only a count
 in the bundle — a contained change **only** while every language access goes through
 `presetPayload()` and `presetLanguages()`.
@@ -209,6 +209,38 @@ Japanese text comes from an input method, while a JIS keycap also prints kana. T
 and puts the kana in the right-hand column. XKB has nothing equivalent for Korean (it defines no
 Hangul jamo) or for Chinese (mainland keycaps are US-printed), so those are not offered.
 
+The same private-use tags carry a language's **alternative layouts**: arrangements that
+people buy keycaps for, as opposed to a different printing of the same arrangement. The bar for
+inclusion is a national standard, the other layout a country widely prints where it has two, or
+one of the best-known alternatives to QWERTY:
+
+| Code            | Name                           | Source             | Why                                  |
+| --------------- | ------------------------------ | ------------------ | ------------------------------------ |
+| `en-x-dvorak`   | English (Dvorak)               | `us(dvorak)`       | Alternative to QWERTY                |
+| `en-x-colemak`  | English (Colemak)              | `us(colemak)`      | Alternative to QWERTY; `basic`       |
+| `en-x-cmk-dh`   | English (Colemak-DH)           | `us(colemak_dh)`   | Alternative to QWERTY; `basic`       |
+| `fr-x-afnor`    | French (AZERTY, AFNOR)         | `fr(afnor)`        | NF Z71-300, the 2019 French standard |
+| `fr-x-bepo`     | French (BÉPO)                  | `fr(bepo)`         | Alternative to AZERTY                |
+| `fr-CA-x-csa`   | Canadian French (Multilingual) | `ca(multix)`       | CSA Z243.200, the Canadian standard  |
+| `de-x-e1`       | German (E1)                    | `de(e1)`           | DIN 2137-01:2018                     |
+| `de-x-neo`      | German (Neo 2)                 | `de(neo)`          | Alternative to QWERTZ                |
+| `cs-x-qwerty`   | Czech (QWERTY)                 | `cz(qwerty)`       | Czech keyboards ship in both         |
+| `sk-x-qwerty`   | Slovak (QWERTY)                | `sk(qwerty)`       | Slovak keyboards ship in both        |
+| `tr-x-f`        | Turkish (F)                    | `tr(f)`            | TS 5600, Turkey's standard           |
+| `ro-x-std`      | Romanian (Standard)            | `ro(std)`          | SR 13392:2004                        |
+| `ru-x-phonetic` | Russian (Phonetic)             | `ru(phonetic)`     | Common alternative to ЙЦУКЕН         |
+| `bg-x-phonetic` | Bulgarian (Phonetic)           | `bg(phonetic)`     | Common alternative to BDS            |
+| `ta-x-tamil99`  | Tamil (Tamil99)                | `in(tam_tamilnet)` | Tamil Nadu government standard       |
+
+Two languages that were missing entirely came in through a variant with a real BCP 47 tag, so
+`Intl` names them: Swiss French (`fr-CH`, from `ch(fr)`) and Catalan (`ca`, from `es(cat)`).
+Serbian Latin (`rs(latin)`) was tried and skipped, because its legends are identical to Bosnian.
+
+Colemak takes the `basic` option because XKB's Colemak defines a full AltGr layer that Colemak
+keycaps do not print, and like the English defaults, a Colemak board should look plain. Keep a
+new suffix short: the chip on the card shows it, and at `EN-COLEMAK-DH` the key count beside it
+was cut to `104 k…` even on a desktop-width card. That is why Colemak-DH is `en-x-cmk-dh`.
+
 Several languages are reachable only as a variant of another country's XKB layout and are listed
 that way: India's InScript layouts (`in(tam)`, `in(tel)`, `in(ben)` for `bn-IN`, and so on)
 beside Hindi's `in`, and Tibetan and Uyghur as `cn(tib)` and `cn(ug)`.
@@ -260,7 +292,9 @@ A legend that is a lone combining mark is drawn on a dotted circle `◌` by xkbp
 dead key is shown this way, as its combining accent on the circle: `dead_circumflex` is `◌̂`, not a
 spacing `^`. Spacing forms exist for the common accents but not for all (`dead_belowdot`,
 `dead_hook`), and mixing the two made one key show an accent bare beside another on a circle.
-A plain `^` on a legend is therefore always a real character, never a dead key. The circle also
+A plain `^` on a legend is therefore always a real character, never a dead key. The dead keys
+that are not accents are drawn bare as the character they stand for: `dead_currency` as `¤`, and
+`dead_greek`, which switches the next key to Greek (BÉPO, AFNOR, Finnish), as `α`. The circle also
 carries the vowel signs and tone marks of Arabic, Hebrew, Thai, Devanagari, Tamil and similar
 scripts, spacing ones included. A nonspacing mark printed bare has no width: it floats off the
 cap or lands on a neighbouring legend. A spacing vowel sign such as Tamil `ா` renders, but beside
@@ -316,8 +350,8 @@ nothing is noise. For example, `cn` and `kr` are US-printed, and `at` equals `de
 
 ### Bundle size
 
-There are 100 languages on each of the four presets (400 payloads), and the manifest is a static
-import, so the language lists add roughly 25 KB to the bundle before compression. The exit is
+There are 117 languages on each of the four presets (468 payloads), and the manifest is a static
+import, so the language lists add roughly 30 KB to the bundle before compression. The exit is
 still the one described under `presetPayload()`: lazy-load the lists behind `presetLanguages()`.
 
 ## The language menu
@@ -358,7 +392,7 @@ relative to the focused card — stops responding. The backdrop handler carries 
 the click that dismisses a menu does not also close the modal behind it.
 
 **Focus always moves into the menu, onto the card's current language**, whether it was opened
-by mouse or keyboard. Type-ahead can only hear keys while focus is inside the menu, and with 100
+by mouse or keyboard. Type-ahead can only hear keys while focus is inside the menu, and with 117
 languages it is the main way through the list. Starting on the current choice rather than the
 first option also brings a staged language deep in the list into view when the menu reopens.
 `:focus-visible` keeps the ring off for mouse users.

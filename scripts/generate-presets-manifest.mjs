@@ -38,7 +38,13 @@ const discovered = []
 for (const { id, codes } of scan.multilingual) {
   for (const code of codes) {
     if (languageNames[code]) continue
-    const name = displayNames.of(code)
+    // Some ICU builds throw on a private-use tag rather than echoing it back.
+    let name
+    try {
+      name = displayNames.of(code)
+    } catch {
+      name = undefined
+    }
     if (!name || name === code) {
       console.error(
         `error: cannot resolve a display name for "${code}" (${id}/${code}.json).\n` +

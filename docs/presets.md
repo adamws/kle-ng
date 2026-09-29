@@ -11,7 +11,7 @@ Loading a preset replaces the current layout and clears the undo history, so sav
 
 ## Languages {#languages}
 
-**ANSI 104**, **ISO 105**, **Default 60%** and **ISO 60%** come in 100 languages. The legends follow the layouts shipped with X11, including AltGr characters.
+**ANSI 104**, **ISO 105**, **Default 60%** and **ISO 60%** come in 117 languages. The legends follow the layouts shipped with X11, including AltGr characters.
 
 <img src="/preset-language-menu-light.png" class="docs-screenshot light-only" alt="Language menu of the ANSI 104 card with Polish highlighted" style="max-width:320px" />
 <img src="/preset-language-menu-dark.png" class="docs-screenshot dark-only" alt="Language menu of the ANSI 104 card with Polish highlighted" style="max-width:320px" />
@@ -19,6 +19,8 @@ Loading a preset replaces the current layout and clears the undo history, so sav
 To pick a language, click the globe button in the card's corner (`🌐 EN`) and choose one from the list, then click the card to load it. Clicking the card without opening the list loads the default language. You can type in the list to jump to a language by name or code, for example `pol` or `pl` for Polish.
 
 The default is US English on every board, kept plain with only the base and Shift legends. For a UK printing, choose **British English**. For more legends, choose **English (US, International)** or **British English (Extended)**, which add the AltGr layer. For Japanese, **Japanese (Kana)** adds kana next to the romaji.
+
+Some languages also offer alternative layouts, listed next to the language under the same name: **English (Dvorak)**, **English (Colemak)** and **English (Colemak-DH)**; **French (BÉPO)** and the newer **French (AZERTY, AFNOR)** standard; **German (E1)** and **German (Neo 2)**; the QWERTY versions of Czech and Slovak; **Turkish (F)**; **Romanian (Standard)**; the phonetic Russian and Bulgarian layouts; **Tamil (Tamil99)**; and **Canadian French (Multilingual)**.
 
 <img src="/preset-ansi-104-polish-light.png" class="docs-screenshot light-only" alt="ANSI 104 preset loaded in Polish" />
 <img src="/preset-ansi-104-polish-dark.png" class="docs-screenshot dark-only" alt="ANSI 104 preset loaded in Polish" />
