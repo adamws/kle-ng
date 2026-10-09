@@ -47,13 +47,18 @@ import PadLayer from './pcb/PadLayer.vue'
 import type { PlacedPad } from '@/utils/pcb-tracks/netlist'
 import GridLayer from './pcb/GridLayer.vue'
 import DrcLayer from './pcb/DrcLayer.vue'
-import { runDrc } from '@/utils/pcb-tracks/drc'
+import TrackEditorLayer from './pcb/TrackEditorLayer.vue'
+import TrackEditorToolbar from './pcb/TrackEditorToolbar.vue'
+import { usePcbTracksStore } from '@/stores/pcbTracks'
+import { placedPadNet } from '@/utils/pcb-tracks/netlist'
 import BiInfoCircle from 'bootstrap-icons/icons/info-circle.svg'
 import BiExclamationTriangle from 'bootstrap-icons/icons/exclamation-triangle.svg'
 import BiPencilSquare from 'bootstrap-icons/icons/pencil-square.svg'
 import BiZoomIn from 'bootstrap-icons/icons/zoom-in.svg'
 import BiZoomOut from 'bootstrap-icons/icons/zoom-out.svg'
 import BiFullscreen from 'bootstrap-icons/icons/fullscreen.svg'
+import BiEye from 'bootstrap-icons/icons/eye.svg'
+import BiEyeSlash from 'bootstrap-icons/icons/eye-slash.svg'
 
 // Constants for footprint positioning
 const CONTAINER_PADDING = 2.0 // mm
@@ -64,6 +69,8 @@ const ZOOM_FACTOR = 1.3
 // Pinia store access
 const pcbStore = usePcbGeneratorStore()
 const { settings } = storeToRefs(pcbStore)
+const tracks = usePcbTracksStore()
+const { editorSettings } = storeToRefs(tracks)
 
 // Component state
 const switchSvgContent = ref<string>('')
@@ -411,15 +418,13 @@ const svgViewBox = computed(() =>
   editMode.value ? panZoom.viewBoxString.value : compositeViewBox.value,
 )
 
-/** Editor grid pitch in mm (configurable from B4). */
-const GRID_MM = 0.25
-
 const visibleLayers = ref<Record<CopperLayer, boolean>>({ 'F.Cu': true, 'B.Cu': true })
 const cursorLocal = ref<{ x: number; y: number } | null>(null)
 const hoveredPadKey = ref<string | null>(null)
 
 function toggleEditMode() {
   editMode.value = !editMode.value
+  tracks.reset()
   if (editMode.value) {
     panZoom.fit(fittedViewBox.value)
     nextTick(() => containerRef.value?.focus({ preventScroll: true }))
@@ -427,7 +432,7 @@ function toggleEditMode() {
 }
 
 watch(canEdit, (can) => {
-  if (!can) editMode.value = false
+  if (!can && editMode.value) toggleEditMode()
 })
 
 // Size of the SVG on screen, for the grid density
@@ -546,17 +551,37 @@ const showDrc = computed(
     padsReady.value &&
     (editMode.value || trackPresetItems.value.length > 0),
 )
-const drc = computed(() =>
-  showDrc.value ? runDrc(previewPads.value, trackPresetItems.value) : null,
+// the store runs DRC on the preset, plus the route and its preview while routing
+const drc = computed(() => (showDrc.value ? tracks.drc : null))
+
+watch(previewPads, (pads) => tracks.setPads(pads), { immediate: true })
+// anchors attract the cursor within a few screen pixels
+watch(pxPerMm, (scale) => (tracks.snapRadius = SNAP_RADIUS_PX / scale), { immediate: true })
+
+const routeStatus = computed(() => {
+  const r = tracks.route
+  if (!r) return null
+  return `Routing ${r.net ?? 'new net'} on ${r.layer}, ${r.width} mm`
+})
+const blockedReason = computed(() => tracks.previewViolations[0]?.message ?? null)
+
+// a refused click flashes the canvas
+const blockedFlash = ref(false)
+let flashTimer: ReturnType<typeof setTimeout> | undefined
+watch(
+  () => tracks.blockedCount,
+  () => {
+    blockedFlash.value = true
+    clearTimeout(flashTimer)
+    flashTimer = setTimeout(() => (blockedFlash.value = false), 300)
+  },
 )
 const drcSummary = computed(() => {
   if (!drc.value) return null
-  const errors = drc.value.violations.filter((v) => v.severity === 'error').length
-  const warnings = drc.value.violations.length - errors
+  const errors = drc.value.violations.length
   const unrouted = drc.value.ratsnest.length
   const parts = [
     errors && `${errors} DRC error${errors > 1 ? 's' : ''}`,
-    warnings && `${warnings} warning${warnings > 1 ? 's' : ''}`,
     unrouted && `${unrouted} unrouted`,
   ].filter(Boolean)
   return { ok: parts.length === 0, text: parts.length ? parts.join(' · ') : 'DRC clean' }
@@ -571,22 +596,77 @@ function padLabel(p: PlacedPad): string {
   return `${p.owner} ${kind}`
 }
 
+/** Anchor attraction radius on screen. */
+const SNAP_RADIUS_PX = 10
+
+// a left click that started a Space+drag pan isn't a routing click
+let clickIsPan = false
+
 function onCanvasPointerDown(event: PointerEvent) {
   if (!editMode.value) return
   containerRef.value?.focus({ preventScroll: true })
-  panZoom.onPointerDown(event)
+  clickIsPan = panZoom.onPointerDown(event)
 }
 
 function onCanvasPointerMove(event: PointerEvent) {
   if (!editMode.value) return
-  panZoom.onPointerMove(event)
+  if (panZoom.onPointerMove(event)) return
   const p = panZoom.screenToSvg(event.clientX, event.clientY)
   cursorLocal.value = p ? boardToSwitchLocal(p, settings.value.switchRotation) : null
+  tracks.setCursor(cursorLocal.value)
 }
 
 function onCanvasPointerLeave() {
   cursorLocal.value = null
   hoveredPadKey.value = null
+  tracks.setCursor(null)
+}
+
+function onCanvasClick(event: MouseEvent) {
+  if (!editMode.value || event.button !== 0) return
+  if (clickIsPan) {
+    clickIsPan = false
+    return
+  }
+  tracks.click(hoveredPad.value ? placedPadNet(hoveredPad.value) : null)
+}
+
+function onCanvasDoubleClick() {
+  if (editMode.value && tracks.isRouting) tracks.finish()
+}
+
+/** Editor shortcuts, scoped to the focused canvas. */
+function onCanvasKeyDown(event: KeyboardEvent) {
+  if (!editMode.value) return
+  panZoom.onKeyDown(event)
+  if (event.ctrlKey || event.metaKey || event.altKey) return
+  const handled = (() => {
+    switch (event.key) {
+      case 'x':
+      case 'X':
+        if (!tracks.isRouting) tracks.startRoute()
+        return true
+      case 'Escape':
+        tracks.escape()
+        return true
+      case 'Backspace':
+        tracks.undoVertex()
+        return true
+      case 'End':
+        tracks.finish()
+        return true
+      case '/':
+        tracks.flipPosture()
+        return true
+      case 'w':
+      case 'W':
+        tracks.cycleWidth(event.shiftKey ? -1 : 1)
+        return true
+      default:
+        return false
+    }
+  })()
+  if (handled) event.preventDefault()
 }
 
 function onCanvasWheel(event: WheelEvent) {
@@ -637,6 +717,9 @@ onUnmounted(() => {
 
 <template>
   <div class="footprint-preview">
+    <!-- Track editor tools (route, layer, width, grid, posture, clearance) -->
+    <TrackEditorToolbar v-if="editMode" />
+
     <!-- SVG Container (always present to maintain height) -->
     <div
       ref="containerRef"
@@ -646,10 +729,12 @@ onUnmounted(() => {
         editing: editMode,
         panning: panZoom.isPanning.value,
         'pan-ready': panZoom.spaceHeld.value,
+        'tool-route': editMode && tracks.tool === 'route',
+        'blocked-flash': blockedFlash,
       }"
       :tabindex="editMode ? 0 : undefined"
       data-testid="pcb-preview-canvas"
-      @keydown="editMode && panZoom.onKeyDown($event)"
+      @keydown="onCanvasKeyDown"
       @keyup="editMode && panZoom.onKeyUp($event)"
       @blur="panZoom.onBlur()"
     >
@@ -665,10 +750,12 @@ onUnmounted(() => {
         @pointercancel="panZoom.onPointerUp"
         @pointerleave="onCanvasPointerLeave"
         @mousedown.middle="editMode && $event.preventDefault()"
+        @click="onCanvasClick"
+        @dblclick="onCanvasDoubleClick"
       >
         <!-- Grid (switch-local frame, track editor only) -->
         <g v-if="editMode" :transform="switchLocalTransform">
-          <GridLayer :grid="GRID_MM" :px-per-mm="pxPerMm" :extent="gridExtent" />
+          <GridLayer :grid="editorSettings.grid" :px-per-mm="pxPerMm" :extent="gridExtent" />
         </g>
 
         <!-- Switch footprint (centered at origin) -->
@@ -707,18 +794,35 @@ onUnmounted(() => {
             :pads="previewPads"
             :visible-layers="visibleLayers"
             :hovered-key="hoveredPadKey"
+            :active-layer="editorSettings.layer"
+            :highlight-net="tracks.highlightNet"
             @hover="hoveredPadKey = $event"
           />
         </g>
 
         <!-- Track preset overlay (switch-local frame) -->
         <g v-if="trackPresetItems.length" :transform="switchLocalTransform">
-          <TrackLayer :items="trackPresetItems" />
+          <TrackLayer
+            :items="trackPresetItems"
+            :item-nets="drc?.itemNets"
+            :highlight-net="editMode ? tracks.highlightNet : null"
+          />
         </g>
 
         <!-- DRC markers and ratsnest (switch-local frame) -->
         <g v-if="drc" :transform="switchLocalTransform">
           <DrcLayer :violations="drc.violations" :ratsnest="drc.ratsnest" :px-per-mm="pxPerMm" />
+        </g>
+
+        <!-- Route being drawn (switch-local frame) -->
+        <g v-if="editMode" :transform="switchLocalTransform">
+          <TrackEditorLayer
+            :committed="tracks.routeSegments"
+            :preview="tracks.previewSegments"
+            :blocked="tracks.previewViolations.length > 0"
+            :target="tracks.tool === 'route' ? tracks.target : null"
+            :px-per-mm="pxPerMm"
+          />
         </g>
 
         <!-- Crosshair overlay -->
@@ -764,7 +868,7 @@ onUnmounted(() => {
           <BiPencilSquare /> Edit tracks
         </button>
         <template v-if="editMode">
-          <div class="btn-group btn-group-sm" role="group" aria-label="Copper layers">
+          <div class="btn-group btn-group-sm" role="group" aria-label="Copper layer visibility">
             <button
               v-for="layer in ['F.Cu', 'B.Cu'] as const"
               :key="layer"
@@ -775,10 +879,11 @@ onUnmounted(() => {
                 layer === 'F.Cu' ? 'layer-front' : 'layer-back',
               ]"
               :aria-pressed="visibleLayers[layer]"
-              :title="`Show ${layer} pads`"
+              :title="`${visibleLayers[layer] ? 'Hide' : 'Show'} ${layer} pads`"
               :data-testid="`pcb-layer-toggle-${layer}`"
               @click="visibleLayers[layer] = !visibleLayers[layer]"
             >
+              <BiEye v-if="visibleLayers[layer]" /><BiEyeSlash v-else />
               <span class="layer-swatch"></span>{{ layer }}
             </button>
           </div>
@@ -814,23 +919,6 @@ onUnmounted(() => {
         </template>
       </div>
 
-      <!-- Track editor status bar -->
-      <div v-if="editMode" class="editor-status" data-testid="pcb-editor-status">
-        <span v-if="hoveredPad" data-testid="pcb-hovered-pad">{{ padLabel(hoveredPad) }}</span>
-        <span v-if="cursorLocal" data-testid="pcb-cursor-readout">
-          X {{ formatCoordinate(cursorLocal.x) }} Y {{ formatCoordinate(cursorLocal.y) }} mm
-        </span>
-        <span class="text-nowrap">grid {{ GRID_MM }} mm</span>
-        <span
-          v-if="drcSummary"
-          :class="drcSummary.ok ? 'text-success' : 'text-danger'"
-          data-testid="pcb-drc-summary"
-          >{{ drcSummary.text }}</span
-        >
-        <span v-if="padsError" class="text-warning">{{ padsError }}</span>
-        <span class="editor-hint">wheel: zoom · middle or Space+drag: pan</span>
-      </div>
-
       <!-- DRC summary of a pasted preset outside the editor -->
       <div
         v-if="drcSummary && !editMode"
@@ -859,6 +947,32 @@ onUnmounted(() => {
       </div>
     </div>
 
+    <!-- Track editor status bar -->
+    <div v-if="editMode" class="editor-status" data-testid="pcb-editor-status">
+      <span v-if="hoveredPad" data-testid="pcb-hovered-pad">{{ padLabel(hoveredPad) }}</span>
+      <span v-if="cursorLocal" data-testid="pcb-cursor-readout">
+        X {{ formatCoordinate(cursorLocal.x) }} Y {{ formatCoordinate(cursorLocal.y) }} mm
+      </span>
+      <span v-if="routeStatus" data-testid="pcb-route-status">{{ routeStatus }}</span>
+      <span v-if="blockedReason" class="text-danger" data-testid="pcb-route-blocked">{{
+        blockedReason
+      }}</span>
+      <span
+        v-if="drcSummary"
+        :class="drcSummary.ok ? 'text-success' : 'text-danger'"
+        data-testid="pcb-drc-summary"
+        >{{ drcSummary.text }}</span
+      >
+      <span v-if="padsError" class="text-warning">{{ padsError }}</span>
+      <span class="editor-hint">{{
+        tracks.isRouting
+          ? 'click: add corner · / flip · Backspace: undo · double-click/End: finish · Esc: cancel'
+          : tracks.tool === 'route'
+            ? 'click or X: start a track · wheel: zoom · middle/Space+drag: pan'
+            : 'click a pad: highlight its net · X: route · wheel: zoom · middle/Space+drag: pan'
+      }}</span>
+    </div>
+
     <!-- Loading State Overlay -->
     <div v-if="isLoading" class="preview-overlay">
       <div class="spinner-border text-primary" role="status">
@@ -880,7 +994,8 @@ onUnmounted(() => {
   width: 100%;
   position: relative;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   justify-content: center;
 }
 
@@ -930,10 +1045,6 @@ onUnmounted(() => {
   z-index: 5;
 }
 
-.svg-container.editing .preview-warning {
-  bottom: 2rem;
-}
-
 .preview-warning small {
   color: rgba(255, 255, 255, 0.8);
 }
@@ -947,6 +1058,10 @@ onUnmounted(() => {
 
 .svg-container.editing:focus-visible {
   box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+.svg-container.blocked-flash {
+  box-shadow: 0 0 0 0.2rem rgba(255, 45, 85, 0.6);
 }
 
 .svg-container.pan-ready {
@@ -1003,21 +1118,14 @@ onUnmounted(() => {
 }
 
 .editor-status {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem 1rem;
-  padding: 0.25rem 0.5rem;
+  gap: 0.125rem 1rem;
+  padding: 0.25rem 0.125rem 0;
+  min-height: 1.75rem;
   font-family: var(--bs-font-monospace);
   font-size: 0.75rem;
   color: var(--bs-secondary-color);
-  background-color: rgba(var(--bs-body-bg-rgb), 0.85);
-  border-top: 1px solid var(--bs-border-color);
-  pointer-events: none;
-  z-index: 20;
 }
 
 .drc-badge {

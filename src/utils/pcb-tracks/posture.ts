@@ -41,6 +41,8 @@ export function walk(start: Vec, end: Vec, posture: Posture, flip = false): Vec[
       ? { x: start.x + diag.x, y: start.y + diag.y }
       : { x: end.x - diag.x, y: end.y - diag.y }
   }
+  // whole nanometres, like the wire format, without float noise
+  corner = { x: Math.round(corner.x * 1e6) / 1e6, y: Math.round(corner.y * 1e6) / 1e6 }
   const same = (p: Vec, q: Vec) => Math.abs(p.x - q.x) < 1e-9 && Math.abs(p.y - q.y) < 1e-9
   if (same(corner, start) || same(corner, end)) return [start, end]
   return [start, corner, end]

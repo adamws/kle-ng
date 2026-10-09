@@ -39,7 +39,7 @@ const cross = computed(() => px(3.5))
       v-for="(v, i) in violations"
       :key="`drc-${i}`"
       :transform="`translate(${v.at.x} ${v.at.y})`"
-      :class="['drc-marker', `drc-${v.severity}`]"
+      class="drc-marker"
       :data-kind="v.kind"
       data-testid="pcb-drc-marker"
     >
@@ -62,29 +62,14 @@ const cross = computed(() => px(3.5))
 }
 
 .drc-marker circle {
+  fill: #ff2d55;
   fill-opacity: 0.25;
+  stroke: #ff2d55;
 }
 
 .drc-marker path {
   fill: none;
+  stroke: #ff2d55;
   stroke-linecap: round;
-}
-
-.drc-error circle {
-  fill: #ff2d55;
-  stroke: #ff2d55;
-}
-
-.drc-error path {
-  stroke: #ff2d55;
-}
-
-.drc-warning circle {
-  fill: #f0ad00;
-  stroke: #f0ad00;
-}
-
-.drc-warning path {
-  stroke: #f0ad00;
 }
 </style>

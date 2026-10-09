@@ -171,11 +171,6 @@ describe('runDrc', () => {
     expect(ratsnest).toHaveLength(1)
   })
 
-  it('warns about items leaving the key cell', () => {
-    const { violations } = runDrc(placed(), [track(2.54, -5.08, 2.54, -9.6)])
-    expect(violations.map((v) => [v.kind, v.severity])).toEqual([['out-of-cell', 'warning']])
-  })
-
   it('checks vias: copper, hole to hole, and connection across layers', () => {
     const via = {
       type: 'via' as const,

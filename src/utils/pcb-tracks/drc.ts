@@ -12,7 +12,7 @@
  * reaches. A cluster reaching pads of two nets (or an obstacle pad) is a short.
  */
 import type { TrackItem } from '@/types/tracks'
-import { shapeBounds, shapeGap, type Shape, type Vec } from './distance'
+import { shapeGap, type Shape, type Vec } from './distance'
 import {
   buildConnectivity,
   padInfos,
@@ -21,7 +21,7 @@ import {
   type PadInfo,
   type RatsnestLine,
 } from './connectivity'
-import type { PlacedPad } from './netlist'
+import type { NetName, PlacedPad } from './netlist'
 import { padHoleShape, trackShape, viaHoleShape, viaShape } from './shapes'
 
 export interface DrcRules {
@@ -31,26 +31,21 @@ export interface DrcRules {
   holeClearance: number
   /** Hole edge to hole edge, mm. */
   holeToHole: number
-  /** Key cell size (1u pitch), mm; items beyond it reach into the neighbour key. */
-  cellSize: number
 }
 
 export const DEFAULT_DRC_RULES: DrcRules = {
   clearance: 0.2,
   holeClearance: 0.25,
   holeToHole: 0.25,
-  cellSize: 19.05,
 }
 
 /** Safety margin added to every limit, mm. */
 export const CLEARANCE_MARGIN = 1e-3
 
-export type ViolationKind =
-  'clearance' | 'hole-clearance' | 'hole-to-hole' | 'short' | 'out-of-cell'
+export type ViolationKind = 'clearance' | 'hole-clearance' | 'hole-to-hole' | 'short'
 
 export interface Violation {
   kind: ViolationKind
-  severity: 'error' | 'warning'
   message: string
   /** Where to draw the marker, switch-local mm. */
   at: Vec
@@ -64,6 +59,8 @@ export interface DrcResult {
   violations: Violation[]
   ratsnest: RatsnestLine[]
   connectivity: Connectivity
+  /** Net of each item (null when floating or shorted), by item index. */
+  itemNets: (NetName | null)[]
 }
 
 const mid = (a: Vec, b: Vec): Vec => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 })
@@ -126,7 +123,6 @@ export function runDrc(
     const second = infos[obstacles[0] ?? padIdx.find((i) => infos[i]!.net !== cluster.nets[0])!]!
     violations.push({
       kind: 'short',
-      severity: 'error',
       message: `Short: tracks connect ${named.join(', ')}`,
       at: { x: second.placed.pad.at.x, y: second.placed.pad.at.y },
       items: itemIdx,
@@ -169,7 +165,6 @@ export function runDrc(
       const bName = bIsPad ? padName(infos[-1 - b.ref]!) : itemName(items[b.ref]!)
       report(`c:${a.ref}:${b.ref}`, {
         kind: 'clearance',
-        severity: 'error',
         message:
           `Clearance: ${itemName(items[a.ref]!)} to ${bName} is ${fmt(gap.d)} mm, ` +
           `needs ${fmt(rules.clearance)} mm`,
@@ -195,7 +190,6 @@ export function runDrc(
       if (gap.d >= limit(rules.holeClearance)) continue
       report(`h:${i}:${hole.i}`, {
         kind: 'hole-clearance',
-        severity: 'error',
         message:
           `Hole clearance: ${itemName(item)} to ${padName(hole.info)} is ${fmt(gap.d)} mm, ` +
           `needs ${fmt(rules.holeClearance)} mm`,
@@ -224,7 +218,6 @@ export function runDrc(
         if (gap.d >= limit(rules.holeToHole)) continue
         report(`hh:${i}:${other.pad || other.item}`, {
           kind: 'hole-to-hole',
-          severity: 'error',
           message: `Hole to hole: via to ${other.name} is ${fmt(gap.d)} mm, needs ${fmt(rules.holeToHole)} mm`,
           at: mid(gap.a, gap.b),
           items: other.item >= 0 ? [i, other.item] : [i],
@@ -234,24 +227,9 @@ export function runDrc(
     }
   })
 
-  // out of the key cell: reaches into the neighbouring key
-  const half = rules.cellSize / 2
-  copper.forEach(({ ref, shape }) => {
-    const b = shapeBounds(shape)
-    if (b.minX >= -half && b.maxX <= half && b.minY >= -half && b.maxY <= half) return
-    const item = items[ref]!
-    violations.push({
-      kind: 'out-of-cell',
-      severity: 'warning',
-      message: `${itemName(item)} leaves the ${rules.cellSize} mm key cell and may hit the neighbouring key`,
-      at: {
-        x: Math.max(-half, Math.min(half, (b.minX + b.maxX) / 2)),
-        y: Math.max(-half, Math.min(half, (b.minY + b.maxY) / 2)),
-      },
-      items: [ref],
-      pads: [],
-    })
+  const itemNets = conn.itemCluster.map((root) => {
+    const nets = conn.clusters.get(root)!.nets
+    return nets.length === 1 ? nets[0]! : null
   })
-
-  return { violations, ratsnest: ratsnest(infos, items, conn), connectivity: conn }
+  return { violations, ratsnest: ratsnest(infos, items, conn), connectivity: conn, itemNets }
 }

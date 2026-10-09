@@ -14,6 +14,14 @@ const EDITOR = {
   FIT: '[data-testid="pcb-zoom-fit"]',
 }
 
+async function padCentre(page: Page, owner: 'SW' | 'D', number: string) {
+  const box = (await page
+    .locator(`[data-layer="B.Cu"] [data-pad-key^="${owner}:"][data-pad-number="${number}"]`)
+    .first()
+    .boundingBox())!
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+}
+
 async function openPreview(page: Page) {
   // never reach a real backend
   await page.route('**/api/workers', (route) =>
@@ -74,6 +82,75 @@ test.describe('PCB Generator track editor', () => {
 
     await expect(page.locator('[data-testid="pcb-ratsnest"][data-net="SW_D"]')).toHaveCount(1)
     await expect(page.locator('[data-testid="pcb-drc-summary"]')).toHaveText('1 unrouted')
+  })
+
+  test('routes SW pad 2 to D pad 2 into the track preset', async ({ page }) => {
+    await openPreview(page)
+    await page.locator(EDITOR.TOGGLE).click()
+    await page.locator('[data-testid="pcb-tool-route"]').click()
+
+    const sw2 = await padCentre(page, 'SW', '2')
+    const d2 = await padCentre(page, 'D', '2')
+    await page.mouse.move(sw2.x, sw2.y)
+    await page.mouse.click(sw2.x, sw2.y)
+    await expect(page.locator('[data-testid="pcb-route-status"]')).toContainText('Routing SW_D')
+    await page.mouse.move(d2.x, d2.y, { steps: 5 })
+    await expect(page.locator('[data-testid="pcb-route-preview"]')).toHaveCount(2)
+    await page.mouse.click(d2.x, d2.y)
+
+    // finished on the pad: the default preset, DRC clean, nothing unrouted
+    const tracks = page.locator('[data-testid="pcb-track-overlay-track"]')
+    await expect(tracks).toHaveCount(2)
+    await expect(page.locator('[data-testid="pcb-route-preview"]')).toHaveCount(0)
+    await expect(page.locator('[data-testid="pcb-ratsnest"]')).toHaveCount(0)
+    await expect(page.locator('[data-testid="pcb-drc-summary"]')).toHaveText('DRC clean')
+
+    // the settings (persisted in the backend's wire format, nm) hold the drawn preset
+    const saved = () =>
+      page.evaluate(() => {
+        const raw = localStorage.getItem('kle-ng-pcb-settings')
+        return raw ? (JSON.parse(raw).tracks ?? null) : null
+      })
+    await expect.poll(saved).not.toBeNull()
+    expect(await saved()).toEqual({
+      version: 1,
+      items: [
+        {
+          type: 'track',
+          start: { x_nm: 2540000, y_nm: -5080000 },
+          end: { x_nm: 2540000, y_nm: 60000 },
+          width_nm: 250000,
+          layer: 'B.Cu',
+        },
+        {
+          type: 'track',
+          start: { x_nm: 2540000, y_nm: 60000 },
+          end: { x_nm: 5080000, y_nm: 2600000 },
+          width_nm: 250000,
+          layer: 'B.Cu',
+        },
+      ],
+    })
+  })
+
+  test('refuses a click that breaks a rule and cancels with Esc', async ({ page }) => {
+    await openPreview(page)
+    await page.locator(EDITOR.TOGGLE).click()
+
+    // X starts a route at the pad under the cursor
+    const sw2 = await padCentre(page, 'SW', '2')
+    await page.mouse.move(sw2.x, sw2.y)
+    await page.keyboard.press('x')
+    // onto the diode cathode (ROW): a short, the click is refused
+    const d1 = await padCentre(page, 'D', '1')
+    await page.mouse.move(d1.x, d1.y, { steps: 5 })
+    await expect(page.locator('[data-testid="pcb-route-blocked"]')).toContainText('Short')
+    await page.mouse.click(d1.x, d1.y)
+    await expect(page.locator('[data-testid="pcb-route-committed"]')).toHaveCount(0)
+
+    await page.keyboard.press('Escape')
+    await expect(page.locator('[data-testid="pcb-route-status"]')).toHaveCount(0)
+    await expect(page.locator('[data-testid="pcb-track-overlay-track"]')).toHaveCount(0)
   })
 
   test('zooms at the cursor, pans and fits', async ({ page }) => {

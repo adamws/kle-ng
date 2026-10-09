@@ -8,7 +8,7 @@
 -->
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { PlacedPad } from '@/utils/pcb-tracks/netlist'
+import { placedPadNet, type NetName, type PlacedPad } from '@/utils/pcb-tracks/netlist'
 import { padCopperLayers } from '@/utils/kicad/footprint-pads'
 import { drillPath, padCopperPaths, padTransform, type PadPath } from '@/utils/pcb-tracks/pad-paths'
 import type { CopperLayer } from '@/types/tracks'
@@ -19,6 +19,8 @@ const props = defineProps<{
   hoveredKey?: string | null
   /** Layer drawn on top. */
   activeLayer?: CopperLayer
+  /** Net to highlight; pads of other nets are dimmed. */
+  highlightNet?: NetName | null
 }>()
 
 const emit = defineEmits<{ hover: [key: string | null] }>()
@@ -31,10 +33,12 @@ interface DrawnPad {
   copper: { layer: CopperLayer; paths: PadPath[] }[]
   hole: string | null
   npth: boolean
+  dimmed: boolean
 }
 
 const drawn = computed<DrawnPad[]>(() =>
-  props.pads.map(({ key, owner, pad }) => {
+  props.pads.map((placed) => {
+    const { key, owner, pad } = placed
     const npth = pad.type === 'np_thru_hole'
     const paths = padCopperPaths(pad)
     return {
@@ -46,6 +50,7 @@ const drawn = computed<DrawnPad[]>(() =>
       copper: npth ? [] : padCopperLayers(pad).map((layer) => ({ layer, paths })),
       hole: pad.drill ? drillPath(pad.drill) : null,
       npth,
+      dimmed: !!props.highlightNet && placedPadNet(placed) !== props.highlightNet,
     }
   }),
 )
@@ -64,7 +69,7 @@ const layerClass = (layer: CopperLayer) => (layer === 'F.Cu' ? 'pad-front' : 'pa
           <g
             v-if="p.copper.some((c) => c.layer === layer)"
             :transform="p.transform"
-            :class="{ hovered: p.key === hoveredKey }"
+            :class="{ hovered: p.key === hoveredKey, dimmed: p.dimmed }"
             :data-pad-key="p.key"
             :data-pad-number="p.number"
             @pointerenter="emit('hover', p.key)"
@@ -86,7 +91,7 @@ const layerClass = (layer: CopperLayer) => (layer === 'F.Cu' ? 'pad-front' : 'pa
         <g
           v-if="p.hole"
           :transform="p.transform"
-          :class="{ npth: p.npth, hovered: p.key === hoveredKey }"
+          :class="{ npth: p.npth, hovered: p.key === hoveredKey, dimmed: p.dimmed }"
           :data-pad-key="p.npth ? p.key : undefined"
           @pointerenter="p.npth && emit('hover', p.key)"
           @pointerleave="p.npth && emit('hover', null)"
@@ -134,6 +139,19 @@ const layerClass = (layer: CopperLayer) => (layer === 'F.Cu' ? 'pad-front' : 'pa
 .pad-copper g,
 .pad-holes .npth {
   cursor: crosshair;
+}
+
+/* dim with a faded colour, not opacity, so stacked layers don't mix */
+.pad-front .dimmed path {
+  fill: color-mix(in srgb, #c83434 30%, var(--bs-body-bg));
+}
+
+.pad-back .dimmed path {
+  fill: color-mix(in srgb, #4d7fc4 30%, var(--bs-body-bg));
+}
+
+.pad-holes .dimmed {
+  opacity: 0.4;
 }
 
 .hovered path {
