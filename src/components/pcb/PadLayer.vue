@@ -8,21 +8,13 @@
 -->
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { FootprintPad } from '@/utils/kicad/footprint-pads'
+import type { PlacedPad } from '@/utils/pcb-tracks/netlist'
 import { padCopperLayers } from '@/utils/kicad/footprint-pads'
 import { drillPath, padCopperPaths, padTransform, type PadPath } from '@/utils/pcb-tracks/pad-paths'
 import type { CopperLayer } from '@/types/tracks'
 
-export interface PreviewPad {
-  /** Unique key, `<owner>:<index>` (e.g. `SW:3`, `D:0`). */
-  key: string
-  /** Reference prefix of the footprint the pad belongs to. */
-  owner: string
-  pad: FootprintPad
-}
-
 const props = defineProps<{
-  pads: readonly PreviewPad[]
+  pads: readonly PlacedPad[]
   visibleLayers: Record<CopperLayer, boolean>
   hoveredKey?: string | null
   /** Layer drawn on top. */

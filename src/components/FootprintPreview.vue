@@ -43,8 +43,11 @@ import { usePanZoom } from '@/composables/usePanZoom'
 import { footprintNameFromSvg, loadFootprintPads } from '@/utils/pcb/footprint-pads-loader'
 import { placePads, type FootprintPad } from '@/utils/kicad/footprint-pads'
 import TrackLayer from './pcb/TrackLayer.vue'
-import PadLayer, { type PreviewPad } from './pcb/PadLayer.vue'
+import PadLayer from './pcb/PadLayer.vue'
+import type { PlacedPad } from '@/utils/pcb-tracks/netlist'
 import GridLayer from './pcb/GridLayer.vue'
+import DrcLayer from './pcb/DrcLayer.vue'
+import { runDrc } from '@/utils/pcb-tracks/drc'
 import BiInfoCircle from 'bootstrap-icons/icons/info-circle.svg'
 import BiExclamationTriangle from 'bootstrap-icons/icons/exclamation-triangle.svg'
 import BiPencilSquare from 'bootstrap-icons/icons/pencil-square.svg'
@@ -419,7 +422,7 @@ function toggleEditMode() {
   editMode.value = !editMode.value
   if (editMode.value) {
     panZoom.fit(fittedViewBox.value)
-    nextTick(() => containerRef.value?.focus())
+    nextTick(() => containerRef.value?.focus({ preventScroll: true }))
   }
 }
 
@@ -440,7 +443,7 @@ onMounted(() => {
 onUnmounted(() => resizeObserver?.disconnect())
 
 const pxPerMm = computed(() => {
-  const vb = panZoom.viewBox.value
+  const vb = editMode.value ? panZoom.viewBox.value : fittedViewBox.value
   const { width, height } = svgSize.value
   return width && height ? Math.min(width / vb.width, height / vb.height) : 1
 })
@@ -508,20 +511,25 @@ const padSources = computed<PadSource[]>(() => {
 const libraryPads = ref<Record<string, readonly FootprintPad[]>>({})
 const padsError = ref<string | null>(null)
 
-watch([editMode, () => padSources.value.map((src) => src.name).join('|')], async ([editing]) => {
-  if (!editing) return
-  padsError.value = null
-  try {
-    const names = [...new Set(padSources.value.map((src) => src.name))]
-    const loaded = await Promise.all(names.map((name) => loadFootprintPads(name)))
-    libraryPads.value = Object.fromEntries(names.map((name, i) => [name, loaded[i]!.pads]))
-  } catch (err) {
-    console.error('Failed to load footprint pads:', err)
-    padsError.value = 'Failed to load pad geometry.'
-  }
-})
+// Pads drive the editor and the preset's DRC, so they load whenever the
+// preview shows (the files are small and cached).
+watch(
+  () => padSources.value.map((src) => src.name).join('|'),
+  async () => {
+    padsError.value = null
+    try {
+      const names = [...new Set(padSources.value.map((src) => src.name))]
+      const loaded = await Promise.all(names.map((name) => loadFootprintPads(name)))
+      libraryPads.value = Object.fromEntries(names.map((name, i) => [name, loaded[i]!.pads]))
+    } catch (err) {
+      console.error('Failed to load footprint pads:', err)
+      padsError.value = 'Failed to load pad geometry.'
+    }
+  },
+  { immediate: true },
+)
 
-const previewPads = computed<PreviewPad[]>(() =>
+const previewPads = computed<PlacedPad[]>(() =>
   padSources.value.flatMap(({ owner, name, placement }) => {
     const pads = libraryPads.value[name]
     if (!pads) return []
@@ -529,11 +537,36 @@ const previewPads = computed<PreviewPad[]>(() =>
   }),
 )
 
+// DRC and ratsnest of the preset (or of no tracks, while editing). Pads of
+// every placed footprint must be loaded, or obstacles would be missing.
+const padsReady = computed(() => padSources.value.every((src) => libraryPads.value[src.name]))
+const showDrc = computed(
+  () =>
+    settings.value.switchSide === 'FRONT' &&
+    padsReady.value &&
+    (editMode.value || trackPresetItems.value.length > 0),
+)
+const drc = computed(() =>
+  showDrc.value ? runDrc(previewPads.value, trackPresetItems.value) : null,
+)
+const drcSummary = computed(() => {
+  if (!drc.value) return null
+  const errors = drc.value.violations.filter((v) => v.severity === 'error').length
+  const warnings = drc.value.violations.length - errors
+  const unrouted = drc.value.ratsnest.length
+  const parts = [
+    errors && `${errors} DRC error${errors > 1 ? 's' : ''}`,
+    warnings && `${warnings} warning${warnings > 1 ? 's' : ''}`,
+    unrouted && `${unrouted} unrouted`,
+  ].filter(Boolean)
+  return { ok: parts.length === 0, text: parts.length ? parts.join(' · ') : 'DRC clean' }
+})
+
 const hoveredPad = computed(() =>
   hoveredPadKey.value ? previewPads.value.find((p) => p.key === hoveredPadKey.value) : undefined,
 )
 
-function padLabel(p: PreviewPad): string {
+function padLabel(p: PlacedPad): string {
   const kind = p.pad.type === 'np_thru_hole' ? 'hole' : `pad ${p.pad.number || '–'}`
   return `${p.owner} ${kind}`
 }
@@ -683,6 +716,11 @@ onUnmounted(() => {
           <TrackLayer :items="trackPresetItems" />
         </g>
 
+        <!-- DRC markers and ratsnest (switch-local frame) -->
+        <g v-if="drc" :transform="switchLocalTransform">
+          <DrcLayer :violations="drc.violations" :ratsnest="drc.ratsnest" :px-per-mm="pxPerMm" />
+        </g>
+
         <!-- Crosshair overlay -->
         <g v-if="hoveredElement" class="crosshair-layer">
           <!-- Horizontal line -->
@@ -783,8 +821,24 @@ onUnmounted(() => {
           X {{ formatCoordinate(cursorLocal.x) }} Y {{ formatCoordinate(cursorLocal.y) }} mm
         </span>
         <span class="text-nowrap">grid {{ GRID_MM }} mm</span>
+        <span
+          v-if="drcSummary"
+          :class="drcSummary.ok ? 'text-success' : 'text-danger'"
+          data-testid="pcb-drc-summary"
+          >{{ drcSummary.text }}</span
+        >
         <span v-if="padsError" class="text-warning">{{ padsError }}</span>
         <span class="editor-hint">wheel: zoom · middle or Space+drag: pan</span>
+      </div>
+
+      <!-- DRC summary of a pasted preset outside the editor -->
+      <div
+        v-if="drcSummary && !editMode"
+        class="drc-badge"
+        :class="drcSummary.ok ? 'drc-badge-ok' : 'drc-badge-problem'"
+        data-testid="pcb-drc-badge"
+      >
+        {{ drcSummary.text }}
       </div>
 
       <!-- Coordinate display overlay -->
@@ -922,12 +976,11 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  background-color: var(--bs-body-bg);
 }
 
-.editor-toolbar .btn-primary,
-.editor-toolbar .btn-secondary {
-  background-color: var(--bs-btn-bg);
+/* outline buttons are transparent; keep them readable over the grid */
+.editor-toolbar .btn-outline-secondary:not(:hover):not(:active):not(:disabled) {
+  background-color: var(--bs-body-bg);
 }
 
 .layer-swatch {
@@ -965,6 +1018,27 @@ onUnmounted(() => {
   border-top: 1px solid var(--bs-border-color);
   pointer-events: none;
   z-index: 20;
+}
+
+.drc-badge {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  padding: 0.15rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  border: 1px solid currentColor;
+  background-color: var(--bs-body-bg);
+  pointer-events: none;
+  z-index: 20;
+}
+
+.drc-badge-ok {
+  color: var(--bs-success-text-emphasis);
+}
+
+.drc-badge-problem {
+  color: var(--bs-danger-text-emphasis);
 }
 
 .editor-hint {

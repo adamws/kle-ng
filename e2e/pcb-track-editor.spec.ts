@@ -35,6 +35,9 @@ async function openPreview(page: Page) {
     await collapseBtn.click()
   }
   await expect(page.locator(EDITOR.CANVAS)).toBeVisible()
+  // footprints loaded: the view doesn't move under the pointer any more
+  await expect(page.locator('.footprint-preview .preview-overlay')).toHaveCount(0)
+  await expect(page.locator(`${EDITOR.CANVAS} .footprint-svg circle`).first()).toBeAttached()
 }
 
 async function viewBoxWidth(page: Page): Promise<number> {
@@ -63,6 +66,14 @@ test.describe('PCB Generator track editor', () => {
     const status = page.locator(EDITOR.STATUS)
     await expect(status).toContainText('SW pad 2')
     await expect(status).toContainText('X 2.540 Y -5.080 mm')
+  })
+
+  test('shows the unrouted switch-diode connection', async ({ page }) => {
+    await openPreview(page)
+    await page.locator(EDITOR.TOGGLE).click()
+
+    await expect(page.locator('[data-testid="pcb-ratsnest"][data-net="SW_D"]')).toHaveCount(1)
+    await expect(page.locator('[data-testid="pcb-drc-summary"]')).toHaveText('1 unrouted')
   })
 
   test('zooms at the cursor, pans and fits', async ({ page }) => {

@@ -32,6 +32,9 @@ const PCB = {
   OVERLAY_TRACK: '[data-testid="pcb-track-overlay-track"]',
   BACK_SWITCH_ERROR: '[data-testid="pcb-track-preset-back-switch"]',
   IGNORED_NOTICE: '[data-testid="pcb-track-preset-ignored"]',
+  DRC_BADGE: '[data-testid="pcb-drc-badge"]',
+  DRC_MARKER: '[data-testid="pcb-drc-marker"]',
+  RATSNEST: '[data-testid="pcb-ratsnest"]',
 }
 
 async function openPcbJsonTab(page: Page) {
@@ -95,6 +98,32 @@ test.describe('PCB Generator track preset', () => {
     await expect(tracks.first()).toHaveClass(/track-back/)
     await expect(page.locator(PCB.IGNORED_NOTICE)).toHaveCount(0)
     await expect(page.locator(PCB.BACK_SWITCH_ERROR)).toHaveCount(0)
+  })
+
+  test('checks the pasted preset against the pads', async ({ page }) => {
+    await openPcbJsonTab(page)
+
+    await applySettings(page, { routing: 'Full', tracks: TRACKS })
+    await expect(page.locator(PCB.DRC_BADGE)).toHaveText('DRC clean')
+    await expect(page.locator(PCB.DRC_MARKER)).toHaveCount(0)
+    await expect(page.locator(PCB.RATSNEST)).toHaveCount(0)
+
+    // straight from SW pad 2 down onto the diode cathode (ROW): a short
+    const shorted = {
+      version: 1,
+      items: [
+        {
+          type: 'track',
+          start: { x_nm: 2540000, y_nm: -5080000 },
+          end: { x_nm: 5080000, y_nm: 5400000 },
+          width_nm: 250000,
+          layer: 'B.Cu',
+        },
+      ],
+    }
+    await applySettings(page, { routing: 'Full', tracks: shorted })
+    await expect(page.locator(PCB.DRC_BADGE)).toContainText('DRC error')
+    await expect(page.locator(`${PCB.DRC_MARKER}[data-kind="short"]`)).toHaveCount(1)
   })
 
   test('rejects a preset with back-side switches', async ({ page }) => {
