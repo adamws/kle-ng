@@ -268,6 +268,14 @@ export function switchLocalToBoard(
   return rotateKicad(p, switchRotation)
 }
 
+/** Converts a point in board axes (relative to the switch origin) to switch-local. */
+export function boardToSwitchLocal(
+  p: { x: number; y: number },
+  switchRotation: number,
+): { x: number; y: number } {
+  return rotateKicad(p, -switchRotation)
+}
+
 /** SVG transform drawing a switch SVG centred at the origin of board axes. */
 export function switchSvgTransform(vb: ViewBox, switchRotation: number, side: BoardSide): string {
   const centerX = vb.x + vb.width / 2

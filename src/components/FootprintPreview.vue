@@ -21,7 +21,7 @@ import { ref, computed, watch, watchEffect, onMounted, nextTick, onUnmounted } f
 import { usePcbGeneratorStore } from '@/stores/pcbGenerator'
 import { storeToRefs } from 'pinia'
 import type { ViewBox, HoveredFootprintElement, FootprintGroup } from '@/types/footprint'
-import type { TrackSegment, TrackVia } from '@/types/tracks'
+import type { CopperLayer, TrackItem } from '@/types/tracks'
 import {
   getSwitchFootprintFilename,
   getDiodeFootprintFilename,
@@ -35,10 +35,22 @@ import {
   switchSvgTransform,
   offsetSvgTransform,
   switchLocalSvgTransform,
+  boardToSwitchLocal,
   type OffsetFootprint,
+  type BoardSide,
 } from '@/utils/footprintUtils'
+import { usePanZoom } from '@/composables/usePanZoom'
+import { footprintNameFromSvg, loadFootprintPads } from '@/utils/pcb/footprint-pads-loader'
+import { placePads, type FootprintPad } from '@/utils/kicad/footprint-pads'
+import TrackLayer from './pcb/TrackLayer.vue'
+import PadLayer, { type PreviewPad } from './pcb/PadLayer.vue'
+import GridLayer from './pcb/GridLayer.vue'
 import BiInfoCircle from 'bootstrap-icons/icons/info-circle.svg'
 import BiExclamationTriangle from 'bootstrap-icons/icons/exclamation-triangle.svg'
+import BiPencilSquare from 'bootstrap-icons/icons/pencil-square.svg'
+import BiZoomIn from 'bootstrap-icons/icons/zoom-in.svg'
+import BiZoomOut from 'bootstrap-icons/icons/zoom-out.svg'
+import BiFullscreen from 'bootstrap-icons/icons/fullscreen.svg'
 
 // Constants for footprint positioning
 const CONTAINER_PADDING = 2.0 // mm
@@ -318,19 +330,12 @@ function groupTransform(group: FootprintGroup): string {
   return offset ? offsetSvgTransform(offset, settings.value.switchRotation) : ''
 }
 
-// Read-only track preset overlay, drawn in the switch-local frame. Presets are
-// defined for a front-side switch, so nothing is drawn for back-side switches.
-const trackPresetTracks = computed(() =>
-  settings.value.switchSide === 'FRONT'
-    ? (settings.value.trackPreset?.items.filter((i): i is TrackSegment => i.type === 'track') ?? [])
-    : [],
+// Track preset overlay, drawn in the switch-local frame. Presets are defined
+// for a front-side switch, so nothing is drawn for back-side switches.
+const trackPresetItems = computed<TrackItem[]>(() =>
+  settings.value.switchSide === 'FRONT' ? (settings.value.trackPreset?.items ?? []) : [],
 )
-const trackPresetVias = computed(() =>
-  settings.value.switchSide === 'FRONT'
-    ? (settings.value.trackPreset?.items.filter((i): i is TrackVia => i.type === 'via') ?? [])
-    : [],
-)
-const trackOverlayTransform = computed(() => switchLocalSvgTransform(settings.value.switchRotation))
+const switchLocalTransform = computed(() => switchLocalSvgTransform(settings.value.switchRotation))
 
 const diodeTransform = computed(() => groupTransform('diode'))
 const ledTransform = computed(() => groupTransform('led'))
@@ -360,9 +365,9 @@ const baseViewBox = computed(() => {
 
 // Computed composite viewBox with zoom applied
 // Separated for better memoization - zoom calculation only runs when baseViewBox changes
-const compositeViewBox = computed(() => {
+const fittedViewBox = computed<ViewBox>(() => {
   if (!baseViewBox.value) {
-    return '0 0 100 100' // Default fallback
+    return { x: 0, y: 0, width: 100, height: 100 } // Default fallback
   }
 
   // Parse viewBox values
@@ -382,8 +387,178 @@ const compositeViewBox = computed(() => {
   const zoomedMinX = centerX - zoomedWidth / 2
   const zoomedMinY = centerY - zoomedHeight / 2
 
-  return `${zoomedMinX} ${zoomedMinY} ${zoomedWidth} ${zoomedHeight}`
+  return { x: zoomedMinX, y: zoomedMinY, width: zoomedWidth, height: zoomedHeight }
 })
+
+const compositeViewBox = computed(() => {
+  const vb = fittedViewBox.value
+  return `${vb.x} ${vb.y} ${vb.width} ${vb.height}`
+})
+
+// Track editor. B2: pan/zoom, pads
+// from the pad geometry JSON, grid and a cursor readout; no drawing yet.
+// The editor works in the switch-local frame, which presets are defined for,
+// so it needs a front-side switch.
+const svgRef = ref<SVGSVGElement | null>(null)
+const containerRef = ref<HTMLDivElement | null>(null)
+const editMode = ref(false)
+const canEdit = computed(() => settings.value.switchSide === 'FRONT')
+const panZoom = usePanZoom(svgRef, fittedViewBox.value)
+const svgViewBox = computed(() =>
+  editMode.value ? panZoom.viewBoxString.value : compositeViewBox.value,
+)
+
+/** Editor grid pitch in mm (configurable from B4). */
+const GRID_MM = 0.25
+
+const visibleLayers = ref<Record<CopperLayer, boolean>>({ 'F.Cu': true, 'B.Cu': true })
+const cursorLocal = ref<{ x: number; y: number } | null>(null)
+const hoveredPadKey = ref<string | null>(null)
+
+function toggleEditMode() {
+  editMode.value = !editMode.value
+  if (editMode.value) {
+    panZoom.fit(fittedViewBox.value)
+    nextTick(() => containerRef.value?.focus())
+  }
+}
+
+watch(canEdit, (can) => {
+  if (!can) editMode.value = false
+})
+
+// Size of the SVG on screen, for the grid density
+const svgSize = ref({ width: 0, height: 0 })
+let resizeObserver: ResizeObserver | null = null
+onMounted(() => {
+  if (typeof ResizeObserver === 'undefined' || !svgRef.value) return
+  resizeObserver = new ResizeObserver(([entry]) => {
+    if (entry) svgSize.value = { width: entry.contentRect.width, height: entry.contentRect.height }
+  })
+  resizeObserver.observe(svgRef.value)
+})
+onUnmounted(() => resizeObserver?.disconnect())
+
+const pxPerMm = computed(() => {
+  const vb = panZoom.viewBox.value
+  const { width, height } = svgSize.value
+  return width && height ? Math.min(width / vb.width, height / vb.height) : 1
+})
+
+/** Half size of a square around the switch origin covering the whole view. */
+const gridExtent = computed(() => {
+  const vb = panZoom.viewBox.value
+  const far = Math.max(
+    Math.hypot(vb.x, vb.y),
+    Math.hypot(vb.x + vb.width, vb.y),
+    Math.hypot(vb.x, vb.y + vb.height),
+    Math.hypot(vb.x + vb.width, vb.y + vb.height),
+  )
+  return Math.ceil(far + 1)
+})
+
+// Pad geometry of the placed footprints, switch-local
+interface PadSource {
+  owner: string
+  name: string
+  placement: { x: number; y: number; rotation: number; side: BoardSide }
+}
+
+const padSources = computed<PadSource[]>(() => {
+  const s = settings.value
+  const sources: PadSource[] = [
+    {
+      owner: 'SW',
+      name: footprintNameFromSvg(getSwitchFootprintFilename(s.switchFootprint)),
+      placement: { x: 0, y: 0, rotation: 0, side: s.switchSide },
+    },
+    {
+      owner: 'D',
+      name: footprintNameFromSvg(getDiodeFootprintFilename(s.diodeFootprint)),
+      placement: {
+        x: s.diodePositionX,
+        y: s.diodePositionY,
+        rotation: s.diodeRotation,
+        side: s.diodeSide,
+      },
+    },
+  ]
+  if (showLed.value) {
+    sources.push({
+      owner: 'LED',
+      name: footprintNameFromSvg(getLedFootprintFilename(s.ledFootprint)),
+      placement: { x: s.ledPositionX, y: s.ledPositionY, rotation: s.ledRotation, side: s.ledSide },
+    })
+  }
+  if (showCapacitor.value) {
+    sources.push({
+      owner: 'C',
+      name: footprintNameFromSvg(getCapacitorFootprintFilename(s.ledCapacitorFootprint)),
+      placement: {
+        x: s.ledCapacitorPositionX,
+        y: s.ledCapacitorPositionY,
+        rotation: s.ledCapacitorRotation,
+        side: s.ledCapacitorSide,
+      },
+    })
+  }
+  return sources
+})
+
+const libraryPads = ref<Record<string, readonly FootprintPad[]>>({})
+const padsError = ref<string | null>(null)
+
+watch([editMode, () => padSources.value.map((src) => src.name).join('|')], async ([editing]) => {
+  if (!editing) return
+  padsError.value = null
+  try {
+    const names = [...new Set(padSources.value.map((src) => src.name))]
+    const loaded = await Promise.all(names.map((name) => loadFootprintPads(name)))
+    libraryPads.value = Object.fromEntries(names.map((name, i) => [name, loaded[i]!.pads]))
+  } catch (err) {
+    console.error('Failed to load footprint pads:', err)
+    padsError.value = 'Failed to load pad geometry.'
+  }
+})
+
+const previewPads = computed<PreviewPad[]>(() =>
+  padSources.value.flatMap(({ owner, name, placement }) => {
+    const pads = libraryPads.value[name]
+    if (!pads) return []
+    return placePads(pads, placement).map((pad, i) => ({ key: `${owner}:${i}`, owner, pad }))
+  }),
+)
+
+const hoveredPad = computed(() =>
+  hoveredPadKey.value ? previewPads.value.find((p) => p.key === hoveredPadKey.value) : undefined,
+)
+
+function padLabel(p: PreviewPad): string {
+  const kind = p.pad.type === 'np_thru_hole' ? 'hole' : `pad ${p.pad.number || '–'}`
+  return `${p.owner} ${kind}`
+}
+
+function onCanvasPointerDown(event: PointerEvent) {
+  if (!editMode.value) return
+  containerRef.value?.focus({ preventScroll: true })
+  panZoom.onPointerDown(event)
+}
+
+function onCanvasPointerMove(event: PointerEvent) {
+  if (!editMode.value) return
+  panZoom.onPointerMove(event)
+  const p = panZoom.screenToSvg(event.clientX, event.clientY)
+  cursorLocal.value = p ? boardToSwitchLocal(p, settings.value.switchRotation) : null
+}
+
+function onCanvasPointerLeave() {
+  cursorLocal.value = null
+  hoveredPadKey.value = null
+}
+
+function onCanvasWheel(event: WheelEvent) {
+  if (editMode.value) panZoom.onWheel(event)
+}
 
 // Watch for settings changes and reload footprints. Includes LED/capacitor
 // URLs and visibility so toggling the feature (or its sides/footprints) reloads.
@@ -430,20 +605,56 @@ onUnmounted(() => {
 <template>
   <div class="footprint-preview">
     <!-- SVG Container (always present to maintain height) -->
-    <div class="svg-container" :class="{ 'svg-hidden': error }">
-      <svg :viewBox="compositeViewBox" class="preview-svg" xmlns="http://www.w3.org/2000/svg">
+    <div
+      ref="containerRef"
+      class="svg-container"
+      :class="{
+        'svg-hidden': error,
+        editing: editMode,
+        panning: panZoom.isPanning.value,
+        'pan-ready': panZoom.spaceHeld.value,
+      }"
+      :tabindex="editMode ? 0 : undefined"
+      data-testid="pcb-preview-canvas"
+      @keydown="editMode && panZoom.onKeyDown($event)"
+      @keyup="editMode && panZoom.onKeyUp($event)"
+      @blur="panZoom.onBlur()"
+    >
+      <svg
+        ref="svgRef"
+        :viewBox="svgViewBox"
+        class="preview-svg"
+        xmlns="http://www.w3.org/2000/svg"
+        @wheel="onCanvasWheel"
+        @pointerdown="onCanvasPointerDown"
+        @pointermove="onCanvasPointerMove"
+        @pointerup="panZoom.onPointerUp"
+        @pointercancel="panZoom.onPointerUp"
+        @pointerleave="onCanvasPointerLeave"
+        @mousedown.middle="editMode && $event.preventDefault()"
+      >
+        <!-- Grid (switch-local frame, track editor only) -->
+        <g v-if="editMode" :transform="switchLocalTransform">
+          <GridLayer :grid="GRID_MM" :px-per-mm="pxPerMm" :extent="gridExtent" />
+        </g>
+
         <!-- Switch footprint (centered at origin) -->
-        <g ref="switchGroupRef" :transform="switchTransform">
+        <g ref="switchGroupRef" class="footprint-svg" :transform="switchTransform">
           <g v-html="switchSvgContent"></g>
         </g>
 
         <!-- Diode footprint (offset from switch center) -->
-        <g ref="diodeGroupRef" :transform="diodeTransform">
+        <g ref="diodeGroupRef" class="footprint-svg" :transform="diodeTransform">
           <g v-html="diodeSvgContent"></g>
         </g>
 
         <!-- LED footprint (offset from switch center) -->
-        <g v-if="showLed && ledSvgContent" ref="ledGroupRef" :transform="ledTransform">
+        <g
+          v-if="showLed && ledSvgContent"
+          ref="ledGroupRef"
+          class="footprint-svg"
+          :transform="ledTransform"
+        >
           <g v-html="ledSvgContent"></g>
         </g>
 
@@ -451,42 +662,25 @@ onUnmounted(() => {
         <g
           v-if="showCapacitor && capacitorSvgContent"
           ref="capacitorGroupRef"
+          class="footprint-svg"
           :transform="capacitorTransform"
         >
           <g v-html="capacitorSvgContent"></g>
         </g>
 
-        <!-- Track preset overlay (switch-local frame) -->
-        <g
-          v-if="trackPresetTracks.length || trackPresetVias.length"
-          class="track-overlay"
-          :transform="trackOverlayTransform"
-          data-testid="pcb-track-overlay"
-        >
-          <line
-            v-for="(track, i) in trackPresetTracks"
-            :key="`track-${i}`"
-            :x1="track.start.x"
-            :y1="track.start.y"
-            :x2="track.end.x"
-            :y2="track.end.y"
-            :stroke-width="track.width"
-            :class="['track', track.layer === 'F.Cu' ? 'track-front' : 'track-back']"
-            data-testid="pcb-track-overlay-track"
+        <!-- Pads from the pad geometry JSON (switch-local frame, track editor only) -->
+        <g v-if="editMode" :transform="switchLocalTransform">
+          <PadLayer
+            :pads="previewPads"
+            :visible-layers="visibleLayers"
+            :hovered-key="hoveredPadKey"
+            @hover="hoveredPadKey = $event"
           />
-          <g
-            v-for="(via, i) in trackPresetVias"
-            :key="`via-${i}`"
-            data-testid="pcb-track-overlay-via"
-          >
-            <circle :cx="via.position.x" :cy="via.position.y" :r="via.diameter / 2" class="via" />
-            <circle
-              :cx="via.position.x"
-              :cy="via.position.y"
-              :r="via.drillDiameter / 2"
-              class="via-drill"
-            />
-          </g>
+        </g>
+
+        <!-- Track preset overlay (switch-local frame) -->
+        <g v-if="trackPresetItems.length" :transform="switchLocalTransform">
+          <TrackLayer :items="trackPresetItems" />
         </g>
 
         <!-- Crosshair overlay -->
@@ -517,8 +711,84 @@ onUnmounted(() => {
         </g>
       </svg>
 
+      <!-- Track editor toolbar -->
+      <div class="editor-toolbar" @pointerdown.stop>
+        <button
+          type="button"
+          class="btn btn-sm"
+          :class="editMode ? 'btn-primary' : 'btn-outline-secondary'"
+          :disabled="!canEdit"
+          :title="canEdit ? 'Edit switch-diode tracks' : 'Track presets need a front-side switch'"
+          :aria-pressed="editMode"
+          data-testid="pcb-track-edit-toggle"
+          @click="toggleEditMode"
+        >
+          <BiPencilSquare /> Edit tracks
+        </button>
+        <template v-if="editMode">
+          <div class="btn-group btn-group-sm" role="group" aria-label="Copper layers">
+            <button
+              v-for="layer in ['F.Cu', 'B.Cu'] as const"
+              :key="layer"
+              type="button"
+              class="btn layer-btn"
+              :class="[
+                visibleLayers[layer] ? 'btn-secondary' : 'btn-outline-secondary',
+                layer === 'F.Cu' ? 'layer-front' : 'layer-back',
+              ]"
+              :aria-pressed="visibleLayers[layer]"
+              :title="`Show ${layer} pads`"
+              :data-testid="`pcb-layer-toggle-${layer}`"
+              @click="visibleLayers[layer] = !visibleLayers[layer]"
+            >
+              <span class="layer-swatch"></span>{{ layer }}
+            </button>
+          </div>
+          <div class="btn-group btn-group-sm" role="group" aria-label="Zoom">
+            <button
+              type="button"
+              class="btn btn-outline-secondary"
+              title="Zoom in"
+              data-testid="pcb-zoom-in"
+              @click="panZoom.zoomBy(1.5)"
+            >
+              <BiZoomIn />
+            </button>
+            <button
+              type="button"
+              class="btn btn-outline-secondary"
+              title="Zoom out"
+              data-testid="pcb-zoom-out"
+              @click="panZoom.zoomBy(1 / 1.5)"
+            >
+              <BiZoomOut />
+            </button>
+            <button
+              type="button"
+              class="btn btn-outline-secondary"
+              title="Fit"
+              data-testid="pcb-zoom-fit"
+              @click="panZoom.fit(fittedViewBox)"
+            >
+              <BiFullscreen />
+            </button>
+          </div>
+        </template>
+      </div>
+
+      <!-- Track editor status bar -->
+      <div v-if="editMode" class="editor-status" data-testid="pcb-editor-status">
+        <span v-if="hoveredPad" data-testid="pcb-hovered-pad">{{ padLabel(hoveredPad) }}</span>
+        <span v-if="cursorLocal" data-testid="pcb-cursor-readout">
+          X {{ formatCoordinate(cursorLocal.x) }} Y {{ formatCoordinate(cursorLocal.y) }} mm
+        </span>
+        <span class="text-nowrap">grid {{ GRID_MM }} mm</span>
+        <span v-if="padsError" class="text-warning">{{ padsError }}</span>
+        <span class="editor-hint">wheel: zoom · middle or Space+drag: pan</span>
+      </div>
+
       <!-- Coordinate display overlay -->
-      <div v-if="hoveredElement" class="coordinate-display">
+      <div v-if="hoveredElement && !editMode" class="coordinate-display">
         <span class="coord-label">Center:</span>
         <span class="coord-values">
           ({{ formatCoordinate(hoveredElement.centerX) }},
@@ -606,34 +876,100 @@ onUnmounted(() => {
   z-index: 5;
 }
 
+.svg-container.editing .preview-warning {
+  bottom: 2rem;
+}
+
 .preview-warning small {
   color: rgba(255, 255, 255, 0.8);
 }
 
-/* Track preset overlay (colours match the copper layers of the footprint SVGs) */
-.track-overlay {
+/* Track editor */
+.svg-container.editing {
+  outline: none;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.svg-container.editing:focus-visible {
+  box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+.svg-container.pan-ready {
+  cursor: grab;
+}
+
+.svg-container.panning {
+  cursor: grabbing;
+}
+
+/* the pad layer replaces the SVG copper and holes while editing */
+.svg-container.editing :deep(.footprint-svg .hoverable) {
+  display: none;
+}
+
+.editor-toolbar {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  z-index: 20;
+}
+
+.editor-toolbar .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background-color: var(--bs-body-bg);
+}
+
+.editor-toolbar .btn-primary,
+.editor-toolbar .btn-secondary {
+  background-color: var(--bs-btn-bg);
+}
+
+.layer-swatch {
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 2px;
+}
+
+.layer-front .layer-swatch {
+  background-color: #c83434;
+}
+
+.layer-back .layer-swatch {
+  background-color: #4d7fc4;
+}
+
+.layer-btn[aria-pressed='false'] .layer-swatch {
+  opacity: 0.3;
+}
+
+.editor-status {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  padding: 0.25rem 0.5rem;
+  font-family: var(--bs-font-monospace);
+  font-size: 0.75rem;
+  color: var(--bs-secondary-color);
+  background-color: rgba(var(--bs-body-bg-rgb), 0.85);
+  border-top: 1px solid var(--bs-border-color);
   pointer-events: none;
+  z-index: 20;
 }
 
-.track {
-  stroke-linecap: round;
-  opacity: 0.85;
-}
-
-.track-front {
-  stroke: #c83434;
-}
-
-.track-back {
-  stroke: #4d7fc4;
-}
-
-.via {
-  fill: #b3b3b3;
-}
-
-.via-drill {
-  fill: var(--bs-body-bg);
+.editor-hint {
+  margin-left: auto;
+  font-family: var(--bs-body-font-family);
 }
 
 /* Crosshair styles */
