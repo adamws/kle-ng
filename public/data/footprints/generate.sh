@@ -2,7 +2,9 @@
 #
 # Regenerate the footprint preview SVGs used by the kle-ng PCB Generator.
 #
-# For every footprint in the table below this script:
+# For every footprint in footprints.txt (shared with
+# scripts/generate-footprint-pads.mjs, which writes the pad geometry JSON) this
+# script:
 #   1. exports a front-side and back-side SVG from its KiCad .pretty library
 #      (kicad-cli),
 #   2. remaps KiCad's per-side layer colors to the kle-ng preview palette,
@@ -19,7 +21,11 @@
 # prettified output.
 #
 # Usage:
-#   ./generate.sh            # regenerate every footprint in the table
+#   ./generate.sh                 # regenerate every footprint in footprints.txt
+#   ./generate.sh D_SOD-123F ...  # regenerate only the named footprints
+#
+# KICAD_LIB and KEYSWITCH_LIB may be set in the environment to point at other
+# library locations.
 #
 
 set -euo pipefail
@@ -43,45 +49,27 @@ COLOR_MAP=(
 )
 
 # --- KiCad footprint library locations -------------------------------------
-KICAD_LIB="/usr/share/kicad/footprints"
-KEYSWITCH_LIB="$HOME/.local/share/kicad/9.0/3rdparty/footprints/com_github_perigoso_keyswitch-kicad-library"
+KICAD_LIB="${KICAD_LIB:-/usr/share/kicad/footprints}"
+KEYSWITCH_LIB="${KEYSWITCH_LIB:-$HOME/.local/share/kicad/9.0/3rdparty/footprints/com_github_perigoso_keyswitch-kicad-library}"
 
 # --- Footprint table -------------------------------------------------------
-# One row per footprint, formatted "<library.pretty>|<footprint name>".
-# Uncomment additional rows to generate more variants.
-FOOTPRINTS=(
-#  # Diodes ------------------------------------------------------------------
-#  "$KICAD_LIB/Diode_SMD.pretty|D_SOD-123"
-#  "$KICAD_LIB/Diode_SMD.pretty|D_SOD-123F"
-#  "$KICAD_LIB/Diode_SMD.pretty|D_SOD-323"
-#  "$KICAD_LIB/Diode_SMD.pretty|D_SOD-323F"
-#  "$KICAD_LIB/Diode_THT.pretty|D_DO-35_SOD27_P7.62mm_Horizontal"
-#
-#  # Switches (perigoso keyswitch library) -----------------------------------
-#  "$KEYSWITCH_LIB/Switch_Keyboard_Cherry_MX.pretty|SW_Cherry_MX_PCB_1.00u"
-#  "$KEYSWITCH_LIB/Switch_Keyboard_Alps_Matias.pretty|SW_Alps_Matias_1.00u"
-#  "$KEYSWITCH_LIB/Switch_Keyboard_Hybrid.pretty|SW_Hybrid_Cherry_MX_Alps_1.00u"
-#  "$KEYSWITCH_LIB/Switch_Keyboard_Kailh.pretty|SW_Kailh_Choc_V1_1.00u"
-#  "$KEYSWITCH_LIB/Switch_Keyboard_Kailh.pretty|SW_Kailh_Choc_V2_1.00u"
-#  "$KEYSWITCH_LIB/Switch_Keyboard_Kailh.pretty|SW_Kailh_Choc_V1V2_1.00u"
-#  "$KEYSWITCH_LIB/Switch_Keyboard_Kailh.pretty|SW_Kailh_Choc_Mini_1.00u"
-#  "$KEYSWITCH_LIB/Switch_Keyboard_Hotswap_Kailh.pretty|SW_Hotswap_Kailh_Choc_V1_1.00u"
-#  "$KEYSWITCH_LIB/Switch_Keyboard_Hotswap_Kailh.pretty|SW_Hotswap_Kailh_Choc_V2_1.00u"
-#  "$KEYSWITCH_LIB/Switch_Keyboard_Hotswap_Kailh.pretty|SW_Hotswap_Kailh_Choc_V1V2_1.00u"
-#  "$KEYSWITCH_LIB/Switch_Keyboard_Hotswap_Kailh.pretty|SW_Hotswap_Kailh_MX_1.00u"
-#
-#  # Per-key RGB LED ---------------------------------------------------------
-#  "$KICAD_LIB/LED_SMD.pretty|LED_SK6812MINI-E_3.2x2.8mm_P1.5mm_ReverseMount"
-
-  # Decoupling capacitor ----------------------------------------------------
-#  "$KICAD_LIB/Capacitor_SMD.pretty|C_0402_1005Metric"
-  # Additional capacitor sizes (uncomment to generate):
-   "$KICAD_LIB/Capacitor_SMD.pretty|C_01005_0402Metric"
-   "$KICAD_LIB/Capacitor_SMD.pretty|C_0201_0603Metric"
-   "$KICAD_LIB/Capacitor_SMD.pretty|C_0603_1608Metric"
-   "$KICAD_LIB/Capacitor_SMD.pretty|C_0805_2012Metric"
-   "$KICAD_LIB/Capacitor_SMD.pretty|C_1206_3216Metric"
-)
+# Rows "<library.pretty>|<footprint name>" from footprints.txt, with the library
+# variables expanded; limited to the footprints named on the command line.
+FOOTPRINTS=()
+while IFS= read -r row; do
+  row="${row%%#*}"
+  row="${row//[[:space:]]/}"
+  [ -n "$row" ] || continue
+  row="${row//\$KICAD_LIB/$KICAD_LIB}"
+  row="${row//\$KEYSWITCH_LIB/$KEYSWITCH_LIB}"
+  if [ "$#" -gt 0 ]; then
+    fp="${row##*|}"
+    match=0
+    for name in "$@"; do [ "$name" = "$fp" ] && match=1; done
+    [ "$match" -eq 1 ] || continue
+  fi
+  FOOTPRINTS+=("$row")
+done < footprints.txt
 
 # --- Preflight -------------------------------------------------------------
 missing=0

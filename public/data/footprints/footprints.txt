@@ -1,0 +1,36 @@
+# Footprints with PCB generator preview data, one per line:
+#   <library.pretty>|<footprint name>
+# $KICAD_LIB and $KEYSWITCH_LIB are expanded by generate.sh (SVGs) and
+# scripts/generate-footprint-pads.mjs (pad geometry JSON), which both default
+# them to a KiCad 9 install with keyswitch-kicad-library v2.4 (what the
+# kle-ng-api worker uses).
+
+# Diodes
+$KICAD_LIB/Diode_SMD.pretty|D_SOD-123
+$KICAD_LIB/Diode_SMD.pretty|D_SOD-123F
+$KICAD_LIB/Diode_SMD.pretty|D_SOD-323
+$KICAD_LIB/Diode_SMD.pretty|D_SOD-323F
+
+# Switches (perigoso keyswitch library)
+$KEYSWITCH_LIB/Switch_Keyboard_Cherry_MX.pretty|SW_Cherry_MX_PCB_1.00u
+$KEYSWITCH_LIB/Switch_Keyboard_Alps_Matias.pretty|SW_Alps_Matias_1.00u
+$KEYSWITCH_LIB/Switch_Keyboard_Hybrid.pretty|SW_Hybrid_Cherry_MX_Alps_1.00u
+$KEYSWITCH_LIB/Switch_Keyboard_Kailh.pretty|SW_Kailh_Choc_V1_1.00u
+$KEYSWITCH_LIB/Switch_Keyboard_Kailh.pretty|SW_Kailh_Choc_V2_1.00u
+$KEYSWITCH_LIB/Switch_Keyboard_Kailh.pretty|SW_Kailh_Choc_V1V2_1.00u
+$KEYSWITCH_LIB/Switch_Keyboard_Kailh.pretty|SW_Kailh_Choc_Mini_1.00u
+$KEYSWITCH_LIB/Switch_Keyboard_Hotswap_Kailh.pretty|SW_Hotswap_Kailh_Choc_V1_1.00u
+$KEYSWITCH_LIB/Switch_Keyboard_Hotswap_Kailh.pretty|SW_Hotswap_Kailh_Choc_V2_1.00u
+$KEYSWITCH_LIB/Switch_Keyboard_Hotswap_Kailh.pretty|SW_Hotswap_Kailh_Choc_V1V2_1.00u
+$KEYSWITCH_LIB/Switch_Keyboard_Hotswap_Kailh.pretty|SW_Hotswap_Kailh_MX_1.00u
+
+# Per-key RGB LED
+$KICAD_LIB/LED_SMD.pretty|LED_SK6812MINI-E_3.2x2.8mm_P1.5mm_ReverseMount
+
+# Decoupling capacitors
+$KICAD_LIB/Capacitor_SMD.pretty|C_01005_0402Metric
+$KICAD_LIB/Capacitor_SMD.pretty|C_0201_0603Metric
+$KICAD_LIB/Capacitor_SMD.pretty|C_0402_1005Metric
+$KICAD_LIB/Capacitor_SMD.pretty|C_0603_1608Metric
+$KICAD_LIB/Capacitor_SMD.pretty|C_0805_2012Metric
+$KICAD_LIB/Capacitor_SMD.pretty|C_1206_3216Metric

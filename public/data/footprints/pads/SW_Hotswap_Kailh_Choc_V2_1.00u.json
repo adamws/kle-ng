@@ -1,0 +1,163 @@
+{
+  "footprint": "SW_Hotswap_Kailh_Choc_V2_1.00u",
+  "pads": [
+    {
+      "number": "",
+      "type": "np_thru_hole",
+      "shape": "circle",
+      "at": {
+        "x": 0,
+        "y": -5.9,
+        "rot": 0
+      },
+      "size": {
+        "w": 3.05,
+        "h": 3.05
+      },
+      "layers": [
+        "F.Cu",
+        "B.Cu",
+        "F.Mask",
+        "B.Mask"
+      ],
+      "drill": {
+        "w": 3.05,
+        "h": 3.05,
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "number": "",
+      "type": "np_thru_hole",
+      "shape": "circle",
+      "at": {
+        "x": 5,
+        "y": -3.8,
+        "rot": 0
+      },
+      "size": {
+        "w": 3.05,
+        "h": 3.05
+      },
+      "layers": [
+        "F.Cu",
+        "B.Cu",
+        "F.Mask",
+        "B.Mask"
+      ],
+      "drill": {
+        "w": 3.05,
+        "h": 3.05,
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "number": "1",
+      "type": "smd",
+      "shape": "roundrect",
+      "at": {
+        "x": -3.5,
+        "y": -6,
+        "rot": 0
+      },
+      "size": {
+        "w": 2.55,
+        "h": 2.5
+      },
+      "layers": [
+        "B.Cu",
+        "B.Mask",
+        "B.Paste"
+      ],
+      "rratio": 0.1
+    },
+    {
+      "number": "2",
+      "type": "smd",
+      "shape": "roundrect",
+      "at": {
+        "x": 8.5,
+        "y": -3.8,
+        "rot": 0
+      },
+      "size": {
+        "w": 2.55,
+        "h": 2.5
+      },
+      "layers": [
+        "B.Cu",
+        "B.Mask",
+        "B.Paste"
+      ],
+      "rratio": 0.1
+    },
+    {
+      "number": "",
+      "type": "np_thru_hole",
+      "shape": "circle",
+      "at": {
+        "x": 0,
+        "y": 0,
+        "rot": 0
+      },
+      "size": {
+        "w": 5.05,
+        "h": 5.05
+      },
+      "layers": [
+        "F.Cu",
+        "B.Cu",
+        "F.Mask",
+        "B.Mask"
+      ],
+      "drill": {
+        "w": 5.05,
+        "h": 5.05,
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "number": "",
+      "type": "np_thru_hole",
+      "shape": "circle",
+      "at": {
+        "x": -5,
+        "y": 5.15,
+        "rot": 0
+      },
+      "size": {
+        "w": 1.6,
+        "h": 1.6
+      },
+      "layers": [
+        "F.Cu",
+        "B.Cu",
+        "F.Mask",
+        "B.Mask"
+      ],
+      "drill": {
+        "w": 1.6,
+        "h": 1.6,
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    }
+  ],
+  "courtyard": {
+    "minX": -7.75,
+    "minY": -8.452,
+    "maxX": 7.752,
+    "maxY": 7.75
+  }
+}
