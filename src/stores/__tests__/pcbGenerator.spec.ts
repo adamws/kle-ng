@@ -3,6 +3,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import { usePcbGeneratorStore } from '../pcbGenerator'
 import { pcbApi, ApiError } from '@/utils/pcbApi'
 import type { TaskStatusResponse, WorkerStatusResponse } from '@/types/pcb'
+import { useToast } from '@/composables/useToast'
 
 // Mock the pcbApi module
 vi.mock('@/utils/pcbApi', () => ({
@@ -193,6 +194,22 @@ describe('pcbGenerator store', () => {
       )
       expect(store.settings.routing).toBe('Full')
       expect(localStorage.removeItem).toHaveBeenCalledWith('kle-ng-pcb-settings')
+    })
+
+    it('should drop only an unreadable track preset from saved settings, with a warning', () => {
+      localStorageMock['kle-ng-pcb-settings'] = JSON.stringify({
+        routing: 'Disabled',
+        tracks: { version: 2, items: [{ type: 'arc' }] },
+      })
+
+      const store = usePcbGeneratorStore()
+
+      expect(store.settings.routing).toBe('Disabled')
+      expect(store.settings.trackPreset).toBeUndefined()
+      expect(localStorage.removeItem).not.toHaveBeenCalled()
+      expect(useToast().toasts.value.map((t) => t.message)).toContain(
+        "Track preset ignored: 'tracks.version' must be 1, got 2",
+      )
     })
 
     it('should handle corrupted localStorage gracefully', () => {
@@ -479,6 +496,68 @@ describe('pcbGenerator store', () => {
       expect(submitted.ledFootprint).toBe('LED_SMD:LED_SK6812MINI-E_3.2x2.8mm_P1.5mm_ReverseMount')
       expect(submitted.ledCapacitorFootprint).toBeUndefined()
       expect(submitted.ledCapacitorPositionX).toBeUndefined()
+    })
+
+    it('should send the track preset in kbplacer format without ids and basis', async () => {
+      const store = usePcbGeneratorStore()
+      store.settings.trackPreset = {
+        version: 1,
+        basis: { switchFootprint: 'SW_Cherry_MX_PCB_1.00u' },
+        items: [
+          {
+            type: 'track',
+            id: 't1',
+            start: { x: 2.54, y: -5.08 },
+            end: { x: 5.08, y: 2.6 },
+            width: 0.25,
+            layer: 'B.Cu',
+          },
+        ],
+      }
+      mockKeyboardStore.getSerializedData.mockReturnValue({ meta: {}, keys: [{ x: 0, y: 0 }] })
+      vi.mocked(pcbApi.submitTask).mockResolvedValue({
+        task_id: 't',
+        task_status: 'PENDING',
+        task_result: {},
+      })
+
+      await store.startTask()
+
+      const submitted = vi.mocked(pcbApi.submitTask).mock.calls[0]![0].settings
+      expect(submitted.trackPreset).toEqual({
+        version: 1,
+        items: [
+          {
+            type: 'track',
+            start: { x_nm: 2540000, y_nm: -5080000 },
+            end: { x_nm: 5080000, y_nm: 2600000 },
+            width_nm: 250000,
+            layer: 'B.Cu',
+          },
+        ],
+      })
+    })
+
+    it('should omit the track preset when there is none or it is empty', async () => {
+      const store = usePcbGeneratorStore()
+      mockKeyboardStore.getSerializedData.mockReturnValue({ meta: {}, keys: [{ x: 0, y: 0 }] })
+      vi.mocked(pcbApi.submitTask).mockResolvedValue({
+        task_id: 't',
+        task_status: 'PENDING',
+        task_result: {},
+      })
+
+      await store.startTask()
+      store.settings.trackPreset = { version: 1, items: [] }
+      vi.useFakeTimers()
+      vi.setSystemTime(Date.now() + 60_000) // past the submit cooldown
+      await store.startTask()
+      vi.useRealTimers()
+
+      const calls = vi.mocked(pcbApi.submitTask).mock.calls
+      expect(calls).toHaveLength(2)
+      expect('trackPreset' in calls[0]![0].settings).toBe(false)
+      expect('trackPreset' in calls[1]![0].settings).toBe(false)
     })
 
     it('should validate empty layout', async () => {

@@ -1,4 +1,5 @@
 import type { PcbSettingsJson } from './pcb-settings-serializer'
+import { validateWireTrackPreset } from './track-preset'
 
 export type ValidationResult =
   { valid: true; json: PcbSettingsJson; warnings: string[] } | { valid: false; error: string }
@@ -6,7 +7,14 @@ export type ValidationResult =
 const SIDE_VALUES = ['FRONT', 'BACK'] as const
 const ROUTING_VALUES = ['Disabled', 'Switch-Diode only', 'Full'] as const
 
-const KNOWN_TOP_LEVEL_KEYS = new Set(['switch', 'stabilizerFootprint', 'diode', 'routing', 'led'])
+const KNOWN_TOP_LEVEL_KEYS = new Set([
+  'switch',
+  'stabilizerFootprint',
+  'diode',
+  'routing',
+  'led',
+  'tracks',
+])
 const KNOWN_SWITCH_KEYS = new Set(['footprint', 'rotation', 'side'])
 const KNOWN_DIODE_KEYS = new Set(['footprint', 'rotation', 'side', 'offsetX', 'offsetY'])
 const KNOWN_LED_KEYS = new Set(['footprint', 'rotation', 'side', 'offsetX', 'offsetY', 'capacitor'])
@@ -48,7 +56,19 @@ function validatePlacement(
   return null
 }
 
-export function validatePcbSettingsJson(text: string): ValidationResult {
+export interface ValidationOptions {
+  /**
+   * Drop an invalid `tracks` group with a warning instead of rejecting the
+   * settings, so that saved settings survive a preset this build can't read
+   * (for example a newer preset version).
+   */
+  dropInvalidTracks?: boolean
+}
+
+export function validatePcbSettingsJson(
+  text: string,
+  options: ValidationOptions = {},
+): ValidationResult {
   let parsed: unknown
   try {
     parsed = JSON.parse(text)
@@ -124,6 +144,19 @@ export function validatePcbSettingsJson(text: string): ValidationResult {
         warnings,
       )
       if (capErr) return { valid: false, error: capErr }
+    }
+  }
+
+  // tracks sub-object (switch-diode track preset, kbplacer's JSON format)
+  if ('tracks' in obj) {
+    const result = validateWireTrackPreset(obj.tracks)
+    if (result.valid) {
+      obj.tracks = result.preset
+    } else if (options.dropInvalidTracks) {
+      delete obj.tracks
+      warnings.push(`Track preset ignored: ${result.error}`)
+    } else {
+      return { valid: false, error: result.error }
     }
   }
 

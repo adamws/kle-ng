@@ -131,3 +131,54 @@ describe('round-trip', () => {
     expect(back).toEqual(original)
   })
 })
+
+describe('track preset settings', () => {
+  const tracks = {
+    version: 1 as const,
+    items: [
+      {
+        type: 'track' as const,
+        start: { x_nm: 2540000, y_nm: -5080000 },
+        end: { x_nm: 2540000, y_nm: 60000 },
+        width_nm: 250000,
+        layer: 'B.Cu' as const,
+      },
+      {
+        type: 'via' as const,
+        position: { x_nm: 0, y_nm: 1000000 },
+        diameter_nm: 600000,
+        drill_diameter_nm: 300000,
+      },
+    ],
+  }
+
+  it('deserializes the nm tracks group to the mm preset', () => {
+    const settings = deserializePcbSettings({ tracks }, DEFAULTS)
+    expect(settings.trackPreset).toEqual({
+      version: 1,
+      items: [
+        {
+          type: 'track',
+          start: { x: 2.54, y: -5.08 },
+          end: { x: 2.54, y: 0.06 },
+          width: 0.25,
+          layer: 'B.Cu',
+        },
+        { type: 'via', position: { x: 0, y: 1 }, diameter: 0.6, drillDiameter: 0.3 },
+      ],
+    })
+  })
+
+  it('round-trips the tracks group', () => {
+    const settings = deserializePcbSettings({ tracks }, DEFAULTS)
+    expect(serializePcbSettings(settings).tracks).toEqual(tracks)
+  })
+
+  it('has no preset when the group is absent and omits an empty preset', () => {
+    expect(deserializePcbSettings({}, DEFAULTS).trackPreset).toBeUndefined()
+    expect(serializePcbSettings(DEFAULTS).tracks).toBeUndefined()
+    expect(
+      serializePcbSettings({ ...DEFAULTS, trackPreset: { version: 1, items: [] } }).tracks,
+    ).toBeUndefined()
+  })
+})

@@ -75,6 +75,53 @@ The **JSON** tab shows the current switch, diode, routing, and LED settings as a
 
 The editor always reflects changes made on the **Switches** and **LEDs** tabs. Only active sections are written: the `led` section appears only when **Add per-key LED** is enabled, and its nested `capacitor` section only when **Add capacitors** is enabled. Settings are also remembered between sessions in the same format.
 
+## Advanced: Track Presets (JSON) {#track-presets}
+
+Instead of the automatic router, you can route one switch–diode pair yourself and have it copied to every key. A **track preset** is the set of tracks (and vias) of that one pair. Add it to the JSON settings as a `tracks` section:
+
+```json
+{
+  "routing": "Full",
+  "tracks": {
+    "version": 1,
+    "items": [
+      {
+        "type": "track",
+        "start": { "x_nm": 2540000, "y_nm": -5080000 },
+        "end": { "x_nm": 2540000, "y_nm": 60000 },
+        "width_nm": 250000,
+        "layer": "B.Cu"
+      },
+      {
+        "type": "track",
+        "start": { "x_nm": 2540000, "y_nm": 60000 },
+        "end": { "x_nm": 5080000, "y_nm": 2600000 },
+        "width_nm": 250000,
+        "layer": "B.Cu"
+      }
+    ]
+  }
+}
+```
+
+This example connects pad 2 of a Cherry MX switch to the anode of the default SOD-123F diode (placed at `5.08`, `4`, rotated `90`, on the back), passing between the center hole and the right side hole.
+
+- **Coordinates** are in nanometres (1 mm = 1000000), relative to the switch center, with the switch at 0° on the front side and +Y pointing down, as in KiCad.
+- **Items** are `track` (`start`, `end`, `width_nm`, `layer`) or `via` (`position`, `diameter_nm`, `drill_diameter_nm`). Layers are `F.Cu` or `B.Cu`. Arcs are not supported yet.
+- **Diode placement** comes from the diode settings, so a preset must not contain a `diodes` section. The preset only works for the footprints and diode placement it was drawn for.
+- **Preview** — Applied tracks are drawn over the footprint preview, so you can check that they start and end on the right pads before generating.
+- **Routing** must be **Switch-Diode only** or **Full**; with routing disabled the preset is ignored. Presets support front-side switches only.
+
+To create a preset in KiCad, route one switch–diode pair on a template board and convert it with [kbplacer](https://github.com/adamws/kicad-kbplacer):
+
+```shell
+python -m kbplacer.connection_preset to-json diode_template.kicad_pcb > preset.json
+```
+
+Then copy the `items` of `preset.json` into the `tracks` section.
+
+If a saved preset can't be read (for example one saved by a newer version), it is dropped with a warning and the remaining settings are kept.
+
 ## After Downloading the PCB
 
 The downloaded ZIP archive contains two files:

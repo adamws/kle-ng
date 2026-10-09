@@ -21,6 +21,7 @@ import { ref, computed, watch, watchEffect, onMounted, nextTick, onUnmounted } f
 import { usePcbGeneratorStore } from '@/stores/pcbGenerator'
 import { storeToRefs } from 'pinia'
 import type { ViewBox, HoveredFootprintElement, FootprintGroup } from '@/types/footprint'
+import type { TrackSegment, TrackVia } from '@/types/tracks'
 import {
   getSwitchFootprintFilename,
   getDiodeFootprintFilename,
@@ -33,6 +34,7 @@ import {
   calculateElementCenter,
   switchSvgTransform,
   offsetSvgTransform,
+  switchLocalSvgTransform,
   type OffsetFootprint,
 } from '@/utils/footprintUtils'
 import BiInfoCircle from 'bootstrap-icons/icons/info-circle.svg'
@@ -316,6 +318,20 @@ function groupTransform(group: FootprintGroup): string {
   return offset ? offsetSvgTransform(offset, settings.value.switchRotation) : ''
 }
 
+// Read-only track preset overlay, drawn in the switch-local frame. Presets are
+// defined for a front-side switch, so nothing is drawn for back-side switches.
+const trackPresetTracks = computed(() =>
+  settings.value.switchSide === 'FRONT'
+    ? (settings.value.trackPreset?.items.filter((i): i is TrackSegment => i.type === 'track') ?? [])
+    : [],
+)
+const trackPresetVias = computed(() =>
+  settings.value.switchSide === 'FRONT'
+    ? (settings.value.trackPreset?.items.filter((i): i is TrackVia => i.type === 'via') ?? [])
+    : [],
+)
+const trackOverlayTransform = computed(() => switchLocalSvgTransform(settings.value.switchRotation))
+
 const diodeTransform = computed(() => groupTransform('diode'))
 const ledTransform = computed(() => groupTransform('led'))
 const capacitorTransform = computed(() => groupTransform('capacitor'))
@@ -440,6 +456,39 @@ onUnmounted(() => {
           <g v-html="capacitorSvgContent"></g>
         </g>
 
+        <!-- Track preset overlay (switch-local frame) -->
+        <g
+          v-if="trackPresetTracks.length || trackPresetVias.length"
+          class="track-overlay"
+          :transform="trackOverlayTransform"
+          data-testid="pcb-track-overlay"
+        >
+          <line
+            v-for="(track, i) in trackPresetTracks"
+            :key="`track-${i}`"
+            :x1="track.start.x"
+            :y1="track.start.y"
+            :x2="track.end.x"
+            :y2="track.end.y"
+            :stroke-width="track.width"
+            :class="['track', track.layer === 'F.Cu' ? 'track-front' : 'track-back']"
+            data-testid="pcb-track-overlay-track"
+          />
+          <g
+            v-for="(via, i) in trackPresetVias"
+            :key="`via-${i}`"
+            data-testid="pcb-track-overlay-via"
+          >
+            <circle :cx="via.position.x" :cy="via.position.y" :r="via.diameter / 2" class="via" />
+            <circle
+              :cx="via.position.x"
+              :cy="via.position.y"
+              :r="via.drillDiameter / 2"
+              class="via-drill"
+            />
+          </g>
+        </g>
+
         <!-- Crosshair overlay -->
         <g v-if="hoveredElement" class="crosshair-layer">
           <!-- Horizontal line -->
@@ -559,6 +608,32 @@ onUnmounted(() => {
 
 .preview-warning small {
   color: rgba(255, 255, 255, 0.8);
+}
+
+/* Track preset overlay (colours match the copper layers of the footprint SVGs) */
+.track-overlay {
+  pointer-events: none;
+}
+
+.track {
+  stroke-linecap: round;
+  opacity: 0.85;
+}
+
+.track-front {
+  stroke: #c83434;
+}
+
+.track-back {
+  stroke: #4d7fc4;
+}
+
+.via {
+  fill: #b3b3b3;
+}
+
+.via-drill {
+  fill: var(--bs-body-bg);
 }
 
 /* Crosshair styles */

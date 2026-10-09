@@ -1,3 +1,5 @@
+import type { TrackPreset, WireTrackPreset } from './tracks'
+
 // Internal settings format (stored in Pinia)
 export interface PcbSettings {
   switchFootprint: string
@@ -25,6 +27,8 @@ export interface PcbSettings {
   ledCapacitorSide: 'FRONT' | 'BACK'
   ledCapacitorPositionX: number
   ledCapacitorPositionY: number
+  // Switch-diode track preset replicated to every key (absent = none)
+  trackPreset?: TrackPreset
 }
 
 // API request format (for submission)
@@ -56,6 +60,9 @@ export interface PcbApiSettings {
   ledCapacitorSide?: string // "FRONT" or "BACK"
   ledCapacitorPositionX?: number
   ledCapacitorPositionY?: number
+  // Switch-diode track preset in kbplacer's JSON format, only sent when set.
+  // The backend adds the diode placement from the diode settings.
+  trackPreset?: Pick<WireTrackPreset, 'version' | 'items'>
 }
 
 export interface TaskRequest {

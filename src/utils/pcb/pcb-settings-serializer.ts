@@ -1,4 +1,6 @@
 import type { PcbSettings } from '@/types/pcb'
+import type { WireTrackPreset } from '@/types/tracks'
+import { trackPresetFromWire, trackPresetToWire } from './track-preset'
 
 // ---------------------------------------------------------------------------
 // JSON format interfaces (all fields optional — deserializer falls back to defaults)
@@ -43,6 +45,8 @@ export interface PcbSettingsJson {
   routing?: string
   /** Presence implies createLedSchFile = true (per-key LED chain enabled) */
   led?: PcbSettingsJsonLed
+  /** Switch-diode track preset in kbplacer's JSON format (integer nm) */
+  tracks?: WireTrackPreset
 }
 
 // ---------------------------------------------------------------------------
@@ -89,6 +93,10 @@ export function serializePcbSettings(s: PcbSettings): PcbSettingsJson {
     result.led = led
   }
 
+  if (s.trackPreset && s.trackPreset.items.length > 0) {
+    result.tracks = trackPresetToWire(s.trackPreset)
+  }
+
   return result
 }
 
@@ -129,5 +137,7 @@ export function deserializePcbSettings(json: PcbSettingsJson, defaults: PcbSetti
     ledCapacitorSide: cap?.side ?? defaults.ledCapacitorSide,
     ledCapacitorPositionX: cap?.offsetX ?? defaults.ledCapacitorPositionX,
     ledCapacitorPositionY: cap?.offsetY ?? defaults.ledCapacitorPositionY,
+    // Track preset — absent means none, it never falls back to a default
+    trackPreset: json.tracks ? trackPresetFromWire(json.tracks) : undefined,
   }
 }

@@ -276,6 +276,11 @@ export function switchSvgTransform(vb: ViewBox, switchRotation: number, side: Bo
   return `rotate(${-switchRotation})${mirror} translate(${-centerX}, ${-centerY})`
 }
 
+/** SVG transform drawing switch-local items (track preset) in board axes. */
+export function switchLocalSvgTransform(switchRotation: number): string {
+  return `rotate(${-switchRotation})`
+}
+
 /** SVG transform drawing an offset footprint SVG (diode, LED, …) in board axes. */
 export function offsetSvgTransform(fp: OffsetFootprint, switchRotation: number): string {
   const centerX = fp.vb.x + fp.vb.width / 2

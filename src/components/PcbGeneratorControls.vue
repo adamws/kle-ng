@@ -6,7 +6,8 @@ import { storeToRefs } from 'pinia'
 import { ApiError } from '@/utils/pcbApi'
 
 const pcbStore = usePcbGeneratorStore()
-const { taskStatus, isTaskActive, isBackendAvailable, workerStatusError } = storeToRefs(pcbStore)
+const { settings, taskStatus, isTaskActive, isBackendAvailable, workerStatusError } =
+  storeToRefs(pcbStore)
 
 const keyboardStore = useKeyboardStore()
 const {
@@ -20,6 +21,16 @@ const {
 const errorMessage = ref<string | null>(null)
 const isSubmitting = ref(false)
 
+// Track presets are drawn for a front-side switch, the backend can't flip
+// them, so a preset with back-side switches is rejected up front.
+const hasTrackPreset = computed(() => (settings.value.trackPreset?.items.length ?? 0) > 0)
+const isTrackPresetOnBackSwitch = computed(
+  () => hasTrackPreset.value && settings.value.switchSide === 'BACK',
+)
+const isTrackPresetIgnored = computed(
+  () => hasTrackPreset.value && settings.value.routing === 'Disabled',
+)
+
 // Button should show when no task is active (taskStatus is null)
 const showGenerateButton = computed(() => !taskStatus.value)
 
@@ -30,7 +41,8 @@ const isGenerateDisabled = computed(
     !isBackendAvailable.value ||
     !isViaAnnotated.value ||
     hasInvalidMatrixDuplicates.value ||
-    hasMalformedLayoutOptionLabels.value,
+    hasMalformedLayoutOptionLabels.value ||
+    isTrackPresetOnBackSwitch.value,
 )
 
 const buttonTooltip = computed(() => {
@@ -42,6 +54,9 @@ const buttonTooltip = computed(() => {
   }
   if (hasMalformedLayoutOptionLabels.value) {
     return 'Layout has invalid layout-option labels'
+  }
+  if (isTrackPresetOnBackSwitch.value) {
+    return 'Track presets support only front-side switches'
   }
   if (!isBackendAvailable.value) {
     if (workerStatusError.value) {
@@ -177,6 +192,27 @@ function handleNewTask() {
         Edit the key labels so the legend is in the front-left position and the bottom-right
         position is empty or a valid <code>option,choice</code> value.
       </small>
+    </div>
+
+    <!-- Track Preset Messages -->
+    <div
+      v-if="isTrackPresetOnBackSwitch && showGenerateButton"
+      class="alert alert-danger py-2 mt-2 mb-0"
+      role="alert"
+      data-testid="pcb-track-preset-back-switch"
+    >
+      <small>
+        <strong>Track presets support only front-side switches.</strong>
+        Set the switch side to front, or remove the <code>tracks</code> group in the JSON settings.
+      </small>
+    </div>
+    <div
+      v-if="isTrackPresetIgnored && showGenerateButton"
+      class="alert alert-info py-2 mt-2 mb-0"
+      role="status"
+      data-testid="pcb-track-preset-ignored"
+    >
+      <small>Routing is disabled, the track preset is ignored.</small>
     </div>
   </div>
 </template>

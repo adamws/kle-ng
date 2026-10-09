@@ -21,6 +21,7 @@ import { validatePcbSettingsJson } from '@/utils/pcb/pcb-settings-validator'
 import { applyViaEncoderSwitchMount } from '@/utils/pcb-encoder'
 import { useKeyboardStore } from '@/stores/keyboard'
 import { useToast } from '@/composables/useToast'
+import { trackPresetToWire } from '@/utils/pcb/track-preset'
 import { setCustomBackendUrl, getDefaultBackendUrl } from '@/config/api'
 
 // Default settings — single source of truth for the initial state and for
@@ -276,6 +277,13 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
           apiSettings.ledCapacitorPositionX = settings.value.ledCapacitorPositionX
           apiSettings.ledCapacitorPositionY = settings.value.ledCapacitorPositionY
         }
+      }
+
+      // Track preset in kbplacer's format, without editor ids or basis.
+      const trackPreset = settings.value.trackPreset
+      if (trackPreset && trackPreset.items.length > 0) {
+        const { version, items } = trackPresetToWire(trackPreset)
+        apiSettings.trackPreset = { version, items }
       }
 
       // Mark VIA-annotated rotary encoders with sm="rot_ec11" so the backend
@@ -631,13 +639,20 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
     const saved = localStorage.getItem('kle-ng-pcb-settings')
     if (!saved) return
     try {
-      const result = validatePcbSettingsJson(saved)
+      // An unreadable track preset (e.g. saved by a newer version) is dropped on
+      // its own, keeping the rest of the settings.
+      const result = validatePcbSettingsJson(saved, { dropInvalidTracks: true })
       if (!result.valid) {
         console.warn('PCB settings: invalid format, resetting to defaults:', result.error)
         localStorage.removeItem('kle-ng-pcb-settings')
         return
       }
       settings.value = deserializePcbSettings(result.json, DEFAULT_SETTINGS)
+      const dropped = result.warnings.find((w) => w.startsWith('Track preset ignored'))
+      if (dropped) {
+        console.warn(`PCB settings: ${dropped}`)
+        useToast().showWarning(dropped, 'PCB Generator')
+      }
     } catch (error) {
       console.warn('Failed to load PCB settings:', error)
     }

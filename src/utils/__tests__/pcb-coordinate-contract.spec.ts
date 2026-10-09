@@ -14,6 +14,7 @@ import {
   offsetSvgTransform,
   parseViewBox,
   switchLocalToBoard,
+  switchLocalSvgTransform,
   switchSvgTransform,
   type BoardSide,
 } from '../footprintUtils'
@@ -290,6 +291,34 @@ describe('Rendered footprint SVGs', () => {
           `switch ${side} ${switchRotation}`,
         )
       }
+    }
+  })
+
+  // The track preset overlay draws switch-local tracks. The kle-ng default preset
+  // runs from SW pad 2 to D pad 2 (A) at the default diode placement.
+  it('draws the default track preset from SW pad 2 to D pad 2 (A)', () => {
+    expect.hasAssertions()
+    const presetStart = { x: 2.54, y: -5.08 }
+    const presetEnd = { x: 5.08, y: 2.6 }
+    const defaults = cases.filter(
+      (c) =>
+        c.switch_footprint.startsWith('Switch_Keyboard_Cherry_MX:') &&
+        c.diode.x === 5.08 &&
+        c.diode.y === 4 &&
+        c.diode.rotation === 90 &&
+        c.diode.side === 'BACK',
+    )
+    expect(defaults.map((c) => c.switch_rotation).sort()).toEqual([0, 37, 90])
+    for (const c of defaults) {
+      const transform = switchLocalSvgTransform(c.switch_rotation)
+      const swPad2 = pads(c, 'SW1').find((p) => p.number === '2')!
+      const dPad2 = pads(c, 'D1').find((p) => p.number === '2')!
+      expectPoint(
+        applySvgTransform(transform, presetStart),
+        mm(swPad2.board),
+        `${caseName(c)} start`,
+      )
+      expectPoint(applySvgTransform(transform, presetEnd), mm(dPad2.board), `${caseName(c)} end`)
     }
   })
 

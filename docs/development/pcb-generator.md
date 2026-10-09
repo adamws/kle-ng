@@ -255,6 +255,9 @@ core convention:
   `skipLedDecoupling = false`.
 - Diode/LED/capacitor offsets are stored as `offsetX`/`offsetY`; switch/diode/led placement share the
   `footprint`/`rotation`/`side` shape.
+- The `tracks` section holds the switch-diode track preset in kbplacer's JSON preset format (integer
+  nm, see [Track presets](#track-presets)), converted to and from `PcbSettings.trackPreset` (mm) by
+  `utils/pcb/track-preset.ts`. It is omitted when there is no preset and never falls back to a default.
 
 `deserializePcbSettings(json, defaults)` fills every missing field from `defaults`, so partial JSON
 is always valid.
@@ -265,12 +268,18 @@ is always valid.
 editor and on localStorage load. Returns `{ valid, json, warnings }` or `{ valid, error }`. It
 validates placement objects (string footprint, finite numeric rotation/offsets, `FRONT`/`BACK` side),
 the `routing` enum, and warns on unknown fields at every level. It **fast-rejects** the legacy flat
-format by detecting a top-level `switchFootprint` key.
+format by detecting a top-level `switchFootprint` key. The `tracks` section is checked by
+`validateWireTrackPreset` (`utils/pcb/track-preset.ts`). With `{ dropInvalidTracks: true }`, used on
+localStorage load, an invalid `tracks` section is dropped with a `Track preset ignored: …` warning
+instead of rejecting the whole document; the store shows it as a toast.
 
 ### Types (`types/pcb.ts`)
 
 - `PcbSettings` — internal flat settings.
-- `PcbApiSettings` — the request shape; LED fields are optional and only sent when enabled.
+- `PcbApiSettings` — the request shape; LED fields and `trackPreset` are optional and only sent when
+  set.
+- `TrackPreset` / `WireTrackPreset` (`types/tracks.ts`) — the track preset in the editor's mm types
+  and in kbplacer's JSON format.
 - `TaskRequest` — `{ layout, settings }`.
 - `TaskStatusType` — `PENDING | PROGRESS | SUCCESS | FAILURE | RETRY`.
 - `RenderFile` / `ProjectFiles` — the file manifest returned in a SUCCESS response.
@@ -371,6 +380,13 @@ work directory plus a `ProjectFiles` manifest:
 `--diode`, and a `;`-separated `--additional-elements` list (`ST{}`, `LED{}`, `C{}` with `CUSTOM
 x y rotation side` placement templates).
 
+**Track presets** (`preset.go`): when `settings.trackPreset` is set and switch-diode routing is on,
+the preset is written to `logs/switch-preset.json` with a `diodes` entry built from the diode
+settings, and kbplacer gets `--diode "D{} PRESET <file>"` instead of `CUSTOM`. The backend only
+checks that the preset is an object without `diodes` and with at most 500 items; kbplacer validates
+the format, so format errors reach the client in the build log tail. With routing `Disabled` the
+preset is ignored.
+
 **Other files:**
 
 - `errors.go` — Typed validation errors surfaced to the client as failure messages.
@@ -425,6 +441,7 @@ Request body:
     "diodeRotation": 90, "diodeSide": "BACK",
     "diodePositionX": 5.08, "diodePositionY": 4.0
     // LED chain fields (createLedSchFile, ledFootprint, …) sent only when enabled
+    // "trackPreset": { "version": 1, "items": [ … ] } sent only when set
   }
 }
 ```
@@ -504,6 +521,44 @@ object each:
 
 The `{:.2f}u` placeholder in footprint names is a kbplacer template filled with the key size (e.g.
 `2.00u`), so a single selection covers all key widths.
+
+### Track presets {#track-presets}
+
+`trackPreset` is a switch-local track template that kbplacer replicates to every switch-diode pair,
+in kbplacer's JSON preset format (kicad-kbplacer `docs/switch-preset.schema.json`):
+
+```jsonc
+{
+  "version": 1,
+  "items": [
+    {
+      "type": "track",
+      "start": { "x_nm": 2540000, "y_nm": -5080000 },
+      "end": { "x_nm": 5080000, "y_nm": 2600000 },
+      "width_nm": 250000,
+      "layer": "B.Cu",
+    },
+    {
+      "type": "via",
+      "position": { "x_nm": 0, "y_nm": 0 },
+      "diameter_nm": 600000,
+      "drill_diameter_nm": 300000,
+    },
+  ],
+}
+```
+
+- Coordinates are integer nanometres relative to the switch origin, switch at 0° on the front side,
+  +Y down. Field names follow KiCad's IPC API (kipy) types.
+- No `diodes`: the backend adds the diode placement from `diode*` settings.
+- Only `track` and `via` items; arcs are rejected until kbplacer supports them. Front-side switches
+  only (kbplacer rejects a JSON preset when a switch is on the back).
+- Ignored when `routing` is `Disabled`.
+
+The client edits it through the settings JSON `tracks` section and draws it read-only over the
+footprint preview (`FootprintPreview.vue`, switch-local frame). The preview follows kbplacer's
+placement exactly; `utils/__tests__/pcb-coordinate-contract.spec.ts` checks it against pad positions
+of footprints placed by kbplacer (`scripts/generate-pcb-golden-pads.py`).
 
 ### LED chain (LEDs tab)
 
