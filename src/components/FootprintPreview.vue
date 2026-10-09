@@ -31,6 +31,8 @@ import {
   extractSvgContent,
   calculateCompositeViewBoxMulti,
   calculateElementCenter,
+  switchSvgTransform,
+  offsetSvgTransform,
   type OffsetFootprint,
 } from '@/utils/footprintUtils'
 import BiInfoCircle from 'bootstrap-icons/icons/info-circle.svg'
@@ -188,6 +190,7 @@ function offsetForGroup(group: FootprintGroup): OffsetFootprint | null {
             offsetX: settings.value.diodePositionX,
             offsetY: settings.value.diodePositionY,
             rotation: settings.value.diodeRotation,
+            side: settings.value.diodeSide,
           }
         : null
     case 'led':
@@ -197,6 +200,7 @@ function offsetForGroup(group: FootprintGroup): OffsetFootprint | null {
             offsetX: settings.value.ledPositionX,
             offsetY: settings.value.ledPositionY,
             rotation: settings.value.ledRotation,
+            side: settings.value.ledSide,
           }
         : null
     case 'capacitor':
@@ -206,6 +210,7 @@ function offsetForGroup(group: FootprintGroup): OffsetFootprint | null {
             offsetX: settings.value.ledCapacitorPositionX,
             offsetY: settings.value.ledCapacitorPositionY,
             rotation: settings.value.ledCapacitorRotation,
+            side: settings.value.ledCapacitorSide,
           }
         : null
     default:
@@ -248,6 +253,7 @@ function setupGroupHoverHandlers(groupElement: SVGGElement | null, groupType: Fo
         switchViewBox.value,
         offsetForGroup(groupType),
         settings.value.switchRotation,
+        settings.value.switchSide,
       )
       hoveredElement.value = {
         type: element.tagName.toLowerCase() as 'circle' | 'path',
@@ -294,87 +300,25 @@ const formatCoordinate = (value: number): string => {
   return value.toFixed(3)
 }
 
-// Computed transform for switch (centered at origin with rotation)
+// Footprint transforms follow kbplacer's placement, see the coordinate
+// contract in footprintUtils.ts (KiCad rotations, BACK side mirroring).
 const switchTransform = computed(() => {
   if (!switchViewBox.value) return ''
-
-  const switchVB = switchViewBox.value
-  // Center the switch at origin by translating to negative center point
-  const centerX = switchVB.x + switchVB.width / 2
-  const centerY = switchVB.y + switchVB.height / 2
-  const rotation = settings.value.switchRotation
-
-  // Transform chain (SVG applies right-to-left):
-  // 1. translate(-centerX, -centerY): center switch at origin
-  // 2. rotate(rotation): rotate around origin
-  return `rotate(${rotation}) translate(${-centerX}, ${-centerY})`
+  return switchSvgTransform(
+    switchViewBox.value,
+    settings.value.switchRotation,
+    settings.value.switchSide,
+  )
 })
 
-/**
- * Builds the SVG transform for a footprint positioned relative to the switch
- * center (diode, LED, capacitor). Offsets and rotation are switch-relative:
- *
- * 1. translate(-center): center the footprint at origin
- * 2. rotate(rotation + switchRotation): switch-relative orientation
- * 3. translate(rotatedOffset): offset vector rotated into world coords
- *
- * Note: SVG applies the chain right-to-left, matching the order above.
- */
-function buildOffsetTransform(
-  vb: ViewBox,
-  offsetX: number,
-  offsetY: number,
-  rotation: number,
-): string {
-  const centerX = vb.x + vb.width / 2
-  const centerY = vb.y + vb.height / 2
-
-  // Rotate the switch-relative offset vector by the switch rotation so that,
-  // e.g., a 180° switch flips a "5mm right" offset to 5mm left in world coords.
-  const switchRotationRad = (settings.value.switchRotation * Math.PI) / 180
-  const cos = Math.cos(switchRotationRad)
-  const sin = Math.sin(switchRotationRad)
-  const rotatedOffsetX = offsetX * cos - offsetY * sin
-  const rotatedOffsetY = offsetX * sin + offsetY * cos
-
-  // Footprint orientation is switch-relative too.
-  const finalRotation = rotation + settings.value.switchRotation
-
-  return `translate(${rotatedOffsetX}, ${rotatedOffsetY}) rotate(${finalRotation}) translate(${-centerX}, ${-centerY})`
+function groupTransform(group: FootprintGroup): string {
+  const offset = offsetForGroup(group)
+  return offset ? offsetSvgTransform(offset, settings.value.switchRotation) : ''
 }
 
-// Computed transform for diode (offset from switch center with rotation)
-const diodeTransform = computed(() => {
-  if (!diodeViewBox.value) return ''
-  return buildOffsetTransform(
-    diodeViewBox.value,
-    settings.value.diodePositionX,
-    settings.value.diodePositionY,
-    settings.value.diodeRotation,
-  )
-})
-
-// Computed transform for LED placeholder (offset from switch center with rotation)
-const ledTransform = computed(() => {
-  if (!ledViewBox.value) return ''
-  return buildOffsetTransform(
-    ledViewBox.value,
-    settings.value.ledPositionX,
-    settings.value.ledPositionY,
-    settings.value.ledRotation,
-  )
-})
-
-// Computed transform for LED decoupling capacitor placeholder
-const capacitorTransform = computed(() => {
-  if (!capacitorViewBox.value) return ''
-  return buildOffsetTransform(
-    capacitorViewBox.value,
-    settings.value.ledCapacitorPositionX,
-    settings.value.ledCapacitorPositionY,
-    settings.value.ledCapacitorRotation,
-  )
-})
+const diodeTransform = computed(() => groupTransform('diode'))
+const ledTransform = computed(() => groupTransform('led'))
+const capacitorTransform = computed(() => groupTransform('capacitor'))
 
 // Computed base viewBox without zoom (memoized separately for performance)
 const baseViewBox = computed(() => {
@@ -383,32 +327,12 @@ const baseViewBox = computed(() => {
   }
 
   // Diode is always present; LED and capacitor only when the feature is enabled.
-  const offsets: OffsetFootprint[] = [
-    {
-      vb: diodeViewBox.value,
-      offsetX: settings.value.diodePositionX,
-      offsetY: settings.value.diodePositionY,
-      rotation: settings.value.diodeRotation,
-    },
-  ]
-
-  if (showLed.value && ledViewBox.value) {
-    offsets.push({
-      vb: ledViewBox.value,
-      offsetX: settings.value.ledPositionX,
-      offsetY: settings.value.ledPositionY,
-      rotation: settings.value.ledRotation,
-    })
-  }
-
-  if (showCapacitor.value && capacitorViewBox.value) {
-    offsets.push({
-      vb: capacitorViewBox.value,
-      offsetX: settings.value.ledCapacitorPositionX,
-      offsetY: settings.value.ledCapacitorPositionY,
-      rotation: settings.value.ledCapacitorRotation,
-    })
-  }
+  const groups: FootprintGroup[] = ['diode']
+  if (showLed.value) groups.push('led')
+  if (showCapacitor.value) groups.push('capacitor')
+  const offsets = groups
+    .map(offsetForGroup)
+    .filter((offset): offset is OffsetFootprint => offset !== null)
 
   return calculateCompositeViewBoxMulti(
     switchViewBox.value,
@@ -468,6 +392,7 @@ watchEffect(() => {
       switchViewBox.value,
       offsetForGroup(hoveredElement.value.group),
       settings.value.switchRotation,
+      settings.value.switchSide,
     )
     // Update coordinates reactively
     hoveredElement.value.centerX = center.x

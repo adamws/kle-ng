@@ -206,6 +206,85 @@ export interface OffsetFootprint {
   offsetX: number
   offsetY: number
   rotation: number
+  /** Board side, BACK mirrors the footprint top to bottom. Defaults to FRONT. */
+  side?: BoardSide
+}
+
+export type BoardSide = 'FRONT' | 'BACK'
+
+/*
+ * Coordinate contract with kbplacer (the PCB generator backend).
+ *
+ * All coordinates are mm with +Y down, like KiCad. Rotations are KiCad
+ * orientations: positive angles turn COUNTER-CLOCKWISE on screen, while SVG
+ * `rotate()` turns clockwise, so SVG transforms use the negated angle.
+ *
+ * kbplacer places an element relative to its switch as follows:
+ * 1. a BACK element is mirrored top to bottom (y -> -y) in its own frame,
+ * 2. it is rotated by its switch-relative orientation,
+ * 3. it is moved by its switch-relative offset.
+ * The switch-local result is then rotated by the switch orientation.
+ *
+ * Footprint SVGs are drawn in footprint coordinates as seen from the front
+ * (back side SVGs differ only in layer colours), with the footprint origin at
+ * the viewBox centre.
+ */
+
+/** A placement relative to the switch: kbplacer's CUSTOM position option. */
+export interface Placement {
+  x: number
+  y: number
+  rotation: number
+  side: BoardSide
+}
+
+/** Rotates a point by a KiCad orientation (counter-clockwise on screen). */
+export function rotateKicad(
+  p: { x: number; y: number },
+  degrees: number,
+): { x: number; y: number } {
+  if (degrees % 360 === 0) return { x: p.x, y: p.y }
+  const rad = (degrees * Math.PI) / 180
+  const cos = Math.cos(rad)
+  const sin = Math.sin(rad)
+  return { x: p.x * cos + p.y * sin, y: -p.x * sin + p.y * cos }
+}
+
+/** Converts a point from a footprint's own frame to the switch-local frame. */
+export function footprintToSwitchLocal(
+  p: { x: number; y: number },
+  placement: Placement,
+): { x: number; y: number } {
+  const mirrored = placement.side === 'BACK' ? { x: p.x, y: -p.y } : p
+  const rotated = rotateKicad(mirrored, placement.rotation)
+  return { x: rotated.x + placement.x, y: rotated.y + placement.y }
+}
+
+/** Converts a switch-local point to board axes (relative to the switch origin). */
+export function switchLocalToBoard(
+  p: { x: number; y: number },
+  switchRotation: number,
+): { x: number; y: number } {
+  return rotateKicad(p, switchRotation)
+}
+
+/** SVG transform drawing a switch SVG centred at the origin of board axes. */
+export function switchSvgTransform(vb: ViewBox, switchRotation: number, side: BoardSide): string {
+  const centerX = vb.x + vb.width / 2
+  const centerY = vb.y + vb.height / 2
+  const mirror = side === 'BACK' ? ' scale(1, -1)' : ''
+  return `rotate(${-switchRotation})${mirror} translate(${-centerX}, ${-centerY})`
+}
+
+/** SVG transform drawing an offset footprint SVG (diode, LED, …) in board axes. */
+export function offsetSvgTransform(fp: OffsetFootprint, switchRotation: number): string {
+  const centerX = fp.vb.x + fp.vb.width / 2
+  const centerY = fp.vb.y + fp.vb.height / 2
+  const mirror = fp.side === 'BACK' ? ' scale(1, -1)' : ''
+  return (
+    `rotate(${-switchRotation}) translate(${fp.offsetX}, ${fp.offsetY}) ` +
+    `rotate(${-fp.rotation})${mirror} translate(${-centerX}, ${-centerY})`
+  )
 }
 
 /**
@@ -261,6 +340,7 @@ export function calculateCompositeViewBoxMulti(
         fp.offsetY,
         fp.rotation,
         switchRotation,
+        fp.side,
       )
       xs.push(world.x)
       ys.push(world.y)
@@ -278,28 +358,24 @@ export function calculateCompositeViewBoxMulti(
 /**
  * Applies switch transform to convert local coordinates to world coordinates
  *
- * Applies the switch group's transform chain:
+ * Matches {@link switchSvgTransform}:
  * 1. translate(-centerX, -centerY) - center switch at origin
- * 2. rotate(switchRotation) - rotate around origin
+ * 2. mirror top to bottom when the switch is on the BACK side
+ * 3. rotate by the switch orientation (KiCad, counter-clockwise on screen)
  *
  * @param x - X coordinate in switch's original SVG space
  * @param y - Y coordinate in switch's original SVG space
  * @param switchVB - ViewBox of the switch footprint
- * @param switchRotation - Switch rotation angle in degrees (0, 90, 180, 270)
+ * @param switchRotation - Switch orientation in degrees
+ * @param switchSide - Switch board side
  * @returns Object with x, y coordinates in world space
- *
- * @example
- * ```typescript
- * // Switch center hole at (9.744, 9.575) in SVG, with 90° rotation
- * const world = applySwitchTransform(9.744, 9.575, switchVB, 90)
- * // Returns approximately (0, 0) since it's at the switch center
- * ```
  */
 export function applySwitchTransform(
   x: number,
   y: number,
   switchVB: ViewBox,
   switchRotation: number,
+  switchSide: BoardSide = 'FRONT',
 ): { x: number; y: number } {
   // Calculate switch center in its viewBox coordinate system using decimal math
   const centerX = D.add(switchVB.x, D.div(switchVB.width, 2))
@@ -307,39 +383,36 @@ export function applySwitchTransform(
 
   // Step 1: translate(-centerX, -centerY) - center at origin
   const x1 = D.sub(x, centerX)
-  const y1 = D.sub(y, centerY)
+  let y1 = D.sub(y, centerY)
 
-  // Step 2: rotate(switchRotation) - rotate around origin using decimal math
-  const rad = D.degreesToRadians(switchRotation)
+  // Step 2: mirror BACK side footprints top to bottom
+  if (switchSide === 'BACK') y1 = -y1
+
+  // Step 3: rotate counter-clockwise on screen (D.rotatePoint turns clockwise)
+  const rad = D.degreesToRadians(-switchRotation)
   return D.rotatePoint(x1, y1, rad)
 }
 
 /**
  * Applies diode transform to convert local coordinates to world coordinates
  *
- * Applies the diode group's transform chain:
+ * Matches {@link offsetSvgTransform} and kbplacer's placement:
  * 1. translate(-centerX, -centerY) - center diode at origin
- * 2. rotate(finalRotation) - rotate around origin (diodeRotation + switchRotation)
- * 3. translate(rotatedOffset) - move to final position in world coords
- *
- * The offset is rotated by switchRotation to convert from switch-relative
- * coordinates to world coordinates.
+ * 2. mirror top to bottom when the diode is on the BACK side
+ * 3. rotate by the diode orientation, then translate by the offset
+ *    (both switch-relative)
+ * 4. rotate by the switch orientation
+ * Rotations are KiCad orientations, counter-clockwise on screen.
  *
  * @param x - X coordinate in diode's original SVG space
  * @param y - Y coordinate in diode's original SVG space
  * @param diodeVB - ViewBox of the diode footprint
  * @param diodeOffsetX - Horizontal offset in SWITCH coordinates (positive = right in switch's frame)
  * @param diodeOffsetY - Vertical offset in SWITCH coordinates (positive = down in switch's frame)
- * @param diodeRotation - Diode rotation angle in degrees (switch-relative)
- * @param switchRotation - Switch rotation angle in degrees
+ * @param diodeRotation - Diode orientation in degrees (switch-relative)
+ * @param switchRotation - Switch orientation in degrees
+ * @param diodeSide - Diode board side
  * @returns Object with x, y coordinates in world space
- *
- * @example
- * ```typescript
- * // Diode pad at (3.032, 2.453) in SVG, offset (5, 0) from switch, 90° diode rotation
- * const world = applyDiodeTransform(3.032, 2.453, diodeVB, 5.0, 0.0, 90, 0)
- * // Returns position relative to switch center (at origin)
- * ```
  */
 export function applyDiodeTransform(
   x: number,
@@ -349,6 +422,7 @@ export function applyDiodeTransform(
   diodeOffsetY: number,
   diodeRotation: number,
   switchRotation: number,
+  diodeSide: BoardSide = 'FRONT',
 ): { x: number; y: number } {
   // Calculate diode center in its viewBox coordinate system using decimal math
   const centerX = D.add(diodeVB.x, D.div(diodeVB.width, 2))
@@ -356,22 +430,17 @@ export function applyDiodeTransform(
 
   // Step 1: translate(-centerX, -centerY) - center diode at origin
   const x1 = D.sub(x, centerX)
-  const y1 = D.sub(y, centerY)
+  let y1 = D.sub(y, centerY)
 
-  // Step 2: rotate by final rotation (diodeRotation + switchRotation) using decimal math
-  const finalRotation = D.add(diodeRotation, switchRotation)
-  const rad = D.degreesToRadians(finalRotation)
-  const rotated = D.rotatePoint(x1, y1, rad)
+  // Step 2: mirror BACK side footprints top to bottom
+  if (diodeSide === 'BACK') y1 = -y1
 
-  // Step 3: translate by rotated offset
-  // Rotate the offset vector by switch rotation to convert from switch-relative to world coords
-  const switchRotationRad = D.degreesToRadians(switchRotation)
-  const rotatedOffset = D.rotatePoint(diodeOffsetX, diodeOffsetY, switchRotationRad)
+  // Step 3: switch-local position (D.rotatePoint turns clockwise, so negate)
+  const rotated = D.rotatePoint(x1, y1, D.degreesToRadians(-diodeRotation))
+  const local = { x: D.add(rotated.x, diodeOffsetX), y: D.add(rotated.y, diodeOffsetY) }
 
-  return {
-    x: D.add(rotated.x, rotatedOffset.x),
-    y: D.add(rotated.y, rotatedOffset.y),
-  }
+  // Step 4: rotate the switch-local position by the switch orientation
+  return D.rotatePoint(local.x, local.y, D.degreesToRadians(-switchRotation))
 }
 
 /**
@@ -388,6 +457,7 @@ export function applyDiodeTransform(
  * @param offset - The offset footprint (diode/LED/capacitor) this element belongs
  *   to, with its switch-relative placement; pass null for the switch group.
  * @param switchRotation - Switch rotation angle in degrees
+ * @param switchSide - Switch board side
  * @returns Object with x, y coordinates in world space (mm)
  *
  * @example
@@ -403,6 +473,7 @@ export function calculateElementCenter(
   switchVB: ViewBox | null,
   offset: OffsetFootprint | null,
   switchRotation: number,
+  switchSide: BoardSide = 'FRONT',
 ): { x: number; y: number } {
   // Extract local coordinates based on element type
   let localX: number, localY: number
@@ -433,7 +504,7 @@ export function calculateElementCenter(
   // Apply parent group transform based on group type
   if (group === 'switch') {
     if (!switchVB) return { x: 0, y: 0 }
-    return applySwitchTransform(localX, localY, switchVB, switchRotation)
+    return applySwitchTransform(localX, localY, switchVB, switchRotation, switchSide)
   }
 
   // Diode / LED / capacitor are all offset footprints sharing the same transform.
@@ -446,5 +517,6 @@ export function calculateElementCenter(
     offset.offsetY,
     offset.rotation,
     switchRotation,
+    offset.side,
   )
 }
