@@ -542,7 +542,7 @@ test.describe('PCB Generator track editor', () => {
       return { x: b.x + b.width / 2, y: b.y + b.height / 2 }
     }
 
-    // select it: size fields and position
+    // select it: size fields
     let c = await centre()
     await page.mouse.click(c.x, c.y)
     await expect(page.locator('[data-testid="pcb-selection-count"]')).toHaveText('1 via selected')
@@ -551,15 +551,6 @@ test.describe('PCB Generator track editor', () => {
     await diameter.fill('0.8')
     await diameter.press('Enter')
     await expect(viaCircle).toHaveAttribute('r', '0.4')
-    const x = page.locator('[data-testid="pcb-selection-via-x"] input')
-    await expect(x).toHaveValue('3.5')
-
-    // a typed position next to the centre hole is refused with the reason
-    await x.fill('0')
-    await x.press('Enter')
-    await expect(page.locator('[data-testid="pcb-selection-via-error"]')).toContainText('clearance')
-    await expect(x).toHaveValue('3.5')
-
     // drag it up by 1 mm: the tracks on both layers follow
     c = await centre()
     await page.mouse.move(c.x, c.y)

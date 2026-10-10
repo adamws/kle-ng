@@ -631,25 +631,6 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     if (state) drag.value = state
   }
 
-  /**
-   * Moves via `index` to `p` (switch-local mm) with the tracks ending on it,
-   * as one undoable step. Returns why it can't, or null when moved; the via
-   * stays selected.
-   */
-  function setViaPosition(index: number, p: Pt): string | null {
-    const state = createDragState({ kind: 'via', item: index }, p)
-    if (!state) return 'Not a via'
-    const result = dragPreview(state, p)
-    const violation = dragViolation({ ...state, strict: true }, result)
-    if (violation) return violation.message
-    const at = roundNm(p)
-    const items = cleanupTracks(result.items, padInfoList.value).items
-    writeItems(items)
-    const moved = items.findIndex((it) => it.type === 'via' && samePoint(it.position, at))
-    selection.value = moved >= 0 ? [moved] : []
-    return null
-  }
-
   /** A dragged via snaps to track ends of its net on either layer (not its own), else the grid. */
   function snapVia(state: DragState, at: Pt): Pt {
     const own = new Set([
@@ -940,7 +921,6 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     dragViolation: computed(() => drag.value?.violation ?? null),
     dragHandleAt,
     startDrag,
-    setViaPosition,
     moveDrag,
     endDrag,
     cancelDrag,

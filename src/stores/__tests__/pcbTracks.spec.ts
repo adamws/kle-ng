@@ -356,17 +356,6 @@ describe('pcbTracks selection and history', () => {
     expect(presetVia()).toMatchObject({ position: { x: 3.5, y: 2 } })
   })
 
-  it('moves a via to a typed position, refusing one that breaks a rule', async () => {
-    await viaPreset()
-    expect(tracks.setViaPosition(1, { x: 5.08, y: 0 })).toMatch(/Hole/)
-    expect(presetVia()).toMatchObject({ position: { x: 3.5, y: 2.6 } })
-    expect(tracks.setViaPosition(1, { x: 3.25, y: 2.25 })).toBeNull()
-    expect(presetVia()).toMatchObject({ position: { x: 3.25, y: 2.25 } })
-    expect(endsOnVia()).toBe(2)
-    const i = pcb.settings.trackPreset!.items.indexOf(presetVia())
-    expect(tracks.selection).toEqual([i])
-  })
-
   it('changes the size of selected vias, which new vias then use', async () => {
     await viaPreset()
     tracks.selectItems([0, 1], false)
