@@ -1,6 +1,8 @@
 <!--
-  TrackEditorToolbar: tool, history, copper layer, track width, grid and
-  posture of the track editor. Shortcuts are listed in the titles.
+  TrackEditorToolbar: the drawing controls of the track editor (tool, history,
+  copper layer, track width, grid and posture). View controls (layer
+  visibility, zoom) sit on the canvas instead. Shortcuts are listed in the
+  titles. One line that never wraps, so the canvas below never moves.
 
   Clearance is not editable: kle-ng-api boards use KiCad's default netclass
   (0.2 mm), so a smaller value would only make presets kbplacer rejects.
@@ -19,7 +21,13 @@ const { editorSettings, tool, isRouting, canUndo, canRedo } = storeToRefs(tracks
 </script>
 
 <template>
-  <div class="track-editor-toolbar" data-testid="pcb-track-toolbar">
+  <div
+    class="track-editor-toolbar"
+    role="toolbar"
+    aria-label="Draw"
+    data-testid="pcb-track-toolbar"
+  >
+    <span class="group-caption">Draw</span>
     <div class="btn-group btn-group-sm" role="group" aria-label="Tool">
       <button
         type="button"
@@ -80,7 +88,7 @@ const { editorSettings, tool, isRouting, canUndo, canRedo } = storeToRefs(tracks
         ]"
         :aria-pressed="editorSettings.layer === layer"
         :disabled="isRouting"
-        :title="`Route on ${layer}`"
+        :title="`Draw new tracks on ${layer}`"
         :data-testid="`pcb-route-layer-${layer}`"
         @click="editorSettings.layer = layer"
       >
@@ -88,8 +96,11 @@ const { editorSettings, tool, isRouting, canUndo, canRedo } = storeToRefs(tracks
       </button>
     </div>
 
-    <label class="toolbar-field" title="Track width (W / Shift+W: next / previous preset)">
-      <span>Width</span>
+    <label
+      class="toolbar-field"
+      title="Width of new tracks, mm (W / Shift+W: next / previous preset)"
+    >
+      <span>Width mm</span>
       <CustomNumberInput
         v-model="editorSettings.width"
         :step="0.05"
@@ -98,13 +109,11 @@ const { editorSettings, tool, isRouting, canUndo, canRedo } = storeToRefs(tracks
         :value-on-clear="0.25"
         size="compact"
         data-testid="pcb-track-width"
-      >
-        <template #suffix>mm</template>
-      </CustomNumberInput>
+      />
     </label>
 
-    <label class="toolbar-field" title="Grid (mm)">
-      <span>Grid</span>
+    <label class="toolbar-field" title="Snap grid for drawing, mm">
+      <span>Grid mm</span>
       <select
         v-model.number="editorSettings.grid"
         class="form-select form-select-sm"
@@ -122,7 +131,7 @@ const { editorSettings, tool, isRouting, canUndo, canRedo } = storeToRefs(tracks
         class="btn"
         :class="editorSettings.posture === p ? 'btn-secondary' : 'btn-outline-secondary'"
         :aria-pressed="editorSettings.posture === p"
-        :title="`${p}° corners (/ flips the corner while routing)`"
+        :title="`New tracks bend at ${p}° (/ flips the corner while routing)`"
         :data-testid="`pcb-posture-${p}`"
         @click="editorSettings.posture = p"
       >
@@ -135,10 +144,25 @@ const { editorSettings, tool, isRouting, canUndo, canRedo } = storeToRefs(tracks
 <style scoped>
 .track-editor-toolbar {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 0.375rem 0.5rem;
-  padding: 0.375rem 0;
+  gap: 0.5rem;
+  height: 100%;
+  white-space: nowrap;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.track-editor-toolbar > * {
+  flex-shrink: 0;
+}
+
+.group-caption {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--bs-secondary-color);
 }
 
 .track-editor-toolbar .btn {
@@ -157,7 +181,7 @@ const { editorSettings, tool, isRouting, canUndo, canRedo } = storeToRefs(tracks
 }
 
 .toolbar-field :deep(.custom-number-input) {
-  width: 5.25rem;
+  width: 4.5rem;
 }
 
 .toolbar-field select {

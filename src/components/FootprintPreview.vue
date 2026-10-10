@@ -594,6 +594,14 @@ const drcSummary = computed(() => {
   return { ok: parts.length === 0, text: parts.length ? parts.join(' · ') : 'DRC clean' }
 })
 
+/** What the preview shows outside the track editor, in the row the toolbar takes there. */
+const viewInfo = computed(() => {
+  if (settings.value.trackPreset !== undefined) return 'Preset tracks need a front-side switch.'
+  if (settings.value.routing === 'Disabled')
+    return 'Routing is disabled: the generator leaves every connection unrouted.'
+  return 'Switch-diode tracks are routed automatically. Choose a (preset) routing option to draw them.'
+})
+
 const hoveredPad = computed(() =>
   hoveredPadKey.value ? previewPads.value.find((p) => p.key === hoveredPadKey.value) : undefined,
 )
@@ -843,8 +851,15 @@ onUnmounted(() => {
 
 <template>
   <div class="footprint-preview" @keydown="onEditorKeyDown" @keyup="onEditorKeyUp">
-    <!-- Track editor tools (route, layer, width, grid, posture) -->
-    <TrackEditorToolbar v-if="editMode" />
+    <!-- Fixed-height rows above and below the canvas keep it in place in every state -->
+    <div class="preview-top-row">
+      <!-- Track editor drawing tools (route, layer, width, grid, posture) -->
+      <TrackEditorToolbar v-if="editMode" />
+      <div v-else class="preview-info" data-testid="pcb-preview-info">
+        <BiInfoCircle class="flex-shrink-0" />
+        <span>{{ viewInfo }}</span>
+      </div>
+    </div>
 
     <!-- SVG Container (always present to maintain height) -->
     <div
@@ -997,8 +1012,15 @@ onUnmounted(() => {
         </g>
       </svg>
 
-      <!-- Track editor toolbar -->
-      <div v-if="editMode" class="editor-toolbar" @pointerdown.stop>
+      <!-- View controls (what is shown, never what is drawn) -->
+      <div
+        v-if="editMode"
+        class="editor-toolbar view-controls"
+        role="toolbar"
+        aria-label="View"
+        @pointerdown.stop
+      >
+        <span class="view-caption">View</span>
         <div class="btn-group btn-group-sm" role="group" aria-label="Copper layer visibility">
           <button
             v-for="layer in ['F.Cu', 'B.Cu'] as const"
@@ -1010,7 +1032,7 @@ onUnmounted(() => {
               layer === 'F.Cu' ? 'layer-front' : 'layer-back',
             ]"
             :aria-pressed="visibleLayers[layer]"
-            :title="`${visibleLayers[layer] ? 'Hide' : 'Show'} ${layer} pads`"
+            :title="`${visibleLayers[layer] ? 'Hide' : 'Show'} ${layer} copper (view only)`"
             :data-testid="`pcb-layer-toggle-${layer}`"
             @click="visibleLayers[layer] = !visibleLayers[layer]"
           >
@@ -1022,7 +1044,7 @@ onUnmounted(() => {
           <button
             type="button"
             class="btn btn-outline-secondary"
-            title="Zoom in"
+            title="Zoom in (wheel)"
             data-testid="pcb-zoom-in"
             @click="panZoom.zoomBy(1.5)"
           >
@@ -1031,7 +1053,7 @@ onUnmounted(() => {
           <button
             type="button"
             class="btn btn-outline-secondary"
-            title="Zoom out"
+            title="Zoom out (wheel)"
             data-testid="pcb-zoom-out"
             @click="panZoom.zoomBy(1 / 1.5)"
           >
@@ -1040,7 +1062,7 @@ onUnmounted(() => {
           <button
             type="button"
             class="btn btn-outline-secondary"
-            title="Fit"
+            title="Zoom to fit"
             data-testid="pcb-zoom-fit"
             @click="panZoom.fit(fittedViewBox)"
           >
@@ -1055,14 +1077,8 @@ onUnmounted(() => {
         <StalePresetBanner />
       </div>
 
-      <!-- Coordinate display overlay -->
-      <div v-if="hoveredElement && !editMode" class="coordinate-display">
-        <span class="coord-label">Center:</span>
-        <span class="coord-values">
-          ({{ formatCoordinate(hoveredElement.centerX) }},
-          {{ formatCoordinate(hoveredElement.centerY) }}) mm
-        </span>
-      </div>
+      <!-- Width, layer and delete for the selected tracks (floats over the canvas) -->
+      <TrackSelectionBar v-if="editMode" />
 
       <!-- Fallback warning overlay -->
       <div v-if="isFallback" class="preview-warning">
@@ -1073,11 +1089,19 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- Width, layer and delete for the selected tracks -->
-    <TrackSelectionBar v-if="editMode" />
+    <!-- Preview status bar: hovered element and unrouted connections -->
+    <div v-if="!editMode" class="editor-status" data-testid="pcb-preview-status">
+      <span v-if="hoveredElement" data-testid="pcb-hovered-center">
+        Center: ({{ formatCoordinate(hoveredElement.centerX) }},
+        {{ formatCoordinate(hoveredElement.centerY) }}) mm
+      </span>
+      <span v-if="ratsnestLines.length" class="editor-hint">
+        dashed line: unrouted switch-diode connection
+      </span>
+    </div>
 
     <!-- Track editor status bar -->
-    <div v-if="editMode" class="editor-status" data-testid="pcb-editor-status">
+    <div v-else class="editor-status" data-testid="pcb-editor-status">
       <span v-if="hoveredPad" data-testid="pcb-hovered-pad">{{ padLabel(hoveredPad) }}</span>
       <span v-if="cursorLocal" data-testid="pcb-cursor-readout">
         X {{ formatCoordinate(cursorLocal.x) }} Y {{ formatCoordinate(cursorLocal.y) }} mm
@@ -1132,7 +1156,8 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  justify-content: center;
+  /* top-aligned: centred, it would move whenever the settings column grows */
+  justify-content: flex-start;
 }
 
 .svg-container {
@@ -1257,6 +1282,45 @@ onUnmounted(() => {
   opacity: 0.3;
 }
 
+/* the toolbar or an info line, always this high */
+.preview-top-row {
+  height: 2.5rem;
+  padding: 0.25rem 0;
+  flex-shrink: 0;
+}
+
+.preview-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 100%;
+  font-size: 0.8125rem;
+  color: var(--bs-secondary-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.view-caption {
+  align-self: center;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--bs-secondary-color);
+  background-color: var(--bs-body-bg);
+}
+
+/* view controls are light-weight and translucent, unlike the Draw toolbar */
+.view-controls {
+  padding: 0.25rem;
+  border-radius: 0.375rem;
+  background-color: rgba(var(--bs-body-bg-rgb), 0.75);
+  border: 1px dashed var(--bs-border-color);
+}
+
 /* one line: a wrapping status bar would move the canvas under the cursor */
 .editor-status {
   display: flex;
@@ -1264,7 +1328,8 @@ onUnmounted(() => {
   white-space: nowrap;
   gap: 0.125rem 1rem;
   padding: 0.25rem 0.125rem 0;
-  min-height: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
   font-family: var(--bs-font-monospace);
   font-size: 0.75rem;
   color: var(--bs-secondary-color);
@@ -1315,32 +1380,5 @@ onUnmounted(() => {
   fill-opacity: 0.6;
   stroke: #ffffff;
   stroke-width: 0.04;
-}
-
-/* Coordinate display */
-.coordinate-display {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background-color: rgba(0, 0, 0, 0.85);
-  color: white;
-  padding: 6px 10px;
-  border-radius: 4px;
-  font-family: 'Courier New', monospace;
-  font-size: 0.75rem;
-  line-height: 1.2;
-  pointer-events: none;
-  z-index: 20;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-.coord-label {
-  font-weight: normal;
-  margin-right: 4px;
-  opacity: 0.8;
-}
-
-.coord-values {
-  font-weight: 600;
 }
 </style>

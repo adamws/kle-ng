@@ -406,4 +406,39 @@ test.describe('PCB Generator track editor', () => {
     await expect(tracks).toHaveCount(0)
     await expect(page.locator('[data-testid="pcb-ratsnest"]')).toHaveCount(1)
   })
+
+  test('keeps the canvas in place while editing', async ({ page }) => {
+    await openPreview(page)
+    const canvas = page.locator(EDITOR.CANVAS)
+    await canvas.scrollIntoViewIfNeeded()
+    // relative to the PCB panel: selecting the routing option may scroll the page
+    const panel = page.locator('.pcb-generator-panel')
+    const box = async () => {
+      const b = (await canvas.boundingBox())!
+      const p = (await panel.boundingBox())!
+      return { y: Math.round(b.y - p.y), height: Math.round(b.height) }
+    }
+    const before = await box()
+
+    await enterPresetMode(page)
+    expect(await box()).toEqual(before)
+
+    // routing shows a status, finishing it a selection-free preset
+    await page.locator('[data-testid="pcb-tool-route"]').click()
+    const sw2 = await padCentre(page, 'SW', '2')
+    const d2 = await padCentre(page, 'D', '2')
+    await page.mouse.click(sw2.x, sw2.y)
+    await expect(page.locator('[data-testid="pcb-route-status"]')).toBeVisible()
+    expect(await box()).toEqual(before)
+    await page.mouse.move(d2.x, d2.y, { steps: 5 })
+    await page.mouse.click(d2.x, d2.y)
+
+    // a selection opens its panel over the canvas
+    await page.locator('[data-testid="pcb-tool-select"]').click()
+    const track = page.locator('[data-testid="pcb-track-overlay-track"]').first()
+    const t = (await track.boundingBox())!
+    await page.mouse.click(t.x + t.width / 2, t.y + t.height / 2)
+    await expect(page.locator('[data-testid="pcb-selection-bar"]')).toBeVisible()
+    expect(await box()).toEqual(before)
+  })
 })

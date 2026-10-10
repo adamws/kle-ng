@@ -1,5 +1,7 @@
 <!--
-  TrackSelectionBar: width, layer and delete for the selected tracks.
+  TrackSelectionBar: width, layer and delete for the selected tracks. A panel
+  floating over the canvas's top-right corner, so a selection never moves the
+  preview.
 -->
 <script setup lang="ts">
 import { computed } from 'vue'
@@ -35,12 +37,18 @@ function setLayer(value: CopperLayer) {
 </script>
 
 <template>
-  <div v-if="selected.length" class="track-selection-bar" data-testid="pcb-selection-bar">
+  <div
+    v-if="selected.length"
+    class="track-selection-bar"
+    role="group"
+    aria-label="Selected tracks"
+    data-testid="pcb-selection-bar"
+  >
     <span class="selection-count" data-testid="pcb-selection-count">
       {{ selected.length }} track{{ selected.length > 1 ? 's' : '' }} selected
     </span>
-    <label class="bar-field" title="Width of the selected tracks">
-      <span>Width</span>
+    <label class="bar-field" title="Width of the selected tracks, mm">
+      <span>Width mm</span>
       <CustomNumberInput
         v-model="width"
         :step="0.05"
@@ -50,9 +58,7 @@ function setLayer(value: CopperLayer) {
         placeholder="mixed"
         size="compact"
         data-testid="pcb-selection-width"
-      >
-        <template #suffix>mm</template>
-      </CustomNumberInput>
+      />
     </label>
     <div class="btn-group btn-group-sm" role="group" aria-label="Layer of the selected tracks">
       <button
@@ -74,7 +80,7 @@ function setLayer(value: CopperLayer) {
     </div>
     <button
       type="button"
-      class="btn btn-sm btn-outline-danger"
+      class="btn btn-sm btn-outline-danger justify-content-center"
       title="Delete the selected tracks (Delete)"
       data-testid="pcb-selection-delete"
       @click="tracks.deleteSelection()"
@@ -86,12 +92,29 @@ function setLayer(value: CopperLayer) {
 
 <style scoped>
 .track-selection-bar {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 20;
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.375rem 0.5rem;
-  padding: 0.375rem 0 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.375rem;
+  padding: 0.5rem;
   font-size: 0.8125rem;
+  background-color: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
+  border-radius: 0.375rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.track-selection-bar .btn-group {
+  display: flex;
+}
+
+.track-selection-bar .btn-group .btn {
+  flex: 1 1 0;
+  justify-content: center;
 }
 
 .track-selection-bar .btn {
@@ -105,15 +128,16 @@ function setLayer(value: CopperLayer) {
 }
 
 .bar-field {
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 0.375rem;
   margin: 0;
   color: var(--bs-secondary-color);
 }
 
 .bar-field :deep(.custom-number-input) {
-  width: 5.25rem;
+  width: 4.5rem;
 }
 
 .layer-swatch {
