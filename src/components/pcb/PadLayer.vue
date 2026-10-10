@@ -126,7 +126,7 @@ const layerClass = (layer: CopperLayer) => (layer === 'F.Cu' ? 'pad-front' : 'pa
 }
 
 .pad-holes .npth path {
-  stroke: #585d84;
+  stroke: var(--pcb-fab-color, #585d84);
   stroke-width: 0.05;
 }
 

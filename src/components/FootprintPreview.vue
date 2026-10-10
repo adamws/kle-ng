@@ -985,11 +985,8 @@ onMounted(() => {
             v-for="layer in ['F.Cu', 'B.Cu'] as const"
             :key="layer"
             type="button"
-            class="btn layer-btn"
-            :class="[
-              visibleLayers[layer] ? 'btn-secondary' : 'btn-outline-secondary',
-              layer === 'F.Cu' ? 'layer-front' : 'layer-back',
-            ]"
+            class="btn btn-toggle layer-btn"
+            :class="layer === 'F.Cu' ? 'layer-front' : 'layer-back'"
             :aria-pressed="visibleLayers[layer]"
             :title="`${visibleLayers[layer] ? 'Hide' : 'Show'} ${layer} copper (view only)`"
             :data-testid="`pcb-layer-toggle-${layer}`"
@@ -1002,7 +999,7 @@ onMounted(() => {
         <div class="btn-group btn-group-sm" role="group" aria-label="Zoom">
           <button
             type="button"
-            class="btn btn-outline-secondary"
+            class="btn btn-toggle"
             title="Zoom in (wheel)"
             data-testid="pcb-zoom-in"
             @click="panZoom.zoomBy(1.5)"
@@ -1011,7 +1008,7 @@ onMounted(() => {
           </button>
           <button
             type="button"
-            class="btn btn-outline-secondary"
+            class="btn btn-toggle"
             title="Zoom out (wheel)"
             data-testid="pcb-zoom-out"
             @click="panZoom.zoomBy(1 / 1.5)"
@@ -1020,7 +1017,7 @@ onMounted(() => {
           </button>
           <button
             type="button"
-            class="btn btn-outline-secondary"
+            class="btn btn-toggle"
             title="Zoom to fit"
             data-testid="pcb-zoom-fit"
             @click="panZoom.fit(fittedViewBox)"
@@ -1075,19 +1072,19 @@ onMounted(() => {
         X {{ formatCoordinate(cursorLocal.x) }} Y {{ formatCoordinate(cursorLocal.y) }} mm
       </span>
       <span v-if="routeStatus" data-testid="pcb-route-status">{{ routeStatus }}</span>
-      <span v-if="blockedReason" class="text-danger" data-testid="pcb-route-blocked">{{
+      <span v-if="blockedReason" class="text-danger-emphasis" data-testid="pcb-route-blocked">{{
         blockedReason
       }}</span>
       <span
         v-if="drcSummary"
-        :class="drcSummary.ok ? 'text-success' : 'text-danger'"
+        :class="drcSummary.ok ? 'text-success-emphasis' : 'text-danger-emphasis'"
         data-testid="pcb-drc-summary"
         >{{ drcSummary.text }}</span
       >
-      <span v-if="padsError" class="text-warning">{{ padsError }}</span>
+      <span v-if="padsError" class="text-warning-emphasis">{{ padsError }}</span>
       <span
         v-if="tracks.dragViolation"
-        class="editor-hint text-danger"
+        class="editor-hint text-danger-emphasis"
         data-testid="pcb-drag-blocked"
         >Can't drop here · {{ tracks.dragViolation.message }}</span
       >
@@ -1237,11 +1234,6 @@ onMounted(() => {
   gap: 0.3rem;
 }
 
-/* outline buttons are transparent; keep them readable over the grid */
-.editor-toolbar .btn-outline-secondary:not(:hover):not(:active):not(:disabled) {
-  background-color: var(--bs-body-bg);
-}
-
 .layer-swatch {
   display: inline-block;
   width: 0.65rem;
@@ -1295,7 +1287,7 @@ onMounted(() => {
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--bs-secondary-color);
+  color: var(--bs-body-color);
   background-color: var(--bs-body-bg);
 }
 
@@ -1318,7 +1310,8 @@ onMounted(() => {
   flex-shrink: 0;
   font-family: var(--bs-font-monospace);
   font-size: 0.75rem;
-  color: var(--bs-secondary-color);
+  /* readouts in the body colour, hints muted, like the layout editor's status bar */
+  color: var(--bs-body-color);
 }
 
 .selection-box {
@@ -1341,12 +1334,25 @@ onMounted(() => {
 }
 
 .editor-hint {
+  color: var(--bs-secondary-color);
   flex: 1 1 0;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   text-align: right;
   font-family: var(--bs-body-font-family);
+}
+
+/* footprint outlines (fab layer) in the theme's fab colour */
+.svg-container :deep(g[style*='stroke:#585D84']),
+.svg-container :deep(g[style*='stroke:#585d84']) {
+  stroke: var(--pcb-fab-color, #585d84) !important;
+}
+
+/* KiCad's fab layer colour (#585d84) barely shows on the dark theme: lighten it
+   (also used by PadLayer's hole outlines) */
+:global([data-bs-theme='dark']) {
+  --pcb-fab-color: #a3a8de;
 }
 
 /* Crosshair styles */

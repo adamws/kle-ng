@@ -38,8 +38,7 @@ const { editorSettings, tool, isRouting, canUndo, canRedo, presetItems } = store
     <div class="btn-group btn-group-sm" role="group" aria-label="Tool">
       <button
         type="button"
-        class="btn"
-        :class="tool === 'select' ? 'btn-secondary' : 'btn-outline-secondary'"
+        class="btn btn-toggle"
         :aria-pressed="tool === 'select'"
         title="Select tracks (click, Shift+click, drag a box); click a pad to highlight its net, or an unrouted pad to start a track"
         data-testid="pcb-tool-select"
@@ -49,8 +48,7 @@ const { editorSettings, tool, isRouting, canUndo, canRedo, presetItems } = store
       </button>
       <button
         type="button"
-        class="btn"
-        :class="tool === 'route' ? 'btn-secondary' : 'btn-outline-secondary'"
+        class="btn btn-toggle"
         :aria-pressed="tool === 'route'"
         title="Route tracks (X)"
         data-testid="pcb-tool-route"
@@ -60,8 +58,7 @@ const { editorSettings, tool, isRouting, canUndo, canRedo, presetItems } = store
       </button>
       <button
         type="button"
-        class="btn"
-        :class="tool === 'via' ? 'btn-secondary' : 'btn-outline-secondary'"
+        class="btn btn-toggle"
         :aria-pressed="tool === 'via'"
         :disabled="isRouting"
         :title="
@@ -79,7 +76,7 @@ const { editorSettings, tool, isRouting, canUndo, canRedo, presetItems } = store
     <div class="btn-group btn-group-sm" role="group" aria-label="History">
       <button
         type="button"
-        class="btn btn-outline-secondary"
+        class="btn btn-toggle"
         :disabled="!canUndo"
         title="Undo (Ctrl+Z)"
         data-testid="pcb-undo"
@@ -90,7 +87,7 @@ const { editorSettings, tool, isRouting, canUndo, canRedo, presetItems } = store
       </button>
       <button
         type="button"
-        class="btn btn-outline-secondary"
+        class="btn btn-toggle"
         :disabled="!canRedo"
         title="Redo (Ctrl+Shift+Z, Ctrl+Y)"
         data-testid="pcb-redo"
@@ -121,11 +118,8 @@ const { editorSettings, tool, isRouting, canUndo, canRedo, presetItems } = store
         v-for="layer in ['F.Cu', 'B.Cu'] as const"
         :key="layer"
         type="button"
-        class="btn"
-        :class="[
-          editorSettings.layer === layer ? 'btn-secondary' : 'btn-outline-secondary',
-          layer === 'F.Cu' ? 'layer-front' : 'layer-back',
-        ]"
+        class="btn btn-toggle"
+        :class="layer === 'F.Cu' ? 'layer-front' : 'layer-back'"
         :aria-pressed="editorSettings.layer === layer"
         :disabled="isRouting"
         :title="`Draw new tracks on ${layer}`"
@@ -168,8 +162,7 @@ const { editorSettings, tool, isRouting, canUndo, canRedo, presetItems } = store
         v-for="p in ['45', '90'] as const"
         :key="p"
         type="button"
-        class="btn"
-        :class="editorSettings.posture === p ? 'btn-secondary' : 'btn-outline-secondary'"
+        class="btn btn-toggle"
         :aria-pressed="editorSettings.posture === p"
         :title="`New tracks bend at ${p}° (/ flips the corner while routing)`"
         :data-testid="`pcb-posture-${p}`"
@@ -220,7 +213,7 @@ const { editorSettings, tool, isRouting, canUndo, canRedo, presetItems } = store
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--bs-secondary-color);
+  color: var(--bs-body-color);
 }
 
 .track-editor-toolbar .btn {
@@ -235,7 +228,7 @@ const { editorSettings, tool, isRouting, canUndo, canRedo, presetItems } = store
   gap: 0.375rem;
   margin: 0;
   font-size: 0.8125rem;
-  color: var(--bs-secondary-color);
+  color: var(--bs-body-color);
 }
 
 .toolbar-field :deep(.custom-number-input) {

@@ -102,11 +102,8 @@ function setDrill(d: number | undefined) {
         v-for="l in ['F.Cu', 'B.Cu'] as const"
         :key="l"
         type="button"
-        class="btn"
-        :class="[
-          layer === l ? 'btn-secondary' : 'btn-outline-secondary',
-          l === 'F.Cu' ? 'layer-front' : 'layer-back',
-        ]"
+        class="btn btn-toggle"
+        :class="l === 'F.Cu' ? 'layer-front' : 'layer-back'"
         :aria-pressed="layer === l"
         :title="`Move the selected tracks to ${l}`"
         :data-testid="`pcb-selection-layer-${l}`"
@@ -203,7 +200,7 @@ function setDrill(d: number | undefined) {
   justify-content: space-between;
   gap: 0.375rem;
   margin: 0;
-  color: var(--bs-secondary-color);
+  color: var(--bs-body-color);
 }
 
 .bar-field :deep(.custom-number-input) {
