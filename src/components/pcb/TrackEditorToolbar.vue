@@ -1,6 +1,9 @@
 <!--
-  TrackEditorToolbar: route tool, copper layer, track width, grid, posture and
-  clearance of the track editor. Shortcuts are listed in the titles.
+  TrackEditorToolbar: tool, history, copper layer, track width, grid and
+  posture of the track editor. Shortcuts are listed in the titles.
+
+  Clearance is not editable: kle-ng-api boards use KiCad's default netclass
+  (0.2 mm), so a smaller value would only make presets kbplacer rejects.
 -->
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
@@ -8,9 +11,11 @@ import { GRID_OPTIONS, usePcbTracksStore } from '@/stores/pcbTracks'
 import CustomNumberInput from '../CustomNumberInput.vue'
 import BiBezier2 from 'bootstrap-icons/icons/bezier2.svg'
 import BiCursor from 'bootstrap-icons/icons/cursor.svg'
+import BiUndo from 'bootstrap-icons/icons/arrow-counterclockwise.svg'
+import BiRedo from 'bootstrap-icons/icons/arrow-clockwise.svg'
 
 const tracks = usePcbTracksStore()
-const { editorSettings, tool, isRouting } = storeToRefs(tracks)
+const { editorSettings, tool, isRouting, canUndo, canRedo } = storeToRefs(tracks)
 </script>
 
 <template>
@@ -21,7 +26,7 @@ const { editorSettings, tool, isRouting } = storeToRefs(tracks)
         class="btn"
         :class="tool === 'select' ? 'btn-secondary' : 'btn-outline-secondary'"
         :aria-pressed="tool === 'select'"
-        title="Select: click a pad to highlight its net (Esc)"
+        title="Select tracks (click, Shift+click, drag a box); click a pad to highlight its net"
         data-testid="pcb-tool-select"
         @click="tracks.setTool('select')"
       >
@@ -37,6 +42,29 @@ const { editorSettings, tool, isRouting } = storeToRefs(tracks)
         @click="tracks.setTool('route')"
       >
         <BiBezier2 /> Route
+      </button>
+    </div>
+
+    <div class="btn-group btn-group-sm" role="group" aria-label="History">
+      <button
+        type="button"
+        class="btn btn-outline-secondary"
+        :disabled="!canUndo"
+        title="Undo (Ctrl+Z)"
+        data-testid="pcb-undo"
+        @click="tracks.undo()"
+      >
+        <BiUndo />
+      </button>
+      <button
+        type="button"
+        class="btn btn-outline-secondary"
+        :disabled="!canRedo"
+        title="Redo (Ctrl+Shift+Z, Ctrl+Y)"
+        data-testid="pcb-redo"
+        @click="tracks.redo()"
+      >
+        <BiRedo />
       </button>
     </div>
 
@@ -75,14 +103,14 @@ const { editorSettings, tool, isRouting } = storeToRefs(tracks)
       </CustomNumberInput>
     </label>
 
-    <label class="toolbar-field" title="Grid">
+    <label class="toolbar-field" title="Grid (mm)">
       <span>Grid</span>
       <select
         v-model.number="editorSettings.grid"
         class="form-select form-select-sm"
         data-testid="pcb-grid-select"
       >
-        <option v-for="g in GRID_OPTIONS" :key="g" :value="g">{{ g }} mm</option>
+        <option v-for="g in GRID_OPTIONS" :key="g" :value="g">{{ g }}</option>
       </select>
     </label>
 
@@ -102,20 +130,6 @@ const { editorSettings, tool, isRouting } = storeToRefs(tracks)
       </button>
     </div>
 
-    <label class="toolbar-field" title="Minimum copper clearance between nets">
-      <span>Clearance</span>
-      <CustomNumberInput
-        v-model="editorSettings.clearance"
-        :step="0.05"
-        :min="0.1"
-        :max="1"
-        :value-on-clear="0.2"
-        size="compact"
-        data-testid="pcb-clearance"
-      >
-        <template #suffix>mm</template>
-      </CustomNumberInput>
-    </label>
   </div>
 </template>
 

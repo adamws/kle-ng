@@ -36,6 +36,7 @@ import {
   offsetSvgTransform,
   switchLocalSvgTransform,
   boardToSwitchLocal,
+  switchLocalToBoard,
   type OffsetFootprint,
   type BoardSide,
 } from '@/utils/footprintUtils'
@@ -51,6 +52,9 @@ import TrackEditorLayer from './pcb/TrackEditorLayer.vue'
 import TrackEditorToolbar from './pcb/TrackEditorToolbar.vue'
 import { usePcbTracksStore } from '@/stores/pcbTracks'
 import { placedPadNet } from '@/utils/pcb-tracks/netlist'
+import { isCrossing, tracksInBox, type Box } from '@/utils/pcb-tracks/selection'
+import TrackSelectionBar from './pcb/TrackSelectionBar.vue'
+import type { Point } from '@/composables/usePanZoom'
 import BiInfoCircle from 'bootstrap-icons/icons/info-circle.svg'
 import BiExclamationTriangle from 'bootstrap-icons/icons/exclamation-triangle.svg'
 import BiPencilSquare from 'bootstrap-icons/icons/pencil-square.svg'
@@ -601,11 +605,32 @@ const SNAP_RADIUS_PX = 10
 
 // a left click that started a Space+drag pan isn't a routing click
 let clickIsPan = false
+// a left click that ends a box selection isn't a selection click either
+let clickIsBox = false
+
+/** Box selection being dragged (select tool), board axes. */
+const selectionBox = ref<Box | null>(null)
+let boxStart: { client: Point; board: Point } | null = null
+/** Drag distance that turns a click into a box selection, px. */
+const BOX_THRESHOLD_PX = 4
+/** Click tolerance around a track's edge, px. */
+const PICK_TOLERANCE_PX = 4
+
+const visibleLayerList = computed(() =>
+  (['F.Cu', 'B.Cu'] as const).filter((l) => visibleLayers.value[l]),
+)
 
 function onCanvasPointerDown(event: PointerEvent) {
   if (!editMode.value) return
   containerRef.value?.focus({ preventScroll: true })
   clickIsPan = panZoom.onPointerDown(event)
+  clickIsBox = false
+  if (clickIsPan || event.button !== 0 || tracks.tool !== 'select') return
+  const board = panZoom.screenToSvg(event.clientX, event.clientY)
+  if (!board) return
+  boxStart = { client: { x: event.clientX, y: event.clientY }, board }
+  // keep receiving the drag when it leaves the canvas
+  ;(event.currentTarget as Element | null)?.setPointerCapture?.(event.pointerId)
 }
 
 function onCanvasPointerMove(event: PointerEvent) {
@@ -614,6 +639,32 @@ function onCanvasPointerMove(event: PointerEvent) {
   const p = panZoom.screenToSvg(event.clientX, event.clientY)
   cursorLocal.value = p ? boardToSwitchLocal(p, settings.value.switchRotation) : null
   tracks.setCursor(cursorLocal.value)
+  if (boxStart && p) {
+    const moved = Math.hypot(event.clientX - boxStart.client.x, event.clientY - boxStart.client.y)
+    if (selectionBox.value || moved >= BOX_THRESHOLD_PX) {
+      selectionBox.value = { from: boxStart.board, to: p }
+    }
+  }
+}
+
+function onCanvasPointerUp(event: PointerEvent) {
+  panZoom.onPointerUp(event)
+  const box = selectionBox.value
+  boxStart = null
+  selectionBox.value = null
+  if (!box) return
+  clickIsBox = true
+  const rotation = settings.value.switchRotation
+  const visible = new Set<string>(visibleLayerList.value)
+  tracks.selectItems(
+    tracksInBox(
+      tracks.presetItems,
+      box,
+      (q) => switchLocalToBoard(q, rotation),
+      (item) => item.type !== 'track' || visible.has(item.layer),
+    ),
+    event.shiftKey,
+  )
 }
 
 function onCanvasPointerLeave() {
@@ -624,23 +675,46 @@ function onCanvasPointerLeave() {
 
 function onCanvasClick(event: MouseEvent) {
   if (!editMode.value || event.button !== 0) return
-  if (clickIsPan) {
-    clickIsPan = false
+  if (clickIsPan || clickIsBox) {
+    clickIsPan = clickIsBox = false
     return
   }
-  tracks.click(hoveredPad.value ? placedPadNet(hoveredPad.value) : null)
+  const padNet = hoveredPad.value ? placedPadNet(hoveredPad.value) : null
+  if (tracks.tool === 'route') {
+    tracks.click(padNet)
+    return
+  }
+  const item = cursorLocal.value
+    ? tracks.trackAt(cursorLocal.value, PICK_TOLERANCE_PX / pxPerMm.value, visibleLayerList.value)
+    : null
+  tracks.selectClick(item, padNet, event.shiftKey)
 }
 
 function onCanvasDoubleClick() {
   if (editMode.value && tracks.isRouting) tracks.finish()
 }
 
-/** Editor shortcuts, scoped to the focused canvas. */
-function onCanvasKeyDown(event: KeyboardEvent) {
-  if (!editMode.value) return
+/** Typing in a toolbar field must not trigger shortcuts. */
+function isTextField(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && !!target.closest('input, select, textarea')
+}
+
+/** Editor shortcuts, scoped to the editor (canvas and its toolbars). */
+function onEditorKeyDown(event: KeyboardEvent) {
+  if (!editMode.value || isTextField(event.target)) return
+  // Space pans on the canvas, but still presses a focused toolbar button
+  if (event.code === 'Space' && event.target !== containerRef.value) return
   panZoom.onKeyDown(event)
-  if (event.ctrlKey || event.metaKey || event.altKey) return
+  if (event.altKey) return
+  const mod = event.ctrlKey || event.metaKey
+  const key = event.key.toLowerCase()
   const handled = (() => {
+    if (mod) {
+      if (key === 'z' && !event.shiftKey) tracks.undo()
+      else if ((key === 'z' && event.shiftKey) || key === 'y') tracks.redo()
+      else return false
+      return true
+    }
     switch (event.key) {
       case 'x':
       case 'X':
@@ -650,13 +724,22 @@ function onCanvasKeyDown(event: KeyboardEvent) {
         tracks.escape()
         return true
       case 'Backspace':
-        tracks.undoVertex()
+      case 'Delete':
+        if (tracks.isRouting) {
+          if (event.key === 'Backspace') tracks.undoVertex()
+        } else {
+          tracks.deleteSelection()
+        }
         return true
       case 'End':
         tracks.finish()
         return true
       case '/':
         tracks.flipPosture()
+        return true
+      case 'u':
+      case 'U':
+        tracks.selectConnected()
         return true
       case 'w':
       case 'W':
@@ -667,6 +750,10 @@ function onCanvasKeyDown(event: KeyboardEvent) {
     }
   })()
   if (handled) event.preventDefault()
+}
+
+function onEditorKeyUp(event: KeyboardEvent) {
+  if (editMode.value) panZoom.onKeyUp(event)
 }
 
 function onCanvasWheel(event: WheelEvent) {
@@ -716,7 +803,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="footprint-preview">
+  <div class="footprint-preview" @keydown="onEditorKeyDown" @keyup="onEditorKeyUp">
     <!-- Track editor tools (route, layer, width, grid, posture, clearance) -->
     <TrackEditorToolbar v-if="editMode" />
 
@@ -734,8 +821,6 @@ onUnmounted(() => {
       }"
       :tabindex="editMode ? 0 : undefined"
       data-testid="pcb-preview-canvas"
-      @keydown="onCanvasKeyDown"
-      @keyup="editMode && panZoom.onKeyUp($event)"
       @blur="panZoom.onBlur()"
     >
       <svg
@@ -746,8 +831,8 @@ onUnmounted(() => {
         @wheel="onCanvasWheel"
         @pointerdown="onCanvasPointerDown"
         @pointermove="onCanvasPointerMove"
-        @pointerup="panZoom.onPointerUp"
-        @pointercancel="panZoom.onPointerUp"
+        @pointerup="onCanvasPointerUp"
+        @pointercancel="onCanvasPointerUp"
         @pointerleave="onCanvasPointerLeave"
         @mousedown.middle="editMode && $event.preventDefault()"
         @click="onCanvasClick"
@@ -806,6 +891,8 @@ onUnmounted(() => {
             :items="trackPresetItems"
             :item-nets="drc?.itemNets"
             :highlight-net="editMode ? tracks.highlightNet : null"
+            :selected="editMode ? tracks.selection : []"
+            :px-per-mm="pxPerMm"
           />
         </g>
 
@@ -824,6 +911,19 @@ onUnmounted(() => {
             :px-per-mm="pxPerMm"
           />
         </g>
+
+        <!-- Box selection (board axes): solid selects enclosed, dashed touched tracks -->
+        <rect
+          v-if="selectionBox"
+          :x="Math.min(selectionBox.from.x, selectionBox.to.x)"
+          :y="Math.min(selectionBox.from.y, selectionBox.to.y)"
+          :width="Math.abs(selectionBox.to.x - selectionBox.from.x)"
+          :height="Math.abs(selectionBox.to.y - selectionBox.from.y)"
+          :stroke-width="1 / pxPerMm"
+          :stroke-dasharray="isCrossing(selectionBox) ? `${4 / pxPerMm} ${3 / pxPerMm}` : undefined"
+          class="selection-box"
+          data-testid="pcb-selection-box"
+        />
 
         <!-- Crosshair overlay -->
         <g v-if="hoveredElement" class="crosshair-layer">
@@ -947,6 +1047,9 @@ onUnmounted(() => {
       </div>
     </div>
 
+    <!-- Width, layer and delete for the selected tracks -->
+    <TrackSelectionBar v-if="editMode" />
+
     <!-- Track editor status bar -->
     <div v-if="editMode" class="editor-status" data-testid="pcb-editor-status">
       <span v-if="hoveredPad" data-testid="pcb-hovered-pad">{{ padLabel(hoveredPad) }}</span>
@@ -969,7 +1072,7 @@ onUnmounted(() => {
           ? 'click: add corner · / flip · Backspace: undo · double-click/End: finish · Esc: cancel'
           : tracks.tool === 'route'
             ? 'click or X: start a track · wheel: zoom · middle/Space+drag: pan'
-            : 'click a pad: highlight its net · X: route · wheel: zoom · middle/Space+drag: pan'
+            : 'click: select · Shift: add · drag: box · Del: delete · U: connected · Ctrl+Z: undo · X: route'
       }}</span>
     </div>
 
@@ -1126,6 +1229,12 @@ onUnmounted(() => {
   font-family: var(--bs-font-monospace);
   font-size: 0.75rem;
   color: var(--bs-secondary-color);
+}
+
+.selection-box {
+  fill: rgba(var(--bs-primary-rgb), 0.08);
+  stroke: var(--bs-primary);
+  pointer-events: none;
 }
 
 .drc-badge {

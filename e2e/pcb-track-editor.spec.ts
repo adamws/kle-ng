@@ -133,6 +133,79 @@ test.describe('PCB Generator track editor', () => {
     })
   })
 
+  test('selects, deletes, undoes and redoes tracks', async ({ page }) => {
+    await openPreview(page)
+    await page.locator(EDITOR.TOGGLE).click()
+    const tracks = page.locator('[data-testid="pcb-track-overlay-track"]')
+
+    // draw the default preset
+    await page.locator('[data-testid="pcb-tool-route"]').click()
+    const sw2 = await padCentre(page, 'SW', '2')
+    const d2 = await padCentre(page, 'D', '2')
+    await page.mouse.move(sw2.x, sw2.y)
+    await page.mouse.click(sw2.x, sw2.y)
+    await page.mouse.move(d2.x, d2.y, { steps: 5 })
+    await page.mouse.click(d2.x, d2.y)
+    await expect(tracks).toHaveCount(2)
+
+    // undo removes the whole route, redo brings it back
+    await page.locator('[data-testid="pcb-undo"]').click()
+    await expect(tracks).toHaveCount(0)
+    await page.keyboard.press('Control+Shift+Z')
+    await expect(tracks).toHaveCount(2)
+
+    // click the vertical track to select it, U adds the connected one
+    await page.locator('[data-testid="pcb-tool-select"]').click()
+    const vertical = (await tracks.nth(0).boundingBox())!
+    await page.mouse.click(vertical.x + vertical.width / 2, vertical.y + vertical.height / 2)
+    await expect(page.locator('[data-testid="pcb-selection-count"]')).toHaveText('1 track selected')
+    await page.keyboard.press('u')
+    await expect(page.locator('[data-testid="pcb-selection-count"]')).toHaveText(
+      '2 tracks selected',
+    )
+
+    // width of the selection
+    const width = page.locator('[data-testid="pcb-selection-width"] input')
+    await width.fill('0.4')
+    await width.press('Enter')
+    await expect(tracks.nth(0)).toHaveAttribute('stroke-width', '0.4')
+    await expect(tracks.nth(1)).toHaveAttribute('stroke-width', '0.4')
+
+    // delete, then undo the delete
+    await page.locator('[data-testid="pcb-preview-canvas"]').focus()
+    await page.keyboard.press('Delete')
+    await expect(tracks).toHaveCount(0)
+    await page.keyboard.press('Control+z')
+    await expect(tracks).toHaveCount(2)
+  })
+
+  test('selects tracks with a box', async ({ page }) => {
+    await openPreview(page)
+    await page.locator(EDITOR.TOGGLE).click()
+    await page.locator('[data-testid="pcb-tool-route"]').click()
+    const sw2 = await padCentre(page, 'SW', '2')
+    const d2 = await padCentre(page, 'D', '2')
+    await page.mouse.move(sw2.x, sw2.y)
+    await page.mouse.click(sw2.x, sw2.y)
+    await page.mouse.move(d2.x, d2.y, { steps: 5 })
+    await page.mouse.click(d2.x, d2.y)
+    await page.locator('[data-testid="pcb-tool-select"]').click()
+
+    // left to right around everything: both tracks
+    const canvas = (await page.locator(EDITOR.CANVAS).boundingBox())!
+    await page.mouse.move(canvas.x + 20, canvas.y + 60)
+    await page.mouse.down()
+    await page.mouse.move(canvas.x + canvas.width - 20, canvas.y + canvas.height - 20, {
+      steps: 5,
+    })
+    await expect(page.locator('[data-testid="pcb-selection-box"]')).toBeVisible()
+    await page.mouse.up()
+    await expect(page.locator('[data-testid="pcb-selection-box"]')).toHaveCount(0)
+    await expect(page.locator('[data-testid="pcb-selection-count"]')).toHaveText(
+      '2 tracks selected',
+    )
+  })
+
   test('refuses a click that breaks a rule and cancels with Esc', async ({ page }) => {
     await openPreview(page)
     await page.locator(EDITOR.TOGGLE).click()

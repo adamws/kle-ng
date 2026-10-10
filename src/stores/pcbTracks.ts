@@ -8,12 +8,20 @@
  * walk; a click commits it unless it breaks a design rule; clicking a pad or
  * track end of the route's net finishes it, as do double-click and End.
  * Backspace drops the last vertex, Esc cancels, / flips the posture.
+ *
+ * The select tool selects tracks (click, Shift+click, box), deletes them,
+ * extends a selection to connected tracks (U) and changes their width or
+ * layer. Committed changes go through an undo history; a preset replaced
+ * from outside the editor (JSON Apply, Reset, Upload) resets it.
  */
 import { defineStore } from 'pinia'
-import { computed, ref, shallowRef } from 'vue'
+import { computed, ref, shallowRef, toRaw, watch } from 'vue'
+import { useSnapshotHistory } from '@/composables/useSnapshotHistory'
 import { usePcbGeneratorStore } from './pcbGenerator'
 import type { CopperLayer, Pt, TrackItem, TrackSegment } from '@/types/tracks'
 import { padInfos } from '@/utils/pcb-tracks/connectivity'
+import { shapeGap } from '@/utils/pcb-tracks/distance'
+import { trackShape } from '@/utils/pcb-tracks/shapes'
 import { DEFAULT_DRC_RULES, runDrc, type DrcResult, type Violation } from '@/utils/pcb-tracks/drc'
 import type { NetName, PlacedPad } from '@/utils/pcb-tracks/netlist'
 import { walk, type Posture } from '@/utils/pcb-tracks/posture'
@@ -148,6 +156,107 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
 
   const isRouting = computed(() => route.value !== null)
 
+  // Selection (indexes into the preset items) and history
+
+  const selection = ref<number[]>([])
+  const history = useSnapshotHistory<TrackItem[]>()
+  /** The preset object this store wrote last; anything else is an outside write. */
+  let ownPreset: unknown = undefined
+
+  /** Writes the preset items, as one undoable step unless `record` is false. */
+  function writeItems(items: TrackItem[], record = true) {
+    const preset = pcb.settings.trackPreset
+    const next =
+      items.length || preset?.basis ? { ...preset, version: 1 as const, items } : undefined
+    ownPreset = next
+    pcb.settings.trackPreset = next
+    if (record) history.push(items)
+  }
+
+  ownPreset = toRaw(pcb.settings.trackPreset)
+  history.reset(pcb.settings.trackPreset?.items ?? [])
+
+  // an outside write starts a new history, so undo can't bring back a replaced preset
+  watch(
+    () => pcb.settings.trackPreset,
+    (preset) => {
+      if (toRaw(preset) === ownPreset) return
+      ownPreset = toRaw(preset)
+      selection.value = []
+      history.reset(preset?.items ?? [])
+    },
+  )
+
+  function undo() {
+    cancelRoute()
+    selection.value = []
+    const items = history.undo()
+    if (items) writeItems(items, false)
+  }
+
+  function redo() {
+    cancelRoute()
+    selection.value = []
+    const items = history.redo()
+    if (items) writeItems(items, false)
+  }
+
+  /** Index of the track under `p` within `tolerance` mm (topmost), on visible layers. */
+  function trackAt(p: Pt, tolerance: number, layers: readonly CopperLayer[]): number | null {
+    let best: { i: number; d: number } | null = null
+    presetItems.value.forEach((item, i) => {
+      if (item.type !== 'track' || !layers.includes(item.layer)) return
+      const d = shapeGap(trackShape(item), { core: { kind: 'point', p }, r: 0 }).d
+      if (d <= tolerance && (!best || d <= best.d)) best = { i, d }
+    })
+    return best ? (best as { i: number }).i : null
+  }
+
+  /** Select-tool click: a track selects it (Shift toggles), a pad highlights its net. */
+  function selectClick(item: number | null, padNet: NetName | null, additive: boolean) {
+    if (item !== null) {
+      const has = selection.value.includes(item)
+      selection.value = additive
+        ? has
+          ? selection.value.filter((i) => i !== item)
+          : [...selection.value, item]
+        : [item]
+      return
+    }
+    if (!additive) selection.value = []
+    selectedNet.value = padNet
+  }
+
+  function selectItems(items: readonly number[], additive: boolean) {
+    selection.value = additive ? [...new Set([...selection.value, ...items])] : [...items]
+  }
+
+  /** U: extend the selection to every track connected to it. */
+  function selectConnected() {
+    if (!selection.value.length) return
+    const cluster = presetDrc.value.connectivity.itemCluster
+    const clusters = new Set(selection.value.map((i) => cluster[i]))
+    selection.value = presetItems.value.flatMap((_, i) => (clusters.has(cluster[i]) ? [i] : []))
+  }
+
+  function deleteSelection() {
+    if (!selection.value.length) return
+    const drop = new Set(selection.value)
+    selection.value = []
+    writeItems(presetItems.value.filter((_, i) => !drop.has(i)))
+  }
+
+  /** Changes the selected tracks; the selection stays (indexes don't move). */
+  function updateSelection(change: Partial<Pick<TrackSegment, 'width' | 'layer'>>) {
+    if (!selection.value.length) return
+    const chosen = new Set(selection.value)
+    writeItems(
+      presetItems.value.map((item, i) =>
+        chosen.has(i) && item.type === 'track' ? { ...item, ...change } : item,
+      ),
+    )
+  }
+
   /** Net to highlight: the route's while routing, else the clicked pad's. */
   const highlightNet = computed(() => (route.value ? route.value.net : selectedNet.value))
 
@@ -206,11 +315,7 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     if (!r || r.points.length < 2) return
     // kbplacer places a preset's items in order, so walk outward from a pad
     const points = !r.startAnchored && endAnchored ? [...r.points].reverse() : r.points
-    const added = segments(points, r.layer, r.width)
-    const preset = pcb.settings.trackPreset
-    pcb.settings.trackPreset = preset
-      ? { ...preset, items: [...preset.items, ...added] }
-      : { version: 1, items: added }
+    writeItems([...presetItems.value, ...segments(points, r.layer, r.width)])
   }
 
   function cancelRoute() {
@@ -250,9 +355,10 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     selectedNet.value = padNet
   }
 
-  /** Esc: cancel the route, then clear the highlight, then leave the route tool. */
+  /** Esc: cancel the route, then the selection, then the highlight, then the route tool. */
   function escape() {
     if (route.value) cancelRoute()
+    else if (selection.value.length) selection.value = []
     else if (selectedNet.value) selectedNet.value = null
     else tool.value = 'select'
   }
@@ -262,6 +368,7 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     route.value = null
     cursor.value = null
     selectedNet.value = null
+    selection.value = []
     tool.value = 'select'
   }
 
@@ -283,6 +390,17 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     previewViolations,
     drc,
     isRouting,
+    selection,
+    canUndo: history.canUndo,
+    canRedo: history.canRedo,
+    undo,
+    redo,
+    trackAt,
+    selectClick,
+    selectItems,
+    selectConnected,
+    deleteSelection,
+    updateSelection,
     setPads,
     setCursor,
     setTool,

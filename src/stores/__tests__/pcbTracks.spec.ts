@@ -5,6 +5,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { nextTick } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
 import { usePcbTracksStore } from '../pcbTracks'
 import { usePcbGeneratorStore } from '../pcbGenerator'
@@ -175,5 +176,114 @@ describe('pcbTracks store', () => {
     expect(tracks.highlightNet).toBe('ROW')
     tracks.escape()
     expect(tracks.highlightNet).toBeNull()
+  })
+})
+
+describe('pcbTracks selection and history', () => {
+  let tracks: ReturnType<typeof usePcbTracksStore>
+  let pcb: ReturnType<typeof usePcbGeneratorStore>
+
+  beforeEach(() => {
+    localStorage.clear()
+    setActivePinia(createPinia())
+    pcb = usePcbGeneratorStore()
+    tracks = usePcbTracksStore()
+    tracks.setPads(defaultPads())
+    tracks.snapRadius = 0.3
+  })
+
+  const items = () => (pcb.settings.trackPreset?.items ?? []) as TrackSegment[]
+
+  /** Routes SW pad 2 to D pad 2 (the default preset, 2 tracks). */
+  function routeDefault() {
+    tracks.setTool('route')
+    tracks.setCursor(SW2)
+    tracks.click(null)
+    tracks.setCursor(D2)
+    tracks.click(null)
+    tracks.setTool('select')
+  }
+
+  it('picks the track under the cursor on visible layers', () => {
+    routeDefault()
+    expect(tracks.trackAt({ x: 2.6, y: -2 }, 0.05, ['B.Cu'])).toBe(0)
+    expect(tracks.trackAt({ x: 4, y: 1.5 }, 0.05, ['B.Cu'])).toBe(1)
+    expect(tracks.trackAt({ x: 2.6, y: -2 }, 0.05, ['F.Cu'])).toBeNull()
+    expect(tracks.trackAt({ x: 0, y: 0 }, 0.05, ['B.Cu'])).toBeNull()
+  })
+
+  it('selects, toggles with Shift, extends to connected tracks and clears with Esc', () => {
+    routeDefault()
+    tracks.selectClick(0, null, false)
+    expect(tracks.selection).toEqual([0])
+    tracks.selectClick(1, null, true)
+    expect(tracks.selection).toEqual([0, 1])
+    tracks.selectClick(0, null, true)
+    expect(tracks.selection).toEqual([1])
+    tracks.selectConnected()
+    expect(tracks.selection).toEqual([0, 1])
+    tracks.escape()
+    expect(tracks.selection).toEqual([])
+    // clicking empty space clears it too
+    tracks.selectClick(0, null, false)
+    tracks.selectClick(null, null, false)
+    expect(tracks.selection).toEqual([])
+  })
+
+  it('changes width and layer of the selection, keeping it selected', () => {
+    routeDefault()
+    tracks.selectItems([1], false)
+    tracks.updateSelection({ width: 0.4 })
+    tracks.updateSelection({ layer: 'F.Cu' })
+    expect(items().map((t) => [t.width, t.layer])).toEqual([
+      [0.25, 'B.Cu'],
+      [0.4, 'F.Cu'],
+    ])
+    expect(tracks.selection).toEqual([1])
+  })
+
+  it('deletes, undoes and redoes', async () => {
+    routeDefault()
+    expect(tracks.canUndo).toBe(true)
+    tracks.selectItems([0], false)
+    tracks.deleteSelection()
+    expect(items()).toHaveLength(1)
+    expect(tracks.selection).toEqual([])
+
+    tracks.undo()
+    expect(items()).toHaveLength(2)
+    tracks.undo()
+    expect(pcb.settings.trackPreset).toBeUndefined()
+    expect(tracks.canUndo).toBe(false)
+
+    tracks.redo()
+    tracks.redo()
+    expect(items()).toHaveLength(1)
+    expect(tracks.canRedo).toBe(false)
+  })
+
+  it('starts a new history when the preset is replaced from outside', async () => {
+    routeDefault()
+    pcb.settings.trackPreset = { version: 1, items: [] }
+    await nextTick()
+    expect(tracks.canUndo).toBe(false)
+    // own writes keep the history
+    routeDefault()
+    await nextTick()
+    expect(tracks.canUndo).toBe(true)
+  })
+
+  it('caps the history', () => {
+    for (let i = 0; i < 110; i++) {
+      routeDefault()
+      tracks.selectItems([0, 1], false)
+      tracks.deleteSelection()
+    }
+    let undos = 0
+    while (tracks.canUndo) {
+      tracks.undo()
+      undos++
+    }
+    expect(undos).toBe(99)
   })
 })
