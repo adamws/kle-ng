@@ -639,4 +639,29 @@ test.describe('PCB Generator track editor', () => {
     await expect(crosshair).toHaveCount(0)
     await expect(page.locator('[data-testid="pcb-hovered-pad"]')).toHaveText('SW pad 2')
   })
+
+  test('starts a track when an unrouted pad is clicked with the select tool', async ({ page }) => {
+    await openPreview(page)
+    await enterPresetMode(page)
+    const selectTool = page.locator('[data-testid="pcb-tool-select"]')
+    const routeTool = page.locator('[data-testid="pcb-tool-route"]')
+    await expect(selectTool).toHaveAttribute('aria-pressed', 'true')
+
+    const sw2 = await padCentre(page, 'SW', '2')
+    const d2 = await padCentre(page, 'D', '2')
+    await page.mouse.move(sw2.x + 3, sw2.y + 3)
+    await page.mouse.click(sw2.x + 3, sw2.y + 3)
+    await expect(routeTool).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('[data-testid="pcb-route-status"]')).toContainText('Routing SW_D')
+    await page.mouse.move(d2.x, d2.y, { steps: 5 })
+    await page.mouse.click(d2.x, d2.y)
+    await expect(page.locator('[data-testid="pcb-track-overlay-track"]')).toHaveCount(2)
+
+    // a routed pad only highlights its net
+    await selectTool.click()
+    await page.mouse.move(sw2.x + 3, sw2.y - 3)
+    await page.mouse.click(sw2.x + 3, sw2.y - 3)
+    await expect(selectTool).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('[data-testid="pcb-route-status"]')).toHaveCount(0)
+  })
 })

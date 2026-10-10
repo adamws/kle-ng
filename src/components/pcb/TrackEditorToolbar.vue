@@ -39,7 +39,7 @@ const { editorSettings, tool, isRouting, canUndo, canRedo, presetItems } = store
         class="btn"
         :class="tool === 'select' ? 'btn-secondary' : 'btn-outline-secondary'"
         :aria-pressed="tool === 'select'"
-        title="Select tracks (click, Shift+click, drag a box); click a pad to highlight its net"
+        title="Select tracks (click, Shift+click, drag a box); click a pad to highlight its net, or an unrouted pad to start a track"
         data-testid="pcb-tool-select"
         @click="tracks.setTool('select')"
       >

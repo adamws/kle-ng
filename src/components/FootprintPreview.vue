@@ -687,6 +687,15 @@ function onCanvasClick(event: MouseEvent) {
   const item = cursorLocal.value
     ? tracks.itemAt(cursorLocal.value, PICK_TOLERANCE_PX / pxPerMm.value, visibleLayerList.value)
     : null
+  // a pad still waiting for its track: start routing from it, as X would
+  const pad = hoveredPad.value
+  if (item === null && !event.shiftKey && pad && tracks.isUnconnectedPad(pad.key)) {
+    // route on a layer the pad has (an SMD pad is on one only)
+    const layers = previewPadInfos.value.find((p) => p.placed.key === pad.key)?.layers ?? []
+    if (layers.length && !layers.includes(editorSettings.value.layer))
+      editorSettings.value.layer = layers[0]!
+    if (tracks.startRoute()) return
+  }
   tracks.selectClick(item, padNet, event.shiftKey)
 }
 
@@ -1078,7 +1087,7 @@ onMounted(() => {
           ? 'click: add corner · V: via · / flip · Backspace: undo · double-click/End: finish · Esc: cancel'
           : tracks.tool === 'route'
             ? 'click or X: start a track · wheel: zoom · middle/Space+drag: pan'
-            : 'click: select · double-click/U: connected · drag track or via: move · drag empty: box · Ctrl+A: all · Del: delete · X: route'
+            : 'click: select · click unrouted pad: route · double-click/U: connected · drag track or via: move · drag empty: box · Ctrl+A: all · Del: delete · X: route'
       }}</span>
     </div>
 

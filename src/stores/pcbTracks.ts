@@ -399,6 +399,20 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     return best ? (best as { i: number }).i : null
   }
 
+  /**
+   * A pad still waiting for its first track: it has a net with an unrouted
+   * connection (a ratsnest line) and no track or via touches it. Clicking one
+   * with the select tool starts a route there.
+   */
+  function isUnconnectedPad(key: string): boolean {
+    const drc = presetDrc.value
+    const index = padInfoList.value.findIndex((p) => p.placed.key === key)
+    const pad = padInfoList.value[index]
+    if (!pad?.net || !drc.ratsnest.some((line) => line.net === pad.net)) return false
+    const cluster = drc.connectivity.clusters.get(drc.connectivity.padCluster[index]!)
+    return !cluster?.nodes.some((n) => n >= padInfoList.value.length)
+  }
+
   /** Select-tool click: a track selects it (Shift toggles), a pad highlights its net. */
   function selectClick(item: number | null, padNet: NetName | null, additive: boolean) {
     if (item !== null) {
@@ -935,6 +949,7 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     redo,
     trackAt,
     itemAt,
+    isUnconnectedPad,
     selectClick,
     selectItems,
     selectConnected,

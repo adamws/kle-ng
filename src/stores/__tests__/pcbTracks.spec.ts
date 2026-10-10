@@ -368,6 +368,25 @@ describe('pcbTracks selection and history', () => {
     expect(tracks.drc.violations.map((v) => v.kind)).toContain('via-size')
   })
 
+  it('tells pads waiting for their first track', () => {
+    const key = (owner: string, number: string) =>
+      tracks.pads.find((p) => p.owner === owner && p.pad.number === number)!.key
+    // SW pad 2 and D pad 2 (SW_D) are unrouted; SW pad 1 (COL) has nothing to reach
+    expect(tracks.isUnconnectedPad(key('SW', '2'))).toBe(true)
+    expect(tracks.isUnconnectedPad(key('D', '2'))).toBe(true)
+    expect(tracks.isUnconnectedPad(key('SW', '1'))).toBe(false)
+
+    // a track from SW pad 2 halfway: SW pad 2 has its track, D pad 2 still waits
+    tracks.setTool('route')
+    tracks.setCursor(SW2)
+    tracks.click(null)
+    tracks.setCursor({ x: 2.5, y: -2 })
+    tracks.click(null)
+    tracks.finish()
+    expect(tracks.isUnconnectedPad(key('SW', '2'))).toBe(false)
+    expect(tracks.isUnconnectedPad(key('D', '2'))).toBe(true)
+  })
+
   it('picks the track under the cursor on visible layers', () => {
     routeDefault()
     expect(tracks.trackAt({ x: 2.6, y: -2 }, 0.05, ['B.Cu'])).toBe(0)
