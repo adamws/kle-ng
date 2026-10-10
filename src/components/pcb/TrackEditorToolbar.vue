@@ -141,7 +141,7 @@ const { editorSettings, tool, isRouting, canUndo, canRedo, presetItems } = store
         :min="0.1"
         :max="2"
         :value-on-clear="0.25"
-        size="compact"
+        size="small"
         data-testid="pcb-track-width"
       />
     </label>
@@ -209,9 +209,10 @@ const { editorSettings, tool, isRouting, canUndo, canRedo, presetItems } = store
 }
 
 .group-caption {
-  font-size: 0.6875rem;
+  /* like the layout editor toolbar's section labels */
+  font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
   color: var(--bs-body-color);
 }
@@ -227,16 +228,20 @@ const { editorSettings, tool, isRouting, canUndo, canRedo, presetItems } = store
   align-items: center;
   gap: 0.375rem;
   margin: 0;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: var(--bs-body-color);
 }
 
 .toolbar-field :deep(.custom-number-input) {
-  width: 4.5rem;
+  width: 5rem;
 }
 
 .toolbar-field select {
   width: auto;
+  /* as tall as the buttons and the number field */
+  height: 30px;
+  padding-top: 0;
+  padding-bottom: 0;
   padding-right: 1.75rem;
 }
 

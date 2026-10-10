@@ -104,6 +104,13 @@ textarea.form-control.is-invalid:focus {
   --bs-btn-disabled-border-color: var(--bs-border-color);
 }
 
+/* icon-only small toggles as tall as labelled ones (an inline-flex icon button is
+   otherwise only as tall as its 16px icon) */
+.btn-sm.btn-toggle,
+.btn-group-sm > .btn.btn-toggle {
+  min-height: 30px;
+}
+
 .btn.btn-toggle[aria-pressed='true'] {
   --bs-btn-color: #fff;
   --bs-btn-bg: var(--bs-primary);

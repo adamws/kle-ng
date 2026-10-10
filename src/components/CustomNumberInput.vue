@@ -109,8 +109,11 @@ interface Props {
   /** Maximum value for wrap-around calculations @default 360 */
   wrapMax?: number
 
-  /** Visual size variant of the component @default 'default' */
-  size?: 'default' | 'compact'
+  /**
+   * Visual size variant of the component @default 'default'. 'small' matches
+   * Bootstrap's small buttons and selects (30 px, 0.875rem), for toolbars.
+   */
+  size?: 'default' | 'small' | 'compact'
 
   /**
    * Behavior when input is cleared:
@@ -607,6 +610,12 @@ watch([() => props.disabled, () => props.min, () => props.max], () => {
   height: 32px;
 }
 
+.custom-number-input.size-small .invalid-icon-tooltip {
+  right: calc(22px + var(--suffix-width, 0px));
+  width: 20px;
+  height: 30px;
+}
+
 .custom-number-input.size-compact .invalid-icon-tooltip {
   right: calc(18px + var(--suffix-width, 0px));
   width: 20px;
@@ -702,6 +711,40 @@ watch([() => props.disabled, () => props.min, () => props.max], () => {
   font-size: 0.875rem;
   height: 30px;
   line-height: 30px;
+  padding: 0 6px;
+}
+
+.custom-number-input.size-small {
+  height: 30px;
+}
+
+.custom-number-input.size-small input {
+  height: 30px;
+  min-height: 30px;
+  padding: 4px 8px;
+  padding-right: 26px;
+  font-size: 0.875rem;
+  border-radius: var(--bs-border-radius-sm);
+}
+
+.custom-number-input.size-small input.is-invalid {
+  padding-right: calc(46px + var(--suffix-width, 0px));
+  background-position: right calc(26px + var(--suffix-width, 0px)) center;
+  background-size: 14px 14px;
+}
+
+.custom-number-input.size-small .spinner-buttons {
+  width: 22px !important;
+  height: 30px !important;
+  border-top-right-radius: var(--bs-border-radius-sm);
+  border-bottom-right-radius: var(--bs-border-radius-sm);
+}
+
+.custom-number-input.size-small .input-suffix {
+  right: 22px;
+  font-size: 0.875rem;
+  height: 28px;
+  line-height: 28px;
   padding: 0 6px;
 }
 

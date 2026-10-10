@@ -80,7 +80,7 @@ function setDrill(d: number | undefined) {
   >
     <span class="selection-count" data-testid="pcb-selection-count">{{ summary }}</span>
     <label v-if="selected.length" class="bar-field" title="Width of the selected tracks, mm">
-      <span>Width mm</span>
+      <span>Width</span>
       <CustomNumberInput
         v-model="width"
         :step="0.05"
@@ -88,7 +88,7 @@ function setDrill(d: number | undefined) {
         :max="2"
         :value-on-clear="null"
         placeholder="mixed"
-        size="compact"
+        size="small"
         data-testid="pcb-selection-width"
       />
     </label>
@@ -114,7 +114,7 @@ function setDrill(d: number | undefined) {
     </div>
     <template v-if="viaCount">
       <label class="bar-field" title="Via diameter, mm (at least 0.5); new vias take this size">
-        <span>Via ⌀ mm</span>
+        <span>Via ⌀</span>
         <CustomNumberInput
           :model-value="diameter"
           :step="0.05"
@@ -122,7 +122,7 @@ function setDrill(d: number | undefined) {
           :max="2"
           :value-on-clear="null"
           placeholder="mixed"
-          size="compact"
+          size="small"
           data-testid="pcb-selection-via-diameter"
           @commit="setDiameter"
         />
@@ -131,7 +131,7 @@ function setDrill(d: number | undefined) {
         class="bar-field"
         title="Via drill, mm (at least 0.3, leaving a 0.1 mm ring); new vias take this size"
       >
-        <span>Drill mm</span>
+        <span>Drill</span>
         <CustomNumberInput
           :model-value="drill"
           :step="0.05"
@@ -139,7 +139,7 @@ function setDrill(d: number | undefined) {
           :max="Math.max(RULES.minThroughDrill, maxDrill)"
           :value-on-clear="null"
           placeholder="mixed"
-          size="compact"
+          size="small"
           data-testid="pcb-selection-via-drill"
           @commit="setDrill"
         />
@@ -168,7 +168,7 @@ function setDrill(d: number | undefined) {
   align-items: stretch;
   gap: 0.375rem;
   padding: 0.5rem;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   background-color: var(--bs-body-bg);
   border: 1px solid var(--bs-border-color);
   border-radius: 0.375rem;
@@ -204,7 +204,7 @@ function setDrill(d: number | undefined) {
 }
 
 .bar-field :deep(.custom-number-input) {
-  width: 4.5rem;
+  width: 5rem;
 }
 
 .layer-swatch {

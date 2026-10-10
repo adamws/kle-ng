@@ -1283,9 +1283,10 @@ onMounted(() => {
   align-self: center;
   padding: 0.125rem 0.375rem;
   border-radius: 0.25rem;
-  font-size: 0.6875rem;
+  /* like the layout editor toolbar's section labels */
+  font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
   color: var(--bs-body-color);
   background-color: var(--bs-body-bg);
