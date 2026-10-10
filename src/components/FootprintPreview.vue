@@ -631,6 +631,38 @@ const visibleLayerList = computed(() =>
   (['F.Cu', 'B.Cu'] as const).filter((l) => visibleLayers.value[l]),
 )
 
+/** Items drawn on the visible layers (vias span both). */
+function isVisibleItem(item: TrackItem | undefined): boolean {
+  if (!item) return false
+  return item.type === 'via' ? visibleLayerList.value.length > 0 : visibleLayers.value[item.layer]
+}
+
+// hidden tracks can't stay selected (they would still be deleted or changed)
+watch(visibleLayerList, () => {
+  const kept = tracks.selection.filter((i) => isVisibleItem(tracks.presetItems[i]))
+  if (kept.length !== tracks.selection.length) tracks.selectItems(kept, false)
+})
+
+// a route is drawn on a layer that shows
+watch(
+  () => tracks.route?.layer,
+  (layer) => {
+    if (layer) visibleLayers.value[layer] = true
+  },
+)
+
+/** The track a click would select (select tool), highlighted under the cursor. */
+const hoveredTrack = computed(() => {
+  if (!cursorLocal.value || tracks.tool !== 'select' || tracks.isRouting || tracks.isDragging)
+    return null
+  if (selectionBox.value) return null
+  return tracks.trackAt(
+    cursorLocal.value,
+    PICK_TOLERANCE_PX / pxPerMm.value,
+    visibleLayerList.value,
+  )
+})
+
 /** A press on a track or corner: dragging it past the threshold moves it. */
 let pendingDrag: { handle: DragHandle; client: Point; local: Point; started: boolean } | null = null
 /** What a drag from the cursor would move (select tool), for the cursor style. */
@@ -737,8 +769,29 @@ function onCanvasClick(event: MouseEvent) {
   tracks.selectClick(item, padNet, event.shiftKey)
 }
 
+/** Double-click finishes a route, or selects every track connected to the one clicked. */
 function onCanvasDoubleClick() {
-  if (editMode.value && tracks.isRouting) tracks.finish()
+  if (!editMode.value) return
+  if (tracks.isRouting) {
+    tracks.finish()
+    return
+  }
+  if (tracks.tool !== 'select' || !cursorLocal.value) return
+  const item = tracks.trackAt(
+    cursorLocal.value,
+    PICK_TOLERANCE_PX / pxPerMm.value,
+    visibleLayerList.value,
+  )
+  if (item === null) return
+  tracks.selectClick(item, null, false)
+  tracks.selectConnected()
+}
+
+function selectAllVisible() {
+  tracks.selectItems(
+    tracks.presetItems.flatMap((item, i) => (isVisibleItem(item) ? [i] : [])),
+    false,
+  )
 }
 
 /** Typing in a toolbar field must not trigger shortcuts. */
@@ -759,6 +812,7 @@ function onEditorKeyDown(event: KeyboardEvent) {
     if (mod) {
       if (key === 'z' && !event.shiftKey) tracks.undo()
       else if ((key === 'z' && event.shiftKey) || key === 'y') tracks.redo()
+      else if (key === 'a' && !tracks.isRouting) selectAllVisible()
       else return false
       return true
     }
@@ -947,6 +1001,8 @@ onUnmounted(() => {
             :item-nets="drc?.itemNets"
             :highlight-net="editMode ? tracks.highlightNet : null"
             :selected="editMode ? tracks.selection : []"
+            :hovered="editMode ? hoveredTrack : null"
+            :visible-layers="editMode ? visibleLayers : undefined"
             :px-per-mm="pxPerMm"
           />
         </g>
@@ -1129,7 +1185,7 @@ onUnmounted(() => {
           ? 'click: add corner · / flip · Backspace: undo · double-click/End: finish · Esc: cancel'
           : tracks.tool === 'route'
             ? 'click or X: start a track · wheel: zoom · middle/Space+drag: pan'
-            : 'click: select · drag track: move · drag empty: box · Del: delete · U: connected · X: route'
+            : 'click: select · double-click/U: connected · drag track: move · drag empty: box · Ctrl+A: all · Del: delete · X: route'
       }}</span>
     </div>
 

@@ -441,4 +441,47 @@ test.describe('PCB Generator track editor', () => {
     await expect(page.locator('[data-testid="pcb-selection-bar"]')).toBeVisible()
     expect(await box()).toEqual(before)
   })
+
+  test('selects connected tracks, hides layers and clears all', async ({ page }) => {
+    await openPreview(page)
+    await enterPresetMode(page)
+    const tracks = page.locator('[data-testid="pcb-track-overlay-track"]')
+    const count = page.locator('[data-testid="pcb-selection-count"]')
+    await page.locator('[data-testid="pcb-tool-route"]').click()
+    const sw2 = await padCentre(page, 'SW', '2')
+    const d2 = await padCentre(page, 'D', '2')
+    await page.mouse.click(sw2.x, sw2.y)
+    await page.mouse.move(d2.x, d2.y, { steps: 5 })
+    await page.mouse.click(d2.x, d2.y)
+    await expect(tracks).toHaveCount(2)
+
+    // the track a click would select is highlighted; double-click takes all connected
+    await page.locator('[data-testid="pcb-tool-select"]').click()
+    const vertical = (await tracks.nth(0).boundingBox())!
+    const onVertical = { x: vertical.x + vertical.width / 2, y: vertical.y + vertical.height / 2 }
+    await page.mouse.move(onVertical.x, onVertical.y)
+    await expect(page.locator('[data-testid="pcb-track-hover"]')).toHaveCount(1)
+    await page.mouse.dblclick(onVertical.x, onVertical.y)
+    await expect(count).toHaveText('2 tracks selected')
+
+    // hiding B.Cu hides its tracks and drops them from the selection
+    await page.locator('[data-testid="pcb-layer-toggle-B.Cu"]').click()
+    await expect(tracks).toHaveCount(0)
+    await expect(count).toHaveCount(0)
+    await page.locator(EDITOR.CANVAS).focus()
+    await page.keyboard.press('Control+a')
+    await expect(count).toHaveCount(0)
+    await page.locator('[data-testid="pcb-layer-toggle-B.Cu"]').click()
+    await expect(tracks).toHaveCount(2)
+    await page.locator(EDITOR.CANVAS).focus()
+    await page.keyboard.press('Control+a')
+    await expect(count).toHaveText('2 tracks selected')
+
+    // Clear removes everything as one undo step
+    await page.locator('[data-testid="pcb-clear-tracks"]').click()
+    await expect(tracks).toHaveCount(0)
+    await expect(page.locator('[data-testid="pcb-clear-tracks"]')).toBeDisabled()
+    await page.locator('[data-testid="pcb-undo"]').click()
+    await expect(tracks).toHaveCount(2)
+  })
 })

@@ -15,9 +15,10 @@ import BiBezier2 from 'bootstrap-icons/icons/bezier2.svg'
 import BiCursor from 'bootstrap-icons/icons/cursor.svg'
 import BiUndo from 'bootstrap-icons/icons/arrow-counterclockwise.svg'
 import BiRedo from 'bootstrap-icons/icons/arrow-clockwise.svg'
+import BiTrash3 from 'bootstrap-icons/icons/trash3.svg'
 
 const tracks = usePcbTracksStore()
-const { editorSettings, tool, isRouting, canUndo, canRedo } = storeToRefs(tracks)
+const { editorSettings, tool, isRouting, canUndo, canRedo, presetItems } = storeToRefs(tracks)
 </script>
 
 <template>
@@ -75,6 +76,17 @@ const { editorSettings, tool, isRouting, canUndo, canRedo } = storeToRefs(tracks
         <BiRedo />
       </button>
     </div>
+
+    <button
+      type="button"
+      class="btn btn-sm btn-outline-danger"
+      :disabled="!presetItems.length"
+      title="Remove all tracks (Ctrl+Z brings them back)"
+      data-testid="pcb-clear-tracks"
+      @click="tracks.clearAll()"
+    >
+      <BiTrash3 /> Clear
+    </button>
 
     <div class="btn-group btn-group-sm" role="group" aria-label="Copper layer">
       <button
