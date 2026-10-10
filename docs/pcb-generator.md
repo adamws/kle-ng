@@ -32,10 +32,10 @@ The easiest way to assign matrix coordinates is to use [Add Switch Matrix Coordi
 1. Verify your layout has matrix coordinates assigned
 2. Open the **PCB Generator** panel
 3. Configure switch, diode, and routing options as needed
-4. Use the preview window to check key-diode placement, and optionally [draw the switch–diode tracks](#track-presets)
+4. Use the preview window to check key-diode placement (a dashed line shows which switch pad the diode connects to), and optionally [draw the switch–diode tracks](#track-presets)
 
-<img src="/pcb-generator-footprint-preview-light.png" class="docs-screenshot light-only" alt="PCB footprints preview" style="max-width:50%" />
-<img src="/pcb-generator-footprint-preview-dark.png" class="docs-screenshot dark-only" alt="PCB footprints preview" style="max-width:50%" />
+<img src="/pcb-generator-footprint-preview-light.png" class="docs-screenshot light-only" alt="PCB footprints preview of a switch and diode, with a dashed line from switch pad 2 to the diode" style="max-width:50%" />
+<img src="/pcb-generator-footprint-preview-dark.png" class="docs-screenshot dark-only" alt="PCB footprints preview of a switch and diode, with a dashed line from switch pad 2 to the diode" style="max-width:50%" />
 
 5. Click **Generate PCB**
 6. Wait for the server to process your layout
@@ -77,34 +77,41 @@ The editor always reflects changes made on the **Switches** and **LEDs** tabs. O
 
 ## Drawing Switch–Diode Tracks {#track-presets}
 
-Instead of the automatic router, you can draw the tracks between one switch and its diode, and have them copied to every key. These tracks are the **track preset**. Draw them in the footprint preview: click **Edit tracks** to open the editor.
+Instead of the automatic router, you can draw the tracks between one switch and its diode, and have them copied to every key. These tracks are the **track preset**. **Routing** decides where switch–diode tracks come from:
+
+- **Switch-diode only (automatic)** and **Full (automatic)**: the generator's router draws them.
+- **Switch-diode only (preset)** and **Full (preset)**: you draw them, and the footprint preview turns into the track editor. **Full** also routes rows and columns.
+- **Disabled**: nothing is routed.
+
+Choosing another option after drawing tracks asks before removing them (switching between the two preset options keeps them). In a preset option, **Generate PCB** needs at least one drawn track.
 
 <img src="/pcb-track-editor-routing-light.png" class="docs-screenshot light-only" alt="Track editor routing from switch pad 2 towards the diode anode, with a dashed line to the unrouted pad" />
 <img src="/pcb-track-editor-routing-dark.png" class="docs-screenshot dark-only" alt="Track editor routing from switch pad 2 towards the diode anode, with a dashed line to the unrouted pad" />
 
-The editor shows the copper pads of the switch and diode (and of the LED and capacitor when **Add per-key LED** is on). A dashed line marks each connection that still needs a track: switch pad 2 to the diode anode. Tracks are drawn with the switch at 0° on the front side; the generator rotates them with each key.
+The editor shows the copper pads of the switch and diode (and of the LED and capacitor when **Add per-key LED** is on). A dashed line marks each connection that still needs a track: switch pad 2 to the diode anode. It shows in every routing option, so you can see where the diode connects while placing it. Tracks are drawn with the switch at 0° on the front side; the generator rotates them with each key.
 
 **Drawing a track:**
 
 1. Choose **Route** (or press `X` with the cursor over a pad) and click the pad to start from.
 2. Move the cursor: the track follows it with a straight and a 45° part (or an L shape with **90°**). Press `/` to swap the order of the two parts.
 3. Click to add a corner. Clicking a pad of the same connection finishes the track; double-click or `End` finishes it at the last corner.
-4. `Backspace` removes the last corner, `Esc` cancels the track.
+4. To change layer, press `V` (or click **Via**): a via is placed at the end of the track, and the track continues on the other layer.
+5. `Backspace` removes the last via or corner, `Esc` cancels the track.
 
-The cursor snaps to pad centres, to track ends and to the **Grid**. Set the **Width** and the copper layer (**F.Cu** or **B.Cu**) in the toolbar before drawing; `W` and `Shift+W` step through common widths.
+The cursor snaps to pad centres, to track ends and vias, and to the **Grid**. The **Draw** toolbar above the canvas sets how new tracks are drawn: the copper layer (**F.Cu** or **B.Cu**), **Width** and **Grid** (both in mm) and the corner angle. `W` and `Shift+W` step through common widths. Vias use KiCad's default size (0.6 mm, 0.3 mm drill).
 
 The editor checks every click against KiCad's default design rules (0.2 mm clearance, 0.25 mm to holes) and against shorts with pads of other connections. A click that breaks a rule is refused, and the status bar says why. The status bar also shows **DRC clean** once every connection is routed without errors.
 
-**Editing tracks:** with **Select**, click a track to select it, `Shift`+click to add to the selection, or drag a box from empty space (left to right selects tracks inside it, right to left also those it touches). `U` adds the tracks connected to the selection. The bar under the canvas changes the width and layer of the selected tracks or deletes them (`Delete`). Clicking a pad highlights its connection.
+**Editing tracks:** with **Select**, the track or via under the cursor is outlined; click it to select it, `Shift`+click to add to the selection, or drag a box from empty space (left to right selects tracks inside it, right to left also those it touches). Double-click a track, or press `U`, to select everything connected to it; `Ctrl+A` selects all tracks on the visible layers. The panel in the top-right corner of the canvas changes the width and layer of the selected tracks or deletes the selection (`Delete`). **Clear** in the toolbar removes all tracks. Clicking a pad highlights its connection.
 
 **Dragging tracks** works like KiCad's router (45° mode, highlight collisions). With **Select**, drag a track sideways to move it: it keeps its direction and its corners stay at 45°/90°. A neighbour at a 90° corner stretches along its own line; one at a 45° corner follows at 45°, and flips to the other diagonal when you drag past its far end. An end on a pad, via or junction stays put, joined by a new 45° track. Drag a corner (or a free track end) to move it; the tracks on both sides are rebuilt at 45°. The drag snaps to the grid and lines tracks up with pads and track ends of their connection; tracks that shrink to nothing disappear and tracks that line up merge while you drag. So a route doesn't have to be exact while drawing: put a corner close to where it belongs, finish on the pad, then drag the segment into line to remove the extra jog. The drag can pass over holes and pads: errors are marked while dragging, and if you let go where there is one, the track goes back to the last position without errors. `Esc` during a drag puts the tracks back.
 
-<img src="/pcb-track-editor-selection-light.png" class="docs-screenshot light-only" alt="Track editor with the diagonal track selected and the selection bar showing its width, layer and a Delete button" />
-<img src="/pcb-track-editor-selection-dark.png" class="docs-screenshot dark-only" alt="Track editor with the diagonal track selected and the selection bar showing its width, layer and a Delete button" />
+<img src="/pcb-track-editor-selection-light.png" class="docs-screenshot light-only" alt="Track editor with the diagonal track selected and a panel in the canvas corner showing its width, layer and a Delete button" />
+<img src="/pcb-track-editor-selection-dark.png" class="docs-screenshot dark-only" alt="Track editor with the diagonal track selected and a panel in the canvas corner showing its width, layer and a Delete button" />
 
-Undo and redo work for every change (`Ctrl+Z`, `Ctrl+Shift+Z` or `Ctrl+Y`, or the toolbar buttons). Navigate with the mouse wheel (zoom) and middle-drag or `Space`+drag (pan); the eye buttons hide a layer.
+Undo and redo work for every change, **Clear** included (`Ctrl+Z`, `Ctrl+Shift+Z` or `Ctrl+Y`, or the toolbar buttons). Navigate with the mouse wheel (zoom) and middle-drag or `Space`+drag (pan). The **View** controls on the canvas only change what you see: the eye buttons hide a copper layer with its pads and tracks, and the zoom buttons zoom in, out and to fit.
 
-Tracks are saved with the other PCB settings and are sent with **Generate PCB**. **Routing** must be **Switch-Diode only** or **Full**; with routing disabled the tracks are ignored. Tracks are only supported for front-side switches.
+Tracks are saved with the other PCB settings and are sent with **Generate PCB**. They are only supported for front-side switches, so the preset routing options are unavailable when the switch is on the back.
 
 ### When Settings Change {#track-presets-stale}
 
@@ -113,7 +120,7 @@ Tracks only connect the pads they were drawn around. If you change the switch fo
 <img src="/pcb-track-editor-stale-light.png" class="docs-screenshot light-only" alt="Footprint preview with a message over its bottom edge saying the diode position changed since the tracks were drawn, with Keep and Clear buttons" />
 <img src="/pcb-track-editor-stale-dark.png" class="docs-screenshot dark-only" alt="Footprint preview with a message over its bottom edge saying the diode position changed since the tracks were drawn, with Keep and Clear buttons" />
 
-Check the tracks in the editor: errors and unrouted connections are marked. **Keep** hides the message for the current settings, **Clear** removes all tracks. When several settings changed, hover the message to see the old and new values. Outside the editor, a badge in the preview shows the check result.
+Check the tracks in the editor: errors and unrouted connections are marked. **Keep** hides the message for the current settings, **Clear** removes all tracks (undo brings them back). When several settings changed, hover the message to see the old and new values.
 
 ### Track Presets in JSON {#track-presets-json}
 
@@ -147,7 +154,8 @@ The tracks are part of the JSON settings, as a `tracks` section, so they are sav
 This example connects pad 2 of a Cherry MX switch to the anode of the default SOD-123F diode (placed at `5.08`, `4`, rotated `90`, on the back), passing between the center hole and the right side hole. It is what the editor produces when you route from switch pad 2 to the diode anode.
 
 - **Coordinates** are in nanometres (1 mm = 1000000), relative to the switch center, with the switch at 0° on the front side and +Y pointing down, as in KiCad.
-- **Items** are `track` (`start`, `end`, `width_nm`, `layer`) or `via` (`position`, `diameter_nm`, `drill_diameter_nm`). Layers are `F.Cu` or `B.Cu`. Arcs are not supported yet, and the editor can't draw vias yet.
+- **Items** are `track` (`start`, `end`, `width_nm`, `layer`) or `via` (`position`, `diameter_nm`, `drill_diameter_nm`). Layers are `F.Cu` or `B.Cu`. Arcs are not supported yet.
+- **Routing:** a `tracks` section selects the preset option of its `routing`, and an empty `items` list is a preset option with nothing drawn yet. With `"routing": "Disabled"` the section is dropped.
 - **Diode placement** comes from the diode settings, so a preset must not contain a `diodes` section.
 - **basis** (optional) records the footprints and diode placement the tracks were drawn for. The editor writes it; it drives the [settings-changed warning](#track-presets-stale).
 
