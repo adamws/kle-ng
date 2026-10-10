@@ -105,6 +105,9 @@ const { editorSettings, tool, isRouting, canUndo, canRedo, presetItems } = store
       <BiTrash3 /> Clear
     </button>
 
+    <!-- a narrow toolbar wraps here: tools and actions, then new-track settings -->
+    <span class="row-break" aria-hidden="true"></span>
+
     <div class="btn-group btn-group-sm" role="group" aria-label="Copper layer">
       <button
         v-for="layer in ['F.Cu', 'B.Cu'] as const"
@@ -186,11 +189,21 @@ const { editorSettings, tool, isRouting, canUndo, canRedo, presetItems } = store
   flex-shrink: 0;
 }
 
+.row-break {
+  display: none;
+}
+
 @container (max-width: 870px) {
   .track-editor-toolbar {
     flex-wrap: wrap;
     align-content: center;
     row-gap: 0.375rem;
+  }
+
+  .row-break {
+    display: block;
+    flex-basis: 100%;
+    height: 0;
   }
 }
 
