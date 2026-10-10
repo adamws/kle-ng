@@ -1,15 +1,16 @@
 <!--
   TrackEditorLayer: the route being drawn, in the switch-local frame. Committed
   segments are drawn in the layer colour, the preview walk to the cursor in a
-  lighter tone (red when it breaks a rule), plus the snap target.
+  lighter tone (red when it breaks a rule), plus its vias and the snap target.
 -->
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { TrackSegment } from '@/types/tracks'
+import type { TrackSegment, TrackVia } from '@/types/tracks'
 import type { SnapTarget } from '@/utils/pcb-tracks/snap'
 
 const props = defineProps<{
   committed: readonly TrackSegment[]
+  vias?: readonly TrackVia[]
   preview: readonly TrackSegment[]
   blocked: boolean
   target: SnapTarget | null
@@ -46,6 +47,15 @@ const layerClass = (t: TrackSegment) => (t.layer === 'F.Cu' ? 'route-front' : 'r
       :class="['route', 'route-preview', layerClass(t), { 'route-blocked': blocked }]"
       data-testid="pcb-route-preview"
     />
+    <g v-for="(via, i) in vias" :key="`v-${i}`" data-testid="pcb-route-via">
+      <circle :cx="via.position.x" :cy="via.position.y" :r="via.diameter / 2" class="via" />
+      <circle
+        :cx="via.position.x"
+        :cy="via.position.y"
+        :r="via.drillDiameter / 2"
+        class="via-drill"
+      />
+    </g>
     <g
       v-if="target"
       :transform="`translate(${target.point.x} ${target.point.y})`"
@@ -87,6 +97,14 @@ const layerClass = (t: TrackSegment) => (t.layer === 'F.Cu' ? 'route-front' : 'r
 .route-preview.route-blocked {
   stroke: #ff2d55;
   opacity: 0.85;
+}
+
+.via {
+  fill: #b3b3b3;
+}
+
+.via-drill {
+  fill: var(--bs-body-bg);
 }
 
 .snap-target circle {

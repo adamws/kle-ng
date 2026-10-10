@@ -1,6 +1,7 @@
 /**
  * Box selection, KiCad style: dragging left to right selects tracks fully
- * inside the box, right to left also selects tracks the box touches.
+ * inside the box, right to left also selects tracks the box touches. A via is
+ * selected when its centre is in the box.
  *
  * The box is drawn in board axes (what the screen shows) while tracks are
  * switch-local, so track points go through `toBoard` first.
@@ -35,7 +36,9 @@ export function tracksInBox(
   ]
   const crossing = isCrossing(box)
   return items.flatMap((item, i) => {
-    if (item.type !== 'track' || !visible(item)) return []
+    if (!visible(item)) return []
+    if (item.type === 'via') return pointInPolygon(toBoard(item.position), rect) ? [i] : []
+    if (item.type !== 'track') return []
     const a = toBoard(item.start)
     const b = toBoard(item.end)
     const hit = crossing

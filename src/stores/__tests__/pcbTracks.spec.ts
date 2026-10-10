@@ -219,6 +219,80 @@ describe('pcbTracks selection and history', () => {
     tracks.setTool('select')
   }
 
+  it('places a via and continues the route on the other layer', async () => {
+    tracks.editorSettings.grid = 0.02 // the via lands in line with D pad 2
+    tracks.setTool('route')
+    tracks.setCursor(D2) // B.Cu diode pad
+    tracks.click(null)
+    tracks.setCursor({ x: 3.5, y: 2.6 })
+    expect(tracks.placeVia()).toBe(true)
+    expect(tracks.route?.layer).toBe('F.Cu')
+    expect(tracks.editorSettings.layer).toBe('F.Cu')
+    expect(tracks.routeVias.map((v) => v.position)).toEqual([{ x: 3.5, y: 2.6 }])
+
+    // Backspace takes the via back first, then the corner
+    tracks.undoVertex()
+    expect(tracks.route?.layer).toBe('B.Cu')
+    expect(tracks.routeVias).toEqual([])
+    expect(tracks.placeVia()).toBe(true)
+
+    tracks.setCursor(SW2) // through-hole, on F.Cu too: finishes the route
+    tracks.click(null)
+    expect(tracks.isRouting).toBe(false)
+    const preset = pcb.settings.trackPreset!.items
+    expect(preset.map((i) => (i.type === 'track' ? i.layer : i.type))).toEqual([
+      'B.Cu',
+      'via',
+      'F.Cu',
+      'F.Cu',
+    ])
+    expect(preset[0]).toMatchObject({ start: D2, end: { x: 3.5, y: 2.6 } })
+    expect(preset[1]).toMatchObject({ position: { x: 3.5, y: 2.6 }, diameter: 0.6 })
+    expect(preset[2]).toMatchObject({ start: { x: 3.5, y: 2.6 } })
+    expect(preset[3]).toMatchObject({ end: SW2 })
+    expect(tracks.drc.violations).toEqual([])
+    expect(tracks.drc.ratsnest).toEqual([])
+
+    // one undo step removes the whole route
+    tracks.undo()
+    expect(pcb.settings.trackPreset?.items).toEqual([])
+    await nextTick()
+  })
+
+  it('refuses a via on a hole or a pad', () => {
+    tracks.setTool('route')
+    tracks.setCursor(D2)
+    tracks.click(null)
+    tracks.setCursor({ x: 5.08, y: 0 }) // the side NPTH
+    const blocked = tracks.blockedCount
+    expect(tracks.placeVia()).toBe(false)
+    expect(tracks.blockedCount).toBe(blocked + 1)
+    expect(tracks.route?.layer).toBe('B.Cu')
+    expect(tracks.route?.points).toHaveLength(1)
+
+    tracks.setCursor(SW2)
+    expect(tracks.target?.kind).toBe('pad')
+    expect(tracks.placeVia()).toBe(false)
+  })
+
+  it('picks vias and selects them with the tracks they join', () => {
+    pcb.settings.trackPreset = {
+      version: 1,
+      items: [
+        { type: 'track', start: D2, end: { x: 3.5, y: 2.6 }, width: 0.25, layer: 'B.Cu' },
+        { type: 'via', position: { x: 3.5, y: 2.6 }, diameter: 0.6, drillDiameter: 0.3 },
+      ],
+    }
+    expect(tracks.itemAt({ x: 3.6, y: 2.6 }, 0.05, ['B.Cu'])).toBe(1)
+    expect(tracks.itemAt({ x: 4.5, y: 2.6 }, 0.05, ['B.Cu'])).toBe(0)
+    expect(tracks.itemAt({ x: 3.6, y: 2.6 }, 0.05, [])).toBeNull()
+    tracks.selectClick(1, null, false)
+    tracks.selectConnected()
+    expect(tracks.selection).toEqual([0, 1])
+    tracks.deleteSelection()
+    expect(pcb.settings.trackPreset?.items).toEqual([])
+  })
+
   it('picks the track under the cursor on visible layers', () => {
     routeDefault()
     expect(tracks.trackAt({ x: 2.6, y: -2 }, 0.05, ['B.Cu'])).toBe(0)

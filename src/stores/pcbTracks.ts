@@ -7,7 +7,8 @@
  * end or a grid point; the preview to the cursor is a two-segment 45°/90°
  * walk; a click commits it unless it breaks a design rule; clicking a pad or
  * track end of the route's net finishes it, as do double-click and End.
- * Backspace drops the last vertex, Esc cancels, / flips the posture.
+ * Backspace drops the last vertex, Esc cancels, / flips the posture. V places
+ * a via at the end of the walk and continues the route on the other layer.
  *
  * The select tool selects tracks (click, Shift+click, box), deletes them,
  * extends a selection to connected tracks (U) and changes their width or
@@ -21,13 +22,19 @@ import { defineStore } from 'pinia'
 import { computed, ref, shallowRef, toRaw, watch } from 'vue'
 import { useSnapshotHistory } from '@/composables/useSnapshotHistory'
 import { usePcbGeneratorStore } from './pcbGenerator'
-import type { CopperLayer, Pt, TrackItem, TrackSegment } from '@/types/tracks'
+import type { CopperLayer, Pt, TrackItem, TrackSegment, TrackVia } from '@/types/tracks'
 import { basisChanges, presetBasis } from '@/utils/pcb-tracks/basis'
 import { routingModeOption, type RoutingMode } from '@/utils/pcb/routing-mode'
 import { padInfos } from '@/utils/pcb-tracks/connectivity'
 import { shapeGap } from '@/utils/pcb-tracks/distance'
 import { trackShape } from '@/utils/pcb-tracks/shapes'
-import { DEFAULT_DRC_RULES, runDrc, type DrcResult, type Violation } from '@/utils/pcb-tracks/drc'
+import {
+  DEFAULT_DRC_RULES,
+  DEFAULT_VIA,
+  runDrc,
+  type DrcResult,
+  type Violation,
+} from '@/utils/pcb-tracks/drc'
 import type { NetName, PlacedPad } from '@/utils/pcb-tracks/netlist'
 import { walk, type Posture } from '@/utils/pcb-tracks/posture'
 import { snapTarget, type SnapTarget } from '@/utils/pcb-tracks/snap'
@@ -72,11 +79,16 @@ export const GRID_OPTIONS = [0.05, 0.1, 0.127, 0.25, 0.5, 0.635, 1, 1.27]
 interface RouteState {
   /** Committed vertices; the first is the start anchor. */
   points: Pt[]
+  /** Layer of each committed segment (points[i] to points[i + 1]). */
+  segmentLayers: CopperLayer[]
+  /** Vertices holding a via, where the route changes layer. */
+  vias: number[]
   net: NetName | null
   /** Pad the route started on, finishing on it again doesn't end the route. */
   startPadKey: string | null
   /** Started on a pad or track end (not a bare grid point). */
   startAnchored: boolean
+  /** Layer the route continues on. */
   layer: CopperLayer
   width: number
   /** Swap the order of the walk's straight and diagonal parts. */
@@ -115,6 +127,37 @@ function segments(points: readonly Pt[], layer: CopperLayer, width: number): Tra
   return out
 }
 
+const otherLayer = (layer: CopperLayer): CopperLayer => (layer === 'F.Cu' ? 'B.Cu' : 'F.Cu')
+const viaAt = (position: Pt): TrackVia => ({ type: 'via', position, ...DEFAULT_VIA })
+
+/**
+ * A route's items in chain order: the tracks of each layer run, with the via
+ * joining two runs between them. Each run is simplified on its own, so
+ * collinear clicks leave no extra corner but a via never moves.
+ */
+function routeItems(r: RouteState, reverse: boolean): TrackItem[] {
+  const n = r.points.length
+  const points = reverse ? [...r.points].reverse() : r.points
+  const layers = reverse ? [...r.segmentLayers].reverse() : r.segmentLayers
+  const vias = new Set(r.vias.map((v) => (reverse ? n - 1 - v : v)))
+  const items: TrackItem[] = []
+  let run: Pt[] = [points[0]!]
+  const flush = (layer: CopperLayer | undefined) => {
+    if (layer && run.length > 1) items.push(...segments(simplifyChain(run), layer, r.width))
+  }
+  if (vias.has(0)) items.push(viaAt(points[0]!))
+  for (let i = 1; i < n; i++) {
+    run.push(points[i]!)
+    if (vias.has(i)) {
+      flush(layers[i - 1])
+      items.push(viaAt(points[i]!))
+      run = [points[i]!]
+    }
+  }
+  flush(layers[n - 2])
+  return items
+}
+
 export const usePcbTracksStore = defineStore('pcbTracks', () => {
   const pcb = usePcbGeneratorStore()
 
@@ -135,6 +178,8 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
   const selectedNet = ref<NetName | null>(null)
   /** Bumped when a click is refused, so the view can flash. */
   const blockedCount = ref(0)
+  /** Why the last via was refused, until the cursor moves. */
+  const viaRefusal = ref<string | null>(null)
 
   /** Pads of the placed footprints, switch-local (set by the preview). */
   const pads = shallowRef<readonly PlacedPad[]>([])
@@ -179,8 +224,19 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     )
   })
 
-  const routeSegments = computed(() =>
-    route.value ? segments(route.value.points, route.value.layer, route.value.width) : [],
+  const routeSegments = computed<TrackSegment[]>(() => {
+    const r = route.value
+    if (!r) return []
+    return r.segmentLayers.map((layer, i) => ({
+      type: 'track',
+      start: r.points[i]!,
+      end: r.points[i + 1]!,
+      width: r.width,
+      layer,
+    }))
+  })
+  const routeVias = computed<TrackVia[]>(() =>
+    route.value ? route.value.vias.map((i) => viaAt(route.value!.points[i]!)) : [],
   )
   const previewSegments = computed(() =>
     route.value ? segments(previewPoints.value, route.value.layer, route.value.width) : [],
@@ -191,7 +247,12 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     route.value
       ? runDrc(
           pads.value,
-          [...presetItems.value, ...routeSegments.value, ...previewSegments.value],
+          [
+            ...presetItems.value,
+            ...routeSegments.value,
+            ...routeVias.value,
+            ...previewSegments.value,
+          ],
           rules.value,
         )
       : null,
@@ -297,6 +358,20 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     selection.value = []
     const items = history.redo()
     if (items) writeItems(items, false)
+  }
+
+  /** Index of the via or track under `p` within `tolerance` mm, on visible layers. */
+  function itemAt(p: Pt, tolerance: number, layers: readonly CopperLayer[]): number | null {
+    if (layers.length) {
+      let via: { i: number; d: number } | null = null
+      presetItems.value.forEach((item, i) => {
+        if (item.type !== 'via') return
+        const d = Math.hypot(p.x - item.position.x, p.y - item.position.y) - item.diameter / 2
+        if (d <= tolerance && (!via || d < via.d)) via = { i, d }
+      })
+      if (via) return (via as { i: number }).i
+    }
+    return trackAt(p, tolerance, layers)
   }
 
   /** Index of the track under `p` within `tolerance` mm (topmost), on visible layers. */
@@ -537,6 +612,7 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
 
   function setCursor(p: Pt | null) {
     cursor.value = p
+    viaRefusal.value = null
   }
 
   function setTool(value: TrackTool) {
@@ -551,6 +627,8 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     const net = t.kind === 'grid' ? null : t.net
     route.value = {
       points: [t.point],
+      segmentLayers: [],
+      vias: [],
       net,
       startPadKey: t.kind === 'pad' ? t.padKey : null,
       startAnchored: t.kind !== 'grid',
@@ -573,6 +651,7 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     const added = previewPoints.value.slice(1)
     if (!added.length) return true
     r.points.push(...added)
+    r.segmentLayers.push(...added.map(() => r.layer))
     if (t.kind !== 'grid' && !r.net && t.net) r.net = t.net
     const reachedPad = t.kind === 'pad' && t.padKey !== r.startPadKey
     if (reachedPad || t.kind === 'track-end') finish(true)
@@ -585,22 +664,72 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     route.value = null
     if (!r || r.points.length < 2) return
     // kbplacer places a preset's items in order, so walk outward from a pad
-    const ordered = !r.startAnchored && endAnchored ? [...r.points].reverse() : r.points
-    // collinear clicks leave no extra corner, as in KiCad
-    const points = simplifyChain(ordered)
-    writeItems([...savedItems.value, ...segments(points, r.layer, r.width)])
+    writeItems([...savedItems.value, ...routeItems(r, !r.startAnchored && endAnchored)])
+  }
+
+  /**
+   * V while routing: commits the walk to the cursor, places a via at its end
+   * and continues on the other layer, as in KiCad. Refused (returns false)
+   * when the walk or the via breaks a rule, or the via would land on a pad.
+   */
+  function placeVia(): boolean {
+    const r = route.value
+    const t = target.value
+    if (!r || !t || t.kind === 'pad') {
+      if (r) blockedCount.value++
+      return false
+    }
+    const at = previewPoints.value[previewPoints.value.length - 1] ?? r.points[r.points.length - 1]!
+    if (r.vias.includes(r.points.length - 1) && samePoint(at, r.points[r.points.length - 1]!)) {
+      return false // already a via here
+    }
+    const first = presetItems.value.length
+    const check = runDrc(
+      pads.value,
+      [
+        ...presetItems.value,
+        ...routeSegments.value,
+        ...routeVias.value,
+        ...previewSegments.value,
+        viaAt(at),
+      ],
+      rules.value,
+    )
+    const refused = check.violations.find((v) => v.items.some((i) => i >= first))
+    if (refused) {
+      viaRefusal.value = refused.message
+      blockedCount.value++
+      return false
+    }
+    const added = previewPoints.value.slice(1)
+    r.points.push(...added)
+    r.segmentLayers.push(...added.map(() => r.layer))
+    r.vias.push(r.points.length - 1)
+    r.layer = otherLayer(r.layer)
+    editorSettings.value.layer = r.layer
+    return true
   }
 
   function cancelRoute() {
     route.value = null
+    viaRefusal.value = null
   }
 
-  /** Backspace: drop the last committed vertex, or the route when none is left. */
+  /** Backspace: drop the last via (back to its layer), else the last vertex, else the route. */
   function undoVertex() {
     const r = route.value
     if (!r) return
-    if (r.points.length > 1) r.points.pop()
-    else cancelRoute()
+    const last = r.points.length - 1
+    if (r.vias[r.vias.length - 1] === last) {
+      r.vias.pop()
+      r.layer = otherLayer(r.layer)
+      editorSettings.value.layer = r.layer
+    } else if (r.points.length > 1) {
+      r.points.pop()
+      r.segmentLayers.pop()
+    } else {
+      cancelRoute()
+    }
   }
 
   function flipPosture() {
@@ -661,7 +790,9 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     target,
     previewPoints,
     routeSegments,
+    routeVias,
     previewSegments,
+    viaRefusal,
     previewViolations,
     drc,
     isRouting,
@@ -683,6 +814,7 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     undo,
     redo,
     trackAt,
+    itemAt,
     selectClick,
     selectItems,
     selectConnected,
@@ -696,6 +828,7 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     finish,
     cancelRoute,
     undoVertex,
+    placeVia,
     flipPosture,
     cycleWidth,
     click,

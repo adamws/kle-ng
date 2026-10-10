@@ -36,4 +36,20 @@ describe('tracksInBox', () => {
       ),
     ).toEqual([0])
   })
+
+  it('selects vias by their centre', () => {
+    const via: TrackItem = {
+      type: 'via',
+      position: { x: 10, y: 10 },
+      diameter: 0.6,
+      drillDiameter: 0.3,
+    }
+    const withVia = [...items, via]
+    expect(tracksInBox(withVia, { from: { x: 9, y: 9 }, to: { x: 10.1, y: 10.1 } }, id)).toEqual([
+      3,
+    ])
+    expect(tracksInBox(withVia, { from: { x: 10.1, y: 10.1 }, to: { x: 9, y: 9 } }, id)).toEqual([
+      2, 3,
+    ])
+  })
 })

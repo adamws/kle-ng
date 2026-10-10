@@ -2,7 +2,8 @@
   TrackEditorToolbar: the drawing controls of the track editor (tool, history,
   copper layer, track width, grid and posture). View controls (layer
   visibility, zoom) sit on the canvas instead. Shortcuts are listed in the
-  titles. One line that never wraps, so the canvas below never moves.
+  titles. It keeps one height in every state, so the canvas below never moves:
+  one line, or two in a narrow preview (whose row is then two lines high).
 
   Clearance is not editable: kle-ng-api boards use KiCad's default netclass
   (0.2 mm), so a smaller value would only make presets kbplacer rejects.
@@ -16,6 +17,7 @@ import BiCursor from 'bootstrap-icons/icons/cursor.svg'
 import BiUndo from 'bootstrap-icons/icons/arrow-counterclockwise.svg'
 import BiRedo from 'bootstrap-icons/icons/arrow-clockwise.svg'
 import BiTrash3 from 'bootstrap-icons/icons/trash3.svg'
+import BiRecordCircle from 'bootstrap-icons/icons/record-circle.svg'
 
 const tracks = usePcbTracksStore()
 const { editorSettings, tool, isRouting, canUndo, canRedo, presetItems } = storeToRefs(tracks)
@@ -79,6 +81,21 @@ const { editorSettings, tool, isRouting, canUndo, canRedo, presetItems } = store
 
     <button
       type="button"
+      class="btn btn-sm btn-outline-secondary"
+      :disabled="!isRouting"
+      :title="
+        isRouting
+          ? 'Place a via at the end of the route and continue on the other layer (V)'
+          : 'While routing: place a via and continue on the other layer (V)'
+      "
+      data-testid="pcb-place-via"
+      @click="tracks.placeVia()"
+    >
+      <BiRecordCircle /> Via
+    </button>
+
+    <button
+      type="button"
       class="btn btn-sm btn-outline-danger"
       :disabled="!presetItems.length"
       title="Remove all tracks (Ctrl+Z brings them back)"
@@ -112,7 +129,7 @@ const { editorSettings, tool, isRouting, canUndo, canRedo, presetItems } = store
       class="toolbar-field"
       title="Width of new tracks, mm (W / Shift+W: next / previous preset)"
     >
-      <span>Width mm</span>
+      <span>Width</span>
       <CustomNumberInput
         v-model="editorSettings.width"
         :step="0.05"
@@ -125,7 +142,7 @@ const { editorSettings, tool, isRouting, canUndo, canRedo, presetItems } = store
     </label>
 
     <label class="toolbar-field" title="Snap grid for drawing, mm">
-      <span>Grid mm</span>
+      <span>Grid</span>
       <select
         v-model.number="editorSettings.grid"
         class="form-select form-select-sm"
@@ -158,7 +175,7 @@ const { editorSettings, tool, isRouting, canUndo, canRedo, presetItems } = store
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.375rem;
   height: 100%;
   white-space: nowrap;
   overflow-x: auto;
@@ -167,6 +184,14 @@ const { editorSettings, tool, isRouting, canUndo, canRedo, presetItems } = store
 
 .track-editor-toolbar > * {
   flex-shrink: 0;
+}
+
+@container (max-width: 870px) {
+  .track-editor-toolbar {
+    flex-wrap: wrap;
+    align-content: center;
+    row-gap: 0.375rem;
+  }
 }
 
 .group-caption {

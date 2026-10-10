@@ -484,4 +484,40 @@ test.describe('PCB Generator track editor', () => {
     await page.locator('[data-testid="pcb-undo"]').click()
     await expect(tracks).toHaveCount(2)
   })
+
+  test('places a via with V and finishes on the other layer', async ({ page }) => {
+    await openPreview(page)
+    await enterPresetMode(page)
+    await page.locator('[data-testid="pcb-tool-route"]').click()
+    const sw2 = await padCentre(page, 'SW', '2')
+    const d2 = await padCentre(page, 'D', '2')
+    // screen px per mm: SW pad 2 (2.54, -5.08) to D pad 2 (5.08, 2.6) is 7.68 mm down
+    const scale = (d2.y - sw2.y) / 7.68
+
+    await page.mouse.click(d2.x, d2.y)
+    await page.mouse.move(d2.x - 1.58 * scale, d2.y, { steps: 5 })
+    await expect(page.locator('[data-testid="pcb-place-via"]')).toBeEnabled()
+    await page.keyboard.press('v')
+    await expect(page.locator('[data-testid="pcb-route-via"]')).toHaveCount(1)
+    await expect(page.locator('[data-testid="pcb-route-status"]')).toContainText('on F.Cu')
+
+    await page.mouse.move(sw2.x, sw2.y, { steps: 5 })
+    await page.mouse.click(sw2.x, sw2.y)
+    await expect(page.locator('[data-testid="pcb-route-status"]')).toHaveCount(0)
+    await expect(page.locator('[data-testid="pcb-track-overlay-via"]')).toHaveCount(1)
+    await expect(page.locator('[data-testid="pcb-drc-summary"]')).toHaveText('DRC clean')
+
+    const savedTypes = () =>
+      page.evaluate(() => {
+        const raw = localStorage.getItem('kle-ng-pcb-settings')
+        const items: { type: string; layer?: string }[] = raw ? JSON.parse(raw).tracks?.items : []
+        return items.map((i) => i.layer ?? i.type)
+      })
+    await expect.poll(savedTypes).toContain('via')
+    const types = await savedTypes()
+    // chain order: B.Cu tracks from the diode, the via, F.Cu tracks to the switch
+    expect(types.indexOf('via')).toBeGreaterThan(types.indexOf('B.Cu'))
+    expect(types.lastIndexOf('B.Cu')).toBeLessThan(types.indexOf('via'))
+    expect(types.indexOf('F.Cu')).toBeGreaterThan(types.indexOf('via'))
+  })
 })

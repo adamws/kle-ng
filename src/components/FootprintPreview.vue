@@ -570,7 +570,9 @@ const routeStatus = computed(() => {
   if (!r) return null
   return `Routing ${r.net ?? 'new net'} on ${r.layer}, ${r.width} mm`
 })
-const blockedReason = computed(() => tracks.previewViolations[0]?.message ?? null)
+const blockedReason = computed(
+  () => tracks.previewViolations[0]?.message ?? tracks.viaRefusal ?? null,
+)
 
 // a refused click flashes the canvas
 const blockedFlash = ref(false)
@@ -651,16 +653,12 @@ watch(
   },
 )
 
-/** The track a click would select (select tool), highlighted under the cursor. */
+/** The track or via a click would select (select tool), highlighted under the cursor. */
 const hoveredTrack = computed(() => {
   if (!cursorLocal.value || tracks.tool !== 'select' || tracks.isRouting || tracks.isDragging)
     return null
   if (selectionBox.value) return null
-  return tracks.trackAt(
-    cursorLocal.value,
-    PICK_TOLERANCE_PX / pxPerMm.value,
-    visibleLayerList.value,
-  )
+  return tracks.itemAt(cursorLocal.value, PICK_TOLERANCE_PX / pxPerMm.value, visibleLayerList.value)
 })
 
 /** A press on a track or corner: dragging it past the threshold moves it. */
@@ -733,14 +731,8 @@ function onCanvasPointerUp(event: PointerEvent) {
   if (!box) return
   clickIsBox = true
   const rotation = settings.value.switchRotation
-  const visible = new Set<string>(visibleLayerList.value)
   tracks.selectItems(
-    tracksInBox(
-      tracks.presetItems,
-      box,
-      (q) => switchLocalToBoard(q, rotation),
-      (item) => item.type !== 'track' || visible.has(item.layer),
-    ),
+    tracksInBox(tracks.presetItems, box, (q) => switchLocalToBoard(q, rotation), isVisibleItem),
     event.shiftKey,
   )
 }
@@ -764,7 +756,7 @@ function onCanvasClick(event: MouseEvent) {
     return
   }
   const item = cursorLocal.value
-    ? tracks.trackAt(cursorLocal.value, PICK_TOLERANCE_PX / pxPerMm.value, visibleLayerList.value)
+    ? tracks.itemAt(cursorLocal.value, PICK_TOLERANCE_PX / pxPerMm.value, visibleLayerList.value)
     : null
   tracks.selectClick(item, padNet, event.shiftKey)
 }
@@ -777,7 +769,7 @@ function onCanvasDoubleClick() {
     return
   }
   if (tracks.tool !== 'select' || !cursorLocal.value) return
-  const item = tracks.trackAt(
+  const item = tracks.itemAt(
     cursorLocal.value,
     PICK_TOLERANCE_PX / pxPerMm.value,
     visibleLayerList.value,
@@ -834,6 +826,10 @@ function onEditorKeyDown(event: KeyboardEvent) {
         return true
       case 'End':
         tracks.finish()
+        return true
+      case 'v':
+      case 'V':
+        if (tracks.isRouting) tracks.placeVia()
         return true
       case '/':
         tracks.flipPosture()
@@ -1020,6 +1016,7 @@ onUnmounted(() => {
         <g v-if="editMode" :transform="switchLocalTransform">
           <TrackEditorLayer
             :committed="tracks.routeSegments"
+            :vias="tracks.routeVias"
             :preview="tracks.previewSegments"
             :blocked="tracks.previewViolations.length > 0"
             :target="tracks.tool === 'route' ? tracks.target : null"
@@ -1182,7 +1179,7 @@ onUnmounted(() => {
       <span v-else-if="tracks.isDragging" class="editor-hint">release: drop · Esc: cancel</span>
       <span v-else class="editor-hint">{{
         tracks.isRouting
-          ? 'click: add corner · / flip · Backspace: undo · double-click/End: finish · Esc: cancel'
+          ? 'click: add corner · V: via · / flip · Backspace: undo · double-click/End: finish · Esc: cancel'
           : tracks.tool === 'route'
             ? 'click or X: start a track · wheel: zoom · middle/Space+drag: pan'
             : 'click: select · double-click/U: connected · drag track: move · drag empty: box · Ctrl+A: all · Del: delete · X: route'
@@ -1214,6 +1211,8 @@ onUnmounted(() => {
   align-items: stretch;
   /* top-aligned: centred, it would move whenever the settings column grows */
   justify-content: flex-start;
+  /* the toolbar row's height follows the preview's width, never its state */
+  container-type: inline-size;
 }
 
 .svg-container {
@@ -1343,6 +1342,13 @@ onUnmounted(() => {
   height: 2.5rem;
   padding: 0.25rem 0;
   flex-shrink: 0;
+}
+
+/* too narrow for the toolbar on one line: two lines, in every state */
+@container (max-width: 870px) {
+  .preview-top-row {
+    height: 4.75rem;
+  }
 }
 
 .preview-info {

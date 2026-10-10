@@ -39,6 +39,9 @@ export const DEFAULT_DRC_RULES: DrcRules = {
   holeToHole: 0.25,
 }
 
+/** Via placed while routing: KiCad's default netclass (0.6 mm, 0.3 mm drill), as on kle-ng-api boards. */
+export const DEFAULT_VIA = { diameter: 0.6, drillDiameter: 0.3 }
+
 /** Safety margin added to every limit, mm. */
 export const CLEARANCE_MARGIN = 1e-3
 

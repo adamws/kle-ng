@@ -1,6 +1,6 @@
 /**
  * Where a routing click lands: a pad anchor (its centre), the end of an
- * existing track, or the nearest grid point. Pads and track ends are exempt
+ * existing track or a via (both kinds 'track-end'), or the nearest grid point. Pads and track ends are exempt
  * from the grid, like in KiCad.
  *
  * While routing, only anchors of the route's net attract the cursor, so the
@@ -53,6 +53,15 @@ export function snapTarget(cursor: Vec, ctx: SnapContext): SnapTarget {
   }
 
   ctx.items.forEach((item, i) => {
+    // a via is on both layers
+    if (item.type === 'via') {
+      const net = ctx.itemNets[i] ?? null
+      if (!anyNet && net !== ctx.net) return
+      const d = dist(cursor, item.position)
+      if (d <= Math.max(ctx.radius, item.diameter / 2))
+        offer(d - ctx.radius, { kind: 'track-end', point: item.position, item: i, net })
+      return
+    }
     if (item.type !== 'track' || item.layer !== ctx.layer) return
     const net = ctx.itemNets[i] ?? null
     if (!anyNet && net !== ctx.net) return

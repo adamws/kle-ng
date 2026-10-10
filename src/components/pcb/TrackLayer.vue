@@ -49,7 +49,14 @@ const tracks = computed(() =>
 const vias = computed(() =>
   props.items.flatMap((item, i) =>
     item.type === 'via' && (shown('F.Cu') || shown('B.Cu'))
-      ? [{ via: item as TrackVia, dimmed: dimmed(i) }]
+      ? [
+          {
+            via: item as TrackVia,
+            index: i,
+            dimmed: dimmed(i),
+            selected: !!props.selected?.includes(i),
+          },
+        ]
       : [],
   ),
 )
@@ -96,11 +103,20 @@ const vias = computed(() =>
       data-testid="pcb-track-overlay-track"
     />
     <g
-      v-for="({ via, dimmed: dim }, i) in vias"
-      :key="`via-${i}`"
+      v-for="{ via, index, dimmed: dim, selected: sel } in vias"
+      :key="`via-${index}`"
       :class="{ dimmed: dim }"
+      :data-item-index="index"
       data-testid="pcb-track-overlay-via"
     >
+      <circle
+        v-if="sel || index === hovered"
+        :cx="via.position.x"
+        :cy="via.position.y"
+        :r="via.diameter / 2 + px(sel ? 3 : 5)"
+        :class="['via-halo', { 'via-hover': !sel }]"
+        :data-testid="sel ? undefined : 'pcb-track-hover'"
+      />
       <circle :cx="via.position.x" :cy="via.position.y" :r="via.diameter / 2" class="via" />
       <circle
         :cx="via.position.x"
@@ -165,6 +181,18 @@ const vias = computed(() =>
 
 .via {
   fill: #b3b3b3;
+  stroke: #6f6f6f;
+  stroke-width: 0.03;
+}
+
+.via-halo {
+  fill: var(--bs-emphasis-color);
+  fill-opacity: 0.55;
+}
+
+.via-halo.via-hover {
+  fill: var(--bs-primary);
+  fill-opacity: 0.5;
 }
 
 .via-drill {

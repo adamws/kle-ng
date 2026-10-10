@@ -17,6 +17,16 @@ const selected = computed(() =>
     .map((i) => tracks.presetItems[i])
     .filter((item): item is TrackSegment => item?.type === 'track'),
 )
+const viaCount = computed(
+  () => tracks.selection.filter((i) => tracks.presetItems[i]?.type === 'via').length,
+)
+const summary = computed(() => {
+  const parts = []
+  const n = selected.value.length
+  if (n) parts.push(`${n} track${n > 1 ? 's' : ''}`)
+  if (viaCount.value) parts.push(`${viaCount.value} via${viaCount.value > 1 ? 's' : ''}`)
+  return `${parts.join(', ')} selected`
+})
 
 /** Shared value of the selection, undefined when mixed. */
 function common<T>(values: T[]): T | undefined {
@@ -38,16 +48,14 @@ function setLayer(value: CopperLayer) {
 
 <template>
   <div
-    v-if="selected.length"
+    v-if="selected.length || viaCount"
     class="track-selection-bar"
     role="group"
     aria-label="Selected tracks"
     data-testid="pcb-selection-bar"
   >
-    <span class="selection-count" data-testid="pcb-selection-count">
-      {{ selected.length }} track{{ selected.length > 1 ? 's' : '' }} selected
-    </span>
-    <label class="bar-field" title="Width of the selected tracks, mm">
+    <span class="selection-count" data-testid="pcb-selection-count">{{ summary }}</span>
+    <label v-if="selected.length" class="bar-field" title="Width of the selected tracks, mm">
       <span>Width mm</span>
       <CustomNumberInput
         v-model="width"
@@ -60,7 +68,12 @@ function setLayer(value: CopperLayer) {
         data-testid="pcb-selection-width"
       />
     </label>
-    <div class="btn-group btn-group-sm" role="group" aria-label="Layer of the selected tracks">
+    <div
+      v-if="selected.length"
+      class="btn-group btn-group-sm"
+      role="group"
+      aria-label="Layer of the selected tracks"
+    >
       <button
         v-for="l in ['F.Cu', 'B.Cu'] as const"
         :key="l"
@@ -81,7 +94,7 @@ function setLayer(value: CopperLayer) {
     <button
       type="button"
       class="btn btn-sm btn-outline-danger justify-content-center"
-      title="Delete the selected tracks (Delete)"
+      title="Delete the selection (Delete)"
       data-testid="pcb-selection-delete"
       @click="tracks.deleteSelection()"
     >
