@@ -293,6 +293,92 @@ describe('pcbTracks selection and history', () => {
     expect(pcb.settings.trackPreset?.items).toEqual([])
   })
 
+  /** D pad 2 → B.Cu → via → F.Cu → SW pad 2, what the editor draws with V. */
+  async function viaPreset() {
+    const via = { x: 3.5, y: 2.6 }
+    const corner = { x: 3.5, y: -4.12 }
+    pcb.settings.trackPreset = {
+      version: 1,
+      items: [
+        { type: 'track', start: D2, end: via, width: 0.25, layer: 'B.Cu' },
+        { type: 'via', position: via, diameter: 0.6, drillDiameter: 0.3 },
+        { type: 'track', start: via, end: corner, width: 0.25, layer: 'F.Cu' },
+        { type: 'track', start: corner, end: SW2, width: 0.25, layer: 'F.Cu' },
+      ],
+    }
+    await nextTick() // the history starts from the outside write
+  }
+  const presetVia = () => pcb.settings.trackPreset!.items.find((i) => i.type === 'via')!
+  const endsOnVia = () => {
+    const at = (presetVia() as { position: { x: number; y: number } }).position
+    return pcb.settings.trackPreset!.items.filter(
+      (i) =>
+        i.type === 'track' &&
+        ((i.start.x === at.x && i.start.y === at.y) || (i.end.x === at.x && i.end.y === at.y)),
+    ).length
+  }
+
+  it('drags a via with the tracks ending on it, as one undo step', async () => {
+    await viaPreset()
+    tracks.editorSettings.grid = 0.02
+    const handle = tracks.dragHandleAt({ x: 3.6, y: 2.6 }, 0.05, ['B.Cu'])
+    expect(handle).toEqual({ kind: 'via', item: 1 })
+    tracks.startDrag(handle!, { x: 3.5, y: 2.6 })
+    tracks.moveDrag({ x: 3.5, y: 2.0 })
+    expect(tracks.dragViolation).toBeNull()
+    tracks.endDrag()
+
+    expect(presetVia()).toMatchObject({ position: { x: 3.5, y: 2 } })
+    expect(endsOnVia()).toBe(2) // one B.Cu and one F.Cu track still meet it
+    expect(tracks.drc.violations).toEqual([])
+    expect(tracks.drc.ratsnest).toEqual([])
+    // the B.Cu side is rebuilt at 45° from the diode pad
+    const back = pcb.settings.trackPreset!.items.filter(
+      (i) => i.type === 'track' && i.layer === 'B.Cu',
+    ) as TrackSegment[]
+    for (const t of back) {
+      const dx = Math.abs(t.end.x - t.start.x)
+      const dy = Math.abs(t.end.y - t.start.y)
+      expect(dx < 1e-9 || dy < 1e-9 || Math.abs(dx - dy) < 1e-6).toBe(true)
+    }
+
+    tracks.undo()
+    expect(presetVia()).toMatchObject({ position: { x: 3.5, y: 2.6 } })
+  })
+
+  it('drops a dragged via back at its last legal place, over a hole', async () => {
+    await viaPreset()
+    tracks.startDrag({ kind: 'via', item: 1 }, { x: 3.5, y: 2.6 })
+    tracks.moveDrag({ x: 3.5, y: 2.0 })
+    tracks.moveDrag({ x: 5.08, y: 0 }) // the side NPTH
+    expect(tracks.dragViolation).not.toBeNull()
+    tracks.endDrag()
+    expect(presetVia()).toMatchObject({ position: { x: 3.5, y: 2 } })
+  })
+
+  it('moves a via to a typed position, refusing one that breaks a rule', async () => {
+    await viaPreset()
+    expect(tracks.setViaPosition(1, { x: 5.08, y: 0 })).toMatch(/Hole/)
+    expect(presetVia()).toMatchObject({ position: { x: 3.5, y: 2.6 } })
+    expect(tracks.setViaPosition(1, { x: 3.25, y: 2.25 })).toBeNull()
+    expect(presetVia()).toMatchObject({ position: { x: 3.25, y: 2.25 } })
+    expect(endsOnVia()).toBe(2)
+    const i = pcb.settings.trackPreset!.items.indexOf(presetVia())
+    expect(tracks.selection).toEqual([i])
+  })
+
+  it('changes the size of selected vias, which new vias then use', async () => {
+    await viaPreset()
+    tracks.selectItems([0, 1], false)
+    tracks.updateSelection({ diameter: 0.8, drillDiameter: 0.4 })
+    expect(presetVia()).toMatchObject({ diameter: 0.8, drillDiameter: 0.4 })
+    expect(items()[0]!.width).toBe(0.25) // tracks keep their width
+    expect(tracks.editorSettings.via).toEqual({ diameter: 0.8, drillDiameter: 0.4 })
+
+    tracks.updateSelection({ drillDiameter: 0.7 })
+    expect(tracks.drc.violations.map((v) => v.kind)).toContain('via-size')
+  })
+
   it('picks the track under the cursor on visible layers', () => {
     routeDefault()
     expect(tracks.trackAt({ x: 2.6, y: -2 }, 0.05, ['B.Cu'])).toBe(0)

@@ -36,7 +36,7 @@ import {
   type Violation,
 } from '@/utils/pcb-tracks/drc'
 import type { NetName, PlacedPad } from '@/utils/pcb-tracks/netlist'
-import { walk, type Posture } from '@/utils/pcb-tracks/posture'
+import { snapToGrid, walk, type Posture } from '@/utils/pcb-tracks/posture'
 import { snapTarget, type SnapTarget } from '@/utils/pcb-tracks/snap'
 import {
   cleanupTracks,
@@ -53,6 +53,7 @@ import {
   isFreeEnd,
   isLineCorner,
   replaceLine,
+  replaceLines,
   roundNm,
   samePoint,
   simplifyChain,
@@ -69,6 +70,13 @@ export interface TrackEditorSettings {
   clearance: number
   layer: CopperLayer
   posture: Posture
+  /** Size of new vias, mm: the last size set on a via, KiCad's netclass default at first. */
+  via: ViaSize
+}
+
+export interface ViaSize {
+  diameter: number
+  drillDiameter: number
 }
 
 export type TrackTool = 'select' | 'route'
@@ -91,6 +99,7 @@ interface RouteState {
   /** Layer the route continues on. */
   layer: CopperLayer
   width: number
+  via: ViaSize
   /** Swap the order of the walk's straight and diagonal parts. */
   flip: boolean
 }
@@ -99,8 +108,10 @@ interface DragState {
   handle: DragHandle
   /** Items at the start (a segment drag starts from merged collinear tracks). */
   base: TrackItem[]
-  /** The dragged line in `base`. */
+  /** The dragged line in `base` (a via drag: its first fanout line, if any). */
   line: TrackLine
+  /** Via drags: the lines ending on the via, each with the via's point index. */
+  fanout: { line: TrackLine; index: number }[]
   /** The dragged segment (segment drags) or point (corner drags) in the line's chain. */
   index: number
   grab: Pt
@@ -128,7 +139,7 @@ function segments(points: readonly Pt[], layer: CopperLayer, width: number): Tra
 }
 
 const otherLayer = (layer: CopperLayer): CopperLayer => (layer === 'F.Cu' ? 'B.Cu' : 'F.Cu')
-const viaAt = (position: Pt): TrackVia => ({ type: 'via', position, ...DEFAULT_VIA })
+const viaAt = (position: Pt, size: ViaSize): TrackVia => ({ type: 'via', position, ...size })
 
 /**
  * A route's items in chain order: the tracks of each layer run, with the via
@@ -145,12 +156,12 @@ function routeItems(r: RouteState, reverse: boolean): TrackItem[] {
   const flush = (layer: CopperLayer | undefined) => {
     if (layer && run.length > 1) items.push(...segments(simplifyChain(run), layer, r.width))
   }
-  if (vias.has(0)) items.push(viaAt(points[0]!))
+  if (vias.has(0)) items.push(viaAt(points[0]!, r.via))
   for (let i = 1; i < n; i++) {
     run.push(points[i]!)
     if (vias.has(i)) {
       flush(layers[i - 1])
-      items.push(viaAt(points[i]!))
+      items.push(viaAt(points[i]!, r.via))
       run = [points[i]!]
     }
   }
@@ -167,6 +178,7 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     clearance: DEFAULT_DRC_RULES.clearance,
     layer: 'B.Cu',
     posture: '45',
+    via: { ...DEFAULT_VIA },
   })
   const tool = ref<TrackTool>('select')
   const route = ref<RouteState | null>(null)
@@ -236,7 +248,9 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     }))
   })
   const routeVias = computed<TrackVia[]>(() =>
-    route.value ? route.value.vias.map((i) => viaAt(route.value!.points[i]!)) : [],
+    route.value
+      ? route.value.vias.map((i) => viaAt(route.value!.points[i]!, route.value!.via))
+      : [],
   )
   const previewSegments = computed(() =>
     route.value ? segments(previewPoints.value, route.value.layer, route.value.width) : [],
@@ -419,15 +433,29 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     writeItems(savedItems.value.filter((_, i) => !drop.has(i)))
   }
 
-  /** Changes the selected tracks; the selection stays (indexes don't move). */
-  function updateSelection(change: Partial<Pick<TrackSegment, 'width' | 'layer'>>) {
+  /**
+   * Changes the selected tracks (width, layer) or vias (size); the selection
+   * stays (indexes don't move). A via size also becomes the size of new vias.
+   */
+  function updateSelection(change: Partial<Pick<TrackSegment, 'width' | 'layer'> & ViaSize>) {
     if (!selection.value.length) return
     const chosen = new Set(selection.value)
+    const { width, layer, diameter, drillDiameter } = change
+    const trackChange = { ...(width !== undefined && { width }), ...(layer && { layer }) }
+    const viaChange = {
+      ...(diameter !== undefined && { diameter }),
+      ...(drillDiameter !== undefined && { drillDiameter }),
+    }
     writeItems(
-      savedItems.value.map((item, i) =>
-        chosen.has(i) && item.type === 'track' ? { ...item, ...change } : item,
-      ),
+      savedItems.value.map((item, i) => {
+        if (!chosen.has(i)) return item
+        if (item.type === 'track') return { ...item, ...trackChange }
+        if (item.type === 'via') return { ...item, ...viaChange }
+        return item
+      }),
     )
+    if (Object.keys(viaChange).length)
+      editorSettings.value.via = { ...editorSettings.value.via, ...viaChange }
   }
 
   /** Net to highlight: the route's while routing, the dragged one's, else the clicked pad's. */
@@ -448,6 +476,16 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     layers: readonly CopperLayer[],
   ): DragHandle | null {
     const items = savedItems.value
+    // a via drags with the tracks ending on it (vias span both layers)
+    if (layers.length) {
+      let via: { d: number; item: number } | null = null
+      items.forEach((item, i) => {
+        if (item.type !== 'via') return
+        const d = Math.hypot(p.x - item.position.x, p.y - item.position.y)
+        if (d <= tolerance + item.diameter / 2 && (!via || d < via.d)) via = { d, item: i }
+      })
+      if (via) return { kind: 'via', item: (via as { item: number }).item }
+    }
     let corner: { d: number; handle: DragHandle } | null = null
     for (const item of items) {
       if (item.type !== 'track' || !layers.includes(item.layer)) continue
@@ -471,6 +509,19 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
 
   /** The preset with the dragged line at `param`, simplified like KiCad does each frame. */
   function dragPreview(state: DragState, param: number | Pt): LineReplacement {
+    if (state.handle.kind === 'via') {
+      // KiCad's via drag: the via goes to the point, each line on it follows at 45°
+      const at = roundNm(param as Pt)
+      const via = state.base[state.handle.item] as TrackVia
+      return replaceLines(
+        state.base,
+        state.fanout.map(({ line, index }) => ({
+          line,
+          points: simplifyChain(dragCorner45(line.points, index, at).map(roundNm)),
+        })),
+        new Map([[state.handle.item, { ...via, position: at }]]),
+      )
+    }
     let chain: Pt[]
     if (state.handle.kind === 'segment') {
       const [a, b] = draggedSegment(state)
@@ -492,11 +543,50 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     return drc.violations.find((v) => v.items.some((i) => changed.has(i))) ?? null
   }
 
-  function startDrag(handle: DragHandle, at: Pt) {
-    cancelRoute()
-    selection.value = []
+  /** The lines ending on via `index`, each with the via's point index. */
+  function viaFanout(base: TrackItem[], index: number) {
+    const via = base[index] as TrackVia
+    const fanout: { line: TrackLine; index: number }[] = []
+    const seen = new Set<number>()
+    base.forEach((item, i) => {
+      if (item.type !== 'track' || seen.has(i)) return
+      if (!samePoint(item.start, via.position) && !samePoint(item.end, via.position)) return
+      const line = assembleLine(base, padInfoList.value, i)
+      line.items.forEach((j) => seen.add(j))
+      fanout.push({ line, index: line.points.findIndex((q) => samePoint(q, via.position)) })
+    })
+    return fanout
+  }
+
+  /** The drag of `handle` grabbed at `at`, before any move; null when it can't drag. */
+  function createDragState(handle: DragHandle, at: Pt): DragState | null {
     const infos = padInfoList.value
     let base = savedItems.value
+    if (handle.kind === 'via') {
+      const via = base[handle.item]
+      if (via?.type !== 'via') return null
+      const fanout = viaFanout(base, handle.item)
+      const moved = [handle.item, ...fanout.flatMap((f) => f.line.items)]
+      const baseDrc = runDrc(pads.value, base, rules.value)
+      const unchanged = { items: base, changed: [] }
+      const state: DragState = {
+        handle,
+        base,
+        line: fanout[0]?.line ?? { points: [via.position], items: [], layer: 'B.Cu', width: 0 },
+        fanout,
+        index: 0,
+        grab: { ...at },
+        nets: baseDrc.itemNets,
+        net: baseDrc.itemNets[handle.item] ?? null,
+        param: via.position,
+        result: unchanged,
+        violation: null,
+        lastValid: unchanged,
+        strict: !baseDrc.violations.some((v) => v.items.some((i) => moved.includes(i))),
+      }
+      state.result = state.lastValid = dragPreview(state, state.param)
+      return state
+    }
     let item: number
     if (handle.kind === 'segment') {
       // a straight line clicked together from several tracks drags as one
@@ -506,19 +596,20 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     } else {
       item = endsAt(base, handle.point, handle.layer)[0]?.item ?? -1
     }
-    if (item < 0) return
+    if (item < 0) return null
     const line = assembleLine(base, infos, item)
     const index =
       handle.kind === 'segment'
         ? line.items.indexOf(item)
         : line.points.findIndex((q) => samePoint(q, handle.point))
-    if (index < 0) return
+    if (index < 0) return null
     const baseDrc = runDrc(pads.value, base, rules.value)
     const unchanged = { items: base, changed: [] }
     const state: DragState = {
       handle,
       base,
       line,
+      fanout: [],
       index,
       grab: { ...at },
       nets: baseDrc.itemNets,
@@ -530,7 +621,52 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
       strict: !baseDrc.violations.some((v) => v.items.some((i) => line.items.includes(i))),
     }
     state.result = state.lastValid = dragPreview(state, state.param)
-    drag.value = state
+    return state
+  }
+
+  function startDrag(handle: DragHandle, at: Pt) {
+    cancelRoute()
+    selection.value = []
+    const state = createDragState(handle, at)
+    if (state) drag.value = state
+  }
+
+  /**
+   * Moves via `index` to `p` (switch-local mm) with the tracks ending on it,
+   * as one undoable step. Returns why it can't, or null when moved; the via
+   * stays selected.
+   */
+  function setViaPosition(index: number, p: Pt): string | null {
+    const state = createDragState({ kind: 'via', item: index }, p)
+    if (!state) return 'Not a via'
+    const result = dragPreview(state, p)
+    const violation = dragViolation({ ...state, strict: true }, result)
+    if (violation) return violation.message
+    const at = roundNm(p)
+    const items = cleanupTracks(result.items, padInfoList.value).items
+    writeItems(items)
+    const moved = items.findIndex((it) => it.type === 'via' && samePoint(it.position, at))
+    selection.value = moved >= 0 ? [moved] : []
+    return null
+  }
+
+  /** A dragged via snaps to track ends of its net on either layer (not its own), else the grid. */
+  function snapVia(state: DragState, at: Pt): Pt {
+    const own = new Set([
+      state.handle.kind === 'via' ? state.handle.item : -1,
+      ...state.fanout.flatMap((f) => f.line.items),
+    ])
+    let best: { d: number; p: Pt } | null = null
+    state.base.forEach((it, i) => {
+      if (own.has(i) || !state.net || state.nets[i] !== state.net) return
+      const points =
+        it.type === 'track' ? [it.start, it.end] : it.type === 'via' ? [it.position] : []
+      for (const q of points) {
+        const d = Math.hypot(at.x - q.x, at.y - q.y)
+        if (d <= snapRadius.value && (!best || d < best.d)) best = { d, p: q }
+      }
+    })
+    return best ? (best as { p: Pt }).p : snapToGrid(at, editorSettings.value.grid)
   }
 
   /**
@@ -541,7 +677,9 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     const state = drag.value
     if (!state) return
     let param: number | Pt
-    if (state.handle.kind === 'segment') {
+    if (state.handle.kind === 'via') {
+      param = snapVia(state, at)
+    } else if (state.handle.kind === 'segment') {
       const [a, b] = draggedSegment(state)
       const n = segmentNormal(a, b)
       const raw = (at.x - state.grab.x) * n.x + (at.y - state.grab.y) * n.y
@@ -634,6 +772,7 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
       startAnchored: t.kind !== 'grid',
       layer: editorSettings.value.layer,
       width: editorSettings.value.width,
+      via: { ...editorSettings.value.via },
       flip: false,
     }
     return true
@@ -691,7 +830,7 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
         ...routeSegments.value,
         ...routeVias.value,
         ...previewSegments.value,
-        viaAt(at),
+        viaAt(at, r.via),
       ],
       rules.value,
     )
@@ -801,6 +940,7 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     dragViolation: computed(() => drag.value?.violation ?? null),
     dragHandleAt,
     startDrag,
+    setViaPosition,
     moveDrag,
     endDrag,
     cancelDrag,

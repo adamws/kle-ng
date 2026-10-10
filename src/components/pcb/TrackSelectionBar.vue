@@ -1,12 +1,18 @@
 <!--
-  TrackSelectionBar: width, layer and delete for the selected tracks. A panel
+  TrackSelectionBar: width and layer of the selected tracks, size of the
+  selected vias (and the position of a single one), and delete. A panel
   floating over the canvas's top-right corner, so a selection never moves the
   preview.
+
+  Via fields are what kbplacer's preset format holds: diameter, drill and
+  position (through vias only, nets from connectivity). Their limits are
+  KiCad's constraints for a new board, which kle-ng-api boards use.
 -->
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { usePcbTracksStore } from '@/stores/pcbTracks'
-import type { CopperLayer, TrackSegment } from '@/types/tracks'
+import type { CopperLayer, TrackSegment, TrackVia } from '@/types/tracks'
+import { DEFAULT_DRC_RULES } from '@/utils/pcb-tracks/drc'
 import CustomNumberInput from '../CustomNumberInput.vue'
 import BiTrash3 from 'bootstrap-icons/icons/trash3.svg'
 
@@ -17,9 +23,12 @@ const selected = computed(() =>
     .map((i) => tracks.presetItems[i])
     .filter((item): item is TrackSegment => item?.type === 'track'),
 )
-const viaCount = computed(
-  () => tracks.selection.filter((i) => tracks.presetItems[i]?.type === 'via').length,
+const selectedVias = computed(() =>
+  tracks.selection
+    .map((i) => ({ index: i, via: tracks.presetItems[i] }))
+    .filter((v): v is { index: number; via: TrackVia } => v.via?.type === 'via'),
 )
+const viaCount = computed(() => selectedVias.value.length)
 const summary = computed(() => {
   const parts = []
   const n = selected.value.length
@@ -43,6 +52,34 @@ const layer = computed(() => common(selected.value.map((t) => t.layer)))
 
 function setLayer(value: CopperLayer) {
   tracks.updateSelection({ layer: value })
+}
+
+const RULES = DEFAULT_DRC_RULES
+const diameter = computed(() => common(selectedVias.value.map((v) => v.via.diameter)))
+const drill = computed(() => common(selectedVias.value.map((v) => v.via.drillDiameter)))
+/** Largest drill that keeps the copper ring of the smallest selected via. */
+const maxDrill = computed(
+  () => Math.min(...selectedVias.value.map((v) => v.via.diameter)) - 2 * RULES.viaMinAnnular,
+)
+
+function setDiameter(d: number | undefined) {
+  if (d !== undefined && d >= RULES.viaMinDiameter) tracks.updateSelection({ diameter: d })
+}
+function setDrill(d: number | undefined) {
+  if (d !== undefined && d >= RULES.minThroughDrill) tracks.updateSelection({ drillDiameter: d })
+}
+
+// position of a single selected via; a move that breaks a rule is refused
+const singleVia = computed(() =>
+  selectedVias.value.length === 1 && !selected.value.length ? selectedVias.value[0]! : null,
+)
+const moveError = ref<string | null>(null)
+watch(singleVia, () => (moveError.value = null))
+
+function setPosition(axis: 'x' | 'y', value: number | undefined) {
+  const v = singleVia.value
+  if (!v || value === undefined || value === v.via.position[axis]) return
+  moveError.value = tracks.setViaPosition(v.index, { ...v.via.position, [axis]: value })
 }
 </script>
 
@@ -91,6 +128,67 @@ function setLayer(value: CopperLayer) {
         <span class="layer-swatch"></span>{{ l }}
       </button>
     </div>
+    <template v-if="viaCount">
+      <label class="bar-field" title="Via diameter, mm (at least 0.5); new vias take this size">
+        <span>Via ⌀ mm</span>
+        <CustomNumberInput
+          :model-value="diameter"
+          :step="0.05"
+          :min="RULES.viaMinDiameter"
+          :max="2"
+          :value-on-clear="null"
+          placeholder="mixed"
+          size="compact"
+          data-testid="pcb-selection-via-diameter"
+          @commit="setDiameter"
+        />
+      </label>
+      <label
+        class="bar-field"
+        title="Via drill, mm (at least 0.3, leaving a 0.1 mm ring); new vias take this size"
+      >
+        <span>Drill mm</span>
+        <CustomNumberInput
+          :model-value="drill"
+          :step="0.05"
+          :min="RULES.minThroughDrill"
+          :max="Math.max(RULES.minThroughDrill, maxDrill)"
+          :value-on-clear="null"
+          placeholder="mixed"
+          size="compact"
+          data-testid="pcb-selection-via-drill"
+          @commit="setDrill"
+        />
+      </label>
+      <template v-if="singleVia">
+        <label
+          v-for="axis in ['x', 'y'] as const"
+          :key="axis"
+          class="bar-field"
+          :title="`Via ${axis.toUpperCase()} from the switch centre, mm; its tracks follow`"
+        >
+          <span>{{ axis.toUpperCase() }} mm</span>
+          <CustomNumberInput
+            :model-value="singleVia.via.position[axis]"
+            :step="0.05"
+            :min="-19.05"
+            :max="19.05"
+            :value-on-clear="singleVia.via.position[axis]"
+            size="compact"
+            :data-testid="`pcb-selection-via-${axis}`"
+            @commit="(value) => setPosition(axis, value)"
+          />
+        </label>
+        <div
+          v-if="moveError"
+          class="move-error text-danger"
+          role="alert"
+          data-testid="pcb-selection-via-error"
+        >
+          {{ moveError }}
+        </div>
+      </template>
+    </template>
     <button
       type="button"
       class="btn btn-sm btn-outline-danger justify-content-center"
@@ -151,6 +249,11 @@ function setLayer(value: CopperLayer) {
 
 .bar-field :deep(.custom-number-input) {
   width: 4.5rem;
+}
+
+.move-error {
+  max-width: 11rem;
+  font-size: 0.75rem;
 }
 
 .layer-swatch {

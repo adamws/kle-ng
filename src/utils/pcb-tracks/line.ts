@@ -153,23 +153,50 @@ export function replaceLine(
   line: TrackLine,
   points: readonly Vec[],
 ): LineReplacement {
-  const first = Math.min(...line.items)
-  const k = line.items.indexOf(first)
-  const sameWay = samePoint((items[first] as TrackSegment).start, line.points[k]!)
-  const chain = sameWay ? points : [...points].reverse()
-  const tracks: TrackSegment[] = []
-  for (let i = 1; i < chain.length; i++) {
-    tracks.push({
-      type: 'track',
-      start: chain[i - 1]!,
-      end: chain[i]!,
-      width: line.width,
-      layer: line.layer,
-    })
+  return replaceLines(items, [{ line, points }])
+}
+
+/**
+ * Replaces several lines at once (a via's fanout), each like `replaceLine`,
+ * and optionally replaces single items (the dragged via). `changed` lists the
+ * new tracks and the replaced items.
+ */
+export function replaceLines(
+  items: readonly TrackItem[],
+  lines: readonly { line: TrackLine; points: readonly Vec[] }[],
+  replace: ReadonlyMap<number, TrackItem> = new Map(),
+): LineReplacement {
+  const inserts = new Map<number, TrackSegment[]>()
+  const drop = new Set<number>()
+  for (const { line, points } of lines) {
+    const first = Math.min(...line.items)
+    const k = line.items.indexOf(first)
+    const sameWay = samePoint((items[first] as TrackSegment).start, line.points[k]!)
+    const chain = sameWay ? points : [...points].reverse()
+    const tracks: TrackSegment[] = []
+    for (let i = 1; i < chain.length; i++) {
+      tracks.push({
+        type: 'track',
+        start: chain[i - 1]!,
+        end: chain[i]!,
+        width: line.width,
+        layer: line.layer,
+      })
+    }
+    inserts.set(first, tracks)
+    line.items.forEach((i) => drop.add(i))
   }
-  const drop = new Set(line.items)
-  const kept = items.filter((_, i) => !drop.has(i))
-  // the line's first item is the earliest, so nothing before it was dropped
-  const out = [...kept.slice(0, first), ...tracks, ...kept.slice(first)]
-  return { items: out, changed: tracks.map((_, i) => first + i) }
+  const out: TrackItem[] = []
+  const changed: number[] = []
+  items.forEach((item, i) => {
+    for (const t of inserts.get(i) ?? []) {
+      changed.push(out.length)
+      out.push(t)
+    }
+    if (drop.has(i)) return
+    const next = replace.get(i)
+    if (next) changed.push(out.length)
+    out.push(next ?? item)
+  })
+  return { items: out, changed }
 }

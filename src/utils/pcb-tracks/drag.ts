@@ -42,6 +42,8 @@ export type DragHandle =
   | { kind: 'segment'; item: number }
   /** A corner of a line, or a free line end. */
   | { kind: 'corner'; point: Vec; layer: CopperLayer }
+  /** A via, dragged with the lines ending on it. */
+  | { kind: 'via'; item: number }
 
 interface Guide {
   p: Vec

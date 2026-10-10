@@ -556,6 +556,10 @@ in kbplacer's JSON preset format (kicad-kbplacer `docs/switch-preset.schema.json
 - Never combined with `routing` `Disabled`: a defined `trackPreset` is the client's preset routing
   mode, and the settings validator drops `tracks` with `Disabled`. A preset mode with nothing drawn
   keeps an empty `items` list in the settings; it isn't sent, and Generate is blocked.
+- Known kbplacer issue (not fixed yet): for a preset with a via, the build log has one "Could not
+  add track segment due to detected collision" per key for the track leaving the via. The track is
+  placed on kbplacer's retry once the next segment connects it to the switch pad, so the board is
+  routed and DRC-clean, but the warning is spurious.
 - Optional `basis`: free-form, ignored by kbplacer. The editor records the switch and diode
   footprints and the diode placement (`PcbSettings` field names) on every edit; kbplacer's `to-json`
   writes `switchFootprint` and `diodeFootprints`.

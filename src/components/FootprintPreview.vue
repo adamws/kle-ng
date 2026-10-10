@@ -1182,7 +1182,7 @@ onUnmounted(() => {
           ? 'click: add corner · V: via · / flip · Backspace: undo · double-click/End: finish · Esc: cancel'
           : tracks.tool === 'route'
             ? 'click or X: start a track · wheel: zoom · middle/Space+drag: pan'
-            : 'click: select · double-click/U: connected · drag track: move · drag empty: box · Ctrl+A: all · Del: delete · X: route'
+            : 'click: select · double-click/U: connected · drag track or via: move · drag empty: box · Ctrl+A: all · Del: delete · X: route'
       }}</span>
     </div>
 

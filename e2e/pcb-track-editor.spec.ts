@@ -520,4 +520,72 @@ test.describe('PCB Generator track editor', () => {
     expect(types.lastIndexOf('B.Cu')).toBeLessThan(types.indexOf('via'))
     expect(types.indexOf('F.Cu')).toBeGreaterThan(types.indexOf('via'))
   })
+
+  test('edits and drags a via with its tracks', async ({ page }) => {
+    await openPreview(page)
+    await enterPresetMode(page)
+    await page.locator('[data-testid="pcb-tool-route"]').click()
+    const sw2 = await padCentre(page, 'SW', '2')
+    const d2 = await padCentre(page, 'D', '2')
+    const scale = (d2.y - sw2.y) / 7.68 // screen px per mm
+    await page.mouse.click(d2.x, d2.y)
+    await page.mouse.move(d2.x - 1.58 * scale, d2.y, { steps: 5 })
+    await page.keyboard.press('v')
+    await page.mouse.move(sw2.x, sw2.y, { steps: 5 })
+    await page.mouse.click(sw2.x, sw2.y)
+    await page.locator('[data-testid="pcb-tool-select"]').click()
+
+    const via = page.locator('[data-testid="pcb-track-overlay-via"]')
+    const viaCircle = via.locator('circle.via')
+    const centre = async () => {
+      const b = (await viaCircle.boundingBox())!
+      return { x: b.x + b.width / 2, y: b.y + b.height / 2 }
+    }
+
+    // select it: size fields and position
+    let c = await centre()
+    await page.mouse.click(c.x, c.y)
+    await expect(page.locator('[data-testid="pcb-selection-count"]')).toHaveText('1 via selected')
+    const diameter = page.locator('[data-testid="pcb-selection-via-diameter"] input')
+    await expect(diameter).toHaveValue('0.6')
+    await diameter.fill('0.8')
+    await diameter.press('Enter')
+    await expect(viaCircle).toHaveAttribute('r', '0.4')
+    const x = page.locator('[data-testid="pcb-selection-via-x"] input')
+    await expect(x).toHaveValue('3.5')
+
+    // a typed position next to the centre hole is refused with the reason
+    await x.fill('0')
+    await x.press('Enter')
+    await expect(page.locator('[data-testid="pcb-selection-via-error"]')).toContainText('clearance')
+    await expect(x).toHaveValue('3.5')
+
+    // drag it up by 1 mm: the tracks on both layers follow
+    c = await centre()
+    await page.mouse.move(c.x, c.y)
+    await page.mouse.down()
+    await page.mouse.move(c.x, c.y - scale, { steps: 8 })
+    await page.mouse.up()
+    await expect(page.locator('[data-testid="pcb-drc-summary"]')).toHaveText('DRC clean')
+    const moved = await centre()
+    expect(moved.y).toBeLessThan(c.y - scale / 2)
+    // the settings are saved after a short debounce
+    const tracksAtVia = () =>
+      page.evaluate(() => {
+        const raw = localStorage.getItem('kle-ng-pcb-settings')
+        type V = { x_nm: number; y_nm: number }
+        const items: { type: string; start?: V; end?: V; position?: V }[] = raw
+          ? (JSON.parse(raw).tracks?.items ?? [])
+          : []
+        const p = items.find((i) => i.type === 'via')?.position
+        if (!p) return raw
+        const at = (q?: V) => !!q && q.x_nm === p.x_nm && q.y_nm === p.y_nm
+        return items.filter((i) => i.type === 'track' && (at(i.start) || at(i.end))).length
+      })
+    await expect.poll(tracksAtVia).toBe(2)
+
+    await page.locator('[data-testid="pcb-undo"]').click()
+    const back = await centre()
+    expect(Math.abs(back.y - c.y)).toBeLessThan(1)
+  })
 })

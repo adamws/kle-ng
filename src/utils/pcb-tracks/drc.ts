@@ -3,7 +3,8 @@
  *
  * Rules are KiCad 9's defaults for a board built from scratch, which is what
  * kle-ng-api makes (netclass clearance 0.2 mm, hole clearance and hole to
- * hole 0.25 mm). kbplacer itself checks pads (holes included) at the netclass
+ * hole 0.25 mm; vias at least 0.5 mm with a 0.3 mm drill and a 0.1 mm ring).
+ * kbplacer itself checks pads (holes included) at the netclass
  * clearance, so passing these rules passes both. The editor is stricter by
  * CLEARANCE_MARGIN, so a preset it accepts exactly at a limit isn't rejected
  * after rounding to nanometres.
@@ -31,12 +32,22 @@ export interface DrcRules {
   holeClearance: number
   /** Hole edge to hole edge, mm. */
   holeToHole: number
+  /** Smallest via diameter, mm. */
+  viaMinDiameter: number
+  /** Smallest through-hole (via) drill, mm. */
+  minThroughDrill: number
+  /** Smallest via copper ring, (diameter - drill) / 2, mm. */
+  viaMinAnnular: number
 }
 
 export const DEFAULT_DRC_RULES: DrcRules = {
   clearance: 0.2,
   holeClearance: 0.25,
   holeToHole: 0.25,
+  // KiCad's board constraints for a new board (DEFAULT_VIASMINSIZE, DEFAULT_MINTHROUGHDRILL)
+  viaMinDiameter: 0.5,
+  minThroughDrill: 0.3,
+  viaMinAnnular: 0.1,
 }
 
 /** Via placed while routing: KiCad's default netclass (0.6 mm, 0.3 mm drill), as on kle-ng-api boards. */
@@ -45,7 +56,7 @@ export const DEFAULT_VIA = { diameter: 0.6, drillDiameter: 0.3 }
 /** Safety margin added to every limit, mm. */
 export const CLEARANCE_MARGIN = 1e-3
 
-export type ViolationKind = 'clearance' | 'hole-clearance' | 'hole-to-hole' | 'short'
+export type ViolationKind = 'clearance' | 'hole-clearance' | 'hole-to-hole' | 'short' | 'via-size'
 
 export interface Violation {
   kind: ViolationKind
@@ -85,6 +96,22 @@ interface Copper {
   ref: number
   layers: string[]
   shape: Shape
+}
+
+/** Why a via's size breaks the board constraints, or null (no margin: sizes are set, not measured). */
+export function viaSizeProblem(
+  via: { diameter: number; drillDiameter: number },
+  rules: DrcRules = DEFAULT_DRC_RULES,
+): string | null {
+  const tol = 1e-9
+  if (via.diameter < rules.viaMinDiameter - tol)
+    return `diameter ${fmt(via.diameter)} mm, needs ${fmt(rules.viaMinDiameter)} mm`
+  if (via.drillDiameter < rules.minThroughDrill - tol)
+    return `drill ${fmt(via.drillDiameter)} mm, needs ${fmt(rules.minThroughDrill)} mm`
+  const ring = (via.diameter - via.drillDiameter) / 2
+  if (ring < rules.viaMinAnnular - tol)
+    return `ring ${fmt(ring)} mm, needs ${fmt(rules.viaMinAnnular)} mm`
+  return null
 }
 
 export function runDrc(
@@ -202,6 +229,16 @@ export function runDrc(
       })
     }
     if (item.type === 'via') {
+      const size = viaSizeProblem(item, rules)
+      if (size) {
+        report(`vs:${i}`, {
+          kind: 'via-size',
+          message: `Via size: ${size}`,
+          at: item.position,
+          items: [i],
+          pads: [],
+        })
+      }
       const drill = viaHoleShape(item)
       const others = [
         ...holes.map((h) => ({

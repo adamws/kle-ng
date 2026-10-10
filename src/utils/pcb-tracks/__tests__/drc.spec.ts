@@ -9,7 +9,7 @@ import { describe, it, expect } from 'vitest'
 import { placePads, type FootprintPads } from '@/utils/kicad/footprint-pads'
 import type { TrackItem, TrackSegment } from '@/types/tracks'
 import { UnionFind } from '../connectivity'
-import { runDrc } from '../drc'
+import { runDrc, viaSizeProblem } from '../drc'
 import { padNet, type PlacedPad } from '../netlist'
 import { padCopperShapes, padHoleShape } from '../shapes'
 import { shapeContains } from '../distance'
@@ -202,5 +202,15 @@ describe('runDrc', () => {
     const twin = { ...pad2, key: 'SW:9', pad: { ...pad2.pad, at: { x: -2.54, y: -5.08, rot: 0 } } }
     const { ratsnest } = runDrc([...pads, twin], [])
     expect(ratsnest.filter((l) => l.net === 'SW_D')).toHaveLength(2)
+  })
+})
+
+describe('viaSizeProblem', () => {
+  it("checks KiCad's via constraints for a new board", () => {
+    expect(viaSizeProblem({ diameter: 0.6, drillDiameter: 0.3 })).toBeNull()
+    expect(viaSizeProblem({ diameter: 0.5, drillDiameter: 0.3 })).toBeNull()
+    expect(viaSizeProblem({ diameter: 0.45, drillDiameter: 0.25 })).toMatch(/diameter/)
+    expect(viaSizeProblem({ diameter: 0.6, drillDiameter: 0.25 })).toMatch(/drill/)
+    expect(viaSizeProblem({ diameter: 0.6, drillDiameter: 0.45 })).toMatch(/ring/)
   })
 })
