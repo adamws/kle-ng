@@ -449,7 +449,10 @@ let resizeObserver: ResizeObserver | null = null
 onMounted(() => {
   if (typeof ResizeObserver === 'undefined' || !svgRef.value) return
   resizeObserver = new ResizeObserver(([entry]) => {
-    if (entry) svgSize.value = { width: entry.contentRect.width, height: entry.contentRect.height }
+    if (!entry) return
+    svgSize.value = { width: entry.contentRect.width, height: entry.contentRect.height }
+    // the canvas follows the panel's height; what is drawn stays in place
+    panZoom.setSize(svgSize.value)
   })
   resizeObserver.observe(svgRef.value)
 })
@@ -1213,11 +1216,18 @@ onUnmounted(() => {
   justify-content: flex-start;
   /* the toolbar row's height follows the preview's width, never its state */
   container-type: inline-size;
+  /* fill the results card; the canvas takes the height the rows leave */
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .svg-container {
   width: 100%;
-  height: 450px;
+  /* the rest of the card, at least 300 px; 450 px where the card has no set height */
+  flex: 1 1 450px;
+  min-height: 300px;
+  /* never taller than the screen with the toolbar and status rows */
+  max-height: calc(100dvh - 9rem);
   border: 1px solid var(--bs-border-color);
   border-radius: 0.375rem;
   position: relative;

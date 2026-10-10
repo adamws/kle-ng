@@ -2,7 +2,9 @@
   TrackEditorToolbar: the drawing controls of the track editor (tool, history,
   copper layer, track width, grid and posture). View controls (layer
   visibility, zoom) sit on the canvas instead. Shortcuts are listed in the
-  titles. It keeps one height in every state, so the canvas below never moves:
+  titles. Buttons that can disable themselves (undo, redo, via, clear) don't
+  take the focus on a click: a disabled focused button would drop it out of the
+  editor, and its shortcuts with it. It keeps one height in every state, so the canvas below never moves:
   one line, or two in a narrow preview (whose row is then two lines high).
 
   Clearance is not editable: kle-ng-api boards use KiCad's default netclass
@@ -63,6 +65,7 @@ const { editorSettings, tool, isRouting, canUndo, canRedo, presetItems } = store
         :disabled="!canUndo"
         title="Undo (Ctrl+Z)"
         data-testid="pcb-undo"
+        @mousedown.prevent
         @click="tracks.undo()"
       >
         <BiUndo />
@@ -73,6 +76,7 @@ const { editorSettings, tool, isRouting, canUndo, canRedo, presetItems } = store
         :disabled="!canRedo"
         title="Redo (Ctrl+Shift+Z, Ctrl+Y)"
         data-testid="pcb-redo"
+        @mousedown.prevent
         @click="tracks.redo()"
       >
         <BiRedo />
@@ -89,6 +93,7 @@ const { editorSettings, tool, isRouting, canUndo, canRedo, presetItems } = store
           : 'While routing: place a via and continue on the other layer (V)'
       "
       data-testid="pcb-place-via"
+      @mousedown.prevent
       @click="tracks.placeVia()"
     >
       <BiRecordCircle /> Via
@@ -100,6 +105,7 @@ const { editorSettings, tool, isRouting, canUndo, canRedo, presetItems } = store
       :disabled="!presetItems.length"
       title="Remove all tracks (Ctrl+Z brings them back)"
       data-testid="pcb-clear-tracks"
+      @mousedown.prevent
       @click="tracks.clearAll()"
     >
       <BiTrash3 /> Clear

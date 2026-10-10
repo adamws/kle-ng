@@ -5,6 +5,11 @@
  * - middle-button drag, or Space + left-button drag, pans,
  * - `fit(viewBox)` resets the view.
  *
+ * Once the canvas size is known (`setSize`), the viewBox has the canvas's
+ * aspect ratio, so it is exactly what shows. A resize then keeps the scale and
+ * the top-left corner, like KiCad: a canvas growing or shrinking at its edge
+ * shows more or less of the board without moving what is drawn.
+ *
  * Coordinates: `screenToSvg` maps client (screen) pixels to SVG user units via
  * `getScreenCTM().inverse()`, so it stays right for any preserveAspectRatio
  * letterboxing. The math is in plain exported functions for unit tests.
@@ -50,6 +55,38 @@ export function wheelZoomFactor(deltaY: number, deltaMode: number): number {
   return Math.pow(WHEEL_ZOOM_STEP, -px / 100)
 }
 
+export interface Size {
+  width: number
+  height: number
+}
+
+/**
+ * The part of the board a canvas of `size` shows for `vb` with
+ * preserveAspectRatio "xMidYMid meet": `vb` widened or heightened about its
+ * centre to the canvas's aspect ratio.
+ */
+export function visibleViewBox(vb: ViewBox, size: Size): ViewBox {
+  const scale = Math.min(size.width / vb.width, size.height / vb.height)
+  const width = size.width / scale
+  const height = size.height / scale
+  return {
+    x: vb.x + (vb.width - width) / 2,
+    y: vb.y + (vb.height - height) / 2,
+    width,
+    height,
+  }
+}
+
+/**
+ * The viewBox after the canvas went from `from` to `to` pixels: the scale and
+ * the top-left corner stay, so nothing drawn moves on screen. `vb` has the
+ * aspect ratio of `from` (see visibleViewBox).
+ */
+export function resizeViewBox(vb: ViewBox, from: Size, to: Size): ViewBox {
+  const scale = from.width / vb.width
+  return { x: vb.x, y: vb.y, width: to.width / scale, height: to.height / scale }
+}
+
 export function formatViewBox(vb: ViewBox): string {
   return `${vb.x} ${vb.y} ${vb.width} ${vb.height}`
 }
@@ -68,6 +105,8 @@ export function clientToSvg(ctm: Affine, clientX: number, clientY: number): Poin
 
 export function usePanZoom(svgRef: Ref<SVGSVGElement | null>, initial: ViewBox) {
   const viewBox = ref<ViewBox>({ ...initial })
+  /** Canvas size in pixels, once known. */
+  let size: Size | null = null
   const isPanning = ref(false)
   const spaceHeld = ref(false)
 
@@ -81,7 +120,16 @@ export function usePanZoom(svgRef: Ref<SVGSVGElement | null>, initial: ViewBox) 
   }
 
   function fit(vb: ViewBox) {
-    viewBox.value = { ...vb }
+    viewBox.value = size ? visibleViewBox(vb, size) : { ...vb }
+  }
+
+  /** The canvas was resized (ResizeObserver); keeps what is drawn in place. */
+  function setSize(next: Size) {
+    if (!next.width || !next.height) return
+    viewBox.value = size
+      ? resizeViewBox(viewBox.value, size, next)
+      : visibleViewBox(viewBox.value, next)
+    size = { ...next }
   }
 
   function zoomAt(at: Point, factor: number) {
@@ -157,6 +205,7 @@ export function usePanZoom(svgRef: Ref<SVGSVGElement | null>, initial: ViewBox) 
     spaceHeld,
     screenToSvg,
     fit,
+    setSize,
     zoomAt,
     zoomBy,
     onWheel,

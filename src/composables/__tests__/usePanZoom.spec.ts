@@ -4,6 +4,8 @@ import {
   MIN_VIEW_WIDTH,
   clientToSvg,
   panViewBox,
+  resizeViewBox,
+  visibleViewBox,
   wheelZoomFactor,
   zoomViewBoxAt,
 } from '../usePanZoom'
@@ -65,5 +67,34 @@ describe('clientToSvg', () => {
     const p = clientToSvg(ctm, 0, 1)
     expect(p.x).toBeCloseTo(1)
     expect(p.y).toBeCloseTo(0)
+  })
+})
+
+describe('canvas size', () => {
+  it('widens a viewBox about its centre to what a wider canvas shows', () => {
+    // 20 x 10 mm on a 400 x 100 px canvas: 10 px/mm, 40 x 10 mm visible
+    expect(
+      visibleViewBox({ x: 0, y: 0, width: 20, height: 10 }, { width: 400, height: 100 }),
+    ).toEqual({ x: -10, y: 0, width: 40, height: 10 })
+    // a taller canvas shows more height
+    expect(
+      visibleViewBox({ x: 0, y: 0, width: 20, height: 10 }, { width: 200, height: 200 }),
+    ).toEqual({ x: 0, y: -5, width: 20, height: 20 })
+  })
+
+  it('keeps the scale and top-left corner when the canvas resizes', () => {
+    const vb = { x: -10, y: -5, width: 40, height: 10 } // 10 px/mm on 400 x 100 px
+    expect(resizeViewBox(vb, { width: 400, height: 100 }, { width: 400, height: 300 })).toEqual({
+      x: -10,
+      y: -5,
+      width: 40,
+      height: 30,
+    })
+    expect(resizeViewBox(vb, { width: 400, height: 100 }, { width: 200, height: 100 })).toEqual({
+      x: -10,
+      y: -5,
+      width: 20,
+      height: 10,
+    })
   })
 })

@@ -52,8 +52,10 @@ async function openPreview(page: Page) {
 async function enterPresetMode(page: Page) {
   await page.locator(EDITOR.ROUTING).selectOption('Full (preset)')
   await expect(page.locator(EDITOR.PADS)).toBeVisible()
-  // the select sits below the preview; mouse actions need the canvas on screen
-  await page.locator(EDITOR.CANVAS).scrollIntoViewIfNeeded()
+  // the select sits below the preview; mouse actions need the whole canvas on screen
+  await page
+    .locator(EDITOR.CANVAS)
+    .evaluate((el) => el.scrollIntoView({ block: 'center', behavior: 'instant' }))
 }
 
 async function viewBoxWidth(page: Page): Promise<number> {
@@ -198,6 +200,9 @@ test.describe('PCB Generator track editor', () => {
     await expect(tracks).toHaveCount(2)
     await page.locator('[data-testid="pcb-tool-select"]').click()
 
+    // screen px per mm: SW pad 2 (2.54, -5.08) to D pad 2 (5.08, 2.6) is 7.68 mm down
+    const mm = (n: number) => (n * (d2.y - sw2.y)) / 7.68
+
     // grab the vertical track halfway and pull it right: the pad end stays,
     // joined by a new 45° track, the corner slides along the diagonal
     const v = (await tracks.nth(0).boundingBox())!
@@ -205,8 +210,8 @@ test.describe('PCB Generator track editor', () => {
     await page.mouse.move(grab.x, grab.y)
     await expect(page.locator(EDITOR.CANVAS)).toHaveClass(/drag-hover/)
     await page.mouse.down()
-    await page.mouse.move(grab.x + 10, grab.y, { steps: 4 })
-    await page.mouse.move(grab.x + 20, grab.y, { steps: 4 })
+    await page.mouse.move(grab.x + mm(0.4), grab.y, { steps: 4 })
+    await page.mouse.move(grab.x + mm(0.8), grab.y, { steps: 4 })
     await expect(tracks).toHaveCount(3)
     await page.mouse.up()
     await expect(tracks).toHaveCount(3)
@@ -221,8 +226,8 @@ test.describe('PCB Generator track editor', () => {
     // track goes back to the last legal position
     await page.mouse.move(grab.x, grab.y)
     await page.mouse.down()
-    await page.mouse.move(grab.x + 10, grab.y, { steps: 4 })
-    await page.mouse.move(grab.x + 40, grab.y, { steps: 6 })
+    await page.mouse.move(grab.x + mm(0.4), grab.y, { steps: 4 })
+    await page.mouse.move(grab.x + mm(1.6), grab.y, { steps: 6 })
     await expect(page.locator('[data-testid="pcb-drag-blocked"]')).toContainText('Hole clearance')
     await page.mouse.up()
     await expect(page.locator('[data-testid="pcb-drag-blocked"]')).toHaveCount(0)
@@ -234,11 +239,11 @@ test.describe('PCB Generator track editor', () => {
     // Esc while dragging puts the track back
     await page.mouse.move(grab.x, grab.y)
     await page.mouse.down()
-    await page.mouse.move(grab.x + 20, grab.y, { steps: 6 })
+    await page.mouse.move(grab.x + mm(0.8), grab.y, { steps: 6 })
     await expect(tracks).toHaveCount(3)
     await page.keyboard.press('Escape')
     await expect(tracks).toHaveCount(2)
-    await page.mouse.move(grab.x + 30, grab.y, { steps: 3 })
+    await page.mouse.move(grab.x + mm(1.2), grab.y, { steps: 3 })
     await page.mouse.up()
     await expect(tracks).toHaveCount(2)
   })
@@ -407,31 +412,35 @@ test.describe('PCB Generator track editor', () => {
     await expect(page.locator('[data-testid="pcb-ratsnest"]')).toHaveCount(1)
   })
 
-  test('keeps the canvas in place while editing', async ({ page }) => {
+  test('keeps the canvas and the drawing in place while editing', async ({ page }) => {
+    // tall enough for the canvas to fill the card instead of the screen
+    await page.setViewportSize({ width: 1280, height: 1100 })
     await openPreview(page)
     const canvas = page.locator(EDITOR.CANVAS)
     await canvas.scrollIntoViewIfNeeded()
     // relative to the PCB panel: selecting the routing option may scroll the page
     const panel = page.locator('.pcb-generator-panel')
-    const box = async () => {
-      const b = (await canvas.boundingBox())!
-      const p = (await panel.boundingBox())!
-      return { y: Math.round(b.y - p.y), height: Math.round(b.height) }
-    }
-    const before = await box()
+    const top = async () =>
+      Math.round((await canvas.boundingBox())!.y - (await panel.boundingBox())!.y)
+    const before = await top()
 
     await enterPresetMode(page)
-    expect(await box()).toEqual(before)
+    expect(await top()).toBe(before)
+    // the canvas fills the results card, down to its bottom edge
+    const card = (await page.locator('.pcb-generator-panel .results-card').boundingBox())!
+    const c = (await canvas.boundingBox())!
+    expect(card.y + card.height - (c.y + c.height)).toBeLessThan(60)
 
-    // routing shows a status, finishing it a selection-free preset
-    await page.locator('[data-testid="pcb-tool-route"]').click()
+    // the settings column changes height while editing (the "No tracks drawn"
+    // warning goes away), the canvas follows it, the drawing stays put
     const sw2 = await padCentre(page, 'SW', '2')
     const d2 = await padCentre(page, 'D', '2')
+    await page.locator('[data-testid="pcb-tool-route"]').click()
     await page.mouse.click(sw2.x, sw2.y)
     await expect(page.locator('[data-testid="pcb-route-status"]')).toBeVisible()
-    expect(await box()).toEqual(before)
     await page.mouse.move(d2.x, d2.y, { steps: 5 })
     await page.mouse.click(d2.x, d2.y)
+    await expect(page.locator('[data-testid="pcb-track-preset-empty"]')).toHaveCount(0)
 
     // a selection opens its panel over the canvas
     await page.locator('[data-testid="pcb-tool-select"]').click()
@@ -439,7 +448,13 @@ test.describe('PCB Generator track editor', () => {
     const t = (await track.boundingBox())!
     await page.mouse.click(t.x + t.width / 2, t.y + t.height / 2)
     await expect(page.locator('[data-testid="pcb-selection-bar"]')).toBeVisible()
-    expect(await box()).toEqual(before)
+
+    expect(await top()).toBe(before)
+    // relative to the canvas: a shorter page may scroll everything together
+    const now = (await canvas.boundingBox())!
+    const after = await padCentre(page, 'SW', '2')
+    expect(Math.abs(after.x - now.x - (sw2.x - c.x))).toBeLessThan(0.5)
+    expect(Math.abs(after.y - now.y - (sw2.y - c.y))).toBeLessThan(0.5)
   })
 
   test('selects connected tracks, hides layers and clears all', async ({ page }) => {
