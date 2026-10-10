@@ -21,10 +21,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -5080000,
                 "y_nm": 0
@@ -38,10 +35,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 0,
                 "y_nm": 0
@@ -55,10 +49,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 0
@@ -72,10 +63,7 @@
               "number": "1",
               "net": "COL",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -3810000,
                 "y_nm": -2540000
@@ -89,10 +77,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 2540000,
                 "y_nm": -5080000
@@ -112,9 +97,7 @@
               "number": "1",
               "net": "ROW",
               "attribute": "SMD",
-              "layers": [
-                "F.Cu"
-              ],
+              "layers": ["F.Cu"],
               "switch_local": {
                 "x_nm": -1400000,
                 "y_nm": 0
@@ -128,9 +111,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "SMD",
-              "layers": [
-                "F.Cu"
-              ],
+              "layers": ["F.Cu"],
               "switch_local": {
                 "x_nm": 1400000,
                 "y_nm": 0
@@ -163,10 +144,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -5080000,
                 "y_nm": 0
@@ -180,10 +158,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 0,
                 "y_nm": 0
@@ -197,10 +172,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 0
@@ -214,10 +186,7 @@
               "number": "1",
               "net": "COL",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -3810000,
                 "y_nm": -2540000
@@ -231,10 +200,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 2540000,
                 "y_nm": -5080000
@@ -254,9 +220,7 @@
               "number": "1",
               "net": "ROW",
               "attribute": "SMD",
-              "layers": [
-                "F.Cu"
-              ],
+              "layers": ["F.Cu"],
               "switch_local": {
                 "x_nm": 3680000,
                 "y_nm": 4000000
@@ -270,9 +234,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "SMD",
-              "layers": [
-                "F.Cu"
-              ],
+              "layers": ["F.Cu"],
               "switch_local": {
                 "x_nm": 6480000,
                 "y_nm": 4000000
@@ -305,10 +267,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -5080000,
                 "y_nm": 0
@@ -322,10 +281,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 0,
                 "y_nm": 0
@@ -339,10 +295,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 0
@@ -356,10 +309,7 @@
               "number": "1",
               "net": "COL",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -3810000,
                 "y_nm": -2540000
@@ -373,10 +323,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 2540000,
                 "y_nm": -5080000
@@ -396,9 +343,7 @@
               "number": "1",
               "net": "ROW",
               "attribute": "SMD",
-              "layers": [
-                "F.Cu"
-              ],
+              "layers": ["F.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 5400000
@@ -412,9 +357,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "SMD",
-              "layers": [
-                "F.Cu"
-              ],
+              "layers": ["F.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 2600000
@@ -447,10 +390,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -5080000,
                 "y_nm": 0
@@ -464,10 +404,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 0,
                 "y_nm": 0
@@ -481,10 +418,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 0
@@ -498,10 +432,7 @@
               "number": "1",
               "net": "COL",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -3810000,
                 "y_nm": -2540000
@@ -515,10 +446,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 2540000,
                 "y_nm": -5080000
@@ -538,9 +466,7 @@
               "number": "1",
               "net": "ROW",
               "attribute": "SMD",
-              "layers": [
-                "F.Cu"
-              ],
+              "layers": ["F.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 2600000
@@ -554,9 +480,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "SMD",
-              "layers": [
-                "F.Cu"
-              ],
+              "layers": ["F.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 5400000
@@ -589,10 +513,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -5080000,
                 "y_nm": 0
@@ -606,10 +527,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 0,
                 "y_nm": 0
@@ -623,10 +541,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 0
@@ -640,10 +555,7 @@
               "number": "1",
               "net": "COL",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -3810000,
                 "y_nm": -2540000
@@ -657,10 +569,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 2540000,
                 "y_nm": -5080000
@@ -680,9 +589,7 @@
               "number": "1",
               "net": "ROW",
               "attribute": "SMD",
-              "layers": [
-                "B.Cu"
-              ],
+              "layers": ["B.Cu"],
               "switch_local": {
                 "x_nm": 3680000,
                 "y_nm": 4000000
@@ -696,9 +603,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "SMD",
-              "layers": [
-                "B.Cu"
-              ],
+              "layers": ["B.Cu"],
               "switch_local": {
                 "x_nm": 6480000,
                 "y_nm": 4000000
@@ -731,10 +636,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -5080000,
                 "y_nm": 0
@@ -748,10 +650,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 0,
                 "y_nm": 0
@@ -765,10 +664,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 0
@@ -782,10 +678,7 @@
               "number": "1",
               "net": "COL",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -3810000,
                 "y_nm": -2540000
@@ -799,10 +692,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 2540000,
                 "y_nm": -5080000
@@ -822,9 +712,7 @@
               "number": "1",
               "net": "ROW",
               "attribute": "SMD",
-              "layers": [
-                "B.Cu"
-              ],
+              "layers": ["B.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 5400000
@@ -838,9 +726,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "SMD",
-              "layers": [
-                "B.Cu"
-              ],
+              "layers": ["B.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 2600000
@@ -873,10 +759,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -5080000,
                 "y_nm": 0
@@ -890,10 +773,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 0,
                 "y_nm": 0
@@ -907,10 +787,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 0
@@ -924,10 +801,7 @@
               "number": "1",
               "net": "COL",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -3810000,
                 "y_nm": -2540000
@@ -941,10 +815,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 2540000,
                 "y_nm": -5080000
@@ -964,9 +835,7 @@
               "number": "1",
               "net": "ROW",
               "attribute": "SMD",
-              "layers": [
-                "B.Cu"
-              ],
+              "layers": ["B.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 2600000
@@ -980,9 +849,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "SMD",
-              "layers": [
-                "B.Cu"
-              ],
+              "layers": ["B.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 5400000
@@ -1015,10 +882,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -5080000,
                 "y_nm": 0
@@ -1032,10 +896,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 0,
                 "y_nm": 0
@@ -1049,10 +910,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 0
@@ -1066,10 +924,7 @@
               "number": "1",
               "net": "COL",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -3810000,
                 "y_nm": -2539999
@@ -1083,10 +938,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 2539999,
                 "y_nm": -5080000
@@ -1106,9 +958,7 @@
               "number": "1",
               "net": "ROW",
               "attribute": "SMD",
-              "layers": [
-                "F.Cu"
-              ],
+              "layers": ["F.Cu"],
               "switch_local": {
                 "x_nm": 3680000,
                 "y_nm": 4000000
@@ -1122,9 +972,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "SMD",
-              "layers": [
-                "F.Cu"
-              ],
+              "layers": ["F.Cu"],
               "switch_local": {
                 "x_nm": 6480000,
                 "y_nm": 3999999
@@ -1157,10 +1005,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -5080000,
                 "y_nm": 0
@@ -1174,10 +1019,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 0,
                 "y_nm": 0
@@ -1191,10 +1033,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 0
@@ -1208,10 +1047,7 @@
               "number": "1",
               "net": "COL",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -3810000,
                 "y_nm": -2539999
@@ -1225,10 +1061,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 2539999,
                 "y_nm": -5080000
@@ -1248,9 +1081,7 @@
               "number": "1",
               "net": "ROW",
               "attribute": "SMD",
-              "layers": [
-                "F.Cu"
-              ],
+              "layers": ["F.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 5400000
@@ -1264,9 +1095,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "SMD",
-              "layers": [
-                "F.Cu"
-              ],
+              "layers": ["F.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 2599999
@@ -1299,10 +1128,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -5080000,
                 "y_nm": 0
@@ -1316,10 +1142,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 0,
                 "y_nm": 0
@@ -1333,10 +1156,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 0
@@ -1350,10 +1170,7 @@
               "number": "1",
               "net": "COL",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -3810000,
                 "y_nm": -2539999
@@ -1367,10 +1184,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 2539999,
                 "y_nm": -5080000
@@ -1390,9 +1204,7 @@
               "number": "1",
               "net": "ROW",
               "attribute": "SMD",
-              "layers": [
-                "F.Cu"
-              ],
+              "layers": ["F.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 2599999
@@ -1406,9 +1218,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "SMD",
-              "layers": [
-                "F.Cu"
-              ],
+              "layers": ["F.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 5400000
@@ -1441,10 +1251,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -5080000,
                 "y_nm": 0
@@ -1458,10 +1265,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 0,
                 "y_nm": 0
@@ -1475,10 +1279,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 0
@@ -1492,10 +1293,7 @@
               "number": "1",
               "net": "COL",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -3810000,
                 "y_nm": -2539999
@@ -1509,10 +1307,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 2539999,
                 "y_nm": -5080000
@@ -1532,9 +1327,7 @@
               "number": "1",
               "net": "ROW",
               "attribute": "SMD",
-              "layers": [
-                "B.Cu"
-              ],
+              "layers": ["B.Cu"],
               "switch_local": {
                 "x_nm": 3680000,
                 "y_nm": 4000000
@@ -1548,9 +1341,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "SMD",
-              "layers": [
-                "B.Cu"
-              ],
+              "layers": ["B.Cu"],
               "switch_local": {
                 "x_nm": 6480000,
                 "y_nm": 3999999
@@ -1583,10 +1374,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -5080000,
                 "y_nm": 0
@@ -1600,10 +1388,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 0,
                 "y_nm": 0
@@ -1617,10 +1402,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 0
@@ -1634,10 +1416,7 @@
               "number": "1",
               "net": "COL",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -3810000,
                 "y_nm": -2539999
@@ -1651,10 +1430,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 2539999,
                 "y_nm": -5080000
@@ -1674,9 +1450,7 @@
               "number": "1",
               "net": "ROW",
               "attribute": "SMD",
-              "layers": [
-                "B.Cu"
-              ],
+              "layers": ["B.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 5400000
@@ -1690,9 +1464,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "SMD",
-              "layers": [
-                "B.Cu"
-              ],
+              "layers": ["B.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 2599999
@@ -1725,10 +1497,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -5080000,
                 "y_nm": 0
@@ -1742,10 +1511,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 0,
                 "y_nm": 0
@@ -1759,10 +1525,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 0
@@ -1776,10 +1539,7 @@
               "number": "1",
               "net": "COL",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -3810000,
                 "y_nm": -2539999
@@ -1793,10 +1553,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 2539999,
                 "y_nm": -5080000
@@ -1816,9 +1573,7 @@
               "number": "1",
               "net": "ROW",
               "attribute": "SMD",
-              "layers": [
-                "B.Cu"
-              ],
+              "layers": ["B.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 2599999
@@ -1832,9 +1587,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "SMD",
-              "layers": [
-                "B.Cu"
-              ],
+              "layers": ["B.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 5400000
@@ -1867,10 +1620,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -5079999,
                 "y_nm": 0
@@ -1884,10 +1634,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 0,
                 "y_nm": 0
@@ -1901,10 +1648,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 5079999,
                 "y_nm": 0
@@ -1918,10 +1662,7 @@
               "number": "1",
               "net": "COL",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -3809999,
                 "y_nm": -2539999
@@ -1935,10 +1676,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 2540000,
                 "y_nm": -5080000
@@ -1958,9 +1696,7 @@
               "number": "1",
               "net": "ROW",
               "attribute": "SMD",
-              "layers": [
-                "F.Cu"
-              ],
+              "layers": ["F.Cu"],
               "switch_local": {
                 "x_nm": 3679999,
                 "y_nm": 3999998
@@ -1974,9 +1710,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "SMD",
-              "layers": [
-                "F.Cu"
-              ],
+              "layers": ["F.Cu"],
               "switch_local": {
                 "x_nm": 6480000,
                 "y_nm": 3999999
@@ -2009,10 +1743,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -5079999,
                 "y_nm": 0
@@ -2026,10 +1757,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 0,
                 "y_nm": 0
@@ -2043,10 +1771,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 5079999,
                 "y_nm": 0
@@ -2060,10 +1785,7 @@
               "number": "1",
               "net": "COL",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -3809999,
                 "y_nm": -2539999
@@ -2077,10 +1799,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 2540000,
                 "y_nm": -5080000
@@ -2100,9 +1819,7 @@
               "number": "1",
               "net": "ROW",
               "attribute": "SMD",
-              "layers": [
-                "F.Cu"
-              ],
+              "layers": ["F.Cu"],
               "switch_local": {
                 "x_nm": 5079999,
                 "y_nm": 5399999
@@ -2116,9 +1833,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "SMD",
-              "layers": [
-                "F.Cu"
-              ],
+              "layers": ["F.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 2599998
@@ -2151,10 +1866,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -5079999,
                 "y_nm": 0
@@ -2168,10 +1880,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 0,
                 "y_nm": 0
@@ -2185,10 +1894,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 5079999,
                 "y_nm": 0
@@ -2202,10 +1908,7 @@
               "number": "1",
               "net": "COL",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -3809999,
                 "y_nm": -2539999
@@ -2219,10 +1922,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 2540000,
                 "y_nm": -5080000
@@ -2242,9 +1942,7 @@
               "number": "1",
               "net": "ROW",
               "attribute": "SMD",
-              "layers": [
-                "F.Cu"
-              ],
+              "layers": ["F.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 2599998
@@ -2258,9 +1956,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "SMD",
-              "layers": [
-                "F.Cu"
-              ],
+              "layers": ["F.Cu"],
               "switch_local": {
                 "x_nm": 5079999,
                 "y_nm": 5399999
@@ -2293,10 +1989,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -5079999,
                 "y_nm": 0
@@ -2310,10 +2003,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 0,
                 "y_nm": 0
@@ -2327,10 +2017,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 5079999,
                 "y_nm": 0
@@ -2344,10 +2031,7 @@
               "number": "1",
               "net": "COL",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -3809999,
                 "y_nm": -2539999
@@ -2361,10 +2045,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 2540000,
                 "y_nm": -5080000
@@ -2384,9 +2065,7 @@
               "number": "1",
               "net": "ROW",
               "attribute": "SMD",
-              "layers": [
-                "B.Cu"
-              ],
+              "layers": ["B.Cu"],
               "switch_local": {
                 "x_nm": 3679999,
                 "y_nm": 3999998
@@ -2400,9 +2079,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "SMD",
-              "layers": [
-                "B.Cu"
-              ],
+              "layers": ["B.Cu"],
               "switch_local": {
                 "x_nm": 6480000,
                 "y_nm": 3999999
@@ -2435,10 +2112,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -5079999,
                 "y_nm": 0
@@ -2452,10 +2126,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 0,
                 "y_nm": 0
@@ -2469,10 +2140,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 5079999,
                 "y_nm": 0
@@ -2486,10 +2154,7 @@
               "number": "1",
               "net": "COL",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -3809999,
                 "y_nm": -2539999
@@ -2503,10 +2168,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 2540000,
                 "y_nm": -5080000
@@ -2526,9 +2188,7 @@
               "number": "1",
               "net": "ROW",
               "attribute": "SMD",
-              "layers": [
-                "B.Cu"
-              ],
+              "layers": ["B.Cu"],
               "switch_local": {
                 "x_nm": 5079999,
                 "y_nm": 5399999
@@ -2542,9 +2202,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "SMD",
-              "layers": [
-                "B.Cu"
-              ],
+              "layers": ["B.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 2599998
@@ -2577,10 +2235,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -5079999,
                 "y_nm": 0
@@ -2594,10 +2249,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 0,
                 "y_nm": 0
@@ -2611,10 +2263,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 5079999,
                 "y_nm": 0
@@ -2628,10 +2277,7 @@
               "number": "1",
               "net": "COL",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -3809999,
                 "y_nm": -2539999
@@ -2645,10 +2291,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 2540000,
                 "y_nm": -5080000
@@ -2668,9 +2311,7 @@
               "number": "1",
               "net": "ROW",
               "attribute": "SMD",
-              "layers": [
-                "B.Cu"
-              ],
+              "layers": ["B.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 2599998
@@ -2684,9 +2325,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "SMD",
-              "layers": [
-                "B.Cu"
-              ],
+              "layers": ["B.Cu"],
               "switch_local": {
                 "x_nm": 5079999,
                 "y_nm": 5399999
@@ -2719,10 +2358,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -5080000,
                 "y_nm": 0
@@ -2736,10 +2372,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 0,
                 "y_nm": 0
@@ -2753,10 +2386,7 @@
               "number": "",
               "net": "",
               "attribute": "NPTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 0
@@ -2770,10 +2400,7 @@
               "number": "1",
               "net": "COL",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -3810000,
                 "y_nm": -2540000
@@ -2787,10 +2414,7 @@
               "number": "1",
               "net": "COL",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": -2500000,
                 "y_nm": -4000000
@@ -2804,10 +2428,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "PTH",
-              "layers": [
-                "F.Cu",
-                "B.Cu"
-              ],
+              "layers": ["F.Cu", "B.Cu"],
               "switch_local": {
                 "x_nm": 2520000,
                 "y_nm": -4790000
@@ -2827,9 +2448,7 @@
               "number": "1",
               "net": "ROW",
               "attribute": "SMD",
-              "layers": [
-                "B.Cu"
-              ],
+              "layers": ["B.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 5400000
@@ -2843,9 +2462,7 @@
               "number": "2",
               "net": "SW_D",
               "attribute": "SMD",
-              "layers": [
-                "B.Cu"
-              ],
+              "layers": ["B.Cu"],
               "switch_local": {
                 "x_nm": 5080000,
                 "y_nm": 2600000
