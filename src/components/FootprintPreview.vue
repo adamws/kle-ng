@@ -1191,10 +1191,6 @@ onMounted(() => {
   touch-action: none;
 }
 
-.svg-container.editing:focus-visible {
-  box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
-}
-
 .svg-container.blocked-flash {
   box-shadow: 0 0 0 0.2rem rgba(255, 45, 85, 0.6);
 }
