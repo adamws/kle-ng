@@ -7,7 +7,7 @@ import { KeyboardEditorPage } from './pages/KeyboardEditorPage'
 const EDITOR = {
   COLLAPSE_BTN: '[data-section-id="pcb"] .collapse-btn',
   CANVAS: '[data-testid="pcb-preview-canvas"]',
-  TOGGLE: '[data-testid="pcb-track-edit-toggle"]',
+  ROUTING: '[data-testid="pcb-routing-select"]',
   PADS: '[data-testid="pcb-pad-layer"]',
   GRID: '[data-testid="pcb-grid-layer"]',
   STATUS: '[data-testid="pcb-editor-status"]',
@@ -48,6 +48,14 @@ async function openPreview(page: Page) {
   await expect(page.locator(`${EDITOR.CANVAS} .footprint-svg circle`).first()).toBeAttached()
 }
 
+/** A preset routing mode opens the track editor. */
+async function enterPresetMode(page: Page) {
+  await page.locator(EDITOR.ROUTING).selectOption('Full (preset)')
+  await expect(page.locator(EDITOR.PADS)).toBeVisible()
+  // the select sits below the preview; mouse actions need the canvas on screen
+  await page.locator(EDITOR.CANVAS).scrollIntoViewIfNeeded()
+}
+
 async function viewBoxWidth(page: Page): Promise<number> {
   const vb = await page.locator(`${EDITOR.CANVAS} svg.preview-svg`).getAttribute('viewBox')
   return Number(vb?.split(' ')[2])
@@ -58,7 +66,7 @@ test.describe('PCB Generator track editor', () => {
     await openPreview(page)
     await expect(page.locator(EDITOR.PADS)).toHaveCount(0)
 
-    await page.locator(EDITOR.TOGGLE).click()
+    await enterPresetMode(page)
 
     const pads = page.locator(EDITOR.PADS)
     await expect(pads).toBeVisible()
@@ -78,7 +86,9 @@ test.describe('PCB Generator track editor', () => {
 
   test('shows the unrouted switch-diode connection', async ({ page }) => {
     await openPreview(page)
-    await page.locator(EDITOR.TOGGLE).click()
+    // in every routing mode, it shows which switch pad the diode connects to
+    await expect(page.locator('[data-testid="pcb-ratsnest"][data-net="SW_D"]')).toHaveCount(1)
+    await enterPresetMode(page)
 
     await expect(page.locator('[data-testid="pcb-ratsnest"][data-net="SW_D"]')).toHaveCount(1)
     await expect(page.locator('[data-testid="pcb-drc-summary"]')).toHaveText('1 unrouted')
@@ -86,7 +96,7 @@ test.describe('PCB Generator track editor', () => {
 
   test('routes SW pad 2 to D pad 2 into the track preset', async ({ page }) => {
     await openPreview(page)
-    await page.locator(EDITOR.TOGGLE).click()
+    await enterPresetMode(page)
     await page.locator('[data-testid="pcb-tool-route"]').click()
 
     const sw2 = await padCentre(page, 'SW', '2')
@@ -144,7 +154,7 @@ test.describe('PCB Generator track editor', () => {
 
   test('offers to keep or clear tracks drawn for another diode placement', async ({ page }) => {
     await openPreview(page)
-    await page.locator(EDITOR.TOGGLE).click()
+    await enterPresetMode(page)
     await page.locator('[data-testid="pcb-tool-route"]').click()
     const sw2 = await padCentre(page, 'SW', '2')
     const d2 = await padCentre(page, 'D', '2')
@@ -177,7 +187,7 @@ test.describe('PCB Generator track editor', () => {
 
   test('drags a track sideways, Esc cancels a drag', async ({ page }) => {
     await openPreview(page)
-    await page.locator(EDITOR.TOGGLE).click()
+    await enterPresetMode(page)
     const tracks = page.locator('[data-testid="pcb-track-overlay-track"]')
     await page.locator('[data-testid="pcb-tool-route"]').click()
     const sw2 = await padCentre(page, 'SW', '2')
@@ -235,7 +245,7 @@ test.describe('PCB Generator track editor', () => {
 
   test('selects, deletes, undoes and redoes tracks', async ({ page }) => {
     await openPreview(page)
-    await page.locator(EDITOR.TOGGLE).click()
+    await enterPresetMode(page)
     const tracks = page.locator('[data-testid="pcb-track-overlay-track"]')
 
     // draw the default preset
@@ -281,7 +291,7 @@ test.describe('PCB Generator track editor', () => {
 
   test('selects tracks with a box', async ({ page }) => {
     await openPreview(page)
-    await page.locator(EDITOR.TOGGLE).click()
+    await enterPresetMode(page)
     await page.locator('[data-testid="pcb-tool-route"]').click()
     const sw2 = await padCentre(page, 'SW', '2')
     const d2 = await padCentre(page, 'D', '2')
@@ -308,7 +318,7 @@ test.describe('PCB Generator track editor', () => {
 
   test('refuses a click that breaks a rule and cancels with Esc', async ({ page }) => {
     await openPreview(page)
-    await page.locator(EDITOR.TOGGLE).click()
+    await enterPresetMode(page)
 
     // X starts a route at the pad under the cursor
     const sw2 = await padCentre(page, 'SW', '2')
@@ -328,7 +338,7 @@ test.describe('PCB Generator track editor', () => {
 
   test('zooms at the cursor, pans and fits', async ({ page }) => {
     await openPreview(page)
-    await page.locator(EDITOR.TOGGLE).click()
+    await enterPresetMode(page)
     const fitted = await viewBoxWidth(page)
 
     const box = (await page.locator(EDITOR.CANVAS).boundingBox())!
@@ -361,6 +371,39 @@ test.describe('PCB Generator track editor', () => {
       const store = pinia._s.get('pcbGenerator') as { settings: { switchSide: string } }
       store.settings.switchSide = 'BACK'
     })
-    await expect(page.locator(EDITOR.TOGGLE)).toBeDisabled()
+    await expect(page.locator(`${EDITOR.ROUTING} option[value="Full (preset)"]`)).toBeDisabled()
+  })
+
+  test('confirms before leaving a preset mode with drawn tracks', async ({ page }) => {
+    await openPreview(page)
+    await enterPresetMode(page)
+    await page.locator('[data-testid="pcb-tool-route"]').click()
+    const sw2 = await padCentre(page, 'SW', '2')
+    const d2 = await padCentre(page, 'D', '2')
+    await page.mouse.click(sw2.x, sw2.y)
+    await page.mouse.move(d2.x, d2.y, { steps: 5 })
+    await page.mouse.click(d2.x, d2.y)
+    const tracks = page.locator('[data-testid="pcb-track-overlay-track"]')
+    await expect(tracks).toHaveCount(2)
+
+    // between preset modes the tracks stay
+    const routing = page.locator(EDITOR.ROUTING)
+    await routing.selectOption('Switch-Diode only (preset)')
+    await expect(tracks).toHaveCount(2)
+
+    const dialog = page.locator('[data-testid="pcb-routing-confirm"]')
+    await routing.selectOption('Full')
+    await expect(dialog).toContainText('2 drawn items')
+    await page.locator('[data-testid="pcb-routing-confirm-cancel"]').click()
+    await expect(dialog).toHaveCount(0)
+    await expect(routing).toHaveValue('Switch-Diode only (preset)')
+    await expect(tracks).toHaveCount(2)
+
+    await routing.selectOption('Full')
+    await page.locator('[data-testid="pcb-routing-confirm-ok"]').click()
+    await expect(routing).toHaveValue('Full')
+    await expect(page.locator(EDITOR.PADS)).toHaveCount(0)
+    await expect(tracks).toHaveCount(0)
+    await expect(page.locator('[data-testid="pcb-ratsnest"]')).toHaveCount(1)
   })
 })

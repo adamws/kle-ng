@@ -1,7 +1,7 @@
 <!--
   StalePresetBanner (an overlay on the preview canvas): the track preset was drawn for other footprints or
   another diode placement. Keep marks it as drawn for the current settings,
-  Clear removes it.
+  Clear removes its tracks (undoable).
 -->
 <script setup lang="ts">
 import { computed } from 'vue'
@@ -48,7 +48,7 @@ const details = computed(() =>
         class="btn btn-sm btn-outline-danger"
         title="Remove all tracks"
         data-testid="pcb-stale-clear"
-        @click="tracks.clearPreset()"
+        @click="tracks.clearAll()"
       >
         Clear
       </button>

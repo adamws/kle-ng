@@ -93,7 +93,8 @@ export function serializePcbSettings(s: PcbSettings): PcbSettingsJson {
     result.led = led
   }
 
-  if (s.trackPreset && s.trackPreset.items.length > 0) {
+  // an empty preset still means a preset routing mode
+  if (s.trackPreset) {
     result.tracks = trackPresetToWire(s.trackPreset)
   }
 

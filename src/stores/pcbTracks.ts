@@ -23,6 +23,7 @@ import { useSnapshotHistory } from '@/composables/useSnapshotHistory'
 import { usePcbGeneratorStore } from './pcbGenerator'
 import type { CopperLayer, Pt, TrackItem, TrackSegment } from '@/types/tracks'
 import { basisChanges, presetBasis } from '@/utils/pcb-tracks/basis'
+import { routingModeOption, type RoutingMode } from '@/utils/pcb/routing-mode'
 import { padInfos } from '@/utils/pcb-tracks/connectivity'
 import { shapeGap } from '@/utils/pcb-tracks/distance'
 import { trackShape } from '@/utils/pcb-tracks/shapes'
@@ -218,12 +219,11 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
 
   /**
    * Writes the preset items, as one undoable step unless `record` is false.
-   * The basis records what they were drawn for (see `staleChanges`).
+   * The basis records what they were drawn for (see `staleChanges`). An empty
+   * preset stays: it is what keeps a preset routing mode.
    */
   function writeItems(items: TrackItem[], record = true) {
-    const next = items.length
-      ? { version: 1 as const, items, basis: presetBasis(pcb.settings) }
-      : undefined
+    const next = { version: 1 as const, items, basis: presetBasis(pcb.settings) }
     ownPreset = next
     pcb.settings.trackPreset = next
     if (record) history.push(items)
@@ -260,6 +260,29 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     ownPreset = undefined
     pcb.settings.trackPreset = undefined
     history.reset([])
+  }
+
+  /** Removes every track, as one undoable step; the preset routing mode stays. */
+  function clearAll() {
+    cancelRoute()
+    cancelDrag()
+    selection.value = []
+    if (savedItems.value.length) writeItems([])
+  }
+
+  /**
+   * Switches the routing mode. A preset mode starts an empty preset unless one
+   * exists; any other mode removes the preset (the view confirms first).
+   */
+  function setRoutingMode(mode: RoutingMode) {
+    const option = routingModeOption(mode)
+    pcb.settings.routing = option.routing
+    if (option.preset && !pcb.settings.trackPreset) {
+      writeItems([], false)
+      history.reset([])
+    } else if (!option.preset && pcb.settings.trackPreset) {
+      clearPreset()
+    }
   }
 
   function undo() {
@@ -653,6 +676,8 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     staleChanges,
     keepPreset,
     clearPreset,
+    clearAll,
+    setRoutingMode,
     canUndo: history.canUndo,
     canRedo: history.canRedo,
     undo,

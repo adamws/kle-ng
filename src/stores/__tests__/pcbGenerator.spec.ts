@@ -198,13 +198,13 @@ describe('pcbGenerator store', () => {
 
     it('should drop only an unreadable track preset from saved settings, with a warning', () => {
       localStorageMock['kle-ng-pcb-settings'] = JSON.stringify({
-        routing: 'Disabled',
+        routing: 'Switch-Diode only',
         tracks: { version: 2, items: [{ type: 'arc' }] },
       })
 
       const store = usePcbGeneratorStore()
 
-      expect(store.settings.routing).toBe('Disabled')
+      expect(store.settings.routing).toBe('Switch-Diode only')
       expect(store.settings.trackPreset).toBeUndefined()
       expect(localStorage.removeItem).not.toHaveBeenCalled()
       expect(useToast().toasts.value.map((t) => t.message)).toContain(

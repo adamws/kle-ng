@@ -59,7 +59,6 @@ import StalePresetBanner from './pcb/StalePresetBanner.vue'
 import type { Point } from '@/composables/usePanZoom'
 import BiInfoCircle from 'bootstrap-icons/icons/info-circle.svg'
 import BiExclamationTriangle from 'bootstrap-icons/icons/exclamation-triangle.svg'
-import BiPencilSquare from 'bootstrap-icons/icons/pencil-square.svg'
 import BiZoomIn from 'bootstrap-icons/icons/zoom-in.svg'
 import BiZoomOut from 'bootstrap-icons/icons/zoom-out.svg'
 import BiFullscreen from 'bootstrap-icons/icons/fullscreen.svg'
@@ -410,14 +409,14 @@ const compositeViewBox = computed(() => {
   return `${vb.x} ${vb.y} ${vb.width} ${vb.height}`
 })
 
-// Track editor. B2: pan/zoom, pads
-// from the pad geometry JSON, grid and a cursor readout; no drawing yet.
-// The editor works in the switch-local frame, which presets are defined for,
-// so it needs a front-side switch.
+// Track editor: pan/zoom, pads from the pad geometry JSON, grid, drawing.
+// It shows in a preset routing mode (the settings hold a preset, see
+// utils/pcb/routing-mode.ts). The editor works in the switch-local frame,
+// which presets are defined for, so it needs a front-side switch.
 const svgRef = ref<SVGSVGElement | null>(null)
 const containerRef = ref<HTMLDivElement | null>(null)
-const editMode = ref(false)
 const canEdit = computed(() => settings.value.switchSide === 'FRONT')
+const editMode = computed(() => settings.value.trackPreset !== undefined && canEdit.value)
 const panZoom = usePanZoom(svgRef, fittedViewBox.value)
 const svgViewBox = computed(() =>
   editMode.value ? panZoom.viewBoxString.value : compositeViewBox.value,
@@ -427,17 +426,21 @@ const visibleLayers = ref<Record<CopperLayer, boolean>>({ 'F.Cu': true, 'B.Cu': 
 const cursorLocal = ref<{ x: number; y: number } | null>(null)
 const hoveredPadKey = ref<string | null>(null)
 
-function toggleEditMode() {
-  editMode.value = !editMode.value
-  tracks.reset()
-  if (editMode.value) {
-    panZoom.fit(fittedViewBox.value)
-    nextTick(() => containerRef.value?.focus({ preventScroll: true }))
-  }
-}
-
-watch(canEdit, (can) => {
-  if (!can && editMode.value) toggleEditMode()
+// entering or leaving the editor: nothing in progress survives
+watch(
+  editMode,
+  (editing) => {
+    tracks.reset()
+    if (editing) {
+      panZoom.fit(fittedViewBox.value)
+      nextTick(() => containerRef.value?.focus({ preventScroll: true }))
+    }
+  },
+  { immediate: true },
+)
+// a preset mode restored on load opens the editor before the footprints load
+watch(baseViewBox, (vb, before) => {
+  if (vb && !before && editMode.value) panZoom.fit(fittedViewBox.value)
 })
 
 // Size of the SVG on screen, for the grid density
@@ -547,17 +550,16 @@ const previewPads = computed<PlacedPad[]>(() =>
   }),
 )
 
-// DRC and ratsnest of the preset (or of no tracks, while editing). Pads of
-// every placed footprint must be loaded, or obstacles would be missing.
+// DRC of the preset, while editing. Pads of every placed footprint must be
+// loaded, or obstacles would be missing.
 const padsReady = computed(() => padSources.value.every((src) => libraryPads.value[src.name]))
-const showDrc = computed(
-  () =>
-    settings.value.switchSide === 'FRONT' &&
-    padsReady.value &&
-    (editMode.value || trackPresetItems.value.length > 0),
-)
+const showDrc = computed(() => editMode.value && padsReady.value)
 // the store runs DRC on the preset, plus the route and its preview while routing
 const drc = computed(() => (showDrc.value ? tracks.drc : null))
+// The ratsnest shows in every routing mode, so the user sees which switch pad
+// the diode connects to while placing it. Without a preset (or for a back-side
+// switch, which presets don't apply to) it joins the bare pads.
+const ratsnestLines = computed(() => (padsReady.value ? tracks.drc.ratsnest : []))
 
 watch(previewPads, (pads) => tracks.setPads(pads), { immediate: true })
 // anchors attract the cursor within a few screen pixels
@@ -935,8 +937,12 @@ onUnmounted(() => {
         </g>
 
         <!-- DRC markers and ratsnest (switch-local frame) -->
-        <g v-if="drc" :transform="switchLocalTransform">
-          <DrcLayer :violations="drc.violations" :ratsnest="drc.ratsnest" :px-per-mm="pxPerMm" />
+        <g v-if="padsReady" :transform="switchLocalTransform">
+          <DrcLayer
+            :violations="drc?.violations ?? []"
+            :ratsnest="ratsnestLines"
+            :px-per-mm="pxPerMm"
+          />
         </g>
 
         <!-- Route being drawn (switch-local frame) -->
@@ -992,82 +998,59 @@ onUnmounted(() => {
       </svg>
 
       <!-- Track editor toolbar -->
-      <div class="editor-toolbar" @pointerdown.stop>
-        <button
-          type="button"
-          class="btn btn-sm"
-          :class="editMode ? 'btn-primary' : 'btn-outline-secondary'"
-          :disabled="!canEdit"
-          :title="canEdit ? 'Edit switch-diode tracks' : 'Track presets need a front-side switch'"
-          :aria-pressed="editMode"
-          data-testid="pcb-track-edit-toggle"
-          @click="toggleEditMode"
-        >
-          <BiPencilSquare /> Edit tracks
-        </button>
-        <template v-if="editMode">
-          <div class="btn-group btn-group-sm" role="group" aria-label="Copper layer visibility">
-            <button
-              v-for="layer in ['F.Cu', 'B.Cu'] as const"
-              :key="layer"
-              type="button"
-              class="btn layer-btn"
-              :class="[
-                visibleLayers[layer] ? 'btn-secondary' : 'btn-outline-secondary',
-                layer === 'F.Cu' ? 'layer-front' : 'layer-back',
-              ]"
-              :aria-pressed="visibleLayers[layer]"
-              :title="`${visibleLayers[layer] ? 'Hide' : 'Show'} ${layer} pads`"
-              :data-testid="`pcb-layer-toggle-${layer}`"
-              @click="visibleLayers[layer] = !visibleLayers[layer]"
-            >
-              <BiEye v-if="visibleLayers[layer]" /><BiEyeSlash v-else />
-              <span class="layer-swatch"></span>{{ layer }}
-            </button>
-          </div>
-          <div class="btn-group btn-group-sm" role="group" aria-label="Zoom">
-            <button
-              type="button"
-              class="btn btn-outline-secondary"
-              title="Zoom in"
-              data-testid="pcb-zoom-in"
-              @click="panZoom.zoomBy(1.5)"
-            >
-              <BiZoomIn />
-            </button>
-            <button
-              type="button"
-              class="btn btn-outline-secondary"
-              title="Zoom out"
-              data-testid="pcb-zoom-out"
-              @click="panZoom.zoomBy(1 / 1.5)"
-            >
-              <BiZoomOut />
-            </button>
-            <button
-              type="button"
-              class="btn btn-outline-secondary"
-              title="Fit"
-              data-testid="pcb-zoom-fit"
-              @click="panZoom.fit(fittedViewBox)"
-            >
-              <BiFullscreen />
-            </button>
-          </div>
-        </template>
+      <div v-if="editMode" class="editor-toolbar" @pointerdown.stop>
+        <div class="btn-group btn-group-sm" role="group" aria-label="Copper layer visibility">
+          <button
+            v-for="layer in ['F.Cu', 'B.Cu'] as const"
+            :key="layer"
+            type="button"
+            class="btn layer-btn"
+            :class="[
+              visibleLayers[layer] ? 'btn-secondary' : 'btn-outline-secondary',
+              layer === 'F.Cu' ? 'layer-front' : 'layer-back',
+            ]"
+            :aria-pressed="visibleLayers[layer]"
+            :title="`${visibleLayers[layer] ? 'Hide' : 'Show'} ${layer} pads`"
+            :data-testid="`pcb-layer-toggle-${layer}`"
+            @click="visibleLayers[layer] = !visibleLayers[layer]"
+          >
+            <BiEye v-if="visibleLayers[layer]" /><BiEyeSlash v-else />
+            <span class="layer-swatch"></span>{{ layer }}
+          </button>
+        </div>
+        <div class="btn-group btn-group-sm" role="group" aria-label="Zoom">
+          <button
+            type="button"
+            class="btn btn-outline-secondary"
+            title="Zoom in"
+            data-testid="pcb-zoom-in"
+            @click="panZoom.zoomBy(1.5)"
+          >
+            <BiZoomIn />
+          </button>
+          <button
+            type="button"
+            class="btn btn-outline-secondary"
+            title="Zoom out"
+            data-testid="pcb-zoom-out"
+            @click="panZoom.zoomBy(1 / 1.5)"
+          >
+            <BiZoomOut />
+          </button>
+          <button
+            type="button"
+            class="btn btn-outline-secondary"
+            title="Fit"
+            data-testid="pcb-zoom-fit"
+            @click="panZoom.fit(fittedViewBox)"
+          >
+            <BiFullscreen />
+          </button>
+        </div>
       </div>
 
       <!-- Notices over the bottom of the canvas, so they never move the preview -->
       <div class="canvas-notices">
-        <!-- DRC summary of a pasted preset outside the editor -->
-        <div
-          v-if="drcSummary && !editMode"
-          class="drc-badge"
-          :class="drcSummary.ok ? 'drc-badge-ok' : 'drc-badge-problem'"
-          data-testid="pcb-drc-badge"
-        >
-          {{ drcSummary.text }}
-        </div>
         <!-- The preset was drawn for other footprints or diode placement -->
         <StalePresetBanner />
       </div>
@@ -1304,22 +1287,6 @@ onUnmounted(() => {
   gap: 6px;
   pointer-events: none;
   z-index: 20;
-}
-
-.drc-badge {
-  padding: 0.15rem 0.5rem;
-  border-radius: 0.25rem;
-  font-size: 0.75rem;
-  border: 1px solid currentColor;
-  background-color: var(--bs-body-bg);
-}
-
-.drc-badge-ok {
-  color: var(--bs-success-text-emphasis);
-}
-
-.drc-badge-problem {
-  color: var(--bs-danger-text-emphasis);
 }
 
 .editor-hint {

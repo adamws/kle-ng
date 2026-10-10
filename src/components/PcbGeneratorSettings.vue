@@ -1,10 +1,19 @@
 <script setup lang="ts">
+import { computed, nextTick, ref, watch } from 'vue'
 import { usePcbGeneratorStore } from '@/stores/pcbGenerator'
+import { usePcbTracksStore } from '@/stores/pcbTracks'
 import { storeToRefs } from 'pinia'
 import CustomNumberInput from './CustomNumberInput.vue'
+import {
+  ROUTING_MODES,
+  routingMode,
+  routingModeOption,
+  type RoutingMode,
+} from '@/utils/pcb/routing-mode'
 
 const pcbStore = usePcbGeneratorStore()
 const { settings } = storeToRefs(pcbStore)
+const tracks = usePcbTracksStore()
 
 // Stabilizer footprint options
 const stabilizerFootprintOptions = [
@@ -64,12 +73,36 @@ const rotationOptions = [
   { value: 270, label: '270°' },
 ]
 
-// Routing options
-const routingOptions = [
-  { value: 'Disabled', label: 'Disabled' },
-  { value: 'Switch-Diode only', label: 'Switch-Diode only' },
-  { value: 'Full', label: 'Full' },
-]
+// Routing: the backend's routing value, with switch-diode tracks from its
+// router (automatic) or drawn in the footprint preview (preset)
+const currentRoutingMode = computed(() => routingMode(settings.value))
+const presetUnavailable = computed(() => settings.value.switchSide !== 'FRONT')
+const drawnItemCount = computed(() => settings.value.trackPreset?.items.length ?? 0)
+/** A mode change that would remove drawn tracks, waiting for confirmation. */
+const pendingRoutingMode = ref<RoutingMode | null>(null)
+
+function onRoutingChange(event: Event) {
+  const select = event.target as HTMLSelectElement
+  const mode = select.value as RoutingMode
+  if (!routingModeOption(mode).preset && drawnItemCount.value > 0) {
+    // the select shows the current mode until confirmed
+    select.value = currentRoutingMode.value
+    pendingRoutingMode.value = mode
+    return
+  }
+  tracks.setRoutingMode(mode)
+}
+
+// focus the dialog so Esc and Enter work right away
+const cancelButton = ref<HTMLButtonElement | null>(null)
+watch(pendingRoutingMode, (mode) => {
+  if (mode) nextTick(() => cancelButton.value?.focus())
+})
+
+function confirmRoutingMode() {
+  if (pendingRoutingMode.value) tracks.setRoutingMode(pendingRoutingMode.value)
+  pendingRoutingMode.value = null
+}
 </script>
 
 <template>
@@ -208,16 +241,86 @@ const routingOptions = [
         <label for="routing" class="form-label form-label-sm">Routing</label>
         <select
           id="routing"
-          v-model="settings.routing"
+          :value="currentRoutingMode"
           class="form-select form-select-sm"
           aria-label="Select routing mode"
+          data-testid="pcb-routing-select"
+          @change="onRoutingChange"
         >
-          <option v-for="option in routingOptions" :key="option.value" :value="option.value">
+          <option
+            v-for="option in ROUTING_MODES"
+            :key="option.value"
+            :value="option.value"
+            :disabled="option.preset && presetUnavailable && option.value !== currentRoutingMode"
+          >
             {{ option.label }}
           </option>
         </select>
+        <div class="form-text">
+          <template v-if="presetUnavailable"> Preset tracks need a front-side switch. </template>
+          <template v-else-if="routingModeOption(currentRoutingMode).preset">
+            Draw the switch-diode tracks in the preview, they are copied to every key.
+          </template>
+          <template v-else-if="settings.routing !== 'Disabled'">
+            The generator routes switch-diode tracks itself; a (preset) option lets you draw them.
+          </template>
+          <template v-else>No tracks are routed.</template>
+        </div>
       </div>
     </div>
+
+    <!-- Leaving a preset mode removes the drawn tracks -->
+    <template v-if="pendingRoutingMode">
+      <div
+        class="modal fade show d-block"
+        tabindex="-1"
+        role="dialog"
+        aria-modal="true"
+        data-testid="pcb-routing-confirm"
+        @keydown.esc="pendingRoutingMode = null"
+      >
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Remove drawn tracks?</h5>
+              <button
+                type="button"
+                class="btn-close"
+                aria-label="Close"
+                @click="pendingRoutingMode = null"
+              ></button>
+            </div>
+            <div class="modal-body">
+              <p class="mb-0">
+                <strong>{{ routingModeOption(pendingRoutingMode).label }}</strong> doesn't use drawn
+                tracks. Switching removes the {{ drawnItemCount }} drawn
+                {{ drawnItemCount === 1 ? 'item' : 'items' }}.
+              </p>
+            </div>
+            <div class="modal-footer">
+              <button
+                type="button"
+                ref="cancelButton"
+                class="btn btn-secondary"
+                data-testid="pcb-routing-confirm-cancel"
+                @click="pendingRoutingMode = null"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                class="btn btn-danger"
+                data-testid="pcb-routing-confirm-ok"
+                @click="confirmRoutingMode"
+              >
+                Remove tracks
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-backdrop fade show"></div>
+    </template>
   </div>
 </template>
 

@@ -104,8 +104,16 @@ function item(value: unknown, path: string): WireTrackItem {
   }
 }
 
-/** Validates a preset in kbplacer's JSON format (the settings `tracks` group). */
-export function validateWireTrackPreset(value: unknown, path = 'tracks'): TrackPresetValidation {
+/**
+ * Validates a preset in kbplacer's JSON format (the settings `tracks` group).
+ * `allowEmpty`: an empty `items` is valid. The settings keep an empty preset
+ * while a preset routing mode has nothing drawn yet; kbplacer needs items.
+ */
+export function validateWireTrackPreset(
+  value: unknown,
+  path = 'tracks',
+  { allowEmpty = false } = {},
+): TrackPresetValidation {
   try {
     if (!isPlainObject(value)) fail(path, 'must be an object')
     if (value.version !== TRACK_PRESET_VERSION) {
@@ -122,8 +130,8 @@ export function validateWireTrackPreset(value: unknown, path = 'tracks'): TrackP
         fail(`${path}.${key}`, 'is not a known field')
     }
     if ('basis' in value && !isPlainObject(value.basis)) fail(`${path}.basis`, 'must be an object')
-    if (!Array.isArray(value.items) || value.items.length === 0) {
-      fail(`${path}.items`, 'must be a non-empty array')
+    if (!Array.isArray(value.items) || (!allowEmpty && value.items.length === 0)) {
+      fail(`${path}.items`, allowEmpty ? 'must be an array' : 'must be a non-empty array')
     }
     if (value.items.length > MAX_TRACK_PRESET_ITEMS) {
       fail(`${path}.items`, `has more than ${MAX_TRACK_PRESET_ITEMS} items`)

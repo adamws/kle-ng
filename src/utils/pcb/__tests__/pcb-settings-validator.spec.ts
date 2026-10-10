@@ -131,13 +131,25 @@ describe('validatePcbSettingsJson — tracks', () => {
 
   it('drops only an invalid track preset when asked to', () => {
     const text = JSON.stringify({
-      routing: 'Disabled',
+      routing: 'Full',
       diode: { rotation: 270 },
       tracks: { version: 2, items: [{ type: 'arc' }] },
     })
     const result = validatePcbSettingsJson(text, { dropInvalidTracks: true })
     if (!result.valid) throw new Error(result.error)
-    expect(result.json).toEqual({ routing: 'Disabled', diode: { rotation: 270 } })
+    expect(result.json).toEqual({ routing: 'Full', diode: { rotation: 270 } })
     expect(result.warnings).toEqual(["Track preset ignored: 'tracks.version' must be 1, got 2"])
+  })
+
+  it('accepts an empty preset (a preset routing mode with nothing drawn)', () => {
+    const empty = { version: 1, items: [] }
+    const result = expectValid(JSON.stringify({ routing: 'Full', tracks: empty }))
+    expect(result.json.tracks).toEqual(empty)
+  })
+
+  it('drops a preset when routing is disabled', () => {
+    const result = expectValid(JSON.stringify({ routing: 'Disabled', tracks }))
+    expect(result.json).toEqual({ routing: 'Disabled' })
+    expect(result.warnings).toEqual(['Track preset ignored: routing is Disabled'])
   })
 })

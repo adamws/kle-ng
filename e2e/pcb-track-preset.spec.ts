@@ -26,13 +26,14 @@ const TRACKS = {
 const PCB = {
   COLLAPSE_BTN: '[data-section-id="pcb"] .collapse-btn',
   JSON_TAB: '[data-testid="pcb-tab-json"]',
+  SWITCHES_TAB: '[data-testid="pcb-tab-switches"]',
   JSON_EDITOR: '.pcb-json-view .cm-content',
   APPLY_BTN: '.pcb-json-view button:has-text("Apply")',
   OVERLAY: '[data-testid="pcb-track-overlay"]',
   OVERLAY_TRACK: '[data-testid="pcb-track-overlay-track"]',
   BACK_SWITCH_ERROR: '[data-testid="pcb-track-preset-back-switch"]',
-  IGNORED_NOTICE: '[data-testid="pcb-track-preset-ignored"]',
-  DRC_BADGE: '[data-testid="pcb-drc-badge"]',
+  DRC_SUMMARY: '[data-testid="pcb-drc-summary"]',
+  ROUTING: '[data-testid="pcb-routing-select"]',
   DRC_MARKER: '[data-testid="pcb-drc-marker"]',
   RATSNEST: '[data-testid="pcb-ratsnest"]',
 }
@@ -96,7 +97,9 @@ test.describe('PCB Generator track preset', () => {
     await expect(tracks.first()).toHaveAttribute('y1', '-5.08')
     await expect(tracks.first()).toHaveAttribute('stroke-width', '0.25')
     await expect(tracks.first()).toHaveClass(/track-back/)
-    await expect(page.locator(PCB.IGNORED_NOTICE)).toHaveCount(0)
+    // a pasted preset selects the preset routing mode
+    await page.locator(PCB.SWITCHES_TAB).click()
+    await expect(page.locator(PCB.ROUTING)).toHaveValue('Full (preset)')
     await expect(page.locator(PCB.BACK_SWITCH_ERROR)).toHaveCount(0)
   })
 
@@ -104,7 +107,7 @@ test.describe('PCB Generator track preset', () => {
     await openPcbJsonTab(page)
 
     await applySettings(page, { routing: 'Full', tracks: TRACKS })
-    await expect(page.locator(PCB.DRC_BADGE)).toHaveText('DRC clean')
+    await expect(page.locator(PCB.DRC_SUMMARY)).toHaveText('DRC clean')
     await expect(page.locator(PCB.DRC_MARKER)).toHaveCount(0)
     await expect(page.locator(PCB.RATSNEST)).toHaveCount(0)
 
@@ -122,7 +125,7 @@ test.describe('PCB Generator track preset', () => {
       ],
     }
     await applySettings(page, { routing: 'Full', tracks: shorted })
-    await expect(page.locator(PCB.DRC_BADGE)).toContainText('DRC error')
+    await expect(page.locator(PCB.DRC_SUMMARY)).toContainText('DRC error')
     await expect(page.locator(`${PCB.DRC_MARKER}[data-kind="short"]`)).toHaveCount(1)
   })
 
@@ -137,11 +140,13 @@ test.describe('PCB Generator track preset', () => {
     await expect(page.locator(PCB.OVERLAY)).toHaveCount(0)
   })
 
-  test('notes that the preset is ignored when routing is disabled', async ({ page }) => {
+  test('drops a pasted preset when routing is disabled', async ({ page }) => {
     await openPcbJsonTab(page)
 
     await applySettings(page, { routing: 'Disabled', tracks: TRACKS })
 
-    await expect(page.locator(PCB.IGNORED_NOTICE)).toBeVisible()
+    await expect(page.locator(PCB.OVERLAY)).toHaveCount(0)
+    await page.locator(PCB.SWITCHES_TAB).click()
+    await expect(page.locator(PCB.ROUTING)).toHaveValue('Disabled')
   })
 })

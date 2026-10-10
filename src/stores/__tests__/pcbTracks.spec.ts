@@ -268,7 +268,8 @@ describe('pcbTracks selection and history', () => {
     tracks.undo()
     expect(items()).toHaveLength(2)
     tracks.undo()
-    expect(pcb.settings.trackPreset).toBeUndefined()
+    // an emptied preset stays: it keeps the preset routing mode
+    expect(pcb.settings.trackPreset?.items).toEqual([])
     expect(tracks.canUndo).toBe(false)
 
     tracks.redo()
@@ -319,9 +320,29 @@ describe('pcbTracks selection and history', () => {
 
     pcb.settings.diodeSide = 'FRONT'
     expect(tracks.staleChanges).toHaveLength(1)
-    tracks.clearPreset()
-    expect(pcb.settings.trackPreset).toBeUndefined()
+    tracks.clearAll()
+    expect(pcb.settings.trackPreset?.items).toEqual([])
     expect(tracks.staleChanges).toEqual([])
+    tracks.undo()
+    expect(items()).toHaveLength(2)
+  })
+
+  it('switches routing modes: a preset mode starts an empty preset, others remove it', async () => {
+    pcb.settings.routing = 'Full'
+    tracks.setRoutingMode('Switch-Diode only (preset)')
+    expect(pcb.settings.routing).toBe('Switch-Diode only')
+    expect(pcb.settings.trackPreset?.items).toEqual([])
+    expect(tracks.canUndo).toBe(false)
+
+    routeDefault()
+    tracks.setRoutingMode('Full (preset)')
+    expect(pcb.settings.routing).toBe('Full')
+    expect(items()).toHaveLength(2)
+
+    tracks.setRoutingMode('Full')
+    expect(pcb.settings.trackPreset).toBeUndefined()
+    await nextTick()
+    expect(tracks.canUndo).toBe(false)
   })
 
   it('clearing starts a new history', async () => {

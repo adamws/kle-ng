@@ -148,8 +148,14 @@ export function validatePcbSettingsJson(
   }
 
   // tracks sub-object (switch-diode track preset, kbplacer's JSON format)
+  // A preset is drawn for a routing mode that uses it; with routing disabled it
+  // can't be, so it is dropped (an older build allowed the combination).
+  if ('tracks' in obj && obj.routing === 'Disabled') {
+    delete obj.tracks
+    warnings.push('Track preset ignored: routing is Disabled')
+  }
   if ('tracks' in obj) {
-    const result = validateWireTrackPreset(obj.tracks)
+    const result = validateWireTrackPreset(obj.tracks, 'tracks', { allowEmpty: true })
     if (result.valid) {
       obj.tracks = result.preset
     } else if (options.dropInvalidTracks) {

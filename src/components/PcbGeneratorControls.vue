@@ -21,14 +21,18 @@ const {
 const errorMessage = ref<string | null>(null)
 const isSubmitting = ref(false)
 
-// Track presets are drawn for a front-side switch, the backend can't flip
-// them, so a preset with back-side switches is rejected up front.
-const hasTrackPreset = computed(() => (settings.value.trackPreset?.items.length ?? 0) > 0)
+// A preset routing mode (the settings hold a preset, see routing-mode.ts).
+// Presets are drawn for a front-side switch, the backend can't flip them, so
+// back-side switches are rejected up front; an empty preset has nothing to send.
+const isPresetMode = computed(() => settings.value.trackPreset !== undefined)
 const isTrackPresetOnBackSwitch = computed(
-  () => hasTrackPreset.value && settings.value.switchSide === 'BACK',
+  () => isPresetMode.value && settings.value.switchSide === 'BACK',
 )
-const isTrackPresetIgnored = computed(
-  () => hasTrackPreset.value && settings.value.routing === 'Disabled',
+const isTrackPresetEmpty = computed(
+  () =>
+    isPresetMode.value &&
+    !isTrackPresetOnBackSwitch.value &&
+    !settings.value.trackPreset?.items.length,
 )
 
 // Button should show when no task is active (taskStatus is null)
@@ -42,7 +46,8 @@ const isGenerateDisabled = computed(
     !isViaAnnotated.value ||
     hasInvalidMatrixDuplicates.value ||
     hasMalformedLayoutOptionLabels.value ||
-    isTrackPresetOnBackSwitch.value,
+    isTrackPresetOnBackSwitch.value ||
+    isTrackPresetEmpty.value,
 )
 
 const buttonTooltip = computed(() => {
@@ -57,6 +62,9 @@ const buttonTooltip = computed(() => {
   }
   if (isTrackPresetOnBackSwitch.value) {
     return 'Track presets support only front-side switches'
+  }
+  if (isTrackPresetEmpty.value) {
+    return 'Draw the switch-diode tracks first'
   }
   if (!isBackendAvailable.value) {
     if (workerStatusError.value) {
@@ -203,16 +211,19 @@ function handleNewTask() {
     >
       <small>
         <strong>Track presets support only front-side switches.</strong>
-        Set the switch side to front, or remove the <code>tracks</code> group in the JSON settings.
+        Set the switch side to front, or choose an automatic routing option.
       </small>
     </div>
     <div
-      v-if="isTrackPresetIgnored && showGenerateButton"
-      class="alert alert-info py-2 mt-2 mb-0"
-      role="status"
-      data-testid="pcb-track-preset-ignored"
+      v-if="isTrackPresetEmpty && showGenerateButton"
+      class="alert alert-warning py-2 mt-2 mb-0"
+      role="alert"
+      data-testid="pcb-track-preset-empty"
     >
-      <small>Routing is disabled, the track preset is ignored.</small>
+      <small>
+        <strong>No tracks drawn.</strong> Draw the switch-diode tracks in the preview, or choose an
+        automatic routing option.
+      </small>
     </div>
   </div>
 </template>

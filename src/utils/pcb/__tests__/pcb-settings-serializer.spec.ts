@@ -174,11 +174,11 @@ describe('track preset settings', () => {
     expect(serializePcbSettings(settings).tracks).toEqual(tracks)
   })
 
-  it('has no preset when the group is absent and omits an empty preset', () => {
+  it('has no preset when the group is absent and keeps an empty preset (a preset mode)', () => {
     expect(deserializePcbSettings({}, DEFAULTS).trackPreset).toBeUndefined()
     expect(serializePcbSettings(DEFAULTS).tracks).toBeUndefined()
-    expect(
-      serializePcbSettings({ ...DEFAULTS, trackPreset: { version: 1, items: [] } }).tracks,
-    ).toBeUndefined()
+    const empty = serializePcbSettings({ ...DEFAULTS, trackPreset: { version: 1, items: [] } })
+    expect(empty.tracks).toEqual({ version: 1, items: [] })
+    expect(deserializePcbSettings(empty, DEFAULTS).trackPreset).toEqual({ version: 1, items: [] })
   })
 })
