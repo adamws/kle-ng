@@ -11,12 +11,20 @@
  */
 import type { TrackItem, TrackSegment, TrackVia, CopperLayer } from '@/types/tracks'
 import { padCopperLayers } from '@/utils/kicad/footprint-pads'
-import { pointSegment, shapeContains, shapeGap, type Shape, type Vec } from './distance'
+import {
+  boxesNear,
+  type Box,
+  pointSegment,
+  shapeBounds,
+  shapeContains,
+  shapeGap,
+  type Shape,
+  type Vec,
+} from './distance'
 import { placedPadNet, type NetName, type PlacedPad } from './netlist'
 import { padCopperShapes, viaShape } from './shapes'
-
-/** Tolerance for coincident points, mm (kbplacer matches ends in exact nm). */
-export const POINT_EPSILON = 1e-6
+// coincident points: within 1 nm (kbplacer matches ends in exact nm)
+import { NM } from './units'
 
 export class UnionFind {
   private parent: number[]
@@ -55,15 +63,32 @@ export interface PadInfo {
   net: NetName | null
   layers: CopperLayer[]
   copper: Shape[]
+  /** Bounds of the copper (null for NPTH), to skip far-away points. */
+  box: Box | null
+}
+
+function unionBounds(shapes: readonly Shape[]): Box | null {
+  if (!shapes.length) return null
+  const boxes = shapes.map(shapeBounds)
+  return {
+    minX: Math.min(...boxes.map((b) => b.minX)),
+    minY: Math.min(...boxes.map((b) => b.minY)),
+    maxX: Math.max(...boxes.map((b) => b.maxX)),
+    maxY: Math.max(...boxes.map((b) => b.maxY)),
+  }
 }
 
 export function padInfos(pads: readonly PlacedPad[]): PadInfo[] {
-  return pads.map((placed) => ({
-    placed,
-    net: placedPadNet(placed),
-    layers: placed.pad.type === 'np_thru_hole' ? [] : padCopperLayers(placed.pad),
-    copper: padCopperShapes(placed.pad),
-  }))
+  return pads.map((placed) => {
+    const copper = padCopperShapes(placed.pad)
+    return {
+      placed,
+      net: placedPadNet(placed),
+      layers: placed.pad.type === 'np_thru_hole' ? [] : padCopperLayers(placed.pad),
+      copper,
+      box: unionBounds(copper),
+    }
+  })
 }
 
 export interface Cluster {
@@ -82,9 +107,18 @@ export interface Connectivity {
 }
 
 const ends = (t: TrackSegment): Vec[] => [t.start, t.end]
-const near = (p: Vec, q: Vec) => Math.hypot(p.x - q.x, p.y - q.y) <= POINT_EPSILON
+const near = (p: Vec, q: Vec) => Math.hypot(p.x - q.x, p.y - q.y) <= NM
 
 function inPad(p: Vec, pad: PadInfo): boolean {
+  const box = pad.box
+  if (
+    !box ||
+    p.x < box.minX - NM ||
+    p.x > box.maxX + NM ||
+    p.y < box.minY - NM ||
+    p.y > box.maxY + NM
+  )
+    return false
   return pad.copper.some((s) => shapeContains(s, p))
 }
 
@@ -119,13 +153,7 @@ export function buildConnectivity(
     }
   })
 
-  for (let i = 0; i < items.length; i++) {
-    const a = items[i]!
-    for (let j = i + 1; j < items.length; j++) {
-      const b = items[j]!
-      if (itemsConnect(a, b)) uf.union(P + i, P + j)
-    }
-  }
+  unionConnectedItems(uf, items, P)
 
   const padCluster = pads.map((_, i) => uf.find(i))
   const itemCluster = items.map((_, i) => uf.find(P + i))
@@ -145,12 +173,43 @@ export function buildConnectivity(
   return { padCluster, itemCluster, clusters }
 }
 
+/**
+ * Cluster id of each item from item-to-item connections only, so clusters end
+ * at pads (what KiCad's "select connected" follows).
+ */
+export function itemClusters(items: readonly TrackItem[]): number[] {
+  const uf = new UnionFind(items.length)
+  unionConnectedItems(uf, items, 0)
+  return items.map((_, i) => uf.find(i))
+}
+
+/** Joins connected items (node `offset + index`); far-apart pairs are skipped by their bounds. */
+function unionConnectedItems(uf: UnionFind, items: readonly TrackItem[], offset: number) {
+  // tracks connect along their centre line, vias anywhere in their copper
+  const boxes = items.map((item) =>
+    item.type === 'via'
+      ? shapeBounds(viaShape(item))
+      : item.type === 'track'
+        ? shapeBounds({ core: { kind: 'segment', a: item.start, b: item.end }, r: 0 })
+        : null,
+  )
+  for (let i = 0; i < items.length; i++) {
+    const boxA = boxes[i]
+    if (!boxA) continue
+    for (let j = i + 1; j < items.length; j++) {
+      const boxB = boxes[j]
+      if (!boxB || !boxesNear(boxA, boxB, NM)) continue
+      if (itemsConnect(items[i]!, items[j]!)) uf.union(offset + i, offset + j)
+    }
+  }
+}
+
 function itemsConnect(a: TrackItem, b: TrackItem): boolean {
   if (a.type === 'track' && b.type === 'track') {
     if (a.layer !== b.layer) return false
     return (
-      ends(a).some((e) => pointSegment(e, b.start, b.end).d <= POINT_EPSILON) ||
-      ends(b).some((e) => pointSegment(e, a.start, a.end).d <= POINT_EPSILON)
+      ends(a).some((e) => pointSegment(e, b.start, b.end).d <= NM) ||
+      ends(b).some((e) => pointSegment(e, a.start, a.end).d <= NM)
     )
   }
   if (a.type === 'via' && b.type === 'via') return near(a.position, b.position)

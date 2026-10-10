@@ -179,7 +179,7 @@ export function trackPresetFromWire(wire: WireTrackPreset): TrackPreset {
 }
 
 /**
- * Converts an editor preset to kbplacer's JSON format. Editor ids are dropped.
+ * Converts an editor preset to kbplacer's JSON format.
  * Shared vertices come from equal mm values, so they stay bit-identical in nm
  * (kbplacer matches track ends exactly).
  */

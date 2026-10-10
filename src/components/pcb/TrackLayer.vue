@@ -156,11 +156,11 @@ const vias = computed(() =>
 
 /* darker than the pads, so a track on a pad of its colour keeps its outline */
 .edge-front {
-  stroke: color-mix(in srgb, #c83434 55%, black);
+  stroke: color-mix(in srgb, var(--pcb-fcu) 55%, black);
 }
 
 .edge-back {
-  stroke: color-mix(in srgb, #4d7fc4 55%, black);
+  stroke: color-mix(in srgb, var(--pcb-bcu) 55%, black);
 }
 
 .track.selected {
@@ -168,11 +168,11 @@ const vias = computed(() =>
 }
 
 .track-front {
-  stroke: #c83434;
+  stroke: var(--pcb-fcu);
 }
 
 .track-back {
-  stroke: #4d7fc4;
+  stroke: var(--pcb-bcu);
 }
 
 .dimmed {
@@ -180,8 +180,8 @@ const vias = computed(() =>
 }
 
 .via {
-  fill: #b3b3b3;
-  stroke: #6f6f6f;
+  fill: var(--pcb-via);
+  stroke: var(--pcb-via-edge);
   stroke-width: 0.03;
 }
 

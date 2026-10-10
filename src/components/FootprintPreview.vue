@@ -259,7 +259,6 @@ function groupTransform(group: FootprintGroup): string {
 // Track preset overlay, drawn in the switch-local frame. Presets are defined
 // for a front-side switch, so nothing is drawn for back-side switches. While a
 // track is dragged, the store's items are the drag preview.
-const trackPresetItems = computed<TrackItem[]>(() => tracks.presetItems)
 const switchLocalTransform = computed(() => switchLocalSvgTransform(settings.value.switchRotation))
 
 const diodeTransform = computed(() => groupTransform('diode'))
@@ -285,6 +284,7 @@ const baseViewBox = computed(() => {
     offsets,
     settings.value.switchRotation,
     CONTAINER_PADDING,
+    settings.value.switchSide,
   )
 })
 
@@ -482,7 +482,7 @@ watch(pxPerMm, (scale) => (tracks.snapRadius = SNAP_RADIUS_PX / scale), { immedi
 const routeStatus = computed(() => {
   const r = tracks.route
   if (!r) return null
-  return `Routing ${r.net ?? 'new net'} on ${r.layer}, ${r.width} mm`
+  return `Routing ${r.net ?? 'new net'} on ${r.layer}, ${editorSettings.value.width} mm`
 })
 const blockedReason = computed(
   () =>
@@ -755,6 +755,8 @@ function onEditorKeyDown(event: KeyboardEvent) {
   if (!editMode.value || isTextField(event.target)) return
   // Space pans on the canvas, but still presses a focused toolbar button
   if (event.code === 'Space' && event.target !== containerRef.value) return
+  // a mouse drag ends with the button or Esc; other keys would act on the items under it
+  if (tracks.isDragging && event.key !== 'Escape') return
   panZoom.onKeyDown(event)
   if (event.altKey) return
   const mod = event.ctrlKey || event.metaKey
@@ -849,7 +851,6 @@ onMounted(() => {
         editing: editMode,
         panning: panZoom.isPanning.value,
         'pan-ready': panZoom.spaceHeld.value,
-        'tool-route': editMode && tracks.tool !== 'select',
         'drag-hover': editMode && (dragHover !== null || tracks.isDragging),
         'blocked-flash': blockedFlash || tracks.dragViolation !== null,
         'pad-hover': hoveredPad !== undefined,
@@ -914,9 +915,9 @@ onMounted(() => {
         </g>
 
         <!-- Track preset overlay (switch-local frame) -->
-        <g v-if="trackPresetItems.length" :transform="switchLocalTransform">
+        <g v-if="tracks.presetItems.length" :transform="switchLocalTransform">
           <TrackLayer
-            :items="trackPresetItems"
+            :items="tracks.presetItems"
             :item-nets="drc?.itemNets"
             :highlight-net="editMode ? tracks.highlightNet : null"
             :selected="editMode ? tracks.selection : []"
@@ -985,13 +986,7 @@ onMounted(() => {
       </svg>
 
       <!-- View controls (what is shown, never what is drawn) -->
-      <div
-        v-if="editMode"
-        class="editor-toolbar view-controls"
-        role="toolbar"
-        aria-label="View"
-        @pointerdown.stop
-      >
+      <div v-if="editMode" class="view-controls" role="toolbar" aria-label="View" @pointerdown.stop>
         <span class="view-caption">View</span>
         <div class="btn-group btn-group-sm" role="group" aria-label="Copper layer visibility">
           <button
@@ -1192,7 +1187,7 @@ onMounted(() => {
 }
 
 .svg-container.blocked-flash {
-  box-shadow: 0 0 0 0.2rem rgba(255, 45, 85, 0.6);
+  box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--pcb-error) 60%, transparent);
 }
 
 .svg-container.editing.drag-hover:not(.pan-ready):not(.panning) {
@@ -1210,37 +1205,6 @@ onMounted(() => {
 /* the pad layer replaces the SVG copper and holes while editing */
 .svg-container.editing :deep(.footprint-svg .hoverable) {
   display: none;
-}
-
-.editor-toolbar {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.375rem;
-  z-index: 20;
-}
-
-.editor-toolbar .btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-
-.layer-swatch {
-  display: inline-block;
-  width: 0.65rem;
-  height: 0.65rem;
-  border-radius: 2px;
-}
-
-.layer-front .layer-swatch {
-  background-color: #c83434;
-}
-
-.layer-back .layer-swatch {
-  background-color: #4d7fc4;
 }
 
 .layer-btn[aria-pressed='false'] .layer-swatch {
@@ -1286,12 +1250,26 @@ onMounted(() => {
   background-color: var(--bs-body-bg);
 }
 
-/* view controls are light-weight and translucent, unlike the Draw toolbar */
+/* view controls over the canvas's top-left corner: light-weight and
+   translucent, unlike the Draw toolbar */
 .view-controls {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  z-index: 20;
   padding: 0.25rem;
   border-radius: 0.375rem;
   background-color: rgba(var(--bs-body-bg-rgb), 0.75);
   border: 1px dashed var(--bs-border-color);
+}
+
+.view-controls .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
 }
 
 /* the help line: one line (a wrapping one would move the canvas under the cursor) */
@@ -1370,13 +1348,7 @@ onMounted(() => {
 /* footprint outlines (fab layer) in the theme's fab colour */
 .svg-container :deep(g[style*='stroke:#585D84']),
 .svg-container :deep(g[style*='stroke:#585d84']) {
-  stroke: var(--pcb-fab-color, #585d84) !important;
-}
-
-/* KiCad's fab layer colour (#585d84) barely shows on the dark theme: lighten it
-   (also used by PadLayer's hole outlines) */
-:global([data-bs-theme='dark']) {
-  --pcb-fab-color: #a3a8de;
+  stroke: var(--pcb-fab-color) !important;
 }
 
 /* Crosshair styles */

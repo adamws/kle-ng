@@ -206,19 +206,4 @@ function setDrill(d: number | undefined) {
 .bar-field :deep(.custom-number-input) {
   width: 5rem;
 }
-
-.layer-swatch {
-  display: inline-block;
-  width: 0.65rem;
-  height: 0.65rem;
-  border-radius: 2px;
-}
-
-.layer-front .layer-swatch {
-  background-color: #c83434;
-}
-
-.layer-back .layer-swatch {
-  background-color: #4d7fc4;
-}
 </style>

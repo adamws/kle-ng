@@ -7,6 +7,7 @@
 
 import type { ViewBox } from '@/types/footprint'
 import { D } from './decimal-math'
+import { rotateKicad } from './kicad/transform'
 
 /**
  * Maps switch footprint setting values to SVG filenames
@@ -230,36 +231,6 @@ export type BoardSide = 'FRONT' | 'BACK'
  * the viewBox centre.
  */
 
-/** A placement relative to the switch: kbplacer's CUSTOM position option. */
-export interface Placement {
-  x: number
-  y: number
-  rotation: number
-  side: BoardSide
-}
-
-/** Rotates a point by a KiCad orientation (counter-clockwise on screen). */
-export function rotateKicad(
-  p: { x: number; y: number },
-  degrees: number,
-): { x: number; y: number } {
-  if (degrees % 360 === 0) return { x: p.x, y: p.y }
-  const rad = (degrees * Math.PI) / 180
-  const cos = Math.cos(rad)
-  const sin = Math.sin(rad)
-  return { x: p.x * cos + p.y * sin, y: -p.x * sin + p.y * cos }
-}
-
-/** Converts a point from a footprint's own frame to the switch-local frame. */
-export function footprintToSwitchLocal(
-  p: { x: number; y: number },
-  placement: Placement,
-): { x: number; y: number } {
-  const mirrored = placement.side === 'BACK' ? { x: p.x, y: -p.y } : p
-  const rotated = rotateKicad(mirrored, placement.rotation)
-  return { x: rotated.x + placement.x, y: rotated.y + placement.y }
-}
-
 /** Converts a switch-local point to board axes (relative to the switch origin). */
 export function switchLocalToBoard(
   p: { x: number; y: number },
@@ -312,6 +283,7 @@ export function offsetSvgTransform(fp: OffsetFootprint, switchRotation: number):
  * @param offsets - Offset footprints to include in the bounds
  * @param switchRotation - Switch rotation angle in degrees
  * @param padding - Padding around the composite in mm
+ * @param switchSide - Switch board side
  * @returns ViewBox string in format "minX minY width height"
  */
 export function calculateCompositeViewBoxMulti(
@@ -319,6 +291,7 @@ export function calculateCompositeViewBoxMulti(
   offsets: OffsetFootprint[],
   switchRotation: number,
   padding: number,
+  switchSide: BoardSide = 'FRONT',
 ): string {
   const xs: number[] = []
   const ys: number[] = []
@@ -331,7 +304,7 @@ export function calculateCompositeViewBoxMulti(
     { x: switchVB.x, y: switchVB.y + switchVB.height },
   ]
   for (const corner of switchCorners) {
-    const world = applySwitchTransform(corner.x, corner.y, switchVB, switchRotation)
+    const world = applySwitchTransform(corner.x, corner.y, switchVB, switchRotation, switchSide)
     xs.push(world.x)
     ys.push(world.y)
   }

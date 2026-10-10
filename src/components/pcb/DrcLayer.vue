@@ -62,14 +62,14 @@ const cross = computed(() => px(3.5))
 }
 
 .drc-marker circle {
-  fill: #ff2d55;
+  fill: var(--pcb-error);
   fill-opacity: 0.25;
-  stroke: #ff2d55;
+  stroke: var(--pcb-error);
 }
 
 .drc-marker path {
   fill: none;
-  stroke: #ff2d55;
+  stroke: var(--pcb-error);
   stroke-linecap: round;
 }
 </style>

@@ -104,11 +104,11 @@ const layerClass = (t: TrackSegment) => (t.layer === 'F.Cu' ? 'route-front' : 'r
 }
 
 .route-front {
-  stroke: #c83434;
+  stroke: var(--pcb-fcu);
 }
 
 .route-back {
-  stroke: #4d7fc4;
+  stroke: var(--pcb-bcu);
 }
 
 .route-preview {
@@ -116,12 +116,12 @@ const layerClass = (t: TrackSegment) => (t.layer === 'F.Cu' ? 'route-front' : 'r
 }
 
 .route-preview.route-blocked {
-  stroke: #ff2d55;
+  stroke: var(--pcb-error);
   opacity: 0.85;
 }
 
 .via {
-  fill: #b3b3b3;
+  fill: var(--pcb-via);
 }
 
 .via-drill {
@@ -133,7 +133,7 @@ const layerClass = (t: TrackSegment) => (t.layer === 'F.Cu' ? 'route-front' : 'r
 }
 
 .free-via.route-blocked .via {
-  fill: #ff2d55;
+  fill: var(--pcb-error);
 }
 
 .snap-target circle {

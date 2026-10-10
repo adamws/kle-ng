@@ -57,7 +57,6 @@ describe('parseFootprintPads', () => {
       (pad 1 thru_hole circle (at -3.81 -2.54) (size 2.5 2.5) (drill 1.5) (layers *.Cu *.Mask))
       (pad "" np_thru_hole circle (at 0 0) (size 4 4) (drill 4) (layers *.Cu *.Mask)))`)
     expect(fp.footprint).toBe('SW_Test')
-    expect(fp.courtyard).toEqual({ minX: -7.25, minY: -7.25, maxX: 7.25, maxY: 7.25 })
     expect(fp.pads).toEqual([
       {
         number: '1',
@@ -85,7 +84,6 @@ describe('parseFootprintPads', () => {
       (fp_rect (start -2.2 -1.15) (end 2.2 1.15) (layer "F.CrtYd") (stroke (width 0.05)))
       (pad "1" smd roundrect (at -1.4 0 90) (size 1.1 1.2)
         (layers "F.Cu" "F.Mask" "F.Paste") (roundrect_rratio 0.25) (uuid "x")))`)
-    expect(fp.courtyard).toEqual({ minX: -2.2, minY: -1.15, maxX: 2.2, maxY: 1.15 })
     expect(fp.pads[0]).toEqual({
       number: '1',
       type: 'smd',
@@ -139,17 +137,6 @@ describe('parseFootprintPads', () => {
     ])
   })
 
-  it('bounds courtyard circles and arcs', () => {
-    const fp = parseFootprintPads(`(footprint "X"
-      (fp_circle (center 0 0) (end 1 0) (layer "F.CrtYd"))
-      (fp_arc (start -2 0) (mid 0 2) (end 2 0) (layer "F.CrtYd")))`)
-    const c = fp.courtyard!
-    expect(c.minX).toBeCloseTo(-2)
-    expect(c.maxX).toBeCloseTo(2)
-    expect(c.minY).toBeCloseTo(-1)
-    expect(c.maxY).toBeCloseTo(2)
-  })
-
   it('rejects files that are not footprints and unknown pad kinds', () => {
     expect(() => parseFootprintPads('(kicad_pcb)')).toThrow(SExprError)
     expect(() =>
@@ -170,7 +157,6 @@ describe('committed pad JSON', () => {
     const pads = loadPads(name)
     expect(pads.footprint).toBe(name)
     expect(pads.pads.length).toBeGreaterThan(0)
-    expect(pads.courtyard).not.toBeNull()
   })
 })
 

@@ -75,11 +75,5 @@
       ],
       "rratio": 0.25
     }
-  ],
-  "courtyard": {
-    "minX": -0.6,
-    "minY": -0.3,
-    "maxX": 0.6,
-    "maxY": 0.3
-  }
+  ]
 }

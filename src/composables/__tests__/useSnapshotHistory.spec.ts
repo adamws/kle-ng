@@ -42,7 +42,6 @@ describe('useSnapshotHistory', () => {
     const h = useSnapshotHistory<number>(3)
     h.reset(0)
     for (let i = 1; i <= 5; i++) h.push(i)
-    expect(h.size.value).toBe(3)
     expect(h.undo()).toBe(4)
     expect(h.undo()).toBe(3)
     expect(h.undo()).toBeUndefined()

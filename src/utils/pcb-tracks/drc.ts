@@ -13,7 +13,7 @@
  * reaches. A cluster reaching pads of two nets (or an obstacle pad) is a short.
  */
 import type { TrackItem } from '@/types/tracks'
-import { shapeGap, type Shape, type Vec } from './distance'
+import { boxesNear, shapeBounds, shapeGap, type Box, type Shape, type Vec } from './distance'
 import {
   buildConnectivity,
   padInfos,
@@ -24,6 +24,7 @@ import {
 } from './connectivity'
 import type { NetName, PlacedPad } from './netlist'
 import { padHoleShape, trackShape, viaHoleShape, viaShape } from './shapes'
+import { FLOAT_EPS } from './units'
 
 export interface DrcRules {
   /** Copper to copper of different nets, mm. */
@@ -96,20 +97,28 @@ interface Copper {
   ref: number
   layers: string[]
   shape: Shape
+  /** Bounds of the shape, to skip far-apart pairs. */
+  box: Box
 }
+
+const copperOf = (ref: number, layers: string[], shape: Shape): Copper => ({
+  ref,
+  layers,
+  shape,
+  box: shapeBounds(shape),
+})
 
 /** Why a via's size breaks the board constraints, or null (no margin: sizes are set, not measured). */
 export function viaSizeProblem(
   via: { diameter: number; drillDiameter: number },
   rules: DrcRules = DEFAULT_DRC_RULES,
 ): string | null {
-  const tol = 1e-9
-  if (via.diameter < rules.viaMinDiameter - tol)
+  if (via.diameter < rules.viaMinDiameter - FLOAT_EPS)
     return `diameter ${fmt(via.diameter)} mm, needs ${fmt(rules.viaMinDiameter)} mm`
-  if (via.drillDiameter < rules.minThroughDrill - tol)
+  if (via.drillDiameter < rules.minThroughDrill - FLOAT_EPS)
     return `drill ${fmt(via.drillDiameter)} mm, needs ${fmt(rules.minThroughDrill)} mm`
   const ring = (via.diameter - via.drillDiameter) / 2
-  if (ring < rules.viaMinAnnular - tol)
+  if (ring < rules.viaMinAnnular - FLOAT_EPS)
     return `ring ${fmt(ring)} mm, needs ${fmt(rules.viaMinAnnular)} mm`
   return null
 }
@@ -163,13 +172,11 @@ export function runDrc(
   // copper of items and pads per layer
   const copper: Copper[] = []
   items.forEach((item, i) => {
-    if (item.type === 'track')
-      copper.push({ ref: i, layers: [item.layer], shape: trackShape(item) })
-    else if (item.type === 'via')
-      copper.push({ ref: i, layers: ['F.Cu', 'B.Cu'], shape: viaShape(item) })
+    if (item.type === 'track') copper.push(copperOf(i, [item.layer], trackShape(item)))
+    else if (item.type === 'via') copper.push(copperOf(i, ['F.Cu', 'B.Cu'], viaShape(item)))
   })
   const padCopper: Copper[] = infos.flatMap((info, i) =>
-    info.copper.map((shape) => ({ ref: -1 - i, layers: info.layers, shape })),
+    info.copper.map((shape) => copperOf(-1 - i, info.layers, shape)),
   )
 
   const limit = (v: number) => v + CLEARANCE_MARGIN
@@ -182,40 +189,39 @@ export function runDrc(
   }
 
   // item to item and item to pad copper
-  for (let i = 0; i < copper.length; i++) {
-    const a = copper[i]!
-    const aNet = itemNet(a.ref)
-    for (const b of [...copper.slice(i + 1), ...padCopper]) {
-      if (!shareLayer(a, b)) continue
-      const bIsPad = b.ref < 0
-      const bNet = bIsPad ? padNetRef(-1 - b.ref) : itemNet(b.ref)
-      if (sameNet(aNet, bNet)) continue
-      const gap = shapeGap(a.shape, b.shape)
-      if (gap.d >= limit(rules.clearance)) continue
-      const bName = bIsPad ? padName(infos[-1 - b.ref]!) : itemName(items[b.ref]!)
-      report(`c:${a.ref}:${b.ref}`, {
-        kind: 'clearance',
-        message:
-          `Clearance: ${itemName(items[a.ref]!)} to ${bName} is ${fmt(gap.d)} mm, ` +
-          `needs ${fmt(rules.clearance)} mm`,
-        at: mid(gap.a, gap.b),
-        items: bIsPad ? [a.ref] : [a.ref, b.ref],
-        pads: bIsPad ? [infos[-1 - b.ref]!.placed.key] : [],
-      })
-    }
+  const checkClearance = (a: Copper, aNet: ReturnType<typeof itemNet>, b: Copper) => {
+    if (!boxesNear(a.box, b.box, limit(rules.clearance)) || !shareLayer(a, b)) return
+    const bIsPad = b.ref < 0
+    const bNet = bIsPad ? padNetRef(-1 - b.ref) : itemNet(b.ref)
+    if (sameNet(aNet, bNet)) return
+    const gap = shapeGap(a.shape, b.shape)
+    if (gap.d >= limit(rules.clearance)) return
+    const bName = bIsPad ? padName(infos[-1 - b.ref]!) : itemName(items[b.ref]!)
+    report(`c:${a.ref}:${b.ref}`, {
+      kind: 'clearance',
+      message:
+        `Clearance: ${itemName(items[a.ref]!)} to ${bName} is ${fmt(gap.d)} mm, ` +
+        `needs ${fmt(rules.clearance)} mm`,
+      at: mid(gap.a, gap.b),
+      items: bIsPad ? [a.ref] : [a.ref, b.ref],
+      pads: bIsPad ? [infos[-1 - b.ref]!.placed.key] : [],
+    })
   }
+  copper.forEach((a, i) => {
+    const aNet = itemNet(a.ref)
+    for (let j = i + 1; j < copper.length; j++) checkClearance(a, aNet, copper[j]!)
+    for (const b of padCopper) checkClearance(a, aNet, b)
+  })
 
-  // holes: items to NPTH (any net) and to plated holes of other nets; via holes to holes
+  // holes: tracks and vias to NPTH (any net); via drills to every hole
   const holes = infos
     .map((info, i) => ({ info, i, shape: padHoleShape(info.placed.pad) }))
     .filter((h): h is { info: PadInfo; i: number; shape: Shape } => h.shape !== null)
-  items.forEach((item, i) => {
-    if (item.type !== 'track' && item.type !== 'via') return
-    const shape = item.type === 'track' ? trackShape(item) : viaShape(item)
-    for (const hole of holes) {
-      const npth = hole.info.placed.pad.type === 'np_thru_hole'
-      // a plated hole sits inside its pad's copper, whose clearance check covers it
-      if (!npth) continue
+  // a plated hole sits inside its pad's copper, whose clearance check covers it
+  const npthHoles = holes.filter((h) => h.info.placed.pad.type === 'np_thru_hole')
+  for (const { ref: i, shape } of copper) {
+    const item = items[i]!
+    for (const hole of npthHoles) {
       const gap = shapeGap(shape, hole.shape)
       if (gap.d >= limit(rules.holeClearance)) continue
       report(`h:${i}:${hole.i}`, {
@@ -265,7 +271,7 @@ export function runDrc(
         })
       }
     }
-  })
+  }
 
   const itemNets = conn.itemCluster.map((root) => {
     const nets = conn.clusters.get(root)!.nets

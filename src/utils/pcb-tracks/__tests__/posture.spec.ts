@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { isPostureAngle, snapToGrid, walk } from '../posture'
+import { snapToGrid, walk } from '../posture'
+import type { Vec } from '../distance'
+
+/** Segment a→b runs at a multiple of 45°. */
+const is45 = (a: Vec, b: Vec) => {
+  const dx = Math.abs(b.x - a.x)
+  const dy = Math.abs(b.y - a.y)
+  return dx < 1e-9 || dy < 1e-9 || Math.abs(dx - dy) < 1e-9
+}
 
 describe('snapToGrid', () => {
   it('snaps to multiples of the grid from the switch origin', () => {
@@ -33,7 +41,7 @@ describe('walk', () => {
       for (const flip of [false, true]) {
         const pts = walk(start, end, '45', flip)
         for (let i = 1; i < pts.length; i++) {
-          expect(isPostureAngle(pts[i - 1]!, pts[i]!, '45')).toBe(true)
+          expect(is45(pts[i - 1]!, pts[i]!)).toBe(true)
         }
       }
     }
@@ -57,13 +65,5 @@ describe('walk', () => {
     const pts = walk(start, end, '45')
     expect(pts[0]).toBe(start)
     expect(pts[pts.length - 1]).toBe(end)
-  })
-})
-
-describe('isPostureAngle', () => {
-  it('accepts only 45° multiples, or 90° multiples in 90° mode', () => {
-    expect(isPostureAngle({ x: 0, y: 0 }, { x: 1, y: 1 }, '45')).toBe(true)
-    expect(isPostureAngle({ x: 0, y: 0 }, { x: 1, y: 1 }, '90')).toBe(false)
-    expect(isPostureAngle({ x: 0, y: 0 }, { x: 2, y: 1 }, '45')).toBe(false)
   })
 })

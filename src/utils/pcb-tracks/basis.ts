@@ -9,6 +9,7 @@
  * the basis are compared, so a hand-written preset without one is never stale.
  */
 import type { PcbSettings } from '@/types/pcb'
+import { FLOAT_EPS } from './units'
 
 // a type, not an interface, so it fits the free-form `basis` record
 export type EditorBasis = {
@@ -66,7 +67,7 @@ export function basisChanges(
   const { diodePositionX: x, diodePositionY: y, diodeRotation: rot, diodeSide: side } = basis
   if (typeof x === 'number' && typeof y === 'number') {
     const now = { x: settings.diodePositionX, y: settings.diodePositionY }
-    if (Math.abs(x - now.x) > 1e-9 || Math.abs(y - now.y) > 1e-9) {
+    if (Math.abs(x - now.x) > FLOAT_EPS || Math.abs(y - now.y) > FLOAT_EPS) {
       changes.push({
         label: 'diode position',
         was: `${mm(x)}, ${mm(y)} mm`,
@@ -74,7 +75,7 @@ export function basisChanges(
       })
     }
   }
-  if (typeof rot === 'number' && Math.abs(rot - settings.diodeRotation) > 1e-9) {
+  if (typeof rot === 'number' && Math.abs(rot - settings.diodeRotation) > FLOAT_EPS) {
     changes.push({ label: 'diode rotation', was: `${rot}°`, now: `${settings.diodeRotation}°` })
   }
   if (typeof side === 'string' && side !== settings.diodeSide) {

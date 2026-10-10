@@ -128,6 +128,39 @@ textarea.form-control.is-invalid:focus {
   z-index: 1;
 }
 
+/* PCB track editor colours, shared by its SVG layers and toolbars: the copper layers as
+   the footprint SVGs draw them (KiCad's F.Cu and B.Cu), DRC errors, vias and holes, and
+   the fab outline, lightened on the dark theme where KiCad's #585d84 barely shows. */
+:root {
+  --pcb-fcu: #c83434;
+  --pcb-bcu: #4d7fc4;
+  --pcb-error: #ff2d55;
+  --pcb-via: #b3b3b3;
+  --pcb-via-edge: #6f6f6f;
+  --pcb-hole: #afafaf;
+  --pcb-fab-color: #585d84;
+}
+
+[data-bs-theme='dark'] {
+  --pcb-fab-color: #a3a8de;
+}
+
+/* Colour swatch of a copper layer in a button (layer-front / layer-back) */
+.layer-swatch {
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 2px;
+}
+
+.layer-front .layer-swatch {
+  background-color: var(--pcb-fcu);
+}
+
+.layer-back .layer-swatch {
+  background-color: var(--pcb-bcu);
+}
+
 /* Section headings inside dropdown menus. Bootstrap's default grey is light enough to
    read as disabled text rather than as a heading, which made the sections easy to miss
    once menus started carrying more than one group; the band and the default cursor mark

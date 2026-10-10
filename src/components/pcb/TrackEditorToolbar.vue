@@ -244,19 +244,4 @@ const { editorSettings, tool, isRouting, canUndo, canRedo, presetItems } = store
   padding-bottom: 0;
   padding-right: 1.75rem;
 }
-
-.layer-swatch {
-  display: inline-block;
-  width: 0.65rem;
-  height: 0.65rem;
-  border-radius: 2px;
-}
-
-.layer-front .layer-swatch {
-  background-color: #c83434;
-}
-
-.layer-back .layer-swatch {
-  background-color: #4d7fc4;
-}
 </style>

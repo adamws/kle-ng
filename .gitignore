@@ -33,3 +33,10 @@ test-results/
 playwright-report/
 e2e/test-output/
 .vercel
+
+# Footprint SVG generator (public/data/footprints/generate.sh) local byproducts.
+# Ignoring them keeps them out of commits (CI and Vercel build from git); a local
+# build still copies them from public/ into dist.
+/public/data/footprints/.env
+/public/data/footprints/__pycache__/
+/public/data/footprints/tmp-layers/

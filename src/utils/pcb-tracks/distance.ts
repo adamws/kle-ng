@@ -11,6 +11,8 @@
  * `Core` and `coreDistance` without changing callers.
  */
 
+import { FLOAT_EPS } from './units'
+
 export interface Vec {
   x: number
   y: number
@@ -34,10 +36,10 @@ export interface Closest {
   b: Vec
 }
 
-const sub = (p: Vec, q: Vec): Vec => ({ x: p.x - q.x, y: p.y - q.y })
-const dot = (p: Vec, q: Vec) => p.x * q.x + p.y * q.y
-const cross = (p: Vec, q: Vec) => p.x * q.y - p.y * q.x
-const dist = (p: Vec, q: Vec) => Math.hypot(p.x - q.x, p.y - q.y)
+export const sub = (p: Vec, q: Vec): Vec => ({ x: p.x - q.x, y: p.y - q.y })
+export const dot = (p: Vec, q: Vec) => p.x * q.x + p.y * q.y
+export const cross = (p: Vec, q: Vec) => p.x * q.y - p.y * q.x
+export const dist = (p: Vec, q: Vec) => Math.hypot(p.x - q.x, p.y - q.y)
 
 function flip(c: Closest): Closest {
   return { d: c.d, a: c.b, b: c.a }
@@ -203,9 +205,10 @@ export function shapeGap(s: Shape, t: Shape): Closest {
 
 /** True when p lies inside the shape (boundary included). */
 export function shapeContains(s: Shape, p: Vec): boolean {
-  return coreDistance({ kind: 'point', p }, s.core).d <= s.r + 1e-9
+  return coreDistance({ kind: 'point', p }, s.core).d <= s.r + FLOAT_EPS
 }
 
+/** Axis-aligned bounds, for cheap pre-checks before exact distances. */
 export interface Box {
   minX: number
   minY: number
@@ -213,17 +216,30 @@ export interface Box {
   maxY: number
 }
 
+/** Bounds of a shape, its radius included. */
 export function shapeBounds(s: Shape): Box {
-  const pts =
-    s.core.kind === 'point'
-      ? [s.core.p]
-      : s.core.kind === 'segment'
-        ? [s.core.a, s.core.b]
-        : s.core.pts
-  return {
-    minX: Math.min(...pts.map((p) => p.x)) - s.r,
-    minY: Math.min(...pts.map((p) => p.y)) - s.r,
-    maxX: Math.max(...pts.map((p) => p.x)) + s.r,
-    maxY: Math.max(...pts.map((p) => p.y)) + s.r,
+  const box = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }
+  const add = (p: Vec) => {
+    box.minX = Math.min(box.minX, p.x - s.r)
+    box.minY = Math.min(box.minY, p.y - s.r)
+    box.maxX = Math.max(box.maxX, p.x + s.r)
+    box.maxY = Math.max(box.maxY, p.y + s.r)
   }
+  const core = s.core
+  if (core.kind === 'point') add(core.p)
+  else if (core.kind === 'segment') {
+    add(core.a)
+    add(core.b)
+  } else core.pts.forEach(add)
+  return box
+}
+
+/** True when two boxes are no more than `gap` apart (so their shapes may be). */
+export function boxesNear(a: Box, b: Box, gap: number): boolean {
+  return (
+    a.minX - gap <= b.maxX &&
+    b.minX - gap <= a.maxX &&
+    a.minY - gap <= b.maxY &&
+    b.minY - gap <= a.maxY
+  )
 }

@@ -103,13 +103,13 @@ const layerClass = (layer: CopperLayer) => (layer === 'F.Cu' ? 'pad-front' : 'pa
 }
 
 .pad-front {
-  fill: #c83434;
-  stroke: #c83434;
+  fill: var(--pcb-fcu);
+  stroke: var(--pcb-fcu);
 }
 
 .pad-back {
-  fill: #4d7fc4;
-  stroke: #4d7fc4;
+  fill: var(--pcb-bcu);
+  stroke: var(--pcb-bcu);
 }
 
 .pad-copper path:not(.pad-stroked) {
@@ -117,7 +117,7 @@ const layerClass = (layer: CopperLayer) => (layer === 'F.Cu' ? 'pad-front' : 'pa
 }
 
 .pad-holes {
-  fill: #afafaf;
+  fill: var(--pcb-hole);
 }
 
 /* a plated drill belongs to its copper pad, which takes the pointer */
@@ -126,7 +126,7 @@ const layerClass = (layer: CopperLayer) => (layer === 'F.Cu' ? 'pad-front' : 'pa
 }
 
 .pad-holes .npth path {
-  stroke: var(--pcb-fab-color, #585d84);
+  stroke: var(--pcb-fab-color);
   stroke-width: 0.05;
 }
 
@@ -137,11 +137,11 @@ const layerClass = (layer: CopperLayer) => (layer === 'F.Cu' ? 'pad-front' : 'pa
 
 /* dim with a faded colour, not opacity, so stacked layers don't mix */
 .pad-front .dimmed path {
-  fill: color-mix(in srgb, #c83434 30%, var(--bs-body-bg));
+  fill: color-mix(in srgb, var(--pcb-fcu) 30%, var(--bs-body-bg));
 }
 
 .pad-back .dimmed path {
-  fill: color-mix(in srgb, #4d7fc4 30%, var(--bs-body-bg));
+  fill: color-mix(in srgb, var(--pcb-bcu) 30%, var(--bs-body-bg));
 }
 
 .pad-holes .dimmed {

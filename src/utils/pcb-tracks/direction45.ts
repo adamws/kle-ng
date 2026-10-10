@@ -7,6 +7,7 @@
  * enum: 0 N, 1 NE, 2 E, 3 SE, 4 S, 5 SW, 6 W, 7 NW.
  */
 import type { Vec } from './distance'
+import { FLOAT_EPS } from './units'
 
 export type Dir = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7
 
@@ -23,7 +24,7 @@ const VECTORS: readonly Vec[] = [
 
 /** Direction of a vector rounded to 45°, null for a zero vector (KiCad's UNDEFINED). */
 export function dirOf(v: Vec): Dir | null {
-  if (Math.hypot(v.x, v.y) < 1e-9) return null
+  if (Math.hypot(v.x, v.y) < FLOAT_EPS) return null
   // angle clockwise from north, in 45° steps
   const a = Math.atan2(v.x, -v.y)
   return ((Math.round(a / (Math.PI / 4)) + 8) % 8) as Dir
@@ -65,8 +66,7 @@ export function buildInitialTrace(p0: Vec, p1: Vec, startDiagonal: boolean): Vec
   const h = Math.abs(p1.y - p0.y)
   const sw = Math.sign(p1.x - p0.x)
   const sh = Math.sign(p1.y - p0.y)
-  const eps = 1e-9
-  if (w < eps || h < eps || Math.abs(w - h) < eps) return [p0, p1]
+  if (w < FLOAT_EPS || h < FLOAT_EPS || Math.abs(w - h) < FLOAT_EPS) return [p0, p1]
   const straight = w > h ? { x: (w - h) * sw, y: 0 } : { x: 0, y: sh * (h - w) }
   const diagonal = w > h ? { x: h * sw, y: h * sh } : { x: sw * w, y: sh * w }
   const m = startDiagonal ? diagonal : straight

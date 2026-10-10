@@ -10,17 +10,7 @@
 import type { CopperLayer, TrackItem, TrackSegment } from '@/types/tracks'
 import type { PadInfo } from './connectivity'
 import { pointSegment, shapeContains, type Vec } from './distance'
-
-/** Points this close are one point, mm (well under 1 nm). */
-export const EPS = 1e-7
-
-export const samePoint = (p: Vec, q: Vec) => Math.abs(p.x - q.x) < EPS && Math.abs(p.y - q.y) < EPS
-
-/** Whole nanometres, like the wire format. */
-export const roundNm = (p: Vec): Vec => ({
-  x: Math.round(p.x * 1e6) / 1e6,
-  y: Math.round(p.y * 1e6) / 1e6,
-})
+import { NM, POINT_EPS, samePoint } from './units'
 
 export type End = 'start' | 'end'
 
@@ -53,7 +43,7 @@ export function isFreePoint(
     if (item.type === 'via') return !samePoint(item.position, p)
     if (item.type !== 'track' || item.layer !== layer) return true
     if (samePoint(item.start, p) || samePoint(item.end, p)) return true
-    return pointSegment(p, item.start, item.end).d > EPS
+    return pointSegment(p, item.start, item.end).d > POINT_EPS
   })
 }
 
@@ -67,7 +57,7 @@ export function isLineCorner(
   const ends = endsAt(items, p, layer)
   if (ends.length !== 2 || ends[0]!.item === ends[1]!.item) return false
   const [a, b] = ends.map((e) => items[e.item] as TrackSegment)
-  return Math.abs(a!.width - b!.width) < EPS && isFreePoint(items, pads, p, layer)
+  return Math.abs(a!.width - b!.width) < POINT_EPS && isFreePoint(items, pads, p, layer)
 }
 
 /** A line end a drag may move: one track end, nothing else there. */
@@ -126,7 +116,7 @@ export function assembleLine(
  * neighbours (KiCad's SHAPE_LINE_CHAIN::Simplify), so zero-length and
  * collinear segments disappear. Keeps at least the two end points.
  */
-export function simplifyChain(points: readonly Vec[], tolerance = 5e-7): Vec[] {
+export function simplifyChain(points: readonly Vec[], tolerance = NM / 2): Vec[] {
   const out: Vec[] = []
   for (const p of points) if (!out.length || !samePoint(out[out.length - 1]!, p)) out.push(p)
   for (let i = 1; i < out.length - 1;) {

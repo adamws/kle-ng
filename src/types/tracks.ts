@@ -20,7 +20,6 @@ export interface Pt {
 
 export interface TrackSegment {
   type: 'track'
-  id?: string
   start: Pt
   end: Pt
   width: number
@@ -30,7 +29,6 @@ export interface TrackSegment {
 /** Reserved: arcs are rejected until kbplacer supports them. */
 export interface TrackArc {
   type: 'arc'
-  id?: string
   start: Pt
   mid: Pt
   end: Pt
@@ -41,7 +39,6 @@ export interface TrackArc {
 /** Through via (F.Cu to B.Cu). */
 export interface TrackVia {
   type: 'via'
-  id?: string
   position: Pt
   diameter: number
   drillDiameter: number

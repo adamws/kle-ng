@@ -7,15 +7,14 @@
  * shapes, which block every layer.
  */
 import type { FootprintPad } from '@/utils/kicad/footprint-pads'
+import { rotateKicad } from '@/utils/kicad/transform'
 import type { TrackSegment, TrackVia } from '@/types/tracks'
 import type { Shape, Vec } from './distance'
 
 /** Pad-frame point to switch-local (KiCad rotation is counter-clockwise on screen). */
 function padToLocal(pad: FootprintPad, p: Vec): Vec {
-  const rad = (pad.at.rot * Math.PI) / 180
-  const cos = Math.cos(rad)
-  const sin = Math.sin(rad)
-  return { x: pad.at.x + p.x * cos + p.y * sin, y: pad.at.y - p.x * sin + p.y * cos }
+  const r = rotateKicad(p, pad.at.rot)
+  return { x: pad.at.x + r.x, y: pad.at.y + r.y }
 }
 
 function rectShape(

@@ -147,13 +147,12 @@ describe('track preset conversion', () => {
     expect(trackPresetToWire(preset)).toEqual(wire)
   })
 
-  it('drops editor ids and rounds mm to whole nanometres', () => {
+  it('rounds mm to whole nanometres', () => {
     const preset: TrackPreset = {
       version: 1,
       items: [
         {
           type: 'track',
-          id: 't1',
           start: { x: 0.1 + 0.2, y: -1.0000004 },
           end: { x: 2.5400006, y: 0 },
           width: 0.25,

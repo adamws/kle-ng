@@ -47,5 +47,5 @@ export function useSnapshotHistory<T>(limit = DEFAULT_HISTORY_LIMIT) {
     return copy(states.value[index.value]!)
   }
 
-  return { canUndo, canRedo, reset, push, undo, redo, size: computed(() => states.value.length) }
+  return { canUndo, canRedo, reset, push, undo, redo }
 }

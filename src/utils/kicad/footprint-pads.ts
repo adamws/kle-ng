@@ -16,6 +16,7 @@
 
 import { atom, child, children, head, num, parseSExpr, SExprError } from './sexpr.ts'
 import type { SExpr } from './sexpr.ts'
+import { mirrorForSide, placePoint, type Placement } from './transform.ts'
 
 export type PadType = 'thru_hole' | 'smd' | 'connect' | 'np_thru_hole'
 export type PadShape = 'circle' | 'rect' | 'oval' | 'roundrect' | 'trapezoid' | 'custom'
@@ -60,18 +61,9 @@ export interface FootprintPad {
   primitives?: PadPrimitive[]
 }
 
-export interface Bounds {
-  minX: number
-  minY: number
-  maxX: number
-  maxY: number
-}
-
 export interface FootprintPads {
   footprint: string
   pads: FootprintPad[]
-  /** Courtyard bounds (F.CrtYd and B.CrtYd), null when it has none. */
-  courtyard: Bounds | null
 }
 
 const PAD_TYPES: readonly string[] = ['thru_hole', 'smd', 'connect', 'np_thru_hole']
@@ -170,75 +162,7 @@ function parsePad(node: SExpr[]): FootprintPad {
   return pad
 }
 
-/** Points along an arc through three points (inclusive), for bounds. */
-function arcPoints(start: PadPoint, mid: PadPoint, end: PadPoint): PadPoint[] {
-  const ax = start.x,
-    ay = start.y,
-    bx = mid.x,
-    by = mid.y,
-    cx = end.x,
-    cy = end.y
-  const d = 2 * (ax * (by - cy) + bx * (cy - ay) + cx * (ay - by))
-  if (Math.abs(d) < 1e-12) return [start, mid, end]
-  const a2 = ax * ax + ay * ay,
-    b2 = bx * bx + by * by,
-    c2 = cx * cx + cy * cy
-  const ux = (a2 * (by - cy) + b2 * (cy - ay) + c2 * (ay - by)) / d
-  const uy = (a2 * (cx - bx) + b2 * (ax - cx) + c2 * (bx - ax)) / d
-  const r = Math.hypot(ax - ux, ay - uy)
-  const angle = (p: PadPoint) => Math.atan2(p.y - uy, p.x - ux)
-  const a0 = angle(start)
-  // sweep from start through mid to end
-  let sweep = angle(end) - a0
-  let toMid = angle(mid) - a0
-  const norm = (v: number) => ((v % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)
-  sweep = norm(sweep)
-  toMid = norm(toMid)
-  if (toMid > sweep) sweep -= 2 * Math.PI
-  const steps = 32
-  const out: PadPoint[] = []
-  for (let i = 0; i <= steps; i++) {
-    const t = a0 + (sweep * i) / steps
-    out.push({ x: ux + r * Math.cos(t), y: uy + r * Math.sin(t) })
-  }
-  return out
-}
-
-/** Points of a courtyard graphic item, enough to bound it. */
-function graphicPoints(node: SExpr[]): PadPoint[] {
-  switch (head(node)) {
-    case 'fp_line':
-    case 'fp_rect':
-      return [point(child(node, 'start')), point(child(node, 'end'))]
-    case 'fp_circle': {
-      const c = point(child(node, 'center'))
-      const e = point(child(node, 'end'))
-      const r = Math.hypot(e.x - c.x, e.y - c.y)
-      return [
-        { x: c.x - r, y: c.y - r },
-        { x: c.x + r, y: c.y + r },
-      ]
-    }
-    case 'fp_arc': {
-      const mid = child(node, 'mid')
-      if (mid) return arcPoints(point(child(node, 'start')), point(mid), point(child(node, 'end')))
-      // KiCad 5: start is the centre, end the arc start, angle the sweep (degrees, clockwise on screen)
-      const c = point(child(node, 'start'))
-      const s = point(child(node, 'end'))
-      const sweep = (num(child(node, 'angle'), 1) * Math.PI) / 180
-      const r = Math.hypot(s.x - c.x, s.y - c.y)
-      const a0 = Math.atan2(s.y - c.y, s.x - c.x)
-      const at = (t: number) => ({ x: c.x + r * Math.cos(t), y: c.y + r * Math.sin(t) })
-      return arcPoints(s, at(a0 + sweep / 2), at(a0 + sweep))
-    }
-    case 'fp_poly':
-      return children(child(node, 'pts') ?? [], 'xy').map(point)
-    default:
-      return []
-  }
-}
-
-/** Parses the pads and courtyard bounds of a .kicad_mod footprint. */
+/** Parses the pads of a .kicad_mod footprint. */
 export function parseFootprintPads(kicadModText: string): FootprintPads {
   const root = parseSExpr(kicadModText)
   const kind = head(root)
@@ -247,41 +171,12 @@ export function parseFootprintPads(kicadModText: string): FootprintPads {
   }
   const pads = children(root, 'pad').map(parsePad)
 
-  let courtyard: Bounds | null = null
-  for (const item of root as SExpr[]) {
-    if (!Array.isArray(item) || !head(item)?.startsWith('fp_')) continue
-    const layer = atom(child(item, 'layer'), 1)
-    if (layer !== 'F.CrtYd' && layer !== 'B.CrtYd') continue
-    for (const p of graphicPoints(item)) {
-      courtyard = courtyard
-        ? {
-            minX: Math.min(courtyard.minX, p.x),
-            minY: Math.min(courtyard.minY, p.y),
-            maxX: Math.max(courtyard.maxX, p.x),
-            maxY: Math.max(courtyard.maxY, p.y),
-          }
-        : { minX: p.x, minY: p.y, maxX: p.x, maxY: p.y }
-    }
-  }
-  return { footprint: atom(root as SExpr[], 1) ?? '', pads, courtyard }
+  return { footprint: atom(root as SExpr[], 1) ?? '', pads }
 }
 
-// Placement (kbplacer's coordinate contract, see footprintUtils.ts)
+// Placement (kbplacer's coordinate contract, see transform.ts and footprintUtils.ts)
 
-export interface PadPlacement {
-  x: number
-  y: number
-  rotation: number
-  side: 'FRONT' | 'BACK'
-}
-
-function rotate(p: PadPoint, degrees: number): PadPoint {
-  if (degrees % 360 === 0) return { x: p.x, y: p.y }
-  const rad = (degrees * Math.PI) / 180
-  const cos = Math.cos(rad)
-  const sin = Math.sin(rad)
-  return { x: p.x * cos + p.y * sin, y: -p.x * sin + p.y * cos }
-}
+export type PadPlacement = Placement
 
 function flipLayer(layer: string): string {
   if (layer.startsWith('F.')) return `B.${layer.slice(2)}`
@@ -302,14 +197,14 @@ function flipLayer(layer: string): string {
  */
 export function placePads(pads: readonly FootprintPad[], placement: PadPlacement): FootprintPad[] {
   const back = placement.side === 'BACK'
-  const mirror = (p: PadPoint): PadPoint => (back ? { x: p.x, y: -p.y } : { x: p.x, y: p.y })
+  const mirror = (p: PadPoint): PadPoint => mirrorForSide(p, placement.side)
   return pads.map((pad) => {
-    const center = rotate(mirror(pad.at), placement.rotation)
+    const center = placePoint(pad.at, placement)
     const placed: FootprintPad = {
       ...pad,
       at: {
-        x: center.x + placement.x,
-        y: center.y + placement.y,
+        x: center.x,
+        y: center.y,
         rot: (back ? -pad.at.rot : pad.at.rot) + placement.rotation,
       },
       size: { ...pad.size },

@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import {
+  boxesNear,
   coreDistance,
   pointInPolygon,
   segmentIntersection,
-  shapeBounds,
   shapeContains,
+  shapeBounds,
   shapeGap,
   type Core,
   type Shape,
@@ -90,10 +91,6 @@ describe('shapes', () => {
     expect(shapeContains(hole, { x: 5, y: 1.5 })).toBe(true)
     expect(shapeContains(hole, { x: 5, y: 1.51 })).toBe(false)
   })
-
-  it('bounds shapes including the radius', () => {
-    expect(shapeBounds(track)).toEqual({ minX: -0.125, minY: -0.125, maxX: 10.125, maxY: 0.125 })
-  })
 })
 
 describe('primitives', () => {
@@ -113,5 +110,22 @@ describe('primitives', () => {
     const sq = square(0, 0, 1)
     if (sq.kind !== 'polygon') throw new Error('expected a polygon')
     expect(pointInPolygon({ x: 1, y: 0 }, sq.pts)).toBe(true)
+  })
+})
+
+describe('bounds', () => {
+  it('bounds a shape with its radius', () => {
+    const track: Shape = {
+      core: { kind: 'segment', a: { x: 0, y: 0 }, b: { x: 10, y: 0 } },
+      r: 0.125,
+    }
+    expect(shapeBounds(track)).toEqual({ minX: -0.125, minY: -0.125, maxX: 10.125, maxY: 0.125 })
+  })
+
+  it('tells boxes within a gap of each other', () => {
+    const a = { minX: 0, minY: 0, maxX: 1, maxY: 1 }
+    expect(boxesNear(a, { minX: 1.2, minY: 0, maxX: 2, maxY: 1 }, 0.2)).toBe(true)
+    expect(boxesNear(a, { minX: 1.3, minY: 0, maxX: 2, maxY: 1 }, 0.2)).toBe(false)
+    expect(boxesNear(a, { minX: 0, minY: -3, maxX: 1, maxY: -1.5 }, 0.2)).toBe(false)
   })
 })

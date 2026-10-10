@@ -19,7 +19,7 @@
  */
 import type { CopperLayer, TrackItem, TrackSegment } from '@/types/tracks'
 import type { PadInfo } from './connectivity'
-import { pointSegment, segmentIntersection, type Vec } from './distance'
+import { cross, dist, dot, pointSegment, segmentIntersection, sub, type Vec } from './distance'
 import {
   angle,
   buildInitialTrace,
@@ -30,12 +30,8 @@ import {
   right,
   type Dir,
 } from './direction45'
-import { endsAt, EPS, isFreePoint } from './line'
-
-const sub = (p: Vec, q: Vec): Vec => ({ x: p.x - q.x, y: p.y - q.y })
-const dot = (p: Vec, q: Vec) => p.x * q.x + p.y * q.y
-const cross = (p: Vec, q: Vec) => p.x * q.y - p.y * q.x
-const len = (p: Vec) => Math.hypot(p.x, p.y)
+import { endsAt, isFreePoint } from './line'
+import { FLOAT_EPS, NM, POINT_EPS } from './units'
 
 export type DragHandle =
   /** A whole segment, dragged sideways. */
@@ -63,7 +59,7 @@ function intersectLines(a: Guide, b: Guide): Vec | null {
 type Seg = [Vec, Vec]
 
 const chainLength = (pts: readonly Vec[]) =>
-  pts.reduce((sum, p, i) => (i ? sum + len(sub(p, pts[i - 1]!)) : 0), 0)
+  pts.reduce((sum, p, i) => (i ? sum + dist(p, pts[i - 1]!) : 0), 0)
 
 /**
  * KiCad's LINE::dragSegment45: segment `index` of the chain moved so its
@@ -151,7 +147,7 @@ export function dragSegment45(line: readonly Vec[], index: number, target: Vec):
       else if ((ip = segmentIntersection(s1[0], s1[1], s3[0], s3[1]))) np = [sPrev[0], ip, sNext[1]]
       else np = [sPrev[0], ip1, ip2, sNext[1]]
       const l = chainLength(np)
-      if (l < bestLen - 1e-9) {
+      if (l < bestLen - FLOAT_EPS) {
         bestLen = l
         best = np
       }
@@ -211,7 +207,7 @@ export function snapDraggedCorner(
       if (da === null || db === null || angle(da, db) !== 'obtuse') continue
       const ip = intersectLines({ p: line[i]!, d: da }, { p: line[j]!, d: db })
       if (!ip) continue
-      const d = len(sub(ip, p))
+      const d = dist(ip, p)
       if (d < best.d) best = { d, p: ip }
     }
   }
@@ -246,7 +242,7 @@ export function cleanupTracks(
   pads: readonly PadInfo[],
 ): CleanupResult {
   let list = items.map((item, i) => ({ item: { ...item } as TrackItem, from: [i] }))
-  list = list.filter(({ item }) => item.type !== 'track' || len(sub(item.end, item.start)) > EPS)
+  list = list.filter(({ item }) => item.type !== 'track' || dist(item.end, item.start) > POINT_EPS)
 
   for (let merged = true; merged;) {
     merged = false
@@ -261,11 +257,11 @@ export function cleanupTracks(
         const o = ends.find((e) => e.item !== i)
         if (!o || o.item < i) continue
         const b = list[o.item]!.item as TrackSegment
-        if (Math.abs(b.width - a.width) > EPS) continue
+        if (Math.abs(b.width - a.width) > POINT_EPS) continue
         const farA = endA === 'start' ? a.end : a.start
         const farB = o.end === 'start' ? b.end : b.start
         // collinear and on opposite sides of the corner
-        if (pointSegment(p, farA, farB).d > 1e-6) continue
+        if (pointSegment(p, farA, farB).d > NM) continue
         if (!isFreePoint(current, pads, p, a.layer)) continue
         const joined: TrackSegment = endA === 'end' ? { ...a, end: farB } : { ...a, start: farB }
         list[i] = { item: joined, from: [...list[i]!.from, ...list[o.item]!.from] }
@@ -286,7 +282,7 @@ export function cleanupTracks(
 /** Unit normal of a segment (left of start → end). */
 export function segmentNormal(a: Vec, b: Vec): Vec {
   const d = sub(b, a)
-  const l = len(d)
+  const l = Math.hypot(d.x, d.y)
   return { x: -d.y / l, y: d.x / l }
 }
 
@@ -314,8 +310,8 @@ export function snapSegmentOffset(
   }
   if (best) return best.offset
   // grid lines along the segment: multiples of grid (axis) or grid/√2 (diagonal)
-  const axis = Math.abs(n.x) < 1e-9 || Math.abs(n.y) < 1e-9
-  const diagonal = Math.abs(Math.abs(n.x) - Math.abs(n.y)) < 1e-9
+  const axis = Math.abs(n.x) < FLOAT_EPS || Math.abs(n.y) < FLOAT_EPS
+  const diagonal = Math.abs(Math.abs(n.x) - Math.abs(n.y)) < FLOAT_EPS
   if (grid <= 0 || (!axis && !diagonal)) return raw
   const pitch = axis ? grid : grid / Math.SQRT2
   const base = dot(a, n)

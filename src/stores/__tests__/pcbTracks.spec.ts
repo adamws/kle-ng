@@ -4,7 +4,7 @@
  */
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
 import { usePcbTracksStore } from '../pcbTracks'
@@ -12,6 +12,14 @@ import { usePcbGeneratorStore } from '../pcbGenerator'
 import { placePads, type FootprintPads } from '@/utils/kicad/footprint-pads'
 import type { PlacedPad } from '@/utils/pcb-tracks/netlist'
 import type { TrackSegment } from '@/types/tracks'
+import { trackPresetToWire, validateWireTrackPreset } from '@/utils/pcb/track-preset'
+import { runDrc } from '@/utils/pcb-tracks/drc'
+
+// the real DRC, spied on to count runs
+vi.mock('@/utils/pcb-tracks/drc', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/utils/pcb-tracks/drc')>()
+  return { ...actual, runDrc: vi.fn(actual.runDrc) }
+})
 
 const PADS_DIR = resolve(__dirname, '../../../public/data/footprints/pads')
 const load = (name: string): FootprintPads =>
@@ -30,6 +38,18 @@ function defaultPads(): PlacedPad[] {
     ...d.map((pad, i) => ({ key: `D:${i}`, owner: 'D', pad })),
   ]
 }
+
+/**
+ * Whatever a test leaves in the settings must be a preset the settings
+ * validator (and kbplacer) accepts: an editor write must never produce one
+ * that a reload would drop.
+ */
+afterEach(() => {
+  const preset = usePcbGeneratorStore().settings.trackPreset
+  if (!preset) return
+  const result = validateWireTrackPreset(trackPresetToWire(preset), 'tracks', { allowEmpty: true })
+  if (!result.valid) throw new Error(`the editor left an invalid preset: ${result.error}`)
+})
 
 const SW2 = { x: 2.54, y: -5.08 }
 const D2 = { x: 5.08, y: 2.6 }
@@ -400,8 +420,10 @@ describe('pcbTracks selection and history', () => {
     expect(items()[0]!.width).toBe(0.25) // tracks keep their width
     expect(tracks.editorSettings.via).toEqual({ diameter: 0.8, drillDiameter: 0.4 })
 
+    // a drill leaving less than the smallest ring is cut down to fit
     tracks.updateSelection({ drillDiameter: 0.7 })
-    expect(tracks.drc.violations.map((v) => v.kind)).toContain('via-size')
+    expect(presetVia()).toMatchObject({ diameter: 0.8, drillDiameter: 0.6 })
+    expect(tracks.drc.violations).toEqual([])
   })
 
   it('tells pads waiting for their first track', () => {
@@ -615,6 +637,97 @@ describe('pcbTracks selection and history', () => {
     expect(items().some((t) => t.end.x === 3 && t.end.y === 1)).toBe(true)
     expect(tracks.drc.violations).toEqual([])
     expect(tracks.drc.ratsnest).toEqual([])
+  })
+
+  it('fits a via drill to a smaller diameter, so the preset stays valid', () => {
+    pcb.settings.trackPreset = {
+      version: 1,
+      items: [{ type: 'via', position: { x: 3, y: 3 }, diameter: 2, drillDiameter: 1.8 }],
+    }
+    tracks.selectItems([0], false)
+    tracks.updateSelection({ diameter: 0.5 })
+    expect(pcb.settings.trackPreset.items[0]).toMatchObject({ diameter: 0.5, drillDiameter: 0.3 })
+    expect(tracks.editorSettings.via).toEqual({ diameter: 0.5, drillDiameter: 0.3 })
+    tracks.updateSelection({ drillDiameter: 0.45 })
+    expect(pcb.settings.trackPreset.items[0]).toMatchObject({ drillDiameter: 0.3 })
+    const wire = trackPresetToWire(pcb.settings.trackPreset)
+    expect(validateWireTrackPreset(wire).valid).toBe(true)
+  })
+
+  it('keeps a preset stale through edits and undo until Keep', () => {
+    routeDefault()
+    pcb.settings.diodePositionY = 5
+    tracks.selectItems([1], false)
+    tracks.deleteSelection()
+    expect(tracks.staleChanges.map((c) => c.label)).toEqual(['diode position'])
+    tracks.clearAll()
+    tracks.undo()
+    expect(items()).toHaveLength(1)
+    expect(tracks.staleChanges).toHaveLength(1)
+    tracks.keepPreset()
+    expect(tracks.staleChanges).toEqual([])
+    // Keep is a step of its own
+    tracks.undo()
+    expect(tracks.staleChanges).toHaveLength(1)
+    // a new drawing into an emptied preset is drawn for the current settings
+    tracks.clearAll()
+    routeDefault()
+    expect(tracks.staleChanges).toEqual([])
+  })
+
+  it('ends a drag on undo, so the undone state stays', () => {
+    routeDefault()
+    tracks.selectItems([1], false)
+    tracks.deleteSelection()
+    tracks.startDrag({ kind: 'segment', item: 0 }, { x: 2.54, y: -2 })
+    tracks.moveDrag({ x: 3.5, y: -2 })
+    tracks.undo()
+    expect(tracks.isDragging).toBe(false)
+    tracks.endDrag()
+    expect(items()).toHaveLength(2)
+    expect(tracks.canRedo).toBe(true)
+  })
+
+  it('selects connected tracks up to pads', () => {
+    pcb.settings.trackPreset = {
+      version: 1,
+      items: [
+        { type: 'track', start: SW2, end: { x: 2.54, y: -3 }, width: 0.25, layer: 'B.Cu' },
+        {
+          type: 'track',
+          start: { x: 2.9, y: -5.08 },
+          end: { x: 4, y: -5.08 },
+          width: 0.25,
+          layer: 'B.Cu',
+        },
+      ],
+    }
+    tracks.selectItems([0], false)
+    tracks.selectConnected()
+    expect(tracks.selection).toEqual([0])
+  })
+
+  it('draws the route with the width set in the toolbar', () => {
+    tracks.setTool('route')
+    tracks.setCursor(SW2)
+    tracks.click(null)
+    tracks.setCursor({ x: 2.54, y: 0 })
+    tracks.click(null)
+    tracks.editorSettings.width = 0.4
+    expect(tracks.routeSegments[0]!.width).toBe(0.4)
+    expect(tracks.previewSegments.every((t) => t.width === 0.4)).toBe(true)
+  })
+
+  it('runs DRC once per drag move, shared by the release check and the view', () => {
+    routeDefault()
+    tracks.startDrag({ kind: 'segment', item: 0 }, { x: 2.54, y: -2 })
+    void tracks.drc
+    vi.mocked(runDrc).mockClear()
+    tracks.moveDrag({ x: 4, y: -2 })
+    expect(tracks.dragViolation?.kind).toBe('hole-clearance')
+    expect(tracks.drc.violations).not.toEqual([])
+    expect(runDrc).toHaveBeenCalledTimes(1)
+    tracks.endDrag()
   })
 
   it('cancels a drag with Esc', () => {

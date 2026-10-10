@@ -279,7 +279,7 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
         }
       }
 
-      // Track preset in kbplacer's format, without editor ids or basis.
+      // Track preset in kbplacer's format, without the editor's basis.
       const trackPreset = settings.value.trackPreset
       if (trackPreset && trackPreset.items.length > 0) {
         const { version, items } = trackPresetToWire(trackPreset)

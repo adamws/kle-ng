@@ -10,7 +10,7 @@
  */
 import type { CopperLayer, TrackItem } from '@/types/tracks'
 import type { PadInfo } from './connectivity'
-import { shapeContains, type Vec } from './distance'
+import { dist, shapeContains, type Vec } from './distance'
 import type { NetName } from './netlist'
 import { snapToGrid } from './posture'
 
@@ -32,14 +32,12 @@ export interface SnapContext {
   net?: NetName | null
 }
 
-const dist = (p: Vec, q: Vec) => Math.hypot(p.x - q.x, p.y - q.y)
-
 export function snapTarget(cursor: Vec, ctx: SnapContext): SnapTarget {
   const anyNet = !ctx.net
 
-  let best: { d: number; target: SnapTarget } | null = null
+  const best: { d: number; target: SnapTarget | null } = { d: Infinity, target: null }
   const offer = (d: number, target: SnapTarget) => {
-    if (!best || d < best.d) best = { d, target }
+    if (d < best.d) Object.assign(best, { d, target })
   }
 
   for (const pad of ctx.pads) {
@@ -72,7 +70,5 @@ export function snapTarget(cursor: Vec, ctx: SnapContext): SnapTarget {
     }
   })
 
-  return best
-    ? (best as { target: SnapTarget }).target
-    : { kind: 'grid', point: snapToGrid(cursor, ctx.grid) }
+  return best.target ?? { kind: 'grid', point: snapToGrid(cursor, ctx.grid) }
 }

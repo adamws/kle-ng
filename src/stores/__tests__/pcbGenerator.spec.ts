@@ -498,7 +498,7 @@ describe('pcbGenerator store', () => {
       expect(submitted.ledCapacitorPositionX).toBeUndefined()
     })
 
-    it('should send the track preset in kbplacer format without ids and basis', async () => {
+    it('should send the track preset in kbplacer format without basis', async () => {
       const store = usePcbGeneratorStore()
       store.settings.trackPreset = {
         version: 1,
@@ -506,7 +506,6 @@ describe('pcbGenerator store', () => {
         items: [
           {
             type: 'track',
-            id: 't1',
             start: { x: 2.54, y: -5.08 },
             end: { x: 5.08, y: 2.6 },
             width: 0.25,

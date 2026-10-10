@@ -206,7 +206,6 @@ export function usePanZoom(svgRef: Ref<SVGSVGElement | null>, initial: ViewBox) 
     screenToSvg,
     fit,
     setSize,
-    zoomAt,
     zoomBy,
     onWheel,
     onPointerDown,

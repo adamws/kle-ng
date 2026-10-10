@@ -10,7 +10,6 @@ import { describe, it, expect } from 'vitest'
 import {
   applyDiodeTransform,
   applySwitchTransform,
-  footprintToSwitchLocal,
   offsetSvgTransform,
   parseViewBox,
   switchLocalToBoard,
@@ -18,6 +17,7 @@ import {
   switchSvgTransform,
   type BoardSide,
 } from '../footprintUtils'
+import { placePoint } from '@/utils/kicad/transform'
 import golden from './fixtures/pcb-golden-pads.json'
 
 type Point = { x: number; y: number }
@@ -157,8 +157,8 @@ describe('PCB preview coordinate contract (kbplacer golden pads)', () => {
   it('places SOD-123F K at (5.08, 5.4) and A at (5.08, 2.6) at the default 90 BACK', () => {
     expect.hasAssertions()
     const placement = { x: 5.08, y: 4, rotation: 90, side: 'BACK' as const }
-    expectPoint(footprintToSwitchLocal(diodeLocal.get('1')!, placement), { x: 5.08, y: 5.4 }, 'K')
-    expectPoint(footprintToSwitchLocal(diodeLocal.get('2')!, placement), { x: 5.08, y: 2.6 }, 'A')
+    expectPoint(placePoint(diodeLocal.get('1')!, placement), { x: 5.08, y: 5.4 }, 'K')
+    expectPoint(placePoint(diodeLocal.get('2')!, placement), { x: 5.08, y: 2.6 }, 'A')
   })
 
   describe.each(cases.map((c) => [caseName(c), c] as const))('%s', (_, c) => {
@@ -167,7 +167,7 @@ describe('PCB preview coordinate contract (kbplacer golden pads)', () => {
     it('maps diode pads to switch-local and board coordinates', () => {
       expect.hasAssertions()
       for (const pad of pads(c, 'D1')) {
-        const local = footprintToSwitchLocal(diodeLocal.get(pad.number)!, placement)
+        const local = placePoint(diodeLocal.get(pad.number)!, placement)
         expectPoint(local, mm(pad.switch_local), `D1 pad ${pad.number} local`)
         expectPoint(
           switchLocalToBoard(local, c.switch_rotation),
@@ -270,7 +270,7 @@ describe('Rendered footprint SVGs', () => {
         [0, 90],
       ] as const) {
         const placement = { x: 5.08, y: 4, rotation, side }
-        const expected = switchLocalToBoard(footprintToSwitchLocal(p, placement), switchRotation)
+        const expected = switchLocalToBoard(placePoint(p, placement), switchRotation)
         const transform = offsetSvgTransform(
           { vb, offsetX: 5.08, offsetY: 4, rotation, side },
           switchRotation,
