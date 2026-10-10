@@ -514,6 +514,19 @@ const drcSummary = computed(() => {
   return { ok: parts.length === 0, text: parts.length ? parts.join(' · ') : 'DRC clean' }
 })
 
+/** The help line under the canvas: what the mouse and keys do now. */
+const statusHint = computed(() => {
+  if (!editMode.value)
+    return ratsnestLines.value.length ? 'dashed line: unrouted switch-diode connection' : ''
+  if (tracks.isDragging) return 'release: drop · Esc: cancel'
+  if (tracks.isRouting)
+    return 'click: add corner · V: via · / flip · Backspace: undo · double-click/End: finish · Esc: cancel'
+  if (tracks.tool === 'route')
+    return 'click or X: start a track · wheel: zoom · middle/Space+drag: pan'
+  if (tracks.tool === 'via') return 'click: place a via · X: route from it · Esc: back to Select'
+  return 'click: select · click unrouted pad: route · double-click/U: connected · drag track or via: move · drag empty: box · Ctrl+A: all · Del: delete · X: route'
+})
+
 /** What the preview shows outside the track editor, in the row the toolbar takes there. */
 const viewInfo = computed(() => {
   if (settings.value.trackPreset !== undefined) return 'Preset tracks need a front-side switch.'
@@ -1029,6 +1042,41 @@ onMounted(() => {
 
       <!-- Notices over the bottom of the canvas, so they never move the preview -->
       <div class="canvas-notices">
+        <!-- Readouts: hovered pad, cursor, route, DRC and why something was refused -->
+        <div v-if="hoveredPad || editMode" class="canvas-readout" data-testid="pcb-readout">
+          <div class="readout-row">
+            <template v-if="hoveredPad">
+              <span data-testid="pcb-hovered-pad">{{ padLabel(hoveredPad) }}</span>
+              <span data-testid="pcb-hovered-center">
+                center X {{ formatCoordinate(hoveredPad.pad.at.x) }} Y
+                {{ formatCoordinate(hoveredPad.pad.at.y) }} mm
+              </span>
+            </template>
+            <span v-else-if="editMode && cursorLocal" data-testid="pcb-cursor-readout">
+              X {{ formatCoordinate(cursorLocal.x) }} Y {{ formatCoordinate(cursorLocal.y) }} mm
+            </span>
+            <span
+              v-if="editMode && drcSummary"
+              :class="drcSummary.ok ? 'text-success-emphasis' : 'text-danger-emphasis'"
+              data-testid="pcb-drc-summary"
+              >{{ drcSummary.text }}</span
+            >
+          </div>
+          <template v-if="editMode">
+            <div v-if="routeStatus" data-testid="pcb-route-status">{{ routeStatus }}</div>
+            <div v-if="blockedReason" class="text-danger-emphasis" data-testid="pcb-route-blocked">
+              {{ blockedReason }}
+            </div>
+            <div
+              v-if="tracks.dragViolation"
+              class="text-danger-emphasis"
+              data-testid="pcb-drag-blocked"
+            >
+              Can't drop here · {{ tracks.dragViolation.message }}
+            </div>
+            <div v-if="padsError" class="text-warning-emphasis">{{ padsError }}</div>
+          </template>
+        </div>
         <!-- The preset was drawn for other footprints or diode placement -->
         <StalePresetBanner />
       </div>
@@ -1045,59 +1093,9 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Preview status bar: hovered element and unrouted connections -->
-    <div v-if="!editMode" class="editor-status" data-testid="pcb-preview-status">
-      <template v-if="hoveredPad">
-        <span data-testid="pcb-hovered-pad">{{ padLabel(hoveredPad) }}</span>
-        <span data-testid="pcb-hovered-center">
-          center X {{ formatCoordinate(hoveredPad.pad.at.x) }} Y
-          {{ formatCoordinate(hoveredPad.pad.at.y) }} mm
-        </span>
-      </template>
-      <span v-if="ratsnestLines.length" class="editor-hint">
-        dashed line: unrouted switch-diode connection
-      </span>
-    </div>
-
-    <!-- Track editor status bar -->
-    <div v-else class="editor-status" data-testid="pcb-editor-status">
-      <template v-if="hoveredPad">
-        <span data-testid="pcb-hovered-pad">{{ padLabel(hoveredPad) }}</span>
-        <span data-testid="pcb-hovered-center">
-          center X {{ formatCoordinate(hoveredPad.pad.at.x) }} Y
-          {{ formatCoordinate(hoveredPad.pad.at.y) }} mm
-        </span>
-      </template>
-      <span v-else-if="cursorLocal" data-testid="pcb-cursor-readout">
-        X {{ formatCoordinate(cursorLocal.x) }} Y {{ formatCoordinate(cursorLocal.y) }} mm
-      </span>
-      <span v-if="routeStatus" data-testid="pcb-route-status">{{ routeStatus }}</span>
-      <span v-if="blockedReason" class="text-danger-emphasis" data-testid="pcb-route-blocked">{{
-        blockedReason
-      }}</span>
-      <span
-        v-if="drcSummary"
-        :class="drcSummary.ok ? 'text-success-emphasis' : 'text-danger-emphasis'"
-        data-testid="pcb-drc-summary"
-        >{{ drcSummary.text }}</span
-      >
-      <span v-if="padsError" class="text-warning-emphasis">{{ padsError }}</span>
-      <span
-        v-if="tracks.dragViolation"
-        class="editor-hint text-danger-emphasis"
-        data-testid="pcb-drag-blocked"
-        >Can't drop here · {{ tracks.dragViolation.message }}</span
-      >
-      <span v-else-if="tracks.isDragging" class="editor-hint">release: drop · Esc: cancel</span>
-      <span v-else class="editor-hint">{{
-        tracks.isRouting
-          ? 'click: add corner · V: via · / flip · Backspace: undo · double-click/End: finish · Esc: cancel'
-          : tracks.tool === 'route'
-            ? 'click or X: start a track · wheel: zoom · middle/Space+drag: pan'
-            : tracks.tool === 'via'
-              ? 'click: place a via · X: route from it · Esc: back to Select'
-              : 'click: select · click unrouted pad: route · double-click/U: connected · drag track or via: move · drag empty: box · Ctrl+A: all · Del: delete · X: route'
-      }}</span>
+    <!-- Help line under the canvas (the readouts are on the canvas) -->
+    <div class="editor-status" :data-testid="editMode ? 'pcb-editor-status' : 'pcb-preview-status'">
+      <span v-if="statusHint" class="editor-hint" :title="statusHint">{{ statusHint }}</span>
     </div>
 
     <!-- Loading State Overlay -->
@@ -1300,7 +1298,7 @@ onMounted(() => {
   border: 1px dashed var(--bs-border-color);
 }
 
-/* one line: a wrapping status bar would move the canvas under the cursor */
+/* the help line: one line (a wrapping one would move the canvas under the cursor) */
 .editor-status {
   display: flex;
   flex-wrap: nowrap;
@@ -1311,7 +1309,6 @@ onMounted(() => {
   flex-shrink: 0;
   font-family: var(--bs-font-monospace);
   font-size: 0.75rem;
-  /* readouts in the body colour, hints muted, like the layout editor's status bar */
   color: var(--bs-body-color);
 }
 
@@ -1340,8 +1337,38 @@ onMounted(() => {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-align: right;
   font-family: var(--bs-body-font-family);
+}
+
+/* readouts over the canvas's bottom-left corner, one item per line, as wide as
+   the longest; they never take a click */
+.canvas-readout {
+  display: flex;
+  flex-direction: column;
+  max-width: 100%;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid var(--bs-border-color);
+  border-radius: 0.25rem;
+  background-color: rgba(var(--bs-body-bg-rgb), 0.85);
+  color: var(--bs-body-color);
+  font-family: var(--bs-font-monospace);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+/* the hovered pad or cursor with the DRC summary */
+.readout-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1rem;
+}
+
+.readout-row:empty {
+  display: none;
+}
+
+.readout-row > span {
+  white-space: nowrap;
 }
 
 /* footprint outlines (fab layer) in the theme's fab colour */

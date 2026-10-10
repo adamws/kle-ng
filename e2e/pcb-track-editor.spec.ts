@@ -10,7 +10,7 @@ const EDITOR = {
   ROUTING: '[data-testid="pcb-routing-select"]',
   PADS: '[data-testid="pcb-pad-layer"]',
   GRID: '[data-testid="pcb-grid-layer"]',
-  STATUS: '[data-testid="pcb-editor-status"]',
+  READOUT: '[data-testid="pcb-readout"]',
   FIT: '[data-testid="pcb-zoom-fit"]',
 }
 
@@ -52,10 +52,24 @@ async function openPreview(page: Page) {
 async function enterPresetMode(page: Page) {
   await page.locator(EDITOR.ROUTING).selectOption('Full (preset)')
   await expect(page.locator(EDITOR.PADS)).toBeVisible()
-  // the select sits below the preview; mouse actions need the whole canvas on screen
+  // the select sits below the preview
+  await centreCanvas(page)
+}
+
+/** Mouse actions need the whole canvas on screen. */
+async function centreCanvas(page: Page) {
   await page
     .locator(EDITOR.CANVAS)
     .evaluate((el) => el.scrollIntoView({ block: 'center', behavior: 'instant' }))
+}
+
+/**
+ * Picks a toolbar tool. Firefox scrolls the button towards the middle of the
+ * viewport even when it's in view, which pushes the canvas's bottom off screen.
+ */
+async function useTool(page: Page, tool: 'select' | 'route' | 'via') {
+  await page.locator(`[data-testid="pcb-tool-${tool}"]`).click()
+  await centreCanvas(page)
 }
 
 async function viewBoxWidth(page: Page): Promise<number> {
@@ -81,7 +95,7 @@ test.describe('PCB Generator track editor', () => {
 
     // hovering SW pad 2 names it and reads out its centre in switch-local mm
     await pads.locator('[data-layer="B.Cu"] [data-pad-key^="SW:"][data-pad-number="2"]').hover()
-    const status = page.locator(EDITOR.STATUS)
+    const status = page.locator(EDITOR.READOUT)
     await expect(status).toContainText('SW pad 2')
     await expect(status).toContainText('X 2.540 Y -5.080 mm')
   })
@@ -99,7 +113,7 @@ test.describe('PCB Generator track editor', () => {
   test('routes SW pad 2 to D pad 2 into the track preset', async ({ page }) => {
     await openPreview(page)
     await enterPresetMode(page)
-    await page.locator('[data-testid="pcb-tool-route"]').click()
+    await useTool(page, 'route')
 
     const sw2 = await padCentre(page, 'SW', '2')
     const d2 = await padCentre(page, 'D', '2')
@@ -117,14 +131,14 @@ test.describe('PCB Generator track editor', () => {
     await expect(page.locator('[data-testid="pcb-ratsnest"]')).toHaveCount(0)
     await expect(page.locator('[data-testid="pcb-drc-summary"]')).toHaveText('DRC clean')
 
-    // the settings (persisted in the backend's wire format, nm) hold the drawn preset
+    // the settings (persisted in the backend's wire format, nm) hold the drawn preset;
+    // saving is debounced and entering the preset mode already saved an empty one
     const saved = () =>
       page.evaluate(() => {
         const raw = localStorage.getItem('kle-ng-pcb-settings')
         return raw ? (JSON.parse(raw).tracks ?? null) : null
       })
-    await expect.poll(saved).not.toBeNull()
-    expect(await saved()).toEqual({
+    await expect.poll(saved).toEqual({
       version: 1,
       items: [
         {
@@ -157,7 +171,7 @@ test.describe('PCB Generator track editor', () => {
   test('offers to keep or clear tracks drawn for another diode placement', async ({ page }) => {
     await openPreview(page)
     await enterPresetMode(page)
-    await page.locator('[data-testid="pcb-tool-route"]').click()
+    await useTool(page, 'route')
     const sw2 = await padCentre(page, 'SW', '2')
     const d2 = await padCentre(page, 'D', '2')
     await page.mouse.click(sw2.x, sw2.y)
@@ -191,14 +205,14 @@ test.describe('PCB Generator track editor', () => {
     await openPreview(page)
     await enterPresetMode(page)
     const tracks = page.locator('[data-testid="pcb-track-overlay-track"]')
-    await page.locator('[data-testid="pcb-tool-route"]').click()
+    await useTool(page, 'route')
     const sw2 = await padCentre(page, 'SW', '2')
     const d2 = await padCentre(page, 'D', '2')
     await page.mouse.click(sw2.x, sw2.y)
     await page.mouse.move(d2.x, d2.y, { steps: 5 })
     await page.mouse.click(d2.x, d2.y)
     await expect(tracks).toHaveCount(2)
-    await page.locator('[data-testid="pcb-tool-select"]').click()
+    await useTool(page, 'select')
 
     // screen px per mm: SW pad 2 (2.54, -5.08) to D pad 2 (5.08, 2.6) is 7.68 mm down
     const mm = (n: number) => (n * (d2.y - sw2.y)) / 7.68
@@ -254,7 +268,7 @@ test.describe('PCB Generator track editor', () => {
     const tracks = page.locator('[data-testid="pcb-track-overlay-track"]')
 
     // draw the default preset
-    await page.locator('[data-testid="pcb-tool-route"]').click()
+    await useTool(page, 'route')
     const sw2 = await padCentre(page, 'SW', '2')
     const d2 = await padCentre(page, 'D', '2')
     await page.mouse.move(sw2.x, sw2.y)
@@ -270,7 +284,7 @@ test.describe('PCB Generator track editor', () => {
     await expect(tracks).toHaveCount(2)
 
     // click the vertical track to select it, U adds the connected one
-    await page.locator('[data-testid="pcb-tool-select"]').click()
+    await useTool(page, 'select')
     const vertical = (await tracks.nth(0).boundingBox())!
     await page.mouse.click(vertical.x + vertical.width / 2, vertical.y + vertical.height / 2)
     await expect(page.locator('[data-testid="pcb-selection-count"]')).toHaveText('1 track selected')
@@ -297,14 +311,14 @@ test.describe('PCB Generator track editor', () => {
   test('selects tracks with a box', async ({ page }) => {
     await openPreview(page)
     await enterPresetMode(page)
-    await page.locator('[data-testid="pcb-tool-route"]').click()
+    await useTool(page, 'route')
     const sw2 = await padCentre(page, 'SW', '2')
     const d2 = await padCentre(page, 'D', '2')
     await page.mouse.move(sw2.x, sw2.y)
     await page.mouse.click(sw2.x, sw2.y)
     await page.mouse.move(d2.x, d2.y, { steps: 5 })
     await page.mouse.click(d2.x, d2.y)
-    await page.locator('[data-testid="pcb-tool-select"]').click()
+    await useTool(page, 'select')
 
     // left to right around everything: both tracks
     const canvas = (await page.locator(EDITOR.CANVAS).boundingBox())!
@@ -382,7 +396,7 @@ test.describe('PCB Generator track editor', () => {
   test('confirms before leaving a preset mode with drawn tracks', async ({ page }) => {
     await openPreview(page)
     await enterPresetMode(page)
-    await page.locator('[data-testid="pcb-tool-route"]').click()
+    await useTool(page, 'route')
     const sw2 = await padCentre(page, 'SW', '2')
     const d2 = await padCentre(page, 'D', '2')
     await page.mouse.click(sw2.x, sw2.y)
@@ -435,7 +449,7 @@ test.describe('PCB Generator track editor', () => {
     // warning goes away), the canvas follows it, the drawing stays put
     const sw2 = await padCentre(page, 'SW', '2')
     const d2 = await padCentre(page, 'D', '2')
-    await page.locator('[data-testid="pcb-tool-route"]').click()
+    await useTool(page, 'route')
     await page.mouse.click(sw2.x, sw2.y)
     await expect(page.locator('[data-testid="pcb-route-status"]')).toBeVisible()
     await page.mouse.move(d2.x, d2.y, { steps: 5 })
@@ -443,7 +457,7 @@ test.describe('PCB Generator track editor', () => {
     await expect(page.locator('[data-testid="pcb-track-preset-empty"]')).toHaveCount(0)
 
     // a selection opens its panel over the canvas
-    await page.locator('[data-testid="pcb-tool-select"]').click()
+    await useTool(page, 'select')
     const track = page.locator('[data-testid="pcb-track-overlay-track"]').first()
     const t = (await track.boundingBox())!
     await page.mouse.click(t.x + t.width / 2, t.y + t.height / 2)
@@ -462,7 +476,7 @@ test.describe('PCB Generator track editor', () => {
     await enterPresetMode(page)
     const tracks = page.locator('[data-testid="pcb-track-overlay-track"]')
     const count = page.locator('[data-testid="pcb-selection-count"]')
-    await page.locator('[data-testid="pcb-tool-route"]').click()
+    await useTool(page, 'route')
     const sw2 = await padCentre(page, 'SW', '2')
     const d2 = await padCentre(page, 'D', '2')
     await page.mouse.click(sw2.x, sw2.y)
@@ -471,7 +485,7 @@ test.describe('PCB Generator track editor', () => {
     await expect(tracks).toHaveCount(2)
 
     // the track a click would select is highlighted; double-click takes all connected
-    await page.locator('[data-testid="pcb-tool-select"]').click()
+    await useTool(page, 'select')
     const vertical = (await tracks.nth(0).boundingBox())!
     const onVertical = { x: vertical.x + vertical.width / 2, y: vertical.y + vertical.height / 2 }
     await page.mouse.move(onVertical.x, onVertical.y)
@@ -503,7 +517,7 @@ test.describe('PCB Generator track editor', () => {
   test('places a via with V and finishes on the other layer', async ({ page }) => {
     await openPreview(page)
     await enterPresetMode(page)
-    await page.locator('[data-testid="pcb-tool-route"]').click()
+    await useTool(page, 'route')
     const sw2 = await padCentre(page, 'SW', '2')
     const d2 = await padCentre(page, 'D', '2')
     // screen px per mm: SW pad 2 (2.54, -5.08) to D pad 2 (5.08, 2.6) is 7.68 mm down
@@ -540,7 +554,7 @@ test.describe('PCB Generator track editor', () => {
   test('edits and drags a via with its tracks', async ({ page }) => {
     await openPreview(page)
     await enterPresetMode(page)
-    await page.locator('[data-testid="pcb-tool-route"]').click()
+    await useTool(page, 'route')
     const sw2 = await padCentre(page, 'SW', '2')
     const d2 = await padCentre(page, 'D', '2')
     const scale = (d2.y - sw2.y) / 7.68 // screen px per mm
@@ -549,7 +563,7 @@ test.describe('PCB Generator track editor', () => {
     await page.keyboard.press('v')
     await page.mouse.move(sw2.x, sw2.y, { steps: 5 })
     await page.mouse.click(sw2.x, sw2.y)
-    await page.locator('[data-testid="pcb-tool-select"]').click()
+    await useTool(page, 'select')
 
     const via = page.locator('[data-testid="pcb-track-overlay-via"]')
     const viaCircle = via.locator('circle.via')
@@ -592,6 +606,8 @@ test.describe('PCB Generator track editor', () => {
     await expect.poll(tracksAtVia).toBe(2)
 
     await page.locator('[data-testid="pcb-undo"]').click()
+    // screen positions only compare with the canvas back where it was
+    await centreCanvas(page)
     const back = await centre()
     expect(Math.abs(back.y - c.y)).toBeLessThan(1)
   })
@@ -624,7 +640,7 @@ test.describe('PCB Generator track editor', () => {
     // automatic routing: off-centre on SW pad 2 snaps the readout to its centre
     let p = await toScreen(2.9, -4.8)
     await page.mouse.move(p.x, p.y)
-    await expectPad2('[data-testid="pcb-preview-status"]')
+    await expectPad2('[data-testid="pcb-readout"]')
     await page.mouse.move(p.x + 400, p.y)
     await expect(crosshair).toHaveCount(0)
 
@@ -632,10 +648,10 @@ test.describe('PCB Generator track editor', () => {
     await enterPresetMode(page)
     p = await toScreen(2.9, -4.8)
     await page.mouse.move(p.x, p.y)
-    await expectPad2('[data-testid="pcb-editor-status"]')
+    await expectPad2('[data-testid="pcb-readout"]')
 
     // the route tool has its snap marker instead
-    await page.locator('[data-testid="pcb-tool-route"]').click()
+    await useTool(page, 'route')
     await page.mouse.move(p.x + 1, p.y)
     await expect(crosshair).toHaveCount(0)
     await expect(page.locator('[data-testid="pcb-hovered-pad"]')).toHaveText('SW pad 2')
@@ -659,7 +675,7 @@ test.describe('PCB Generator track editor', () => {
     await expect(page.locator('[data-testid="pcb-track-overlay-track"]')).toHaveCount(2)
 
     // a routed pad only highlights its net
-    await selectTool.click()
+    await useTool(page, 'select')
     await page.mouse.move(sw2.x + 3, sw2.y - 3)
     await page.mouse.click(sw2.x + 3, sw2.y - 3)
     await expect(selectTool).toHaveAttribute('aria-pressed', 'true')
@@ -674,7 +690,7 @@ test.describe('PCB Generator track editor', () => {
     const scale = (d2.y - sw2.y) / 7.68 // screen px per mm
     const spot = { x: d2.x - 1.5 * scale, y: d2.y }
 
-    await page.locator('[data-testid="pcb-tool-via"]').click()
+    await useTool(page, 'via')
     await page.mouse.move(spot.x, spot.y, { steps: 3 })
     await expect(page.locator('[data-testid="pcb-free-via"]')).toHaveCount(1)
     await page.mouse.click(spot.x, spot.y)
