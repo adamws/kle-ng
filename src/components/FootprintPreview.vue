@@ -52,6 +52,7 @@ import TrackEditorLayer from './pcb/TrackEditorLayer.vue'
 import TrackEditorToolbar from './pcb/TrackEditorToolbar.vue'
 import { usePcbTracksStore } from '@/stores/pcbTracks'
 import { placedPadNet } from '@/utils/pcb-tracks/netlist'
+import type { DragHandle } from '@/utils/pcb-tracks/drag'
 import { isCrossing, tracksInBox, type Box } from '@/utils/pcb-tracks/selection'
 import TrackSelectionBar from './pcb/TrackSelectionBar.vue'
 import StalePresetBanner from './pcb/StalePresetBanner.vue'
@@ -346,10 +347,9 @@ function groupTransform(group: FootprintGroup): string {
 }
 
 // Track preset overlay, drawn in the switch-local frame. Presets are defined
-// for a front-side switch, so nothing is drawn for back-side switches.
-const trackPresetItems = computed<TrackItem[]>(() =>
-  settings.value.switchSide === 'FRONT' ? (settings.value.trackPreset?.items ?? []) : [],
-)
+// for a front-side switch, so nothing is drawn for back-side switches. While a
+// track is dragged, the store's items are the drag preview.
+const trackPresetItems = computed<TrackItem[]>(() => tracks.presetItems)
 const switchLocalTransform = computed(() => switchLocalSvgTransform(settings.value.switchRotation))
 
 const diodeTransform = computed(() => groupTransform('diode'))
@@ -621,15 +621,30 @@ const visibleLayerList = computed(() =>
   (['F.Cu', 'B.Cu'] as const).filter((l) => visibleLayers.value[l]),
 )
 
+/** A press on a track or corner: dragging it past the threshold moves it. */
+let pendingDrag: { handle: DragHandle; client: Point; local: Point; started: boolean } | null = null
+/** What a drag from the cursor would move (select tool), for the cursor style. */
+const dragHover = ref<DragHandle['kind'] | null>(null)
+
+function dragHandleUnder(local: Point | null): DragHandle | null {
+  if (!local || tracks.tool !== 'select' || tracks.isRouting) return null
+  return tracks.dragHandleAt(local, PICK_TOLERANCE_PX / pxPerMm.value, visibleLayerList.value)
+}
+
 function onCanvasPointerDown(event: PointerEvent) {
   if (!editMode.value) return
   containerRef.value?.focus({ preventScroll: true })
   clickIsPan = panZoom.onPointerDown(event)
   clickIsBox = false
+  pendingDrag = null
   if (clickIsPan || event.button !== 0 || tracks.tool !== 'select') return
   const board = panZoom.screenToSvg(event.clientX, event.clientY)
   if (!board) return
-  boxStart = { client: { x: event.clientX, y: event.clientY }, board }
+  const client = { x: event.clientX, y: event.clientY }
+  const local = boardToSwitchLocal(board, settings.value.switchRotation)
+  const handle = dragHandleUnder(local)
+  if (handle) pendingDrag = { handle, client, local, started: false }
+  else boxStart = { client, board }
   // keep receiving the drag when it leaves the canvas
   ;(event.currentTarget as Element | null)?.setPointerCapture?.(event.pointerId)
 }
@@ -640,6 +655,19 @@ function onCanvasPointerMove(event: PointerEvent) {
   const p = panZoom.screenToSvg(event.clientX, event.clientY)
   cursorLocal.value = p ? boardToSwitchLocal(p, settings.value.switchRotation) : null
   tracks.setCursor(cursorLocal.value)
+  if (pendingDrag) {
+    const moved = Math.hypot(
+      event.clientX - pendingDrag.client.x,
+      event.clientY - pendingDrag.client.y,
+    )
+    if (!pendingDrag.started && moved >= BOX_THRESHOLD_PX) {
+      pendingDrag.started = true
+      tracks.startDrag(pendingDrag.handle, pendingDrag.local)
+    }
+    if (tracks.isDragging && cursorLocal.value) tracks.moveDrag(cursorLocal.value)
+    return
+  }
+  dragHover.value = boxStart ? null : (dragHandleUnder(cursorLocal.value)?.kind ?? null)
   if (boxStart && p) {
     const moved = Math.hypot(event.clientX - boxStart.client.x, event.clientY - boxStart.client.y)
     if (selectionBox.value || moved >= BOX_THRESHOLD_PX) {
@@ -650,6 +678,13 @@ function onCanvasPointerMove(event: PointerEvent) {
 
 function onCanvasPointerUp(event: PointerEvent) {
   panZoom.onPointerUp(event)
+  if (pendingDrag) {
+    // a drag (even one cancelled with Esc) isn't a click
+    if (pendingDrag.started) clickIsBox = true
+    pendingDrag = null
+    tracks.endDrag()
+    return
+  }
   const box = selectionBox.value
   boxStart = null
   selectionBox.value = null
@@ -669,6 +704,7 @@ function onCanvasPointerUp(event: PointerEvent) {
 }
 
 function onCanvasPointerLeave() {
+  dragHover.value = null
   cursorLocal.value = null
   hoveredPadKey.value = null
   tracks.setCursor(null)
@@ -818,7 +854,8 @@ onUnmounted(() => {
         panning: panZoom.isPanning.value,
         'pan-ready': panZoom.spaceHeld.value,
         'tool-route': editMode && tracks.tool === 'route',
-        'blocked-flash': blockedFlash,
+        'drag-hover': editMode && (dragHover !== null || tracks.isDragging),
+        'blocked-flash': blockedFlash || tracks.dragViolation !== null,
       }"
       :tabindex="editMode ? 0 : undefined"
       data-testid="pcb-preview-canvas"
@@ -1073,12 +1110,19 @@ onUnmounted(() => {
         >{{ drcSummary.text }}</span
       >
       <span v-if="padsError" class="text-warning">{{ padsError }}</span>
-      <span class="editor-hint">{{
+      <span
+        v-if="tracks.dragViolation"
+        class="editor-hint text-danger"
+        data-testid="pcb-drag-blocked"
+        >Can't drop here · {{ tracks.dragViolation.message }}</span
+      >
+      <span v-else-if="tracks.isDragging" class="editor-hint">release: drop · Esc: cancel</span>
+      <span v-else class="editor-hint">{{
         tracks.isRouting
           ? 'click: add corner · / flip · Backspace: undo · double-click/End: finish · Esc: cancel'
           : tracks.tool === 'route'
             ? 'click or X: start a track · wheel: zoom · middle/Space+drag: pan'
-            : 'click: select · Shift: add · drag: box · Del: delete · U: connected · Ctrl+Z: undo · X: route'
+            : 'click: select · drag track: move · drag empty: box · Del: delete · U: connected · X: route'
       }}</span>
     </div>
 
@@ -1173,6 +1217,10 @@ onUnmounted(() => {
   box-shadow: 0 0 0 0.2rem rgba(255, 45, 85, 0.6);
 }
 
+.svg-container.editing.drag-hover:not(.pan-ready):not(.panning) {
+  cursor: move;
+}
+
 .svg-container.pan-ready {
   cursor: grab;
 }
@@ -1226,9 +1274,11 @@ onUnmounted(() => {
   opacity: 0.3;
 }
 
+/* one line: a wrapping status bar would move the canvas under the cursor */
 .editor-status {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  white-space: nowrap;
   gap: 0.125rem 1rem;
   padding: 0.25rem 0.125rem 0;
   min-height: 1.75rem;
@@ -1273,7 +1323,11 @@ onUnmounted(() => {
 }
 
 .editor-hint {
-  margin-left: auto;
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
   font-family: var(--bs-body-font-family);
 }
 

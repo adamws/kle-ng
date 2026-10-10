@@ -24,12 +24,22 @@ import { usePcbGeneratorStore } from './pcbGenerator'
 import type { CopperLayer, Pt, TrackItem, TrackSegment } from '@/types/tracks'
 import { basisChanges, presetBasis } from '@/utils/pcb-tracks/basis'
 import { padInfos } from '@/utils/pcb-tracks/connectivity'
-import { shapeGap } from '@/utils/pcb-tracks/distance'
+import { shapeContains, shapeGap } from '@/utils/pcb-tracks/distance'
 import { trackShape } from '@/utils/pcb-tracks/shapes'
 import { DEFAULT_DRC_RULES, runDrc, type DrcResult, type Violation } from '@/utils/pcb-tracks/drc'
 import type { NetName, PlacedPad } from '@/utils/pcb-tracks/netlist'
 import { walk, type Posture } from '@/utils/pcb-tracks/posture'
 import { snapTarget, type SnapTarget } from '@/utils/pcb-tracks/snap'
+import {
+  cleanupTracks,
+  dragCorner,
+  dragSegment,
+  endsAt,
+  segmentNormal,
+  snapSegmentOffset,
+  type DragHandle,
+  type DragResult,
+} from '@/utils/pcb-tracks/drag'
 
 export interface TrackEditorSettings {
   /** Track width, mm. */
@@ -59,6 +69,28 @@ interface RouteState {
   width: number
   /** Swap the order of the walk's straight and diagonal parts. */
   flip: boolean
+}
+
+interface DragState {
+  handle: DragHandle
+  /** Items at the start (a segment drag starts from merged collinear tracks). */
+  base: TrackItem[]
+  /** The dragged segment's index in `base` (segment drags). */
+  item: number
+  grab: Pt
+  /** Net of each item of `base`. */
+  nets: (NetName | null)[]
+  net: NetName | null
+  /** Offset (segment) or point (corner) of the preview. */
+  param: number | Pt
+  /** The preview: follows the cursor across obstacles. */
+  result: DragResult
+  /** The error at the preview position, where releasing isn't allowed. */
+  violation: Violation | null
+  /** The last preview without errors, where releasing on an error goes back to. */
+  lastValid: DragResult
+  /** Check design rules (off when the dragged tracks already had errors). */
+  strict: boolean
 }
 
 function segments(points: readonly Pt[], layer: CopperLayer, width: number): TrackSegment[] {
@@ -95,9 +127,13 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
   const padInfoList = computed(() => padInfos(pads.value))
 
   // presets are defined for a front-side switch only
-  const presetItems = computed<TrackItem[]>(() =>
+  const savedItems = computed<TrackItem[]>(() =>
     pcb.settings.switchSide === 'FRONT' ? (pcb.settings.trackPreset?.items ?? []) : [],
   )
+  /** A track drag in progress; its preview replaces the saved items until it ends. */
+  const drag = shallowRef<DragState | null>(null)
+  /** The items shown and checked: the saved preset, or the drag preview. */
+  const presetItems = computed<TrackItem[]>(() => drag.value?.result.items ?? savedItems.value)
   const rules = computed(() => ({
     ...DEFAULT_DRC_RULES,
     clearance: editorSettings.value.clearance,
@@ -201,7 +237,7 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
 
   /** Keeps a stale preset: it is now drawn for the current settings. */
   function keepPreset() {
-    writeItems(presetItems.value, false)
+    writeItems(savedItems.value, false)
   }
 
   /** Removes the preset and starts a new history, as an outside write would. */
@@ -269,7 +305,7 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     if (!selection.value.length) return
     const drop = new Set(selection.value)
     selection.value = []
-    writeItems(presetItems.value.filter((_, i) => !drop.has(i)))
+    writeItems(savedItems.value.filter((_, i) => !drop.has(i)))
   }
 
   /** Changes the selected tracks; the selection stays (indexes don't move). */
@@ -277,14 +313,189 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     if (!selection.value.length) return
     const chosen = new Set(selection.value)
     writeItems(
-      presetItems.value.map((item, i) =>
+      savedItems.value.map((item, i) =>
         chosen.has(i) && item.type === 'track' ? { ...item, ...change } : item,
       ),
     )
   }
 
-  /** Net to highlight: the route's while routing, else the clicked pad's. */
-  const highlightNet = computed(() => (route.value ? route.value.net : selectedNet.value))
+  /** Net to highlight: the route's while routing, the dragged one's, else the clicked pad's. */
+  const highlightNet = computed(() =>
+    route.value ? route.value.net : drag.value ? drag.value.net : selectedNet.value,
+  )
+
+  // Dragging tracks (select tool)
+
+  /** A draggable corner or segment under `p`; ends on pads drag their segment instead. */
+  function dragHandleAt(
+    p: Pt,
+    tolerance: number,
+    layers: readonly CopperLayer[],
+  ): DragHandle | null {
+    const items = savedItems.value
+    let corner: { d: number; handle: DragHandle } | null = null
+    for (const item of items) {
+      if (item.type !== 'track' || !layers.includes(item.layer)) continue
+      for (const end of [item.start, item.end]) {
+        const d = Math.hypot(p.x - end.x, p.y - end.y)
+        if (d > tolerance + item.width / 2 || (corner && d >= corner.d)) continue
+        const onPad = padInfoList.value.some(
+          (pad) => pad.layers.includes(item.layer) && pad.copper.some((s) => shapeContains(s, end)),
+        )
+        if (!onPad) corner = { d, handle: { kind: 'corner', point: end, layer: item.layer } }
+      }
+    }
+    if (corner) return corner.handle
+    const index = trackAt(p, tolerance, layers)
+    return index === null ? null : { kind: 'segment', item: index }
+  }
+
+  /** The dragged tracks at `param`, null past where a track would turn back. */
+  function dragGeometry(state: DragState, param: number | Pt): DragResult | null {
+    const h = state.handle
+    return h.kind === 'segment'
+      ? dragSegment(state.base, padInfoList.value, state.item, param as number)
+      : dragCorner(state.base, h.point, h.layer, param as Pt)
+  }
+
+  /** A design-rule error on a moved track. */
+  function dragViolation(state: DragState, result: DragResult): Violation | null {
+    if (!state.strict) return null
+    const changed = new Set(result.changed)
+    const drc = runDrc(pads.value, result.items, rules.value)
+    return drc.violations.find((v) => v.items.some((i) => changed.has(i))) ?? null
+  }
+
+  function startDrag(handle: DragHandle, at: Pt) {
+    cancelRoute()
+    selection.value = []
+    let base = savedItems.value
+    let item = -1
+    if (handle.kind === 'segment') {
+      // a straight line clicked together from several tracks drags as one
+      const clean = cleanupTracks(base, padInfoList.value)
+      base = clean.items
+      item = clean.map[handle.item] ?? -1
+      if (item < 0) return
+    }
+    const baseDrc = runDrc(pads.value, base, rules.value)
+    const dragged =
+      handle.kind === 'segment'
+        ? [item]
+        : endsAt(base, handle.point, handle.layer).map((e) => e.item)
+    if (!dragged.length) return
+    const state: DragState = {
+      handle,
+      base,
+      item,
+      grab: { ...at },
+      nets: baseDrc.itemNets,
+      net: baseDrc.itemNets[dragged[0]!] ?? null,
+      param: handle.kind === 'segment' ? 0 : handle.point,
+      result: { items: base, changed: [], item },
+      violation: null,
+      lastValid: { items: base, changed: [], item },
+      strict: !baseDrc.violations.some((v) => v.items.some((i) => dragged.includes(i))),
+    }
+    state.result = state.lastValid = dragGeometry(state, state.param) ?? state.result
+    drag.value = state
+  }
+
+  /**
+   * Follows the cursor, across obstacles too (like KiCad's highlight-collisions
+   * mode): errors show while passing, only the release position must be legal.
+   * Stops only where a track would turn back on itself.
+   */
+  function moveDrag(at: Pt) {
+    const state = drag.value
+    if (!state) return
+    const h = state.handle
+    let target: number | Pt
+    if (h.kind === 'segment') {
+      const seg = state.base[state.item] as TrackSegment
+      const n = segmentNormal(seg)
+      const raw = (at.x - state.grab.x) * n.x + (at.y - state.grab.y) * n.y
+      const infos = padInfoList.value
+      const anchors: Pt[] = []
+      for (const pad of infos) {
+        if (pad.net && pad.net === state.net && pad.layers.includes(seg.layer))
+          anchors.push({ x: pad.placed.pad.at.x, y: pad.placed.pad.at.y })
+      }
+      state.base.forEach((it, i) => {
+        if (it.type === 'track' && i !== state.item && state.nets[i] === state.net)
+          anchors.push(it.start, it.end)
+      })
+      // the segment's own ends would hold it where it is
+      const own = (q: Pt) =>
+        [seg.start, seg.end].some((e) => Math.abs(e.x - q.x) < 1e-7 && Math.abs(e.y - q.y) < 1e-7)
+      target = snapSegmentOffset(
+        seg,
+        raw,
+        anchors.filter((q) => !own(q)),
+        editorSettings.value.grid,
+        snapRadius.value,
+      )
+    } else {
+      target = snapTarget(at, {
+        pads: padInfoList.value,
+        items: state.base,
+        itemNets: state.nets,
+        layer: h.layer,
+        grid: editorSettings.value.grid,
+        radius: snapRadius.value,
+        net: state.net,
+      }).point
+    }
+
+    let result = dragGeometry(state, target)
+    let param = target
+    if (!result) {
+      // the furthest point before a track turns back, from the last preview
+      const from = state.param
+      const at_ = (t: number): number | Pt =>
+        typeof from === 'number'
+          ? from + ((target as number) - from) * t
+          : {
+              x: from.x + ((target as Pt).x - from.x) * t,
+              y: from.y + ((target as Pt).y - from.y) * t,
+            }
+      let lo = 0
+      let hi = 1
+      for (let k = 0; k < 12; k++) {
+        const mid = (lo + hi) / 2
+        if (dragGeometry(state, at_(mid))) lo = mid
+        else hi = mid
+      }
+      param = at_(lo)
+      result = dragGeometry(state, param)
+      if (!result) return
+    }
+    const violation = dragViolation(state, result)
+    drag.value = {
+      ...state,
+      param,
+      result,
+      violation,
+      lastValid: violation ? state.lastValid : result,
+    }
+  }
+
+  /**
+   * Ends the drag: cleans up and writes the result as one undoable step.
+   * Released on an error, the tracks go to the last position without one.
+   */
+  function endDrag() {
+    const state = drag.value
+    drag.value = null
+    if (!state) return
+    const result = state.violation ? state.lastValid : state.result
+    const items = cleanupTracks(result.items, padInfoList.value).items
+    if (JSON.stringify(items) !== JSON.stringify(savedItems.value)) writeItems(items)
+  }
+
+  function cancelDrag() {
+    drag.value = null
+  }
 
   function setPads(value: readonly PlacedPad[]) {
     pads.value = value
@@ -341,7 +552,7 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     if (!r || r.points.length < 2) return
     // kbplacer places a preset's items in order, so walk outward from a pad
     const points = !r.startAnchored && endAnchored ? [...r.points].reverse() : r.points
-    writeItems([...presetItems.value, ...segments(points, r.layer, r.width)])
+    writeItems([...savedItems.value, ...segments(points, r.layer, r.width)])
   }
 
   function cancelRoute() {
@@ -381,9 +592,10 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     selectedNet.value = padNet
   }
 
-  /** Esc: cancel the route, then the selection, then the highlight, then the route tool. */
+  /** Esc: cancel a drag or the route, then the selection, then the highlight, then the route tool. */
   function escape() {
-    if (route.value) cancelRoute()
+    if (drag.value) cancelDrag()
+    else if (route.value) cancelRoute()
     else if (selection.value.length) selection.value = []
     else if (selectedNet.value) selectedNet.value = null
     else tool.value = 'select'
@@ -391,6 +603,7 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
 
   /** Leaving the editor: nothing in progress survives. */
   function reset() {
+    drag.value = null
     route.value = null
     cursor.value = null
     selectedNet.value = null
@@ -417,6 +630,13 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     drc,
     isRouting,
     selection,
+    isDragging: computed(() => drag.value !== null),
+    dragViolation: computed(() => drag.value?.violation ?? null),
+    dragHandleAt,
+    startDrag,
+    moveDrag,
+    endDrag,
+    cancelDrag,
     staleChanges,
     keepPreset,
     clearPreset,

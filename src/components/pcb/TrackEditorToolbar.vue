@@ -129,7 +129,6 @@ const { editorSettings, tool, isRouting, canUndo, canRedo } = storeToRefs(tracks
         {{ p }}°
       </button>
     </div>
-
   </div>
 </template>
 

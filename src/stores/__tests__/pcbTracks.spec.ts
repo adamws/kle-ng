@@ -315,4 +315,80 @@ describe('pcbTracks selection and history', () => {
     await nextTick()
     expect(tracks.canUndo).toBe(false)
   })
+
+  it('grabs corners away from pads, segments elsewhere', () => {
+    routeDefault()
+    const layers = ['B.Cu'] as const
+    expect(tracks.dragHandleAt({ x: 2.56, y: 0.05 }, 0.1, layers)).toMatchObject({
+      kind: 'corner',
+      point: { x: 2.54, y: 0.06 },
+    })
+    // the end on SW pad 2 drags its segment
+    expect(tracks.dragHandleAt(SW2, 0.1, layers)).toEqual({ kind: 'segment', item: 0 })
+    expect(tracks.dragHandleAt({ x: 2.54, y: -2 }, 0.1, layers)).toEqual({
+      kind: 'segment',
+      item: 0,
+    })
+    expect(tracks.dragHandleAt({ x: 0, y: 3 }, 0.1, layers)).toBeNull()
+  })
+
+  it('drags a segment across obstacles, releasing only where legal, as one undo step', () => {
+    routeDefault()
+    const vertical = () =>
+      tracks.presetItems.find(
+        (t) => t.type === 'track' && t.start.x === t.end.x && t.start.y < 0,
+      ) as TrackSegment
+    tracks.startDrag({ kind: 'segment', item: 0 }, { x: 2.54, y: -2 })
+    expect(tracks.isDragging).toBe(true)
+    tracks.moveDrag({ x: 3.5, y: -2 })
+    expect(vertical().start.x).toBe(3.5)
+    expect(tracks.dragViolation).toBeNull()
+    // the preview follows into the right side hole's clearance, flagged
+    tracks.moveDrag({ x: 4, y: -2 })
+    expect(vertical().start.x).toBe(4)
+    expect(tracks.dragViolation?.kind).toBe('hole-clearance')
+    expect(tracks.drc.violations).not.toEqual([])
+    // the end on the pad stays, joined by a 45° track
+    expect(tracks.presetItems[0]).toMatchObject({ start: SW2 })
+
+    // released there: back to the last legal position
+    tracks.endDrag()
+    expect(tracks.isDragging).toBe(false)
+    expect(items()).toHaveLength(3)
+    expect(items().find((t) => t.start.x === t.end.x && t.start.y < 0)!.start.x).toBe(3.5)
+    expect(tracks.drc.violations).toEqual([])
+    expect(tracks.drc.ratsnest).toEqual([])
+    tracks.undo()
+    expect(items()).toHaveLength(2)
+  })
+
+  it('passes a corner over an obstacle to a legal spot beyond it', () => {
+    routeDefault()
+    const corner = { x: 2.54, y: 0.06 }
+    tracks.startDrag({ kind: 'corner', point: corner, layer: 'B.Cu' }, corner)
+    tracks.moveDrag({ x: 1.5, y: 0.5 }) // in the centre hole
+    expect(tracks.dragViolation).not.toBeNull()
+    tracks.moveDrag({ x: 3, y: 1 })
+    expect(tracks.dragViolation).toBeNull()
+    tracks.endDrag()
+    expect(items()[0]!.end).toEqual({ x: 3, y: 1 })
+  })
+
+  it('cancels a drag with Esc', () => {
+    routeDefault()
+    tracks.startDrag(
+      { kind: 'corner', point: { x: 2.54, y: 0.06 }, layer: 'B.Cu' },
+      {
+        x: 2.54,
+        y: 0.06,
+      },
+    )
+    tracks.moveDrag({ x: 3, y: 1 })
+    expect(items()[0]!.end).toEqual({ x: 2.54, y: 0.06 })
+    expect((tracks.presetItems[0] as TrackSegment).end).toEqual({ x: 3, y: 1 })
+    tracks.escape()
+    expect(tracks.isDragging).toBe(false)
+    expect((tracks.presetItems[0] as TrackSegment).end).toEqual({ x: 2.54, y: 0.06 })
+    expect(tracks.canUndo).toBe(true)
+  })
 })

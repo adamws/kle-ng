@@ -47,9 +47,7 @@ describe('preset basis', () => {
     }
     expect(basisChanges(basis, settings())).toEqual([])
     expect(
-      basisChanges(basis, settings({ diodeFootprint: 'Diode_SMD:D_SOD-123' })).map(
-        (c) => c.label,
-      ),
+      basisChanges(basis, settings({ diodeFootprint: 'Diode_SMD:D_SOD-123' })).map((c) => c.label),
     ).toEqual(['diode footprint'])
   })
 })

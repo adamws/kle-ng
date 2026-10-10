@@ -175,6 +175,64 @@ test.describe('PCB Generator track editor', () => {
     await expect(page.locator('[data-testid="pcb-ratsnest"]')).toHaveCount(1)
   })
 
+  test('drags a track sideways, Esc cancels a drag', async ({ page }) => {
+    await openPreview(page)
+    await page.locator(EDITOR.TOGGLE).click()
+    const tracks = page.locator('[data-testid="pcb-track-overlay-track"]')
+    await page.locator('[data-testid="pcb-tool-route"]').click()
+    const sw2 = await padCentre(page, 'SW', '2')
+    const d2 = await padCentre(page, 'D', '2')
+    await page.mouse.click(sw2.x, sw2.y)
+    await page.mouse.move(d2.x, d2.y, { steps: 5 })
+    await page.mouse.click(d2.x, d2.y)
+    await expect(tracks).toHaveCount(2)
+    await page.locator('[data-testid="pcb-tool-select"]').click()
+
+    // grab the vertical track halfway and pull it right: the pad end stays,
+    // joined by a new 45° track, the corner slides along the diagonal
+    const v = (await tracks.nth(0).boundingBox())!
+    const grab = { x: v.x + v.width / 2, y: v.y + v.height / 2 }
+    await page.mouse.move(grab.x, grab.y)
+    await expect(page.locator(EDITOR.CANVAS)).toHaveClass(/drag-hover/)
+    await page.mouse.down()
+    await page.mouse.move(grab.x + 10, grab.y, { steps: 4 })
+    await page.mouse.move(grab.x + 20, grab.y, { steps: 4 })
+    await expect(tracks).toHaveCount(3)
+    await page.mouse.up()
+    await expect(tracks).toHaveCount(3)
+    await expect(page.locator('[data-testid="pcb-drc-summary"]')).toHaveText('DRC clean')
+    // a drag is not a click: nothing got selected
+    await expect(page.locator('[data-testid="pcb-selection-bar"]')).toHaveCount(0)
+
+    await page.keyboard.press('Control+Z')
+    await expect(tracks).toHaveCount(2)
+
+    // the drag follows into the side hole's clearance; released there, the
+    // track goes back to the last legal position
+    await page.mouse.move(grab.x, grab.y)
+    await page.mouse.down()
+    await page.mouse.move(grab.x + 10, grab.y, { steps: 4 })
+    await page.mouse.move(grab.x + 40, grab.y, { steps: 6 })
+    await expect(page.locator('[data-testid="pcb-drag-blocked"]')).toContainText('Hole clearance')
+    await page.mouse.up()
+    await expect(page.locator('[data-testid="pcb-drag-blocked"]')).toHaveCount(0)
+    await expect(tracks).toHaveCount(3)
+    await expect(page.locator('[data-testid="pcb-drc-summary"]')).toHaveText('DRC clean')
+    await page.keyboard.press('Control+Z')
+    await expect(tracks).toHaveCount(2)
+
+    // Esc while dragging puts the track back
+    await page.mouse.move(grab.x, grab.y)
+    await page.mouse.down()
+    await page.mouse.move(grab.x + 20, grab.y, { steps: 6 })
+    await expect(tracks).toHaveCount(3)
+    await page.keyboard.press('Escape')
+    await expect(tracks).toHaveCount(2)
+    await page.mouse.move(grab.x + 30, grab.y, { steps: 3 })
+    await page.mouse.up()
+    await expect(tracks).toHaveCount(2)
+  })
+
   test('selects, deletes, undoes and redoes tracks', async ({ page }) => {
     await openPreview(page)
     await page.locator(EDITOR.TOGGLE).click()
