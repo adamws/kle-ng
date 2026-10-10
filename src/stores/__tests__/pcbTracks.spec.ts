@@ -163,6 +163,21 @@ describe('pcbTracks store', () => {
     expect(tracks.drc.ratsnest).toEqual([])
   })
 
+  it('merges collinear clicks into one track when finishing', () => {
+    tracks.setTool('route')
+    for (const y of [3, 4, 5]) {
+      tracks.setCursor({ x: 1, y })
+      tracks.click(null)
+    }
+    tracks.finish()
+    expect(items().map((t) => [t.start, t.end])).toEqual([
+      [
+        { x: 1, y: 3 },
+        { x: 1, y: 5 },
+      ],
+    ])
+  })
+
   it('cycles width presets with W', () => {
     tracks.cycleWidth(1)
     expect(tracks.editorSettings.width).toBe(0.3)
@@ -371,7 +386,10 @@ describe('pcbTracks selection and history', () => {
     tracks.moveDrag({ x: 3, y: 1 })
     expect(tracks.dragViolation).toBeNull()
     tracks.endDrag()
-    expect(items()[0]!.end).toEqual({ x: 3, y: 1 })
+    // the corner is at the cursor, joined at 45° on both sides
+    expect(items().some((t) => t.end.x === 3 && t.end.y === 1)).toBe(true)
+    expect(tracks.drc.violations).toEqual([])
+    expect(tracks.drc.ratsnest).toEqual([])
   })
 
   it('cancels a drag with Esc', () => {
@@ -385,7 +403,7 @@ describe('pcbTracks selection and history', () => {
     )
     tracks.moveDrag({ x: 3, y: 1 })
     expect(items()[0]!.end).toEqual({ x: 2.54, y: 0.06 })
-    expect((tracks.presetItems[0] as TrackSegment).end).toEqual({ x: 3, y: 1 })
+    expect(tracks.presetItems).toHaveLength(4)
     tracks.escape()
     expect(tracks.isDragging).toBe(false)
     expect((tracks.presetItems[0] as TrackSegment).end).toEqual({ x: 2.54, y: 0.06 })

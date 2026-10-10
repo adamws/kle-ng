@@ -24,7 +24,7 @@ import { usePcbGeneratorStore } from './pcbGenerator'
 import type { CopperLayer, Pt, TrackItem, TrackSegment } from '@/types/tracks'
 import { basisChanges, presetBasis } from '@/utils/pcb-tracks/basis'
 import { padInfos } from '@/utils/pcb-tracks/connectivity'
-import { shapeContains, shapeGap } from '@/utils/pcb-tracks/distance'
+import { shapeGap } from '@/utils/pcb-tracks/distance'
 import { trackShape } from '@/utils/pcb-tracks/shapes'
 import { DEFAULT_DRC_RULES, runDrc, type DrcResult, type Violation } from '@/utils/pcb-tracks/drc'
 import type { NetName, PlacedPad } from '@/utils/pcb-tracks/netlist'
@@ -32,14 +32,25 @@ import { walk, type Posture } from '@/utils/pcb-tracks/posture'
 import { snapTarget, type SnapTarget } from '@/utils/pcb-tracks/snap'
 import {
   cleanupTracks,
-  dragCorner,
-  dragSegment,
-  endsAt,
+  dragCorner45,
+  dragSegment45,
   segmentNormal,
+  snapDraggedCorner,
   snapSegmentOffset,
   type DragHandle,
-  type DragResult,
 } from '@/utils/pcb-tracks/drag'
+import {
+  assembleLine,
+  endsAt,
+  isFreeEnd,
+  isLineCorner,
+  replaceLine,
+  roundNm,
+  samePoint,
+  simplifyChain,
+  type LineReplacement,
+  type TrackLine,
+} from '@/utils/pcb-tracks/line'
 
 export interface TrackEditorSettings {
   /** Track width, mm. */
@@ -75,8 +86,10 @@ interface DragState {
   handle: DragHandle
   /** Items at the start (a segment drag starts from merged collinear tracks). */
   base: TrackItem[]
-  /** The dragged segment's index in `base` (segment drags). */
-  item: number
+  /** The dragged line in `base`. */
+  line: TrackLine
+  /** The dragged segment (segment drags) or point (corner drags) in the line's chain. */
+  index: number
   grab: Pt
   /** Net of each item of `base`. */
   nets: (NetName | null)[]
@@ -84,11 +97,11 @@ interface DragState {
   /** Offset (segment) or point (corner) of the preview. */
   param: number | Pt
   /** The preview: follows the cursor across obstacles. */
-  result: DragResult
+  result: LineReplacement
   /** The error at the preview position, where releasing isn't allowed. */
   violation: Violation | null
   /** The last preview without errors, where releasing on an error goes back to. */
-  lastValid: DragResult
+  lastValid: LineReplacement
   /** Check design rules (off when the dragged tracks already had errors). */
   strict: boolean
 }
@@ -324,9 +337,13 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     route.value ? route.value.net : drag.value ? drag.value.net : selectedNet.value,
   )
 
-  // Dragging tracks (select tool)
+  // Dragging tracks (select tool), see utils/pcb-tracks/drag.ts
 
-  /** A draggable corner or segment under `p`; ends on pads drag their segment instead. */
+  /**
+   * A draggable corner or segment under `p`. Corners are line corners and
+   * free line ends; an end on a pad, via or junction drags its segment, so a
+   * drag never pulls a track off what it connects.
+   */
   function dragHandleAt(
     p: Pt,
     tolerance: number,
@@ -339,10 +356,9 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
       for (const end of [item.start, item.end]) {
         const d = Math.hypot(p.x - end.x, p.y - end.y)
         if (d > tolerance + item.width / 2 || (corner && d >= corner.d)) continue
-        const onPad = padInfoList.value.some(
-          (pad) => pad.layers.includes(item.layer) && pad.copper.some((s) => shapeContains(s, end)),
-        )
-        if (!onPad) corner = { d, handle: { kind: 'corner', point: end, layer: item.layer } }
+        const infos = padInfoList.value
+        if (isLineCorner(items, infos, end, item.layer) || isFreeEnd(items, infos, end, item.layer))
+          corner = { d, handle: { kind: 'corner', point: end, layer: item.layer } }
       }
     }
     if (corner) return corner.handle
@@ -350,16 +366,28 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     return index === null ? null : { kind: 'segment', item: index }
   }
 
-  /** The dragged tracks at `param`, null past where a track would turn back. */
-  function dragGeometry(state: DragState, param: number | Pt): DragResult | null {
-    const h = state.handle
-    return h.kind === 'segment'
-      ? dragSegment(state.base, padInfoList.value, state.item, param as number)
-      : dragCorner(state.base, h.point, h.layer, param as Pt)
+  /** The line's ends of the dragged segment (segment drags). */
+  function draggedSegment(state: DragState): [Pt, Pt] {
+    return [state.line.points[state.index]!, state.line.points[state.index + 1]!]
+  }
+
+  /** The preset with the dragged line at `param`, simplified like KiCad does each frame. */
+  function dragPreview(state: DragState, param: number | Pt): LineReplacement {
+    let chain: Pt[]
+    if (state.handle.kind === 'segment') {
+      const [a, b] = draggedSegment(state)
+      const n = segmentNormal(a, b)
+      const offset = param as number
+      const target = { x: a.x + n.x * offset, y: a.y + n.y * offset }
+      chain = dragSegment45(state.line.points, state.index, target)
+    } else {
+      chain = dragCorner45(state.line.points, state.index, param as Pt)
+    }
+    return replaceLine(state.base, state.line, simplifyChain(chain.map(roundNm)))
   }
 
   /** A design-rule error on a moved track. */
-  function dragViolation(state: DragState, result: DragResult): Violation | null {
+  function dragViolation(state: DragState, result: LineReplacement): Violation | null {
     if (!state.strict) return null
     const changed = new Set(result.changed)
     const drc = runDrc(pads.value, result.items, rules.value)
@@ -369,107 +397,90 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
   function startDrag(handle: DragHandle, at: Pt) {
     cancelRoute()
     selection.value = []
+    const infos = padInfoList.value
     let base = savedItems.value
-    let item = -1
+    let item: number
     if (handle.kind === 'segment') {
       // a straight line clicked together from several tracks drags as one
-      const clean = cleanupTracks(base, padInfoList.value)
+      const clean = cleanupTracks(base, infos)
       base = clean.items
       item = clean.map[handle.item] ?? -1
-      if (item < 0) return
+    } else {
+      item = endsAt(base, handle.point, handle.layer)[0]?.item ?? -1
     }
-    const baseDrc = runDrc(pads.value, base, rules.value)
-    const dragged =
+    if (item < 0) return
+    const line = assembleLine(base, infos, item)
+    const index =
       handle.kind === 'segment'
-        ? [item]
-        : endsAt(base, handle.point, handle.layer).map((e) => e.item)
-    if (!dragged.length) return
+        ? line.items.indexOf(item)
+        : line.points.findIndex((q) => samePoint(q, handle.point))
+    if (index < 0) return
+    const baseDrc = runDrc(pads.value, base, rules.value)
+    const unchanged = { items: base, changed: [] }
     const state: DragState = {
       handle,
       base,
-      item,
+      line,
+      index,
       grab: { ...at },
       nets: baseDrc.itemNets,
-      net: baseDrc.itemNets[dragged[0]!] ?? null,
+      net: baseDrc.itemNets[item] ?? null,
       param: handle.kind === 'segment' ? 0 : handle.point,
-      result: { items: base, changed: [], item },
+      result: unchanged,
       violation: null,
-      lastValid: { items: base, changed: [], item },
-      strict: !baseDrc.violations.some((v) => v.items.some((i) => dragged.includes(i))),
+      lastValid: unchanged,
+      strict: !baseDrc.violations.some((v) => v.items.some((i) => line.items.includes(i))),
     }
-    state.result = state.lastValid = dragGeometry(state, state.param) ?? state.result
+    state.result = state.lastValid = dragPreview(state, state.param)
     drag.value = state
   }
 
   /**
    * Follows the cursor, across obstacles too (like KiCad's highlight-collisions
    * mode): errors show while passing, only the release position must be legal.
-   * Stops only where a track would turn back on itself.
    */
   function moveDrag(at: Pt) {
     const state = drag.value
     if (!state) return
-    const h = state.handle
-    let target: number | Pt
-    if (h.kind === 'segment') {
-      const seg = state.base[state.item] as TrackSegment
-      const n = segmentNormal(seg)
+    let param: number | Pt
+    if (state.handle.kind === 'segment') {
+      const [a, b] = draggedSegment(state)
+      const n = segmentNormal(a, b)
       const raw = (at.x - state.grab.x) * n.x + (at.y - state.grab.y) * n.y
-      const infos = padInfoList.value
+      // same-net pad centres and track ends; the segment's own ends would hold it in place
       const anchors: Pt[] = []
-      for (const pad of infos) {
-        if (pad.net && pad.net === state.net && pad.layers.includes(seg.layer))
+      for (const pad of padInfoList.value) {
+        if (pad.net && pad.net === state.net && pad.layers.includes(state.line.layer))
           anchors.push({ x: pad.placed.pad.at.x, y: pad.placed.pad.at.y })
       }
       state.base.forEach((it, i) => {
-        if (it.type === 'track' && i !== state.item && state.nets[i] === state.net)
-          anchors.push(it.start, it.end)
+        if (it.type === 'track' && state.nets[i] === state.net) anchors.push(it.start, it.end)
       })
-      // the segment's own ends would hold it where it is
-      const own = (q: Pt) =>
-        [seg.start, seg.end].some((e) => Math.abs(e.x - q.x) < 1e-7 && Math.abs(e.y - q.y) < 1e-7)
-      target = snapSegmentOffset(
-        seg,
+      param = snapSegmentOffset(
+        a,
+        b,
         raw,
-        anchors.filter((q) => !own(q)),
+        anchors.filter((q) => !samePoint(q, a) && !samePoint(q, b)),
         editorSettings.value.grid,
         snapRadius.value,
       )
     } else {
-      target = snapTarget(at, {
-        pads: padInfoList.value,
-        items: state.base,
-        itemNets: state.nets,
-        layer: h.layer,
-        grid: editorSettings.value.grid,
-        radius: snapRadius.value,
-        net: state.net,
-      }).point
+      // where nearby segment lines cross at 45°, else pads, track ends, grid
+      const crossing = snapDraggedCorner(state.line.points, at, state.index, snapRadius.value)
+      param =
+        crossing !== at
+          ? crossing
+          : snapTarget(at, {
+              pads: padInfoList.value,
+              items: state.base,
+              itemNets: state.nets,
+              layer: state.line.layer,
+              grid: editorSettings.value.grid,
+              radius: snapRadius.value,
+              net: state.net,
+            }).point
     }
-
-    let result = dragGeometry(state, target)
-    let param = target
-    if (!result) {
-      // the furthest point before a track turns back, from the last preview
-      const from = state.param
-      const at_ = (t: number): number | Pt =>
-        typeof from === 'number'
-          ? from + ((target as number) - from) * t
-          : {
-              x: from.x + ((target as Pt).x - from.x) * t,
-              y: from.y + ((target as Pt).y - from.y) * t,
-            }
-      let lo = 0
-      let hi = 1
-      for (let k = 0; k < 12; k++) {
-        const mid = (lo + hi) / 2
-        if (dragGeometry(state, at_(mid))) lo = mid
-        else hi = mid
-      }
-      param = at_(lo)
-      result = dragGeometry(state, param)
-      if (!result) return
-    }
+    const result = dragPreview(state, param)
     const violation = dragViolation(state, result)
     drag.value = {
       ...state,
@@ -551,7 +562,9 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     route.value = null
     if (!r || r.points.length < 2) return
     // kbplacer places a preset's items in order, so walk outward from a pad
-    const points = !r.startAnchored && endAnchored ? [...r.points].reverse() : r.points
+    const ordered = !r.startAnchored && endAnchored ? [...r.points].reverse() : r.points
+    // collinear clicks leave no extra corner, as in KiCad
+    const points = simplifyChain(ordered)
     writeItems([...savedItems.value, ...segments(points, r.layer, r.width)])
   }
 
