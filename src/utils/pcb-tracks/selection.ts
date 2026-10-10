@@ -6,8 +6,10 @@
  * The box is drawn in board axes (what the screen shows) while tracks are
  * switch-local, so track points go through `toBoard` first.
  */
-import type { TrackItem } from '@/types/tracks'
-import { pointInPolygon, segmentPolygon, type Vec } from './distance'
+import type { CopperLayer, TrackItem } from '@/types/tracks'
+import type { PadInfo } from './connectivity'
+import { pointInPolygon, segmentPolygon, shapeContains, type Vec } from './distance'
+import { padHoleShape } from './shapes'
 
 export interface Box {
   /** Where the drag started and where it is now, board axes. */
@@ -46,4 +48,26 @@ export function tracksInBox(
       : pointInPolygon(a, rect) && pointInPolygon(b, rect)
     return hit ? [i] : []
   })
+}
+
+/**
+ * The pad under `p` (switch-local): one whose copper on a shown layer, or
+ * whose hole (NPTH), contains it; of several, the one with the nearest centre.
+ */
+export function padAt(
+  pads: readonly PadInfo[],
+  p: Vec,
+  layers: readonly CopperLayer[],
+): PadInfo | null {
+  let best: { pad: PadInfo; d: number } | null = null
+  for (const pad of pads) {
+    const shown = pad.layers.some((l) => layers.includes(l))
+    const hole = pad.layers.length ? null : padHoleShape(pad.placed.pad)
+    const hit =
+      (shown && pad.copper.some((s) => shapeContains(s, p))) || (!!hole && shapeContains(hole, p))
+    if (!hit) continue
+    const d = Math.hypot(p.x - pad.placed.pad.at.x, p.y - pad.placed.pad.at.y)
+    if (!best || d < best.d) best = { pad, d }
+  }
+  return best?.pad ?? null
 }

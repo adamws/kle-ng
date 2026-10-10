@@ -5,7 +5,7 @@
  * Includes filename mapping, URL generation, viewBox parsing, and positioning calculations.
  */
 
-import type { ViewBox, FootprintGroup } from '@/types/footprint'
+import type { ViewBox } from '@/types/footprint'
 import { D } from './decimal-math'
 
 /**
@@ -454,82 +454,4 @@ export function applyDiodeTransform(
 
   // Step 4: rotate the switch-local position by the switch orientation
   return D.rotatePoint(local.x, local.y, D.degreesToRadians(-switchRotation))
-}
-
-/**
- * Calculates the center of an SVG element in world coordinates
- *
- * Handles both circles and paths, accounting for:
- * - Element's own transform attribute if present
- * - Parent group transform (switch, or an offset footprint: diode/LED/capacitor)
- * - All rotation and positioning settings
- *
- * @param element - The SVG circle or path element
- * @param group - Which group the element belongs to
- * @param switchVB - ViewBox of the switch footprint
- * @param offset - The offset footprint (diode/LED/capacitor) this element belongs
- *   to, with its switch-relative placement; pass null for the switch group.
- * @param switchRotation - Switch rotation angle in degrees
- * @param switchSide - Switch board side
- * @returns Object with x, y coordinates in world space (mm)
- *
- * @example
- * ```typescript
- * const circle = document.querySelector('circle')
- * const center = calculateElementCenter(circle, 'switch', switchVB, null, 0)
- * // Returns: { x: 0.123, y: -2.456 } (world coordinates in mm)
- * ```
- */
-export function calculateElementCenter(
-  element: SVGCircleElement | SVGPathElement,
-  group: FootprintGroup,
-  switchVB: ViewBox | null,
-  offset: OffsetFootprint | null,
-  switchRotation: number,
-  switchSide: BoardSide = 'FRONT',
-): { x: number; y: number } {
-  // Extract local coordinates based on element type
-  let localX: number, localY: number
-
-  if (element.tagName === 'circle') {
-    // Circle: use cx, cy attributes
-    localX = parseFloat(element.getAttribute('cx') || '0')
-    localY = parseFloat(element.getAttribute('cy') || '0')
-  } else {
-    // Path: use bounding box to calculate center
-    const bbox = element.getBBox()
-    localX = bbox.x + bbox.width / 2
-    localY = bbox.y + bbox.height / 2
-  }
-
-  // Apply element's own transform if it has one
-  const elementTransform = element.transform.baseVal
-  if (elementTransform.numberOfItems > 0) {
-    const matrix = elementTransform.consolidate()?.matrix
-    if (matrix) {
-      const transformedX = matrix.a * localX + matrix.c * localY + matrix.e
-      const transformedY = matrix.b * localX + matrix.d * localY + matrix.f
-      localX = transformedX
-      localY = transformedY
-    }
-  }
-
-  // Apply parent group transform based on group type
-  if (group === 'switch') {
-    if (!switchVB) return { x: 0, y: 0 }
-    return applySwitchTransform(localX, localY, switchVB, switchRotation, switchSide)
-  }
-
-  // Diode / LED / capacitor are all offset footprints sharing the same transform.
-  if (!offset) return { x: 0, y: 0 }
-  return applyDiodeTransform(
-    localX,
-    localY,
-    offset.vb,
-    offset.offsetX,
-    offset.offsetY,
-    offset.rotation,
-    switchRotation,
-    offset.side,
-  )
 }

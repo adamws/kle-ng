@@ -46,16 +46,3 @@ export interface FootprintPreviewSettings {
  */
 /** Which footprint group a preview element belongs to. */
 export type FootprintGroup = 'switch' | 'diode' | 'led' | 'capacitor'
-
-export interface HoveredFootprintElement {
-  /** Element type - circle or path */
-  type: 'circle' | 'path'
-  /** Parent group - switch, diode, LED or LED capacitor */
-  group: FootprintGroup
-  /** Center X coordinate in world space (mm) */
-  centerX: number
-  /** Center Y coordinate in world space (mm) */
-  centerY: number
-  /** Reference to the DOM element */
-  element: SVGCircleElement | SVGPathElement
-}

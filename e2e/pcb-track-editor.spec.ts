@@ -594,4 +594,49 @@ test.describe('PCB Generator track editor', () => {
     const back = await centre()
     expect(Math.abs(back.y - c.y)).toBeLessThan(1)
   })
+
+  test('shows the hovered pad the same way in every routing mode', async ({ page }) => {
+    await openPreview(page)
+    const canvas = page.locator(EDITOR.CANVAS)
+    await canvas.evaluate((el) => el.scrollIntoView({ block: 'center', behavior: 'instant' }))
+    // board point (mm, switch at 0°) to screen
+    const toScreen = (x: number, y: number) =>
+      page.evaluate(
+        ([x, y]) => {
+          const svg = document.querySelector<SVGSVGElement>(
+            '[data-testid="pcb-preview-canvas"] svg.preview-svg',
+          )!
+          const m = svg.getScreenCTM()!
+          return { x: m.a * x! + m.c * y! + m.e, y: m.b * x! + m.d * y! + m.f }
+        },
+        [x, y],
+      )
+    const crosshair = page.locator('[data-testid="pcb-pad-crosshair"]')
+    const expectPad2 = async (status: string) => {
+      await expect(crosshair).toHaveCount(1)
+      await expect(page.locator(`${status} [data-testid="pcb-hovered-pad"]`)).toHaveText('SW pad 2')
+      await expect(page.locator(`${status} [data-testid="pcb-hovered-center"]`)).toHaveText(
+        'center X 2.540 Y -5.080 mm',
+      )
+    }
+
+    // automatic routing: off-centre on SW pad 2 snaps the readout to its centre
+    let p = await toScreen(2.9, -4.8)
+    await page.mouse.move(p.x, p.y)
+    await expectPad2('[data-testid="pcb-preview-status"]')
+    await page.mouse.move(p.x + 400, p.y)
+    await expect(crosshair).toHaveCount(0)
+
+    // preset routing, select tool: the same
+    await enterPresetMode(page)
+    p = await toScreen(2.9, -4.8)
+    await page.mouse.move(p.x, p.y)
+    await expectPad2('[data-testid="pcb-editor-status"]')
+
+    // the route tool has its snap marker instead
+    await page.locator('[data-testid="pcb-tool-route"]').click()
+    await page.mouse.move(p.x + 1, p.y)
+    await expect(crosshair).toHaveCount(0)
+    await expect(page.locator('[data-testid="pcb-hovered-pad"]')).toHaveText('SW pad 2')
+  })
 })

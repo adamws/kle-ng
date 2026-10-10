@@ -23,8 +23,6 @@ const props = defineProps<{
   highlightNet?: NetName | null
 }>()
 
-const emit = defineEmits<{ hover: [key: string | null] }>()
-
 interface DrawnPad {
   key: string
   owner: string
@@ -72,8 +70,6 @@ const layerClass = (layer: CopperLayer) => (layer === 'F.Cu' ? 'pad-front' : 'pa
             :class="{ hovered: p.key === hoveredKey, dimmed: p.dimmed }"
             :data-pad-key="p.key"
             :data-pad-number="p.number"
-            @pointerenter="emit('hover', p.key)"
-            @pointerleave="emit('hover', null)"
           >
             <path
               v-for="(path, i) in p.copper.find((c) => c.layer === layer)!.paths"
@@ -93,8 +89,6 @@ const layerClass = (layer: CopperLayer) => (layer === 'F.Cu' ? 'pad-front' : 'pa
           :transform="p.transform"
           :class="{ npth: p.npth, hovered: p.key === hoveredKey, dimmed: p.dimmed }"
           :data-pad-key="p.npth ? p.key : undefined"
-          @pointerenter="p.npth && emit('hover', p.key)"
-          @pointerleave="p.npth && emit('hover', null)"
         >
           <path :d="p.hole" />
         </g>

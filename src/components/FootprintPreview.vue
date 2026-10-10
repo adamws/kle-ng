@@ -17,10 +17,10 @@
 -->
 
 <script setup lang="ts">
-import { ref, computed, watch, watchEffect, onMounted, nextTick, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick, onUnmounted } from 'vue'
 import { usePcbGeneratorStore } from '@/stores/pcbGenerator'
 import { storeToRefs } from 'pinia'
-import type { ViewBox, HoveredFootprintElement, FootprintGroup } from '@/types/footprint'
+import type { ViewBox, FootprintGroup } from '@/types/footprint'
 import type { CopperLayer, TrackItem } from '@/types/tracks'
 import {
   getSwitchFootprintFilename,
@@ -31,7 +31,6 @@ import {
   parseViewBox,
   extractSvgContent,
   calculateCompositeViewBoxMulti,
-  calculateElementCenter,
   switchSvgTransform,
   offsetSvgTransform,
   switchLocalSvgTransform,
@@ -53,7 +52,8 @@ import TrackEditorToolbar from './pcb/TrackEditorToolbar.vue'
 import { usePcbTracksStore } from '@/stores/pcbTracks'
 import { placedPadNet } from '@/utils/pcb-tracks/netlist'
 import type { DragHandle } from '@/utils/pcb-tracks/drag'
-import { isCrossing, tracksInBox, type Box } from '@/utils/pcb-tracks/selection'
+import { isCrossing, padAt, tracksInBox, type Box } from '@/utils/pcb-tracks/selection'
+import { padInfos } from '@/utils/pcb-tracks/connectivity'
 import TrackSelectionBar from './pcb/TrackSelectionBar.vue'
 import StalePresetBanner from './pcb/StalePresetBanner.vue'
 import type { Point } from '@/composables/usePanZoom'
@@ -90,20 +90,6 @@ const isLoading = ref(false)
 const error = ref<string | null>(null)
 const isFallback = ref(false)
 const loadController = ref<AbortController | null>(null)
-
-// Hover state
-const hoveredElement = ref<HoveredFootprintElement | null>(null)
-const switchGroupRef = ref<SVGGElement | null>(null)
-const diodeGroupRef = ref<SVGGElement | null>(null)
-const ledGroupRef = ref<SVGGElement | null>(null)
-const capacitorGroupRef = ref<SVGGElement | null>(null)
-
-// Event listener tracking for proper cleanup (prevents memory leaks)
-type EventHandlerPair = {
-  enter: EventListener
-  leave: EventListener
-}
-const eventHandlers = new Map<Element, EventHandlerPair>()
 
 // Computed SVG URLs based on current settings
 const switchSvgUrl = computed(() => {
@@ -245,81 +231,6 @@ function offsetForGroup(group: FootprintGroup): OffsetFootprint | null {
     default:
       return null
   }
-}
-
-/**
- * Setup hover handlers on SVG elements after content injection
- */
-function setupHoverHandlers() {
-  cleanupHoverHandlers()
-
-  nextTick(() => {
-    setupGroupHoverHandlers(switchGroupRef.value, 'switch')
-    setupGroupHoverHandlers(diodeGroupRef.value, 'diode')
-    setupGroupHoverHandlers(ledGroupRef.value, 'led')
-    setupGroupHoverHandlers(capacitorGroupRef.value, 'capacitor')
-  })
-}
-
-/**
- * Attach event listeners to all hoverable elements in a footprint group
- * Properly tracks event handlers for cleanup to prevent memory leaks
- */
-function setupGroupHoverHandlers(groupElement: SVGGElement | null, groupType: FootprintGroup) {
-  if (!groupElement) return
-
-  // Query ALL elements with class="hoverable" (circles, paths, rects, polygons, etc.)
-  const hoverableElements = groupElement.querySelectorAll<SVGCircleElement | SVGPathElement>(
-    '.hoverable',
-  )
-
-  hoverableElements.forEach((element) => {
-    // Create specific handler functions for this element
-    const handleEnter: EventListener = () => {
-      const center = calculateElementCenter(
-        element,
-        groupType,
-        switchViewBox.value,
-        offsetForGroup(groupType),
-        settings.value.switchRotation,
-        settings.value.switchSide,
-      )
-      hoveredElement.value = {
-        type: element.tagName.toLowerCase() as 'circle' | 'path',
-        group: groupType,
-        centerX: center.x,
-        centerY: center.y,
-        element,
-      }
-    }
-
-    const handleLeave: EventListener = () => {
-      hoveredElement.value = null
-    }
-
-    // Attach listeners
-    element.addEventListener('mouseenter', handleEnter)
-    element.addEventListener('mouseleave', handleLeave)
-    element.style.cursor = 'crosshair'
-
-    // Store handlers for cleanup
-    eventHandlers.set(element, { enter: handleEnter, leave: handleLeave })
-  })
-}
-
-/**
- * Cleanup hover handlers
- * Properly removes event listeners to prevent memory leaks
- */
-function cleanupHoverHandlers() {
-  hoveredElement.value = null
-
-  // Remove every tracked listener (covers all groups: switch/diode/LED/capacitor)
-  eventHandlers.forEach((handlers, element) => {
-    element.removeEventListener('mouseenter', handlers.enter)
-    element.removeEventListener('mouseleave', handlers.leave)
-  })
-  eventHandlers.clear()
 }
 
 /**
@@ -607,9 +518,23 @@ const viewInfo = computed(() => {
   return 'Switch-diode tracks are routed automatically. Choose a (preset) routing option to draw them.'
 })
 
+// The pad under the cursor, from the pad geometry in both modes: the preview
+// and the editor show the same crosshair at its centre and the same readout.
+const previewPadInfos = computed(() => padInfos(previewPads.value))
 const hoveredPad = computed(() =>
   hoveredPadKey.value ? previewPads.value.find((p) => p.key === hoveredPadKey.value) : undefined,
 )
+/** The crosshair shows outside the editor and with the select tool (routing has its snap marker). */
+const showCrosshair = computed(
+  () => !editMode.value || (tracks.tool === 'select' && !tracks.isRouting && !tracks.isDragging),
+)
+
+function updateHoveredPad(local: Point | null) {
+  const layers = editMode.value ? visibleLayerList.value : (['F.Cu', 'B.Cu'] as const)
+  hoveredPadKey.value = local
+    ? (padAt(previewPadInfos.value, local, layers)?.placed.key ?? null)
+    : null
+}
 
 function padLabel(p: PlacedPad): string {
   const kind = p.pad.type === 'np_thru_hole' ? 'hole' : `pad ${p.pad.number || '–'}`
@@ -693,10 +618,11 @@ function onCanvasPointerDown(event: PointerEvent) {
 }
 
 function onCanvasPointerMove(event: PointerEvent) {
-  if (!editMode.value) return
-  if (panZoom.onPointerMove(event)) return
+  if (editMode.value && panZoom.onPointerMove(event)) return
   const p = panZoom.screenToSvg(event.clientX, event.clientY)
   cursorLocal.value = p ? boardToSwitchLocal(p, settings.value.switchRotation) : null
+  updateHoveredPad(cursorLocal.value)
+  if (!editMode.value) return
   tracks.setCursor(cursorLocal.value)
   if (pendingDrag) {
     const moved = Math.hypot(
@@ -866,39 +792,9 @@ watch([switchSvgUrl, diodeSvgUrl, ledSvgUrl, capacitorSvgUrl, showLed, showCapac
   loadFootprints()
 })
 
-// Re-attach hover handlers when any group's SVG content changes
-watch([switchSvgContent, diodeSvgContent, ledSvgContent, capacitorSvgContent], () => {
-  setupHoverHandlers()
-})
-
-// Re-calculate coordinates if settings change while hovering
-// Using watchEffect to automatically track all dependencies and reduce redundancy
-watchEffect(() => {
-  // Automatically tracks switchRotation and the hovered group's placement
-  // settings (via offsetForGroup) plus the relevant viewBoxes.
-  if (hoveredElement.value && switchViewBox.value && hoveredElement.value.element) {
-    const center = calculateElementCenter(
-      hoveredElement.value.element,
-      hoveredElement.value.group,
-      switchViewBox.value,
-      offsetForGroup(hoveredElement.value.group),
-      settings.value.switchRotation,
-      settings.value.switchSide,
-    )
-    // Update coordinates reactively
-    hoveredElement.value.centerX = center.x
-    hoveredElement.value.centerY = center.y
-  }
-})
-
 // Load footprints on component mount
 onMounted(() => {
   loadFootprints()
-})
-
-// Cleanup on unmount
-onUnmounted(() => {
-  cleanupHoverHandlers()
 })
 </script>
 
@@ -926,6 +822,7 @@ onUnmounted(() => {
         'tool-route': editMode && tracks.tool === 'route',
         'drag-hover': editMode && (dragHover !== null || tracks.isDragging),
         'blocked-flash': blockedFlash || tracks.dragViolation !== null,
+        'pad-hover': hoveredPad !== undefined,
       }"
       :tabindex="editMode ? 0 : undefined"
       data-testid="pcb-preview-canvas"
@@ -952,29 +849,23 @@ onUnmounted(() => {
         </g>
 
         <!-- Switch footprint (centered at origin) -->
-        <g ref="switchGroupRef" class="footprint-svg" :transform="switchTransform">
+        <g class="footprint-svg" :transform="switchTransform">
           <g v-html="switchSvgContent"></g>
         </g>
 
         <!-- Diode footprint (offset from switch center) -->
-        <g ref="diodeGroupRef" class="footprint-svg" :transform="diodeTransform">
+        <g class="footprint-svg" :transform="diodeTransform">
           <g v-html="diodeSvgContent"></g>
         </g>
 
         <!-- LED footprint (offset from switch center) -->
-        <g
-          v-if="showLed && ledSvgContent"
-          ref="ledGroupRef"
-          class="footprint-svg"
-          :transform="ledTransform"
-        >
+        <g v-if="showLed && ledSvgContent" class="footprint-svg" :transform="ledTransform">
           <g v-html="ledSvgContent"></g>
         </g>
 
         <!-- LED decoupling capacitor footprint (offset from switch center) -->
         <g
           v-if="showCapacitor && capacitorSvgContent"
-          ref="capacitorGroupRef"
           class="footprint-svg"
           :transform="capacitorTransform"
         >
@@ -989,7 +880,6 @@ onUnmounted(() => {
             :hovered-key="hoveredPadKey"
             :active-layer="editorSettings.layer"
             :highlight-net="tracks.highlightNet"
-            @hover="hoveredPadKey = $event"
           />
         </g>
 
@@ -1040,29 +930,23 @@ onUnmounted(() => {
           data-testid="pcb-selection-box"
         />
 
-        <!-- Crosshair overlay -->
-        <g v-if="hoveredElement" class="crosshair-layer">
-          <!-- Horizontal line -->
-          <line
-            :x1="hoveredElement.centerX - 1.5"
-            :y1="hoveredElement.centerY"
-            :x2="hoveredElement.centerX + 1.5"
-            :y2="hoveredElement.centerY"
+        <!-- Crosshair at the hovered pad's centre (switch-local frame) -->
+        <g
+          v-if="hoveredPad && showCrosshair"
+          :transform="switchLocalTransform"
+          class="crosshair-layer"
+          data-testid="pcb-pad-crosshair"
+        >
+          <path
+            :d="`M${hoveredPad.pad.at.x - 14 / pxPerMm} ${hoveredPad.pad.at.y}h${28 / pxPerMm}M${hoveredPad.pad.at.x} ${hoveredPad.pad.at.y - 14 / pxPerMm}v${28 / pxPerMm}`"
+            :stroke-width="1.5 / pxPerMm"
             class="crosshair-line"
           />
-          <!-- Vertical line -->
-          <line
-            :x1="hoveredElement.centerX"
-            :y1="hoveredElement.centerY - 1.5"
-            :x2="hoveredElement.centerX"
-            :y2="hoveredElement.centerY + 1.5"
-            class="crosshair-line"
-          />
-          <!-- Center dot -->
           <circle
-            :cx="hoveredElement.centerX"
-            :cy="hoveredElement.centerY"
-            r="0.3"
+            :cx="hoveredPad.pad.at.x"
+            :cy="hoveredPad.pad.at.y"
+            :r="3.5 / pxPerMm"
+            :stroke-width="1 / pxPerMm"
             class="crosshair-center"
           />
         </g>
@@ -1147,10 +1031,13 @@ onUnmounted(() => {
 
     <!-- Preview status bar: hovered element and unrouted connections -->
     <div v-if="!editMode" class="editor-status" data-testid="pcb-preview-status">
-      <span v-if="hoveredElement" data-testid="pcb-hovered-center">
-        Center: ({{ formatCoordinate(hoveredElement.centerX) }},
-        {{ formatCoordinate(hoveredElement.centerY) }}) mm
-      </span>
+      <template v-if="hoveredPad">
+        <span data-testid="pcb-hovered-pad">{{ padLabel(hoveredPad) }}</span>
+        <span data-testid="pcb-hovered-center">
+          center X {{ formatCoordinate(hoveredPad.pad.at.x) }} Y
+          {{ formatCoordinate(hoveredPad.pad.at.y) }} mm
+        </span>
+      </template>
       <span v-if="ratsnestLines.length" class="editor-hint">
         dashed line: unrouted switch-diode connection
       </span>
@@ -1158,8 +1045,14 @@ onUnmounted(() => {
 
     <!-- Track editor status bar -->
     <div v-else class="editor-status" data-testid="pcb-editor-status">
-      <span v-if="hoveredPad" data-testid="pcb-hovered-pad">{{ padLabel(hoveredPad) }}</span>
-      <span v-if="cursorLocal" data-testid="pcb-cursor-readout">
+      <template v-if="hoveredPad">
+        <span data-testid="pcb-hovered-pad">{{ padLabel(hoveredPad) }}</span>
+        <span data-testid="pcb-hovered-center">
+          center X {{ formatCoordinate(hoveredPad.pad.at.x) }} Y
+          {{ formatCoordinate(hoveredPad.pad.at.y) }} mm
+        </span>
+      </template>
+      <span v-else-if="cursorLocal" data-testid="pcb-cursor-readout">
         X {{ formatCoordinate(cursorLocal.x) }} Y {{ formatCoordinate(cursorLocal.y) }} mm
       </span>
       <span v-if="routeStatus" data-testid="pcb-route-status">{{ routeStatus }}</span>
@@ -1441,8 +1334,8 @@ onUnmounted(() => {
 }
 
 .crosshair-line {
+  fill: none;
   stroke: #ff0000;
-  stroke-width: 0.08;
   stroke-linecap: round;
   opacity: 0.8;
 }
@@ -1451,6 +1344,10 @@ onUnmounted(() => {
   fill: #ff0000;
   fill-opacity: 0.6;
   stroke: #ffffff;
-  stroke-width: 0.04;
+}
+
+/* over a pad outside the editor (the editor sets its own cursors) */
+.svg-container.pad-hover:not(.editing) {
+  cursor: crosshair;
 }
 </style>

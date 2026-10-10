@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { tracksInBox } from '../selection'
+import { padAt, tracksInBox } from '../selection'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { placePads } from '@/utils/kicad/footprint-pads'
+import { padInfos } from '../connectivity'
 import type { TrackItem } from '@/types/tracks'
 
 const t = (x1: number, y1: number, x2: number, y2: number): TrackItem => ({
@@ -51,5 +55,26 @@ describe('tracksInBox', () => {
     expect(tracksInBox(withVia, { from: { x: 10.1, y: 10.1 }, to: { x: 9, y: 9 } }, id)).toEqual([
       2, 3,
     ])
+  })
+})
+
+describe('padAt', () => {
+  const dir = resolve(__dirname, '../../../../public/data/footprints/pads')
+  const sw = placePads(
+    JSON.parse(readFileSync(resolve(dir, 'SW_Cherry_MX_PCB_1.00u.json'), 'utf8')).pads,
+    { x: 0, y: 0, rotation: 0, side: 'FRONT' },
+  )
+  const pads = padInfos(sw.map((pad, i) => ({ key: `SW:${i}`, owner: 'SW', pad })))
+  const both = ['F.Cu', 'B.Cu'] as const
+
+  it('finds the pad, or the NPTH hole, under a point', () => {
+    expect(padAt(pads, { x: 2.6, y: -5 }, both)?.placed.pad.number).toBe('2')
+    expect(padAt(pads, { x: 0.5, y: 0.5 }, both)?.placed.pad.type).toBe('np_thru_hole')
+    expect(padAt(pads, { x: 8, y: 8 }, both)).toBeNull()
+  })
+
+  it('skips pads on hidden layers, but not holes', () => {
+    expect(padAt(pads, { x: 2.6, y: -5 }, [])).toBeNull()
+    expect(padAt(pads, { x: 0.5, y: 0.5 }, [])?.placed.pad.type).toBe('np_thru_hole')
   })
 })
