@@ -79,7 +79,7 @@ export interface ViaSize {
   drillDiameter: number
 }
 
-export type TrackTool = 'select' | 'route'
+export type TrackTool = 'select' | 'route' | 'via'
 
 export const WIDTH_PRESETS = [0.15, 0.2, 0.25, 0.3, 0.4, 0.5]
 export const GRID_OPTIONS = [0.05, 0.1, 0.127, 0.25, 0.5, 0.635, 1, 1.27]
@@ -803,24 +803,18 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
 
   /**
    * V while routing: commits the walk to the cursor, places a via at its end
-   * and continues on the other layer, as in KiCad. `atLastCorner` (the toolbar
-   * button, clicked away from the canvas) places it at the last committed
-   * vertex instead, committing nothing. Refused (returns false) when the walk
-   * or the via breaks a rule, or the via would land on a pad.
+   * and continues on the other layer, as in KiCad. Refused (returns false)
+   * when the walk or the via breaks a rule, or the via would land on a pad.
    */
-  function placeVia({ atLastCorner = false } = {}): boolean {
+  function placeVia(): boolean {
     const r = route.value
-    if (!r) return false
-    const last = r.points[r.points.length - 1]!
     const t = target.value
-    // the start pad is the only pad a committed vertex can be on
-    const onPad = atLastCorner ? r.points.length === 1 && r.startPadKey !== null : t?.kind === 'pad'
-    if ((!atLastCorner && !t) || onPad) {
-      blockedCount.value++
+    if (!r || !t || t.kind === 'pad') {
+      if (r) blockedCount.value++
       return false
     }
-    const walk = atLastCorner ? [] : previewSegments.value
-    const added = atLastCorner ? [] : previewPoints.value.slice(1)
+    const last = r.points[r.points.length - 1]!
+    const added = previewPoints.value.slice(1)
     const at = added[added.length - 1] ?? last
     if (r.vias.includes(r.points.length - 1) && samePoint(at, last)) {
       return false // already a via here
@@ -828,7 +822,13 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     const first = presetItems.value.length
     const check = runDrc(
       pads.value,
-      [...presetItems.value, ...routeSegments.value, ...routeVias.value, ...walk, viaAt(at, r.via)],
+      [
+        ...presetItems.value,
+        ...routeSegments.value,
+        ...routeVias.value,
+        ...previewSegments.value,
+        viaAt(at, r.via),
+      ],
       rules.value,
     )
     const refused = check.violations.find((v) => v.items.some((i) => i >= first))
@@ -848,6 +848,47 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
   function cancelRoute() {
     route.value = null
     viaRefusal.value = null
+  }
+
+  // Via tool: free-standing vias, placed with a click (KiCad's via tool)
+
+  /** The via the via tool would place: at the cursor, snapped to track ends and vias, else the grid. */
+  const freeVia = computed<TrackVia | null>(() => {
+    if (tool.value !== 'via' || route.value || !cursor.value) return null
+    const t = snapTarget(cursor.value, {
+      pads: [], // not into pads: routing onto a pad connects to it
+      items: presetItems.value,
+      itemNets: presetDrc.value.itemNets,
+      layer: editorSettings.value.layer,
+      grid: editorSettings.value.grid,
+      radius: snapRadius.value,
+    })
+    return viaAt(t.point, editorSettings.value.via)
+  })
+
+  /** Why the via tool's via can't go where it is, or null. */
+  const freeViaViolation = computed<Violation | null>(() => {
+    const via = freeVia.value
+    if (!via) return null
+    const at = presetItems.value.length
+    const drc = runDrc(pads.value, [...presetItems.value, via], rules.value)
+    return drc.violations.find((v) => v.items.includes(at)) ?? null
+  })
+
+  /** Via tool click: places the via as one undoable step, unless it breaks a rule. */
+  function placeFreeVia(): boolean {
+    const via = freeVia.value
+    if (!via) return false
+    if (freeViaViolation.value) {
+      blockedCount.value++
+      return false
+    }
+    const taken = savedItems.value.some(
+      (it) => it.type === 'via' && samePoint(it.position, via.position),
+    )
+    if (taken) return false
+    writeItems([...savedItems.value, via])
+    return true
   }
 
   /** Backspace: drop the last via (back to its layer), else the last vertex, else the route. */
@@ -965,6 +1006,9 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     cancelRoute,
     undoVertex,
     placeVia,
+    freeVia,
+    freeViaViolation,
+    placeFreeVia,
     flipPosture,
     cycleWidth,
     click,

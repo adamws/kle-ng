@@ -485,7 +485,11 @@ const routeStatus = computed(() => {
   return `Routing ${r.net ?? 'new net'} on ${r.layer}, ${r.width} mm`
 })
 const blockedReason = computed(
-  () => tracks.previewViolations[0]?.message ?? tracks.viaRefusal ?? null,
+  () =>
+    tracks.previewViolations[0]?.message ??
+    tracks.viaRefusal ??
+    tracks.freeViaViolation?.message ??
+    null,
 )
 
 // a refused click flashes the canvas
@@ -684,6 +688,10 @@ function onCanvasClick(event: MouseEvent) {
     tracks.click(padNet)
     return
   }
+  if (tracks.tool === 'via') {
+    tracks.placeFreeVia()
+    return
+  }
   const item = cursorLocal.value
     ? tracks.itemAt(cursorLocal.value, PICK_TOLERANCE_PX / pxPerMm.value, visibleLayerList.value)
     : null
@@ -828,7 +836,7 @@ onMounted(() => {
         editing: editMode,
         panning: panZoom.isPanning.value,
         'pan-ready': panZoom.spaceHeld.value,
-        'tool-route': editMode && tracks.tool === 'route',
+        'tool-route': editMode && tracks.tool !== 'select',
         'drag-hover': editMode && (dragHover !== null || tracks.isDragging),
         'blocked-flash': blockedFlash || tracks.dragViolation !== null,
         'pad-hover': hoveredPad !== undefined,
@@ -919,6 +927,8 @@ onMounted(() => {
           <TrackEditorLayer
             :committed="tracks.routeSegments"
             :vias="tracks.routeVias"
+            :free-via="tracks.freeVia"
+            :free-via-blocked="tracks.freeViaViolation !== null"
             :preview="tracks.previewSegments"
             :blocked="tracks.previewViolations.length > 0"
             :target="tracks.tool === 'route' ? tracks.target : null"
@@ -1087,7 +1097,9 @@ onMounted(() => {
           ? 'click: add corner · V: via · / flip · Backspace: undo · double-click/End: finish · Esc: cancel'
           : tracks.tool === 'route'
             ? 'click or X: start a track · wheel: zoom · middle/Space+drag: pan'
-            : 'click: select · click unrouted pad: route · double-click/U: connected · drag track or via: move · drag empty: box · Ctrl+A: all · Del: delete · X: route'
+            : tracks.tool === 'via'
+              ? 'click: place a via · X: route from it · Esc: back to Select'
+              : 'click: select · click unrouted pad: route · double-click/U: connected · drag track or via: move · drag empty: box · Ctrl+A: all · Del: delete · X: route'
       }}</span>
     </div>
 

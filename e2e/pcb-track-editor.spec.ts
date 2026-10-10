@@ -511,7 +511,8 @@ test.describe('PCB Generator track editor', () => {
 
     await page.mouse.click(d2.x, d2.y)
     await page.mouse.move(d2.x - 1.58 * scale, d2.y, { steps: 5 })
-    await expect(page.locator('[data-testid="pcb-place-via"]')).toBeEnabled()
+    // while routing the via tool is off: V places the via at the cursor
+    await expect(page.locator('[data-testid="pcb-tool-via"]')).toBeDisabled()
     await page.keyboard.press('v')
     await expect(page.locator('[data-testid="pcb-route-via"]')).toHaveCount(1)
     await expect(page.locator('[data-testid="pcb-route-status"]')).toContainText('on F.Cu')
@@ -665,29 +666,36 @@ test.describe('PCB Generator track editor', () => {
     await expect(page.locator('[data-testid="pcb-route-status"]')).toHaveCount(0)
   })
 
-  test('places a via at the last corner with the toolbar button', async ({ page }) => {
+  test('places free vias with the via tool', async ({ page }) => {
     await openPreview(page)
     await enterPresetMode(page)
-    await page.locator('[data-testid="pcb-tool-route"]').click()
     const sw2 = await padCentre(page, 'SW', '2')
     const d2 = await padCentre(page, 'D', '2')
     const scale = (d2.y - sw2.y) / 7.68 // screen px per mm
+    const spot = { x: d2.x - 1.5 * scale, y: d2.y }
 
-    await page.mouse.click(d2.x, d2.y)
-    await page.mouse.move(d2.x - 1.5 * scale, d2.y, { steps: 5 })
-    await page.mouse.click(d2.x - 1.5 * scale, d2.y)
-    await page.locator('[data-testid="pcb-place-via"]').click()
-    await expect(page.locator('[data-testid="pcb-route-via"]')).toHaveCount(1)
-    await expect(page.locator('[data-testid="pcb-route-layer-F.Cu"]')).toHaveAttribute(
+    await page.locator('[data-testid="pcb-tool-via"]').click()
+    await page.mouse.move(spot.x, spot.y, { steps: 3 })
+    await expect(page.locator('[data-testid="pcb-free-via"]')).toHaveCount(1)
+    await page.mouse.click(spot.x, spot.y)
+    const vias = page.locator('[data-testid="pcb-track-overlay-via"]')
+    await expect(vias).toHaveCount(1)
+    await expect(page.locator('[data-testid="pcb-tool-via"]')).toHaveAttribute(
       'aria-pressed',
       'true',
     )
 
-    // back on the canvas the route goes on, on F.Cu
-    await page.mouse.move(sw2.x, sw2.y, { steps: 5 })
-    await expect(page.locator('[data-testid="pcb-route-status"]')).toContainText('on F.Cu')
-    await page.mouse.click(sw2.x, sw2.y)
-    await expect(page.locator('[data-testid="pcb-track-overlay-via"]')).toHaveCount(1)
-    await expect(page.locator('[data-testid="pcb-drc-summary"]')).toHaveText('DRC clean')
+    // X routes from the via to D pad 2
+    await page.keyboard.press('x')
+    await expect(page.locator('[data-testid="pcb-route-status"]')).toContainText('Routing')
+    await page.mouse.move(d2.x, d2.y, { steps: 5 })
+    await page.mouse.click(d2.x, d2.y)
+    await expect(page.locator('[data-testid="pcb-route-status"]')).toHaveCount(0)
+    await expect(page.locator('[data-testid="pcb-track-overlay-track"]')).not.toHaveCount(0)
+
+    // one undo step per action
+    await page.locator('[data-testid="pcb-undo"]').click()
+    await page.locator('[data-testid="pcb-undo"]').click()
+    await expect(vias).toHaveCount(0)
   })
 })

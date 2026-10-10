@@ -11,6 +11,9 @@ import type { SnapTarget } from '@/utils/pcb-tracks/snap'
 const props = defineProps<{
   committed: readonly TrackSegment[]
   vias?: readonly TrackVia[]
+  /** The via tool's via at the cursor, red when it can't go there. */
+  freeVia?: TrackVia | null
+  freeViaBlocked?: boolean
   preview: readonly TrackSegment[]
   blocked: boolean
   target: SnapTarget | null
@@ -53,6 +56,24 @@ const layerClass = (t: TrackSegment) => (t.layer === 'F.Cu' ? 'route-front' : 'r
         :cx="via.position.x"
         :cy="via.position.y"
         :r="via.drillDiameter / 2"
+        class="via-drill"
+      />
+    </g>
+    <g
+      v-if="freeVia"
+      :class="['free-via', { 'route-blocked': freeViaBlocked }]"
+      data-testid="pcb-free-via"
+    >
+      <circle
+        :cx="freeVia.position.x"
+        :cy="freeVia.position.y"
+        :r="freeVia.diameter / 2"
+        class="via"
+      />
+      <circle
+        :cx="freeVia.position.x"
+        :cy="freeVia.position.y"
+        :r="freeVia.drillDiameter / 2"
         class="via-drill"
       />
     </g>
@@ -105,6 +126,14 @@ const layerClass = (t: TrackSegment) => (t.layer === 'F.Cu' ? 'route-front' : 'r
 
 .via-drill {
   fill: var(--bs-body-bg);
+}
+
+.free-via {
+  opacity: 0.7;
+}
+
+.free-via.route-blocked .via {
+  fill: #ff2d55;
 }
 
 .snap-target circle {

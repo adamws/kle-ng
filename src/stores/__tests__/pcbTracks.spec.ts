@@ -259,24 +259,40 @@ describe('pcbTracks selection and history', () => {
     await nextTick()
   })
 
-  it('places a via at the last corner from the toolbar, with no cursor on the canvas', () => {
+  it('places free vias with the via tool, not where they break a rule', async () => {
     tracks.editorSettings.grid = 0.02
-    tracks.setTool('route')
+    tracks.setTool('via')
+    tracks.setCursor({ x: 3.5, y: 2.6 })
+    expect(tracks.freeVia?.position).toEqual({ x: 3.5, y: 2.6 })
+    expect(tracks.freeViaViolation).toBeNull()
+    expect(tracks.placeFreeVia()).toBe(true)
+    expect(pcb.settings.trackPreset?.items).toMatchObject([
+      { type: 'via', position: { x: 3.5, y: 2.6 }, diameter: 0.6, drillDiameter: 0.3 },
+    ])
+    // the same spot again adds nothing
+    expect(tracks.placeFreeVia()).toBe(false)
+
+    // over the side hole: shown blocked, refused
+    tracks.setCursor({ x: 5.08, y: 0 })
+    expect(tracks.freeViaViolation?.kind).toBe('hole-clearance')
+    const blocked = tracks.blockedCount
+    expect(tracks.placeFreeVia()).toBe(false)
+    expect(tracks.blockedCount).toBe(blocked + 1)
+
+    // a route starts from the via, which then connects to D pad 2
+    tracks.setCursor({ x: 3.5, y: 2.6 })
+    expect(tracks.startRoute()).toBe(true)
+    expect(tracks.tool).toBe('route')
     tracks.setCursor(D2)
     tracks.click(null)
-    // at the start pad: refused
-    tracks.setCursor(null)
-    expect(tracks.placeVia({ atLastCorner: true })).toBe(false)
+    expect(tracks.isRouting).toBe(false)
+    expect(pcb.settings.trackPreset?.items.map((i) => i.type)).toEqual(['via', 'track'])
 
-    tracks.setCursor({ x: 3.5, y: 2.6 })
-    tracks.click(null)
-    tracks.setCursor(null) // the pointer went to the toolbar
-    expect(tracks.placeVia({ atLastCorner: true })).toBe(true)
-    expect(tracks.routeVias.map((v) => v.position)).toEqual([{ x: 3.5, y: 2.6 }])
-    expect(tracks.route?.points).toHaveLength(2)
-    expect(tracks.route?.layer).toBe('F.Cu')
-    // a second click puts no second via there
-    expect(tracks.placeVia({ atLastCorner: true })).toBe(false)
+    // one undo step per via
+    tracks.undo()
+    tracks.undo()
+    expect(pcb.settings.trackPreset?.items).toEqual([])
+    await nextTick()
   })
 
   it('refuses a via on a hole or a pad', () => {

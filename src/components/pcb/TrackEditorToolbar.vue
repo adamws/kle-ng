@@ -2,7 +2,9 @@
   TrackEditorToolbar: the drawing controls of the track editor (tool, history,
   copper layer, track width, grid and posture). View controls (layer
   visibility, zoom) sit on the canvas instead. Shortcuts are listed in the
-  titles. Buttons that can disable themselves (undo, redo, via, clear) don't
+  titles. The Via tool places free vias; while routing it is disabled and V
+  places a via at the cursor instead. Buttons that can disable themselves
+  (undo, redo, clear) don't
   take the focus on a click: a disabled focused button would drop it out of the
   editor, and its shortcuts with it. It keeps one height in every state, so the canvas below never moves:
   one line, or two in a narrow preview (whose row is then two lines high).
@@ -56,6 +58,22 @@ const { editorSettings, tool, isRouting, canUndo, canRedo, presetItems } = store
       >
         <BiBezier2 /> Route
       </button>
+      <button
+        type="button"
+        class="btn"
+        :class="tool === 'via' ? 'btn-secondary' : 'btn-outline-secondary'"
+        :aria-pressed="tool === 'via'"
+        :disabled="isRouting"
+        :title="
+          isRouting
+            ? 'While routing, press V to place a via at the cursor and continue on the other layer'
+            : 'Place free vias: click to place one (Esc: back to Select)'
+        "
+        data-testid="pcb-tool-via"
+        @click="tracks.setTool('via')"
+      >
+        <BiRecordCircle /> Via
+      </button>
     </div>
 
     <div class="btn-group btn-group-sm" role="group" aria-label="History">
@@ -82,22 +100,6 @@ const { editorSettings, tool, isRouting, canUndo, canRedo, presetItems } = store
         <BiRedo />
       </button>
     </div>
-
-    <button
-      type="button"
-      class="btn btn-sm btn-outline-secondary"
-      :disabled="!isRouting"
-      :title="
-        isRouting
-          ? 'Place a via at the last corner and continue on the other layer (V places it at the cursor)'
-          : 'While routing: place a via and continue on the other layer (V)'
-      "
-      data-testid="pcb-place-via"
-      @mousedown.prevent
-      @click="tracks.placeVia({ atLastCorner: true })"
-    >
-      <BiRecordCircle /> Via
-    </button>
 
     <button
       type="button"
