@@ -1,8 +1,8 @@
 import { test, expect, type Page } from '@playwright/test'
 import { KeyboardEditorPage } from './pages/KeyboardEditorPage'
 
-// PCB generator track editor.
-// B2: pan/zoom canvas with pads from the pad geometry JSON; no drawing yet.
+// Draw, select and edit the switch-diode track preset over the pads from the pad
+// geometry JSON (pan/zoom canvas, DRC, undo/redo, stale-preset banner).
 
 const EDITOR = {
   COLLAPSE_BTN: '[data-section-id="pcb"] .collapse-btn',
@@ -130,7 +130,49 @@ test.describe('PCB Generator track editor', () => {
           layer: 'B.Cu',
         },
       ],
+      // what the tracks were drawn for
+      basis: {
+        switchFootprint: 'Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_{:.2f}u',
+        diodeFootprint: 'Diode_SMD:D_SOD-123F',
+        diodePositionX: 5.08,
+        diodePositionY: 4,
+        diodeRotation: 90,
+        diodeSide: 'BACK',
+      },
     })
+  })
+
+  test('offers to keep or clear tracks drawn for another diode placement', async ({ page }) => {
+    await openPreview(page)
+    await page.locator(EDITOR.TOGGLE).click()
+    await page.locator('[data-testid="pcb-tool-route"]').click()
+    const sw2 = await padCentre(page, 'SW', '2')
+    const d2 = await padCentre(page, 'D', '2')
+    await page.mouse.click(sw2.x, sw2.y)
+    await page.mouse.move(d2.x, d2.y, { steps: 5 })
+    await page.mouse.click(d2.x, d2.y)
+    const tracks = page.locator('[data-testid="pcb-track-overlay-track"]')
+    await expect(tracks).toHaveCount(2)
+
+    const banner = page.locator('[data-testid="pcb-stale-preset"]')
+    await expect(banner).toHaveCount(0)
+    const diodeY = page.locator('#diodePositionY input')
+    await diodeY.fill('5')
+    await diodeY.press('Enter')
+    await expect(banner).toHaveText(
+      'Diode position changed since the tracks were drawn (5.08, 4 mm → 5.08, 5 mm) Keep Clear',
+    )
+    await page.locator('[data-testid="pcb-stale-keep"]').click()
+    await expect(banner).toHaveCount(0)
+    await expect(tracks).toHaveCount(2)
+
+    await diodeY.fill('4')
+    await diodeY.press('Enter')
+    await expect(banner).toBeVisible()
+    await page.locator('[data-testid="pcb-stale-clear"]').click()
+    await expect(banner).toHaveCount(0)
+    await expect(tracks).toHaveCount(0)
+    await expect(page.locator('[data-testid="pcb-ratsnest"]')).toHaveCount(1)
   })
 
   test('selects, deletes, undoes and redoes tracks', async ({ page }) => {

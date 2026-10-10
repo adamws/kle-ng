@@ -12,13 +12,17 @@
  * The select tool selects tracks (click, Shift+click, box), deletes them,
  * extends a selection to connected tracks (U) and changes their width or
  * layer. Committed changes go through an undo history; a preset replaced
- * from outside the editor (JSON Apply, Reset, Upload) resets it.
+ * from outside the editor (JSON Apply, Reset, Upload, Clear) resets it.
+ *
+ * Every write records the preset's basis (footprints and diode placement);
+ * when the settings move away from it, the preview offers to keep or clear.
  */
 import { defineStore } from 'pinia'
 import { computed, ref, shallowRef, toRaw, watch } from 'vue'
 import { useSnapshotHistory } from '@/composables/useSnapshotHistory'
 import { usePcbGeneratorStore } from './pcbGenerator'
 import type { CopperLayer, Pt, TrackItem, TrackSegment } from '@/types/tracks'
+import { basisChanges, presetBasis } from '@/utils/pcb-tracks/basis'
 import { padInfos } from '@/utils/pcb-tracks/connectivity'
 import { shapeGap } from '@/utils/pcb-tracks/distance'
 import { trackShape } from '@/utils/pcb-tracks/shapes'
@@ -163,11 +167,14 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
   /** The preset object this store wrote last; anything else is an outside write. */
   let ownPreset: unknown = undefined
 
-  /** Writes the preset items, as one undoable step unless `record` is false. */
+  /**
+   * Writes the preset items, as one undoable step unless `record` is false.
+   * The basis records what they were drawn for (see `staleChanges`).
+   */
   function writeItems(items: TrackItem[], record = true) {
-    const preset = pcb.settings.trackPreset
-    const next =
-      items.length || preset?.basis ? { ...preset, version: 1 as const, items } : undefined
+    const next = items.length
+      ? { version: 1 as const, items, basis: presetBasis(pcb.settings) }
+      : undefined
     ownPreset = next
     pcb.settings.trackPreset = next
     if (record) history.push(items)
@@ -186,6 +193,25 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
       history.reset(preset?.items ?? [])
     },
   )
+
+  /** Settings changed since the preset was drawn (footprints, diode placement). */
+  const staleChanges = computed(() =>
+    presetItems.value.length ? basisChanges(pcb.settings.trackPreset?.basis, pcb.settings) : [],
+  )
+
+  /** Keeps a stale preset: it is now drawn for the current settings. */
+  function keepPreset() {
+    writeItems(presetItems.value, false)
+  }
+
+  /** Removes the preset and starts a new history, as an outside write would. */
+  function clearPreset() {
+    cancelRoute()
+    selection.value = []
+    ownPreset = undefined
+    pcb.settings.trackPreset = undefined
+    history.reset([])
+  }
 
   function undo() {
     cancelRoute()
@@ -391,6 +417,9 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     drc,
     isRouting,
     selection,
+    staleChanges,
+    keepPreset,
+    clearPreset,
     canUndo: history.canUndo,
     canRedo: history.canRedo,
     undo,

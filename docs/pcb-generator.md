@@ -32,7 +32,7 @@ The easiest way to assign matrix coordinates is to use [Add Switch Matrix Coordi
 1. Verify your layout has matrix coordinates assigned
 2. Open the **PCB Generator** panel
 3. Configure switch, diode, and routing options as needed
-4. Use the preview window to check key-diode placement
+4. Use the preview window to check key-diode placement, and optionally [draw the switch–diode tracks](#track-presets)
 
 <img src="/pcb-generator-footprint-preview-light.png" class="docs-screenshot light-only" alt="PCB footprints preview" style="max-width:50%" />
 <img src="/pcb-generator-footprint-preview-dark.png" class="docs-screenshot dark-only" alt="PCB footprints preview" style="max-width:50%" />
@@ -75,9 +75,47 @@ The **JSON** tab shows the current switch, diode, routing, and LED settings as a
 
 The editor always reflects changes made on the **Switches** and **LEDs** tabs. Only active sections are written: the `led` section appears only when **Add per-key LED** is enabled, and its nested `capacitor` section only when **Add capacitors** is enabled. Settings are also remembered between sessions in the same format.
 
-## Advanced: Track Presets (JSON) {#track-presets}
+## Drawing Switch–Diode Tracks {#track-presets}
 
-Instead of the automatic router, you can route one switch–diode pair yourself and have it copied to every key. A **track preset** is the set of tracks (and vias) of that one pair. Add it to the JSON settings as a `tracks` section:
+Instead of the automatic router, you can draw the tracks between one switch and its diode, and have them copied to every key. These tracks are the **track preset**. Draw them in the footprint preview: click **Edit tracks** to open the editor.
+
+<img src="/pcb-track-editor-routing-light.png" class="docs-screenshot light-only" alt="Track editor routing from switch pad 2 towards the diode anode, with a dashed line to the unrouted pad" />
+<img src="/pcb-track-editor-routing-dark.png" class="docs-screenshot dark-only" alt="Track editor routing from switch pad 2 towards the diode anode, with a dashed line to the unrouted pad" />
+
+The editor shows the copper pads of the switch and diode (and of the LED and capacitor when **Add per-key LED** is on). A dashed line marks each connection that still needs a track: switch pad 2 to the diode anode. Tracks are drawn with the switch at 0° on the front side; the generator rotates them with each key.
+
+**Drawing a track:**
+
+1. Choose **Route** (or press `X` with the cursor over a pad) and click the pad to start from.
+2. Move the cursor: the track follows it with a straight and a 45° part (or an L shape with **90°**). Press `/` to swap the order of the two parts.
+3. Click to add a corner. Clicking a pad of the same connection finishes the track; double-click or `End` finishes it at the last corner.
+4. `Backspace` removes the last corner, `Esc` cancels the track.
+
+The cursor snaps to pad centres, to track ends and to the **Grid**. Set the **Width** and the copper layer (**F.Cu** or **B.Cu**) in the toolbar before drawing; `W` and `Shift+W` step through common widths.
+
+The editor checks every click against KiCad's default design rules (0.2 mm clearance, 0.25 mm to holes) and against shorts with pads of other connections. A click that breaks a rule is refused, and the status bar says why. The status bar also shows **DRC clean** once every connection is routed without errors.
+
+**Editing tracks:** with **Select**, click a track to select it, `Shift`+click to add to the selection, or drag a box (left to right selects tracks inside it, right to left also those it touches). `U` adds the tracks connected to the selection. The bar under the canvas changes the width and layer of the selected tracks or deletes them (`Delete`). Clicking a pad highlights its connection.
+
+<img src="/pcb-track-editor-selection-light.png" class="docs-screenshot light-only" alt="Track editor with the diagonal track selected and the selection bar showing its width, layer and a Delete button" />
+<img src="/pcb-track-editor-selection-dark.png" class="docs-screenshot dark-only" alt="Track editor with the diagonal track selected and the selection bar showing its width, layer and a Delete button" />
+
+Undo and redo work for every change (`Ctrl+Z`, `Ctrl+Shift+Z` or `Ctrl+Y`, or the toolbar buttons). Navigate with the mouse wheel (zoom) and middle-drag or `Space`+drag (pan); the eye buttons hide a layer.
+
+Tracks are saved with the other PCB settings and are sent with **Generate PCB**. **Routing** must be **Switch-Diode only** or **Full**; with routing disabled the tracks are ignored. Tracks are only supported for front-side switches.
+
+### When Settings Change {#track-presets-stale}
+
+Tracks only connect the pads they were drawn around. If you change the switch footprint, the diode footprint or the diode position, rotation or side afterwards, a message over the preview says what changed:
+
+<img src="/pcb-track-editor-stale-light.png" class="docs-screenshot light-only" alt="Footprint preview with a message over its bottom edge saying the diode position changed since the tracks were drawn, with Keep and Clear buttons" />
+<img src="/pcb-track-editor-stale-dark.png" class="docs-screenshot dark-only" alt="Footprint preview with a message over its bottom edge saying the diode position changed since the tracks were drawn, with Keep and Clear buttons" />
+
+Check the tracks in the editor: errors and unrouted connections are marked. **Keep** hides the message for the current settings, **Clear** removes all tracks. When several settings changed, hover the message to see the old and new values. Outside the editor, a badge in the preview shows the check result.
+
+### Track Presets in JSON {#track-presets-json}
+
+The tracks are part of the JSON settings, as a `tracks` section, so they are saved and shared with the rest of the configuration. You can also write or paste a preset there:
 
 ```json
 {
@@ -104,13 +142,12 @@ Instead of the automatic router, you can route one switch–diode pair yourself 
 }
 ```
 
-This example connects pad 2 of a Cherry MX switch to the anode of the default SOD-123F diode (placed at `5.08`, `4`, rotated `90`, on the back), passing between the center hole and the right side hole.
+This example connects pad 2 of a Cherry MX switch to the anode of the default SOD-123F diode (placed at `5.08`, `4`, rotated `90`, on the back), passing between the center hole and the right side hole. It is what the editor produces when you route from switch pad 2 to the diode anode.
 
 - **Coordinates** are in nanometres (1 mm = 1000000), relative to the switch center, with the switch at 0° on the front side and +Y pointing down, as in KiCad.
-- **Items** are `track` (`start`, `end`, `width_nm`, `layer`) or `via` (`position`, `diameter_nm`, `drill_diameter_nm`). Layers are `F.Cu` or `B.Cu`. Arcs are not supported yet.
-- **Diode placement** comes from the diode settings, so a preset must not contain a `diodes` section. The preset only works for the footprints and diode placement it was drawn for.
-- **Preview** — Applied tracks are drawn over the footprint preview, so you can check that they start and end on the right pads before generating.
-- **Routing** must be **Switch-Diode only** or **Full**; with routing disabled the preset is ignored. Presets support front-side switches only.
+- **Items** are `track` (`start`, `end`, `width_nm`, `layer`) or `via` (`position`, `diameter_nm`, `drill_diameter_nm`). Layers are `F.Cu` or `B.Cu`. Arcs are not supported yet, and the editor can't draw vias yet.
+- **Diode placement** comes from the diode settings, so a preset must not contain a `diodes` section.
+- **basis** (optional) records the footprints and diode placement the tracks were drawn for. The editor writes it; it drives the [settings-changed warning](#track-presets-stale).
 
 To create a preset in KiCad, route one switch–diode pair on a template board and convert it with [kbplacer](https://github.com/adamws/kicad-kbplacer):
 
@@ -118,7 +155,7 @@ To create a preset in KiCad, route one switch–diode pair on a template board a
 python -m kbplacer.connection_preset to-json diode_template.kicad_pcb > preset.json
 ```
 
-Then copy the `items` of `preset.json` into the `tracks` section.
+Then copy the `items` (and `basis`) of `preset.json` into the `tracks` section.
 
 If a saved preset can't be read (for example one saved by a newer version), it is dropped with a warning and the remaining settings are kept.
 

@@ -554,11 +554,36 @@ in kbplacer's JSON preset format (kicad-kbplacer `docs/switch-preset.schema.json
 - Only `track` and `via` items; arcs are rejected until kbplacer supports them. Front-side switches
   only (kbplacer rejects a JSON preset when a switch is on the back).
 - Ignored when `routing` is `Disabled`.
+- Optional `basis`: free-form, ignored by kbplacer. The editor records the switch and diode
+  footprints and the diode placement (`PcbSettings` field names) on every edit; kbplacer's `to-json`
+  writes `switchFootprint` and `diodeFootprints`.
 
-The client edits it through the settings JSON `tracks` section and draws it read-only over the
-footprint preview (`FootprintPreview.vue`, switch-local frame). The preview follows kbplacer's
-placement exactly; `utils/__tests__/pcb-coordinate-contract.spec.ts` checks it against pad positions
-of footprints placed by kbplacer (`scripts/generate-pcb-golden-pads.py`).
+The client edits it in the track editor (below) or through the settings JSON `tracks` section, and
+draws it over the footprint preview (`FootprintPreview.vue`, switch-local frame). The preview follows
+kbplacer's placement exactly; `utils/__tests__/pcb-coordinate-contract.spec.ts` checks it against pad
+positions of footprints placed by kbplacer (`scripts/generate-pcb-golden-pads.py`).
+
+### Track editor {#track-editor}
+
+**Edit tracks** in `FootprintPreview.vue` turns the preview into a small KiCad-style router for the
+preset. Everything works in the switch-local frame in plain-number mm (no Decimal.js: DRC runs on
+every pointer move); the serializer converts to nm.
+
+| Part                                                                 | Purpose                                                                                                                                                                                                                                                                                                                            |
+| -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `public/data/footprints/pads/*.json`                                 | Pad geometry per footprint (number, type, shape, position, size, drill, layers, custom polygons), generated from the KiCad libraries of the worker image by `scripts/generate-footprint-pads.mjs` (shares `footprints.txt` with the SVG generator `generate.sh`). Committed: CI has no KiCad libraries.                            |
+| `utils/kicad/sexpr.ts`, `utils/kicad/footprint-pads.ts`              | S-expression parser (KiCad 5 and 6+ syntax) and `.kicad_mod` pad extraction. `placePads` applies kbplacer's placement: BACK mirrors y → −y, rotates counter-clockwise on screen and swaps F/B layers.                                                                                                                              |
+| `utils/pcb-tracks/netlist.ts`                                        | kbplacer's fixed nets: switch pad 1 → `COL`, diode pad 1 → `ROW`, switch pad 2 and diode pad 2 → `SW_D`. Other pads (LED, capacitor) are obstacles.                                                                                                                                                                                |
+| `utils/pcb-tracks/distance.ts`, `shapes.ts`                          | Collision shapes as a core (point, segment, polygon) plus a radius, so circles, tracks, ovals and roundrects are exact.                                                                                                                                                                                                            |
+| `utils/pcb-tracks/connectivity.ts`, `drc.ts`                         | Union-find connectivity as KiCad counts it and a minimum-spanning-tree ratsnest per net. `runDrc` checks KiCad 9's defaults for a fresh board (clearance 0.2, hole clearance 0.25, hole to hole 0.25 mm, plus 1 µm margin) and shorts, which kbplacer doesn't catch.                                                               |
+| `utils/pcb-tracks/posture.ts`, `snap.ts`, `selection.ts`, `basis.ts` | Two-segment 45°/90° walk, snapping (pad centres, track ends, grid), box selection, and the staleness check of `preset.basis` against the settings.                                                                                                                                                                                 |
+| `stores/pcbTracks.ts`                                                | Editor state: tools, the route in progress, selection, DRC of preset + route + preview, and undo/redo (`composables/useSnapshotHistory.ts`). Finished operations write `pcbGenerator.settings.trackPreset` in one step; an outside write (JSON Apply, Reset, Upload, Clear) is detected by object identity and resets the history. |
+| `components/pcb/*.vue`                                               | `PadLayer`, `GridLayer`, `TrackLayer`, `TrackEditorLayer`, `DrcLayer` (SVG layers), `TrackEditorToolbar`, `TrackSelectionBar`, `StalePresetBanner`. Pan/zoom is `composables/usePanZoom.ts`.                                                                                                                                       |
+
+Items are written in chain order, walking outward from a pad, and shared vertices are the same
+point: kbplacer places items in order and matches track ends exactly. Tests live next to each module
+(`utils/pcb-tracks/__tests__`, `stores/__tests__/pcbTracks.spec.ts`) and in
+`e2e/pcb-track-editor.spec.ts`.
 
 ### LED chain (LEDs tab)
 

@@ -286,4 +286,33 @@ describe('pcbTracks selection and history', () => {
     }
     expect(undos).toBe(99)
   })
+
+  it('records the basis and offers to keep or clear a stale preset', () => {
+    routeDefault()
+    expect(pcb.settings.trackPreset?.basis).toMatchObject({
+      switchFootprint: pcb.settings.switchFootprint,
+      diodePositionY: 4,
+    })
+    expect(tracks.staleChanges).toEqual([])
+
+    pcb.settings.diodePositionY = 5
+    expect(tracks.staleChanges.map((c) => c.label)).toEqual(['diode position'])
+    tracks.keepPreset()
+    expect(tracks.staleChanges).toEqual([])
+    expect(items()).toHaveLength(2)
+    expect(tracks.canUndo).toBe(true)
+
+    pcb.settings.diodeSide = 'FRONT'
+    expect(tracks.staleChanges).toHaveLength(1)
+    tracks.clearPreset()
+    expect(pcb.settings.trackPreset).toBeUndefined()
+    expect(tracks.staleChanges).toEqual([])
+  })
+
+  it('clearing starts a new history', async () => {
+    routeDefault()
+    tracks.clearPreset()
+    await nextTick()
+    expect(tracks.canUndo).toBe(false)
+  })
 })

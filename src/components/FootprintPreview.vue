@@ -54,6 +54,7 @@ import { usePcbTracksStore } from '@/stores/pcbTracks'
 import { placedPadNet } from '@/utils/pcb-tracks/netlist'
 import { isCrossing, tracksInBox, type Box } from '@/utils/pcb-tracks/selection'
 import TrackSelectionBar from './pcb/TrackSelectionBar.vue'
+import StalePresetBanner from './pcb/StalePresetBanner.vue'
 import type { Point } from '@/composables/usePanZoom'
 import BiInfoCircle from 'bootstrap-icons/icons/info-circle.svg'
 import BiExclamationTriangle from 'bootstrap-icons/icons/exclamation-triangle.svg'
@@ -804,7 +805,7 @@ onUnmounted(() => {
 
 <template>
   <div class="footprint-preview" @keydown="onEditorKeyDown" @keyup="onEditorKeyUp">
-    <!-- Track editor tools (route, layer, width, grid, posture, clearance) -->
+    <!-- Track editor tools (route, layer, width, grid, posture) -->
     <TrackEditorToolbar v-if="editMode" />
 
     <!-- SVG Container (always present to maintain height) -->
@@ -1019,14 +1020,19 @@ onUnmounted(() => {
         </template>
       </div>
 
-      <!-- DRC summary of a pasted preset outside the editor -->
-      <div
-        v-if="drcSummary && !editMode"
-        class="drc-badge"
-        :class="drcSummary.ok ? 'drc-badge-ok' : 'drc-badge-problem'"
-        data-testid="pcb-drc-badge"
-      >
-        {{ drcSummary.text }}
+      <!-- Notices over the bottom of the canvas, so they never move the preview -->
+      <div class="canvas-notices">
+        <!-- DRC summary of a pasted preset outside the editor -->
+        <div
+          v-if="drcSummary && !editMode"
+          class="drc-badge"
+          :class="drcSummary.ok ? 'drc-badge-ok' : 'drc-badge-problem'"
+          data-testid="pcb-drc-badge"
+        >
+          {{ drcSummary.text }}
+        </div>
+        <!-- The preset was drawn for other footprints or diode placement -->
+        <StalePresetBanner />
       </div>
 
       <!-- Coordinate display overlay -->
@@ -1237,17 +1243,25 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
-.drc-badge {
+.canvas-notices {
   position: absolute;
   left: 8px;
+  right: 8px;
   bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.drc-badge {
   padding: 0.15rem 0.5rem;
   border-radius: 0.25rem;
   font-size: 0.75rem;
   border: 1px solid currentColor;
   background-color: var(--bs-body-bg);
-  pointer-events: none;
-  z-index: 20;
 }
 
 .drc-badge-ok {
