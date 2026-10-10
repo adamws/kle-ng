@@ -803,30 +803,32 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
 
   /**
    * V while routing: commits the walk to the cursor, places a via at its end
-   * and continues on the other layer, as in KiCad. Refused (returns false)
-   * when the walk or the via breaks a rule, or the via would land on a pad.
+   * and continues on the other layer, as in KiCad. `atLastCorner` (the toolbar
+   * button, clicked away from the canvas) places it at the last committed
+   * vertex instead, committing nothing. Refused (returns false) when the walk
+   * or the via breaks a rule, or the via would land on a pad.
    */
-  function placeVia(): boolean {
+  function placeVia({ atLastCorner = false } = {}): boolean {
     const r = route.value
+    if (!r) return false
+    const last = r.points[r.points.length - 1]!
     const t = target.value
-    if (!r || !t || t.kind === 'pad') {
-      if (r) blockedCount.value++
+    // the start pad is the only pad a committed vertex can be on
+    const onPad = atLastCorner ? r.points.length === 1 && r.startPadKey !== null : t?.kind === 'pad'
+    if ((!atLastCorner && !t) || onPad) {
+      blockedCount.value++
       return false
     }
-    const at = previewPoints.value[previewPoints.value.length - 1] ?? r.points[r.points.length - 1]!
-    if (r.vias.includes(r.points.length - 1) && samePoint(at, r.points[r.points.length - 1]!)) {
+    const walk = atLastCorner ? [] : previewSegments.value
+    const added = atLastCorner ? [] : previewPoints.value.slice(1)
+    const at = added[added.length - 1] ?? last
+    if (r.vias.includes(r.points.length - 1) && samePoint(at, last)) {
       return false // already a via here
     }
     const first = presetItems.value.length
     const check = runDrc(
       pads.value,
-      [
-        ...presetItems.value,
-        ...routeSegments.value,
-        ...routeVias.value,
-        ...previewSegments.value,
-        viaAt(at, r.via),
-      ],
+      [...presetItems.value, ...routeSegments.value, ...routeVias.value, ...walk, viaAt(at, r.via)],
       rules.value,
     )
     const refused = check.violations.find((v) => v.items.some((i) => i >= first))
@@ -835,7 +837,6 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
       blockedCount.value++
       return false
     }
-    const added = previewPoints.value.slice(1)
     r.points.push(...added)
     r.segmentLayers.push(...added.map(() => r.layer))
     r.vias.push(r.points.length - 1)

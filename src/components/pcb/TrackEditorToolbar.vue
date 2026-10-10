@@ -89,12 +89,12 @@ const { editorSettings, tool, isRouting, canUndo, canRedo, presetItems } = store
       :disabled="!isRouting"
       :title="
         isRouting
-          ? 'Place a via at the end of the route and continue on the other layer (V)'
+          ? 'Place a via at the last corner and continue on the other layer (V places it at the cursor)'
           : 'While routing: place a via and continue on the other layer (V)'
       "
       data-testid="pcb-place-via"
       @mousedown.prevent
-      @click="tracks.placeVia()"
+      @click="tracks.placeVia({ atLastCorner: true })"
     >
       <BiRecordCircle /> Via
     </button>

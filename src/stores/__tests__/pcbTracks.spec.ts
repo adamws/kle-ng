@@ -259,6 +259,26 @@ describe('pcbTracks selection and history', () => {
     await nextTick()
   })
 
+  it('places a via at the last corner from the toolbar, with no cursor on the canvas', () => {
+    tracks.editorSettings.grid = 0.02
+    tracks.setTool('route')
+    tracks.setCursor(D2)
+    tracks.click(null)
+    // at the start pad: refused
+    tracks.setCursor(null)
+    expect(tracks.placeVia({ atLastCorner: true })).toBe(false)
+
+    tracks.setCursor({ x: 3.5, y: 2.6 })
+    tracks.click(null)
+    tracks.setCursor(null) // the pointer went to the toolbar
+    expect(tracks.placeVia({ atLastCorner: true })).toBe(true)
+    expect(tracks.routeVias.map((v) => v.position)).toEqual([{ x: 3.5, y: 2.6 }])
+    expect(tracks.route?.points).toHaveLength(2)
+    expect(tracks.route?.layer).toBe('F.Cu')
+    // a second click puts no second via there
+    expect(tracks.placeVia({ atLastCorner: true })).toBe(false)
+  })
+
   it('refuses a via on a hole or a pad', () => {
     tracks.setTool('route')
     tracks.setCursor(D2)

@@ -95,7 +95,7 @@ The editor shows the copper pads of the switch and diode (and of the LED and cap
 1. Choose **Route** (or press `X` with the cursor over a pad) and click the pad to start from.
 2. Move the cursor: the track follows it with a straight and a 45° part (or an L shape with **90°**). Press `/` to swap the order of the two parts.
 3. Click to add a corner. Clicking a pad of the same connection finishes the track; double-click or `End` finishes it at the last corner.
-4. To change layer, press `V` (or click **Via**): a via is placed at the end of the track, and the track continues on the other layer.
+4. To change layer, press `V` to place a via at the cursor, or click **Via** to place it at the last corner; the track continues on the other layer.
 5. `Backspace` removes the last via or corner, `Esc` cancels the track.
 
 The cursor snaps to pad centres, to track ends and vias, and to the **Grid**. The **Draw** toolbar above the canvas sets how new tracks are drawn: the copper layer (**F.Cu** or **B.Cu**), **Width** and **Grid** (both in mm) and the corner angle. `W` and `Shift+W` step through common widths. New vias are 0.6 mm with a 0.3 mm drill (KiCad's default), or the size you last set on a via.
