@@ -1,8 +1,8 @@
 <!--
   TrackSelectionBar: width and layer of the selected tracks, size of the
   selected vias, and delete (vias are moved by dragging). A panel
-  floating over the canvas's top-right corner, so a selection never moves the
-  preview.
+  floating over the canvas's top-right corner (under the view controls when
+  the canvas is too narrow for both), so a selection never moves the preview.
 
   Via fields are the sizes kbplacer's preset format holds: diameter and
   drill (through vias only, nets from connectivity). Their limits are
@@ -159,10 +159,9 @@ function setDrill(d: number | undefined) {
 
 <style scoped>
 .track-selection-bar {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 20;
+  /* in FootprintPreview's row over the canvas: the top-right corner, or under
+     the view controls when both don't fit */
+  margin-left: auto;
   display: flex;
   flex-direction: column;
   align-items: stretch;

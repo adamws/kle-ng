@@ -49,7 +49,7 @@ import GridLayer from './pcb/GridLayer.vue'
 import DrcLayer from './pcb/DrcLayer.vue'
 import TrackEditorLayer from './pcb/TrackEditorLayer.vue'
 import TrackEditorToolbar from './pcb/TrackEditorToolbar.vue'
-import { usePcbTracksStore } from '@/stores/pcbTracks'
+import { GRID_OPTIONS, usePcbTracksStore } from '@/stores/pcbTracks'
 import { placedPadNet } from '@/utils/pcb-tracks/netlist'
 import type { DragHandle } from '@/utils/pcb-tracks/drag'
 import { isCrossing, padAt, tracksInBox, type Box } from '@/utils/pcb-tracks/selection'
@@ -64,6 +64,7 @@ import BiZoomOut from 'bootstrap-icons/icons/zoom-out.svg'
 import BiFullscreen from 'bootstrap-icons/icons/fullscreen.svg'
 import BiEye from 'bootstrap-icons/icons/eye.svg'
 import BiEyeSlash from 'bootstrap-icons/icons/eye-slash.svg'
+import BiGrid3x3 from 'bootstrap-icons/icons/grid-3x3.svg'
 
 // Constants for footprint positioning
 const CONTAINER_PADDING = 2.0 // mm
@@ -834,7 +835,7 @@ onMounted(() => {
   <div class="footprint-preview" @keydown="onEditorKeyDown" @keyup="onEditorKeyUp">
     <!-- Fixed-height rows above and below the canvas keep it in place in every state -->
     <div class="preview-top-row">
-      <!-- Track editor drawing tools (route, layer, width, grid, posture) -->
+      <!-- Track editor drawing tools (route, history, layer, width, posture) -->
       <TrackEditorToolbar v-if="editMode" />
       <div v-else class="preview-info" data-testid="pcb-preview-info">
         <BiInfoCircle class="flex-shrink-0" />
@@ -985,54 +986,75 @@ onMounted(() => {
         </g>
       </svg>
 
-      <!-- View controls (what is shown, never what is drawn) -->
-      <div v-if="editMode" class="view-controls" role="toolbar" aria-label="View" @pointerdown.stop>
-        <span class="view-caption">View</span>
-        <div class="btn-group btn-group-sm" role="group" aria-label="Copper layer visibility">
-          <button
-            v-for="layer in ['F.Cu', 'B.Cu'] as const"
-            :key="layer"
-            type="button"
-            class="btn btn-toggle layer-btn"
-            :class="layer === 'F.Cu' ? 'layer-front' : 'layer-back'"
-            :aria-pressed="visibleLayers[layer]"
-            :title="`${visibleLayers[layer] ? 'Hide' : 'Show'} ${layer} copper (view only)`"
-            :data-testid="`pcb-layer-toggle-${layer}`"
-            @click="visibleLayers[layer] = !visibleLayers[layer]"
-          >
-            <BiEye v-if="visibleLayers[layer]" /><BiEyeSlash v-else />
-            <span class="layer-swatch"></span>{{ layer }}
-          </button>
+      <!-- Over the canvas's top edge: the view controls on the left, the selected
+           tracks' panel on the right, or under them when both don't fit -->
+      <div v-if="editMode" class="canvas-top">
+        <!-- View controls (what is shown and the snap grid, never what is drawn) -->
+        <div class="view-controls" role="toolbar" aria-label="View" @pointerdown.stop>
+          <span class="view-caption">View</span>
+          <div class="btn-group btn-group-sm" role="group" aria-label="Copper layer visibility">
+            <button
+              v-for="layer in ['F.Cu', 'B.Cu'] as const"
+              :key="layer"
+              type="button"
+              class="btn btn-toggle layer-btn"
+              :class="layer === 'F.Cu' ? 'layer-front' : 'layer-back'"
+              :aria-pressed="visibleLayers[layer]"
+              :title="`${visibleLayers[layer] ? 'Hide' : 'Show'} ${layer} copper (view only)`"
+              :data-testid="`pcb-layer-toggle-${layer}`"
+              @click="visibleLayers[layer] = !visibleLayers[layer]"
+            >
+              <span class="layer-eye"
+                ><BiEye v-if="visibleLayers[layer]" /><BiEyeSlash v-else
+              /></span>
+              <span class="layer-swatch"></span>{{ layer }}
+            </button>
+          </div>
+          <label class="view-field" title="Grid: shown, and what the cursor snaps to, mm">
+            <BiGrid3x3 aria-hidden="true" />
+            <span class="view-field-label">Grid</span>
+            <select
+              v-model.number="editorSettings.grid"
+              class="form-select form-select-sm"
+              aria-label="Grid, mm"
+              data-testid="pcb-grid-select"
+            >
+              <option v-for="g in GRID_OPTIONS" :key="g" :value="g">{{ g }}</option>
+            </select>
+          </label>
+          <div class="btn-group btn-group-sm" role="group" aria-label="Zoom">
+            <button
+              type="button"
+              class="btn btn-toggle"
+              title="Zoom in (wheel)"
+              data-testid="pcb-zoom-in"
+              @click="panZoom.zoomBy(1.5)"
+            >
+              <BiZoomIn />
+            </button>
+            <button
+              type="button"
+              class="btn btn-toggle"
+              title="Zoom out (wheel)"
+              data-testid="pcb-zoom-out"
+              @click="panZoom.zoomBy(1 / 1.5)"
+            >
+              <BiZoomOut />
+            </button>
+            <button
+              type="button"
+              class="btn btn-toggle"
+              title="Zoom to fit"
+              data-testid="pcb-zoom-fit"
+              @click="panZoom.fit(fittedViewBox)"
+            >
+              <BiFullscreen />
+            </button>
+          </div>
         </div>
-        <div class="btn-group btn-group-sm" role="group" aria-label="Zoom">
-          <button
-            type="button"
-            class="btn btn-toggle"
-            title="Zoom in (wheel)"
-            data-testid="pcb-zoom-in"
-            @click="panZoom.zoomBy(1.5)"
-          >
-            <BiZoomIn />
-          </button>
-          <button
-            type="button"
-            class="btn btn-toggle"
-            title="Zoom out (wheel)"
-            data-testid="pcb-zoom-out"
-            @click="panZoom.zoomBy(1 / 1.5)"
-          >
-            <BiZoomOut />
-          </button>
-          <button
-            type="button"
-            class="btn btn-toggle"
-            title="Zoom to fit"
-            data-testid="pcb-zoom-fit"
-            @click="panZoom.fit(fittedViewBox)"
-          >
-            <BiFullscreen />
-          </button>
-        </div>
+
+        <!-- Width, layer and delete for the selected tracks -->
+        <TrackSelectionBar />
       </div>
 
       <!-- Notices over the bottom of the canvas, so they never move the preview -->
@@ -1075,9 +1097,6 @@ onMounted(() => {
         <!-- The preset was drawn for other footprints or diode placement -->
         <StalePresetBanner />
       </div>
-
-      <!-- Width, layer and delete for the selected tracks (floats over the canvas) -->
-      <TrackSelectionBar v-if="editMode" />
 
       <!-- Fallback warning overlay -->
       <div v-if="isFallback" class="preview-warning">
@@ -1218,8 +1237,9 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
-/* too narrow for the toolbar on one line: two lines, in every state */
-@container (max-width: 870px) {
+/* too narrow for the toolbar on one line: its two rows stacked, in every state
+   (TrackEditorToolbar's breakpoint) */
+@container (max-width: 760px) {
   .preview-top-row {
     height: 4.75rem;
   }
@@ -1250,16 +1270,30 @@ onMounted(() => {
   background-color: var(--bs-body-bg);
 }
 
-/* view controls over the canvas's top-left corner: light-weight and
-   translucent, unlike the Draw toolbar */
-.view-controls {
+/* the row over the canvas's top edge; only its panels take the pointer */
+.canvas-top {
   position: absolute;
   top: 8px;
   left: 8px;
+  right: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.canvas-top > * {
+  pointer-events: auto;
+}
+
+/* view controls in the top-left corner: light-weight and translucent, unlike
+   the Draw toolbar; they wrap only in the narrowest preview */
+.view-controls {
   display: flex;
   flex-wrap: wrap;
   gap: 0.375rem;
-  z-index: 20;
   padding: 0.25rem;
   border-radius: 0.375rem;
   background-color: rgba(var(--bs-body-bg-rgb), 0.75);
@@ -1270,6 +1304,44 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
+}
+
+.layer-eye {
+  display: inline-flex;
+}
+
+.view-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0;
+  padding-left: 0.25rem;
+  font-size: 0.875rem;
+  color: var(--bs-body-color);
+}
+
+.view-field select {
+  width: auto;
+  /* as tall as the buttons */
+  height: 31px;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-right: 1.75rem;
+}
+
+/* a narrow canvas: the controls lose their words before they wrap */
+@container (max-width: 560px) {
+  .view-caption,
+  .view-field-label {
+    display: none;
+  }
+}
+
+@container (max-width: 440px) {
+  /* the pressed state and the swatch still say what is shown */
+  .layer-eye {
+    display: none;
+  }
 }
 
 /* the help line: one line (a wrapping one would move the canvas under the cursor) */
