@@ -5,6 +5,9 @@
  * that radius (exact), oval = capsule, chamfers ignored and trapezoids as
  * their rect (both conservative). Drills (plated or not) are separate hole
  * shapes, which block every layer.
+ *
+ * As in KiCad, the drill is at the pad position and its `offset` moves the
+ * copper (PAD::ShapePos), not the hole.
  */
 import type { FootprintPad } from '@/utils/kicad/footprint-pads'
 import { rotateKicad } from '@/utils/kicad/transform'
@@ -48,28 +51,28 @@ function rectShape(
 export function padCopperShapes(pad: FootprintPad): Shape[] {
   if (pad.type === 'np_thru_hole') return []
   const { w, h } = pad.size
+  // the copper's centre in the pad frame
+  const o = pad.drill?.offset ?? { x: 0, y: 0 }
+  const at = (p: Vec) => padToLocal(pad, { x: o.x + p.x, y: o.y + p.y })
   switch (pad.shape) {
     case 'circle':
-      return [{ core: { kind: 'point', p: padToLocal(pad, { x: 0, y: 0 }) }, r: w / 2 }]
+      return [{ core: { kind: 'point', p: at({ x: 0, y: 0 }) }, r: w / 2 }]
     case 'oval':
-      return [rectShape(pad, 0, 0, w, h, Math.min(w, h) / 2)]
+      return [rectShape(pad, o.x, o.y, w, h, Math.min(w, h) / 2)]
     case 'roundrect':
-      return [rectShape(pad, 0, 0, w, h, (pad.rratio ?? 0.25) * Math.min(w, h))]
+      return [rectShape(pad, o.x, o.y, w, h, (pad.rratio ?? 0.25) * Math.min(w, h))]
     case 'rect':
     case 'trapezoid':
-      return [rectShape(pad, 0, 0, w, h, 0)]
+      return [rectShape(pad, o.x, o.y, w, h, 0)]
     case 'custom': {
       const anchor =
         pad.anchor === 'circle'
-          ? { core: { kind: 'point' as const, p: padToLocal(pad, { x: 0, y: 0 }) }, r: w / 2 }
-          : rectShape(pad, 0, 0, w, h, 0)
+          ? { core: { kind: 'point' as const, p: at({ x: 0, y: 0 }) }, r: w / 2 }
+          : rectShape(pad, o.x, o.y, w, h, 0)
       const primitives = (pad.primitives ?? []).map((p): Shape =>
         p.type === 'poly'
-          ? {
-              core: { kind: 'polygon', pts: p.points.map((q) => padToLocal(pad, q)) },
-              r: p.width / 2,
-            }
-          : { core: { kind: 'point', p: padToLocal(pad, p.center) }, r: p.radius + p.width / 2 },
+          ? { core: { kind: 'polygon', pts: p.points.map(at) }, r: p.width / 2 }
+          : { core: { kind: 'point', p: at(p.center) }, r: p.radius + p.width / 2 },
       )
       return [anchor, ...primitives]
     }
@@ -80,10 +83,10 @@ export function padCopperShapes(pad: FootprintPad): Shape[] {
 export function padHoleShape(pad: FootprintPad): Shape | null {
   const drill = pad.drill
   if (!drill) return null
-  const { w, h, offset } = drill
+  const { w, h } = drill
   return w === h
-    ? { core: { kind: 'point', p: padToLocal(pad, offset) }, r: w / 2 }
-    : rectShape(pad, offset.x, offset.y, w, h, Math.min(w, h) / 2)
+    ? { core: { kind: 'point', p: padToLocal(pad, { x: 0, y: 0 }) }, r: w / 2 }
+    : rectShape(pad, 0, 0, w, h, Math.min(w, h) / 2)
 }
 
 export function trackShape(track: TrackSegment): Shape {

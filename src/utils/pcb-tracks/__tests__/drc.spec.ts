@@ -77,6 +77,22 @@ describe('pad shapes', () => {
     expect(padCopperShapes(centreHole.pad)).toEqual([])
     expect(padHoleShape(centreHole.pad)!.r).toBe(2)
   })
+
+  it('keep the hole at the pad position and move the copper by the drill offset', () => {
+    // hybrid MX/Alps pin 1: the hole is the MX pin (-3.81, -2.54), and the oval
+    // copper reaches the Alps pin's round pad (-2.5, -4), as in KiCad
+    const pads = placed('SW_Hybrid_Cherry_MX_Alps_1.00u')
+    const oval = pads.find(
+      (p) => p.owner === 'SW' && p.pad.shape === 'oval' && p.pad.number === '1',
+    )!
+    const hole = padHoleShape(oval.pad)!
+    expect(hole.core).toEqual({ kind: 'point', p: { x: -3.81, y: -2.54 } })
+    const [copper] = padCopperShapes(oval.pad)
+    expect(shapeContains(copper!, { x: -3.81, y: -2.54 })).toBe(true)
+    expect(shapeContains(copper!, { x: -2.5, y: -4 })).toBe(true)
+    // the far end of the oval, mirrored past the MX pin, is not copper
+    expect(shapeContains(copper!, { x: -3.81 - 1.31, y: -2.54 + 1.46 })).toBe(false)
+  })
 })
 
 describe('runDrc', () => {

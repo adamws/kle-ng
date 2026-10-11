@@ -1,7 +1,10 @@
 /**
- * SVG outlines of footprint pads, in the pad's own frame (centred on the pad
+ * SVG outlines of footprint pads, in the pad's own frame (origin at the pad
  * position, unrotated, +Y down). The caller places them with
  * `translate(at) rotate(-at.rot)` (KiCad rotations are counter-clockwise).
+ *
+ * As in KiCad, the drill is at the pad position and its `offset` moves the
+ * copper (PAD::ShapePos), not the hole.
  */
 import type { FootprintPad, PadDrill } from '@/utils/kicad/footprint-pads'
 
@@ -42,40 +45,43 @@ export function circlePath(cx: number, cy: number, r: number): string {
 /** Copper outline of a pad (one path per custom pad primitive). */
 export function padCopperPaths(pad: FootprintPad): PadPath[] {
   const { w, h } = pad.size
+  // the copper's centre in the pad frame
+  const { x: ox, y: oy } = pad.drill?.offset ?? { x: 0, y: 0 }
   switch (pad.shape) {
     case 'circle':
-      return [{ d: circlePath(0, 0, w / 2), strokeWidth: 0 }]
+      return [{ d: circlePath(ox, oy, w / 2), strokeWidth: 0 }]
     case 'oval':
-      return [{ d: roundedRectPath(0, 0, w, h, Math.min(w, h) / 2), strokeWidth: 0 }]
+      return [{ d: roundedRectPath(ox, oy, w, h, Math.min(w, h) / 2), strokeWidth: 0 }]
     case 'roundrect':
       return [
-        { d: roundedRectPath(0, 0, w, h, (pad.rratio ?? 0.25) * Math.min(w, h)), strokeWidth: 0 },
+        {
+          d: roundedRectPath(ox, oy, w, h, (pad.rratio ?? 0.25) * Math.min(w, h)),
+          strokeWidth: 0,
+        },
       ]
     case 'rect':
     case 'trapezoid':
-      return [{ d: roundedRectPath(0, 0, w, h, 0), strokeWidth: 0 }]
+      return [{ d: roundedRectPath(ox, oy, w, h, 0), strokeWidth: 0 }]
     case 'custom': {
       const anchor =
-        pad.anchor === 'circle' ? circlePath(0, 0, w / 2) : roundedRectPath(0, 0, w, h, 0)
+        pad.anchor === 'circle' ? circlePath(ox, oy, w / 2) : roundedRectPath(ox, oy, w, h, 0)
       const primitives = (pad.primitives ?? []).map((p) =>
         p.type === 'poly'
           ? {
-              d: `M${p.points.map((q) => `${fmt(q.x)} ${fmt(q.y)}`).join('L')}Z`,
+              d: `M${p.points.map((q) => `${fmt(ox + q.x)} ${fmt(oy + q.y)}`).join('L')}Z`,
               strokeWidth: p.width,
             }
-          : { d: circlePath(p.center.x, p.center.y, p.radius), strokeWidth: p.width },
+          : { d: circlePath(ox + p.center.x, oy + p.center.y, p.radius), strokeWidth: p.width },
       )
       return [{ d: anchor, strokeWidth: 0 }, ...primitives]
     }
   }
 }
 
-/** Outline of a drill (round hole or oval slot), in the pad's frame. */
+/** Outline of a drill (round hole or oval slot), at the pad's origin. */
 export function drillPath(drill: PadDrill): string {
-  const { w, h, offset } = drill
-  return w === h
-    ? circlePath(offset.x, offset.y, w / 2)
-    : roundedRectPath(offset.x, offset.y, w, h, Math.min(w, h) / 2)
+  const { w, h } = drill
+  return w === h ? circlePath(0, 0, w / 2) : roundedRectPath(0, 0, w, h, Math.min(w, h) / 2)
 }
 
 /** SVG transform placing pad-frame paths at the pad (KiCad rotation is CCW). */

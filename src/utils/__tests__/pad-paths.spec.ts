@@ -62,9 +62,42 @@ describe('pad paths', () => {
     ])
   })
 
-  it('draws drills with their offset, slots as stadiums', () => {
-    expect(drillPath({ w: 1, h: 1, offset: { x: 0.5, y: 0 } })).toBe(circlePath(0.5, 0, 0.5))
+  it('draws drills at the pad position, slots as stadiums', () => {
+    expect(drillPath({ w: 1, h: 1, offset: { x: 0.5, y: 0 } })).toBe(circlePath(0, 0, 0.5))
     expect(drillPath({ w: 1, h: 2, offset: { x: 0, y: 0 } })).toBe(roundedRectPath(0, 0, 1, 2, 0.5))
+  })
+
+  it('moves the copper, not the hole, by the drill offset (KiCad PAD::ShapePos)', () => {
+    // the MX/Alps hybrid's pad 1: an oval from the MX hole towards the Alps one
+    const offset = { x: 0.980778, y: 0 }
+    const hybrid = pad({
+      type: 'thru_hole',
+      shape: 'oval',
+      size: { w: 4.46156, h: 2.5 },
+      drill: { w: 1.5, h: 1.5, offset },
+    })
+    expect(padCopperPaths(hybrid)[0]!.d).toBe(
+      roundedRectPath(offset.x, offset.y, 4.46156, 2.5, 1.25),
+    )
+    const custom = padCopperPaths(
+      pad({
+        shape: 'custom',
+        anchor: 'circle',
+        size: { w: 1, h: 1 },
+        drill: { w: 0.5, h: 0.5, offset: { x: 1, y: 2 } },
+        primitives: [
+          {
+            type: 'poly',
+            points: [
+              { x: 0, y: 0 },
+              { x: 1, y: 0 },
+            ],
+            width: 0,
+          },
+        ],
+      }),
+    )
+    expect(custom.map((p) => p.d)).toEqual([circlePath(1, 2, 0.5), 'M1 2L2 2Z'])
   })
 
   it('places pads with the KiCad rotation negated for SVG', () => {
