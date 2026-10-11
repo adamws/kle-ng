@@ -65,6 +65,12 @@ const diodeFootprintOptions = [
   { value: 'Diode_SMD:D_SOD-323F', label: 'SOD-323F' },
 ]
 
+// Side options
+const sideOptions = [
+  { value: 'FRONT', label: 'Front' },
+  { value: 'BACK', label: 'Back' },
+]
+
 // Rotation options
 const rotationOptions = [
   { value: 0, label: '0°' },
@@ -216,19 +222,34 @@ function confirmRoutingMode() {
         </div>
       </div>
 
-      <!-- Diode Rotation -->
-      <div class="mb-2">
-        <label for="diodeRotation" class="form-label form-label-sm">Rotation</label>
-        <select
-          id="diodeRotation"
-          v-model.number="settings.diodeRotation"
-          class="form-select form-select-sm"
-          aria-label="Select diode rotation angle"
-        >
-          <option v-for="option in rotationOptions" :key="option.value" :value="option.value">
-            {{ option.label }}
-          </option>
-        </select>
+      <!-- Diode Side + Rotation -->
+      <div class="row g-2 mb-2">
+        <div class="col-6">
+          <label for="diodeSide" class="form-label form-label-sm">Side</label>
+          <select
+            id="diodeSide"
+            v-model="settings.diodeSide"
+            class="form-select form-select-sm"
+            aria-label="Select diode board side"
+          >
+            <option v-for="option in sideOptions" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </div>
+        <div class="col-6">
+          <label for="diodeRotation" class="form-label form-label-sm">Rotation</label>
+          <select
+            id="diodeRotation"
+            v-model.number="settings.diodeRotation"
+            class="form-select form-select-sm"
+            aria-label="Select diode rotation angle"
+          >
+            <option v-for="option in rotationOptions" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </div>
       </div>
     </div>
 

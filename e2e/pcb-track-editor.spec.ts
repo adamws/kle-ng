@@ -201,6 +201,42 @@ test.describe('PCB Generator track editor', () => {
     await expect(page.locator('[data-testid="pcb-ratsnest"]')).toHaveCount(1)
   })
 
+  test('puts the diode on the front side', async ({ page }) => {
+    await openPreview(page)
+    await enterPresetMode(page)
+    await useTool(page, 'route')
+    const sw2 = await padCentre(page, 'SW', '2')
+    const d2 = await padCentre(page, 'D', '2')
+    await page.mouse.click(sw2.x, sw2.y)
+    await page.mouse.move(d2.x, d2.y, { steps: 5 })
+    await page.mouse.click(d2.x, d2.y)
+    await expect(page.locator('[data-testid="pcb-track-overlay-track"]')).toHaveCount(2)
+
+    // the side sits next to the rotation; the preview loads the front SVG
+    const frontSvg = page.waitForResponse((r) => r.url().endsWith('/front/D_SOD-123F.svg'))
+    await page.locator('#diodeSide').selectOption('FRONT')
+    await frontSvg
+    // the SMD pads move to F.Cu, and the drawn B.Cu tracks no longer fit
+    const pads = page.locator(EDITOR.PADS)
+    await expect(pads.locator('[data-layer="F.Cu"] [data-pad-key^="D:"]')).toHaveCount(2)
+    await expect(pads.locator('[data-layer="B.Cu"] [data-pad-key^="D:"]')).toHaveCount(0)
+    await expect(page.locator('[data-testid="pcb-stale-preset"]')).toContainText(
+      'Diode side changed since the tracks were drawn',
+    )
+
+    // saved with the other settings (debounced), so a reload keeps it
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const raw = localStorage.getItem('kle-ng-pcb-settings')
+          return raw ? JSON.parse(raw).diode?.side : null
+        }),
+      )
+      .toBe('FRONT')
+    await page.reload()
+    await expect(page.locator('#diodeSide')).toHaveValue('FRONT')
+  })
+
   test('drags a track sideways, Esc cancels a drag', async ({ page }) => {
     await openPreview(page)
     await enterPresetMode(page)

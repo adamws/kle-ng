@@ -54,4 +54,26 @@ describe('PcbGeneratorSettings', () => {
       expect(store.settings.diodePositionY).toBe(0)
     })
   })
+
+  describe('Diode side', () => {
+    it('shows the side next to the rotation and writes it to the settings', async () => {
+      const store = usePcbGeneratorStore()
+      const wrapper = mount(PcbGeneratorSettings, {
+        global: { plugins: [pinia] },
+      })
+      await wrapper.vm.$nextTick()
+
+      const side = wrapper.find('select#diodeSide')
+      expect((side.element as HTMLSelectElement).value).toBe('BACK')
+      // one row: Side, then Rotation
+      const row = side.element.closest('.row')!
+      expect([...row.querySelectorAll('select')].map((s) => s.id)).toEqual([
+        'diodeSide',
+        'diodeRotation',
+      ])
+
+      await side.setValue('FRONT')
+      expect(store.settings.diodeSide).toBe('FRONT')
+    })
+  })
 })
