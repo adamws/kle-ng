@@ -108,6 +108,8 @@ test.describe('PCB Generator track editor', () => {
 
     await expect(page.locator('[data-testid="pcb-ratsnest"][data-net="SW_D"]')).toHaveCount(1)
     await expect(page.locator('[data-testid="pcb-drc-summary"]')).toHaveText('1 unrouted')
+    // the default back-side diode is clear of the switch's front courtyard
+    await expect(page.locator('[data-testid="pcb-courtyard-warning"]')).toHaveCount(0)
   })
 
   test('routes SW pad 2 to D pad 2 into the track preset', async ({ page }) => {
@@ -223,6 +225,11 @@ test.describe('PCB Generator track editor', () => {
     await expect(page.locator('[data-testid="pcb-stale-preset"]')).toContainText(
       'Diode side changed since the tracks were drawn',
     )
+    // on the front it sits under the switch: both courtyards are outlined
+    await expect(page.locator('[data-testid="pcb-courtyard-warning"]')).toContainText(
+      'Switch and diode courtyards overlap (front)',
+    )
+    await expect(page.locator('[data-testid="pcb-courtyard-outline"]')).toHaveCount(2)
 
     // saved with the other settings (debounced), so a reload keeps it
     await expect

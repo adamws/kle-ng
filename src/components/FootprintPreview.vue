@@ -42,6 +42,12 @@ import {
 import { usePanZoom } from '@/composables/usePanZoom'
 import { footprintNameFromSvg, loadFootprintPads } from '@/utils/pcb/footprint-pads-loader'
 import { placePads, type FootprintPad } from '@/utils/kicad/footprint-pads'
+import { placeCourtyard, type Courtyard } from '@/utils/kicad/courtyard'
+import {
+  findCourtyardCollisions,
+  NEIGHBOUR_OFFSETS,
+  type CourtyardPart,
+} from '@/utils/pcb/courtyard-collisions'
 import TrackLayer from './pcb/TrackLayer.vue'
 import PadLayer from './pcb/PadLayer.vue'
 import type { PlacedPad } from '@/utils/pcb-tracks/netlist'
@@ -55,6 +61,8 @@ import type { DragHandle } from '@/utils/pcb-tracks/drag'
 import { isCrossing, padAt, tracksInBox, type Box } from '@/utils/pcb-tracks/selection'
 import { padInfos } from '@/utils/pcb-tracks/connectivity'
 import TrackSelectionBar from './pcb/TrackSelectionBar.vue'
+import CourtyardLayer from './pcb/CourtyardLayer.vue'
+import CourtyardWarning from './pcb/CourtyardWarning.vue'
 import StalePresetBanner from './pcb/StalePresetBanner.vue'
 import type { Point } from '@/composables/usePanZoom'
 import BiInfoCircle from 'bootstrap-icons/icons/info-circle.svg'
@@ -437,6 +445,8 @@ const padSources = computed<PadSource[]>(() => {
 })
 
 const libraryPads = ref<Record<string, readonly FootprintPad[]>>({})
+/** Courtyards by footprint name; a footprint without one has none here. */
+const libraryCourtyards = ref<Record<string, Courtyard>>({})
 const padsError = ref<string | null>(null)
 
 // Pads drive the editor and the preset's DRC, so they load whenever the
@@ -449,6 +459,12 @@ watch(
       const names = [...new Set(padSources.value.map((src) => src.name))]
       const loaded = await Promise.all(names.map((name) => loadFootprintPads(name)))
       libraryPads.value = Object.fromEntries(names.map((name, i) => [name, loaded[i]!.pads]))
+      libraryCourtyards.value = Object.fromEntries(
+        names.flatMap((name, i) => {
+          const courtyard = loaded[i]!.courtyard
+          return courtyard ? [[name, courtyard]] : []
+        }),
+      )
     } catch (err) {
       console.error('Failed to load footprint pads:', err)
       padsError.value = 'Failed to load pad geometry.'
@@ -468,6 +484,21 @@ const previewPads = computed<PlacedPad[]>(() =>
 // DRC of the preset, while editing. Pads of every placed footprint must be
 // loaded, or obstacles would be missing.
 const padsReady = computed(() => padSources.value.every((src) => libraryPads.value[src.name]))
+
+// Parts whose courtyards overlap, in every routing mode: placement is set
+// before routing. Neighbouring keys sit on the 1u grid in board axes.
+const courtyardCollisions = computed(() => {
+  if (!padsReady.value) return []
+  const parts: CourtyardPart[] = padSources.value.flatMap(({ owner, name, placement }) => {
+    const courtyard = libraryCourtyards.value[name]
+    return courtyard ? [{ owner, courtyard: placeCourtyard(courtyard, placement) }] : []
+  })
+  const rotation = settings.value.switchRotation
+  return findCourtyardCollisions(
+    parts,
+    NEIGHBOUR_OFFSETS.map((o) => boardToSwitchLocal(o, rotation)),
+  )
+})
 const showDrc = computed(() => editMode.value && padsReady.value)
 // the store runs DRC on the preset, plus the route and its preview while routing
 const drc = computed(() => (showDrc.value ? tracks.drc : null))
@@ -928,8 +959,9 @@ onMounted(() => {
           />
         </g>
 
-        <!-- DRC markers and ratsnest (switch-local frame) -->
+        <!-- DRC markers, ratsnest and overlapping courtyards (switch-local frame) -->
         <g v-if="padsReady" :transform="switchLocalTransform">
+          <CourtyardLayer :collisions="courtyardCollisions" :px-per-mm="pxPerMm" />
           <DrcLayer
             :violations="drc?.violations ?? []"
             :ratsnest="ratsnestLines"
@@ -1094,6 +1126,8 @@ onMounted(() => {
             <div v-if="padsError" class="text-warning-emphasis">{{ padsError }}</div>
           </template>
         </div>
+        <!-- Parts placed on top of each other -->
+        <CourtyardWarning :collisions="courtyardCollisions" />
         <!-- The preset was drawn for other footprints or diode placement -->
         <StalePresetBanner />
       </div>

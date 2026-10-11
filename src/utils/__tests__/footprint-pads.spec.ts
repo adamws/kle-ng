@@ -57,6 +57,17 @@ describe('parseFootprintPads', () => {
       (pad 1 thru_hole circle (at -3.81 -2.54) (size 2.5 2.5) (drill 1.5) (layers *.Cu *.Mask))
       (pad "" np_thru_hole circle (at 0 0) (size 4 4) (drill 4) (layers *.Cu *.Mask)))`)
     expect(fp.footprint).toBe('SW_Test')
+    // two courtyard lines, closed by a straight edge (see courtyard.spec.ts)
+    expect(fp.courtyard).toEqual({
+      front: [
+        [
+          { x: -7.25, y: -7.25 },
+          { x: 7.25, y: -7.25 },
+          { x: 7.25, y: 7.25 },
+        ],
+      ],
+      back: [],
+    })
     expect(fp.pads).toEqual([
       {
         number: '1',

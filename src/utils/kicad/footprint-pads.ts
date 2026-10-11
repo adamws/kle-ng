@@ -1,7 +1,7 @@
 /**
  * Pad geometry of KiCad footprints, for the PCB generator track editor.
  *
- * `parseFootprintPads` reads a .kicad_mod file. scripts/generate-footprint-pads.mjs
+ * `parseFootprintPads` reads a .kicad_mod file (pads, and the courtyard, see courtyard.ts). scripts/generate-footprint-pads.mjs
  * runs it at build time and commits public/data/footprints/pads/<name>.json,
  * because CI and Vercel have no KiCad libraries. `placePads` puts the pads of
  * a placed footprint into the switch-local frame the way kbplacer does.
@@ -17,6 +17,7 @@
 import { atom, child, children, head, num, parseSExpr, SExprError } from './sexpr.ts'
 import type { SExpr } from './sexpr.ts'
 import { mirrorForSide, placePoint, type Placement } from './transform.ts'
+import { parseCourtyard, type Courtyard } from './courtyard.ts'
 
 export type PadType = 'thru_hole' | 'smd' | 'connect' | 'np_thru_hole'
 export type PadShape = 'circle' | 'rect' | 'oval' | 'roundrect' | 'trapezoid' | 'custom'
@@ -64,6 +65,8 @@ export interface FootprintPad {
 export interface FootprintPads {
   footprint: string
   pads: FootprintPad[]
+  /** F.CrtYd / B.CrtYd outlines; absent when the footprint has none. */
+  courtyard?: Courtyard
 }
 
 const PAD_TYPES: readonly string[] = ['thru_hole', 'smd', 'connect', 'np_thru_hole']
@@ -162,7 +165,7 @@ function parsePad(node: SExpr[]): FootprintPad {
   return pad
 }
 
-/** Parses the pads of a .kicad_mod footprint. */
+/** Parses the pads and courtyard of a .kicad_mod footprint. */
 export function parseFootprintPads(kicadModText: string): FootprintPads {
   const root = parseSExpr(kicadModText)
   const kind = head(root)
@@ -170,8 +173,9 @@ export function parseFootprintPads(kicadModText: string): FootprintPads {
     throw new SExprError(`Not a KiCad footprint: (${kind ?? '?'} ...)`)
   }
   const pads = children(root, 'pad').map(parsePad)
-
-  return { footprint: atom(root as SExpr[], 1) ?? '', pads }
+  const courtyard = parseCourtyard(root as SExpr[])
+  const footprint = atom(root as SExpr[], 1) ?? ''
+  return courtyard ? { footprint, pads, courtyard } : { footprint, pads }
 }
 
 // Placement (kbplacer's coordinate contract, see transform.ts and footprintUtils.ts)

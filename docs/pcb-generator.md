@@ -31,7 +31,7 @@ The easiest way to assign matrix coordinates is to use [Add Switch Matrix Coordi
 
 1. Verify your layout has matrix coordinates assigned
 2. Open the **PCB Generator** panel
-3. Configure switch, diode, and routing options as needed. **Diode Configuration** sets the diode footprint, its **Position** relative to the switch centre (mm), the **Side** of the board it goes on (**Back** by default) and its **Rotation**. A front-side diode inside the switch outline ends up under the switch housing; the generator doesn't check for that.
+3. Configure switch, diode, and routing options as needed. **Diode Configuration** sets the diode footprint, its **Position** relative to the switch centre (mm), the **Side** of the board it goes on (**Back** by default) and its **Rotation**. The preview checks the placement against the footprints' courtyards (the area each part needs, as in KiCad's DRC): when the diode, LED or capacitor would sit on top of the switch or of each other on the same side, or reach into the next key's switch (keys are 19.05 mm apart), a red message names them and their courtyards are outlined. For example, a front-side diode inside an MX switch's outline would be under the switch housing. The message is a warning: **Generate PCB** still works.
 4. Use the preview window to check key-diode placement (a dashed line shows which switch pad the diode connects to; hover a pad or hole to see its name and centre, in mm from the switch centre), and optionally [draw the switch–diode tracks](#track-presets)
 
 <img src="/pcb-generator-footprint-preview-light.png" class="docs-screenshot light-only" alt="PCB footprints preview of a switch and diode, with a dashed line from switch pad 2 to the diode" style="max-width:50%" />
