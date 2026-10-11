@@ -1,7 +1,8 @@
 <!--
   TrackEditorLayer: the route being drawn, in the switch-local frame. Committed
   segments are drawn in the layer colour, the preview walk to the cursor in a
-  lighter tone (red when it breaks a rule), plus its vias and the snap target.
+  lighter tone (red and dashed when it breaks a rule, so it never reads as an
+  F.Cu track), plus its vias and the snap target.
 -->
 <script setup lang="ts">
 import { computed } from 'vue'
@@ -24,6 +25,8 @@ const props = defineProps<{
 const px = (n: number) => n / props.pxPerMm
 const size = computed(() => px(6))
 const layerClass = (t: TrackSegment) => (t.layer === 'F.Cu' ? 'route-front' : 'route-back')
+/** Dashes in track widths, so they look the same at any zoom (round caps add a width to each). */
+const blockedDash = (t: TrackSegment) => `${t.width} ${t.width * 2.5}`
 </script>
 
 <template>
@@ -47,6 +50,7 @@ const layerClass = (t: TrackSegment) => (t.layer === 'F.Cu' ? 'route-front' : 'r
       :x2="t.end.x"
       :y2="t.end.y"
       :stroke-width="t.width"
+      :stroke-dasharray="blocked ? blockedDash(t) : undefined"
       :class="['route', 'route-preview', layerClass(t), { 'route-blocked': blocked }]"
       data-testid="pcb-route-preview"
     />
@@ -68,6 +72,8 @@ const layerClass = (t: TrackSegment) => (t.layer === 'F.Cu' ? 'route-front' : 'r
         :cx="freeVia.position.x"
         :cy="freeVia.position.y"
         :r="freeVia.diameter / 2"
+        :stroke-width="freeViaBlocked ? px(1.5) : undefined"
+        :stroke-dasharray="freeViaBlocked ? `${px(3)} ${px(2)}` : undefined"
         class="via"
       />
       <circle
@@ -117,7 +123,7 @@ const layerClass = (t: TrackSegment) => (t.layer === 'F.Cu' ? 'route-front' : 'r
 
 .route-preview.route-blocked {
   stroke: var(--pcb-error);
-  opacity: 0.85;
+  opacity: 0.9;
 }
 
 .via {
@@ -133,7 +139,8 @@ const layerClass = (t: TrackSegment) => (t.layer === 'F.Cu' ? 'route-front' : 'r
 }
 
 .free-via.route-blocked .via {
-  fill: var(--pcb-error);
+  fill: color-mix(in srgb, var(--pcb-error) 20%, transparent);
+  stroke: var(--pcb-error);
 }
 
 .snap-target circle {
