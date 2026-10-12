@@ -45,6 +45,7 @@ import { placePads, type FootprintPad } from '@/utils/kicad/footprint-pads'
 import { placeCourtyard, type Courtyard } from '@/utils/kicad/courtyard'
 import {
   findCourtyardCollisions,
+  holesOf,
   NEIGHBOUR_OFFSETS,
   type CourtyardPart,
 } from '@/utils/pcb/courtyard-collisions'
@@ -274,27 +275,45 @@ const diodeTransform = computed(() => groupTransform('diode'))
 const ledTransform = computed(() => groupTransform('led'))
 const capacitorTransform = computed(() => groupTransform('capacitor'))
 
+// Diode is always present; LED and capacitor only when the feature is enabled.
+const placedOffsets = computed(() => {
+  const groups: FootprintGroup[] = ['diode']
+  if (showLed.value) groups.push('led')
+  if (showCapacitor.value) groups.push('capacitor')
+  return groups.map(offsetForGroup).filter((offset): offset is OffsetFootprint => offset !== null)
+})
+
 // Computed base viewBox without zoom (memoized separately for performance)
 const baseViewBox = computed(() => {
   if (!switchViewBox.value || !diodeViewBox.value) {
     return null
   }
-
-  // Diode is always present; LED and capacitor only when the feature is enabled.
-  const groups: FootprintGroup[] = ['diode']
-  if (showLed.value) groups.push('led')
-  if (showCapacitor.value) groups.push('capacitor')
-  const offsets = groups
-    .map(offsetForGroup)
-    .filter((offset): offset is OffsetFootprint => offset !== null)
-
   return calculateCompositeViewBoxMulti(
     switchViewBox.value,
-    offsets,
+    placedOffsets.value,
     settings.value.switchRotation,
     CONTAINER_PADDING,
     settings.value.switchSide,
   )
+})
+
+// The placed parts' courtyards (board axes), which the zoom must not crop: a
+// THT diode reaches past the switch's own viewBox
+const PARTS_PADDING = 1.0 // mm
+const partsBounds = computed(() => {
+  const points = courtyardParts.value
+    .filter((part) => part.owner !== 'SW')
+    .flatMap((part) => [...part.courtyard.front, ...part.courtyard.back].flat())
+    .map((p) => switchLocalToBoard(p, settings.value.switchRotation))
+  if (!points.length) return null
+  const xs = points.map((p) => p.x)
+  const ys = points.map((p) => p.y)
+  return {
+    x0: Math.min(...xs) - PARTS_PADDING,
+    y0: Math.min(...ys) - PARTS_PADDING,
+    x1: Math.max(...xs) + PARTS_PADDING,
+    y1: Math.max(...ys) + PARTS_PADDING,
+  }
 })
 
 // Computed composite viewBox with zoom applied
@@ -321,7 +340,13 @@ const fittedViewBox = computed<ViewBox>(() => {
   const zoomedMinX = centerX - zoomedWidth / 2
   const zoomedMinY = centerY - zoomedHeight / 2
 
-  return { x: zoomedMinX, y: zoomedMinY, width: zoomedWidth, height: zoomedHeight }
+  // grow back where the zoom would cut a placed part
+  const bounds = partsBounds.value
+  const x0 = Math.min(zoomedMinX, bounds?.x0 ?? Infinity)
+  const y0 = Math.min(zoomedMinY, bounds?.y0 ?? Infinity)
+  const x1 = Math.max(zoomedMinX + zoomedWidth, bounds?.x1 ?? -Infinity)
+  const y1 = Math.max(zoomedMinY + zoomedHeight, bounds?.y1 ?? -Infinity)
+  return { x: x0, y: y0, width: x1 - x0, height: y1 - y0 }
 })
 
 const compositeViewBox = computed(() => {
@@ -485,17 +510,25 @@ const previewPads = computed<PlacedPad[]>(() =>
 // loaded, or obstacles would be missing.
 const padsReady = computed(() => padSources.value.every((src) => libraryPads.value[src.name]))
 
+// Placed parts with their courtyards and holes (switch-local), once loaded
+const courtyardParts = computed<CourtyardPart[]>(() => {
+  if (!padsReady.value) return []
+  return padSources.value.map(({ owner, name, placement }) => {
+    const courtyard = libraryCourtyards.value[name]
+    return {
+      owner,
+      courtyard: courtyard ? placeCourtyard(courtyard, placement) : { front: [], back: [] },
+      holes: holesOf(previewPads.value.filter((p) => p.owner === owner).map((p) => p.pad)),
+    }
+  })
+})
+
 // Parts whose courtyards overlap, in every routing mode: placement is set
 // before routing. Neighbouring keys sit on the 1u grid in board axes.
 const courtyardCollisions = computed(() => {
-  if (!padsReady.value) return []
-  const parts: CourtyardPart[] = padSources.value.flatMap(({ owner, name, placement }) => {
-    const courtyard = libraryCourtyards.value[name]
-    return courtyard ? [{ owner, courtyard: placeCourtyard(courtyard, placement) }] : []
-  })
   const rotation = settings.value.switchRotation
   return findCourtyardCollisions(
-    parts,
+    courtyardParts.value,
     NEIGHBOUR_OFFSETS.map((o) => boardToSwitchLocal(o, rotation)),
   )
 })

@@ -10,6 +10,15 @@ $KICAD_LIB/Diode_SMD.pretty|D_SOD-123
 $KICAD_LIB/Diode_SMD.pretty|D_SOD-123F
 $KICAD_LIB/Diode_SMD.pretty|D_SOD-323
 $KICAD_LIB/Diode_SMD.pretty|D_SOD-323F
+$KICAD_LIB/Diode_THT.pretty|D_DO-34_SOD68_P7.62mm_Horizontal
+$KICAD_LIB/Diode_THT.pretty|D_DO-34_SOD68_P10.16mm_Horizontal
+$KICAD_LIB/Diode_THT.pretty|D_DO-34_SOD68_P12.70mm_Horizontal
+$KICAD_LIB/Diode_THT.pretty|D_DO-35_SOD27_P7.62mm_Horizontal
+$KICAD_LIB/Diode_THT.pretty|D_DO-35_SOD27_P10.16mm_Horizontal
+$KICAD_LIB/Diode_THT.pretty|D_DO-35_SOD27_P12.70mm_Horizontal
+$KICAD_LIB/Diode_THT.pretty|D_DO-41_SOD81_P7.62mm_Horizontal
+$KICAD_LIB/Diode_THT.pretty|D_DO-41_SOD81_P10.16mm_Horizontal
+$KICAD_LIB/Diode_THT.pretty|D_DO-41_SOD81_P12.70mm_Horizontal
 
 # Switches (perigoso keyswitch library)
 $KEYSWITCH_LIB/Switch_Keyboard_Cherry_MX.pretty|SW_Cherry_MX_PCB_1.00u

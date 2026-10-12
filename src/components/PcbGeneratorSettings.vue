@@ -57,12 +57,35 @@ const switchFootprintOptions = [
   { value: 'Switch_Keyboard_Hotswap_Kailh:SW_Hotswap_Kailh_MX_{:.2f}u', label: 'Hotswap Kailh MX' },
 ]
 
-// Diode footprint options
-const diodeFootprintOptions = [
-  { value: 'Diode_SMD:D_SOD-123', label: 'SOD-123' },
-  { value: 'Diode_SMD:D_SOD-123F', label: 'SOD-123F' },
-  { value: 'Diode_SMD:D_SOD-323', label: 'SOD-323' },
-  { value: 'Diode_SMD:D_SOD-323F', label: 'SOD-323F' },
+// Diode footprint options: SMD, and horizontal through-hole packages by lead
+// spacing (KiCad's Diode_THT names; the backend resolves any `lib:name`).
+const THT_PACKAGES = [
+  { name: 'DO-34_SOD68', label: 'DO-34' },
+  { name: 'DO-35_SOD27', label: 'DO-35 (1N4148)' },
+  { name: 'DO-41_SOD81', label: 'DO-41 (1N400x)' },
+]
+const THT_SPACINGS = ['7.62', '10.16', '12.70']
+
+const diodeFootprintGroups = [
+  {
+    label: 'SMD',
+    options: [
+      { value: 'Diode_SMD:D_SOD-123', label: 'SOD-123' },
+      { value: 'Diode_SMD:D_SOD-123F', label: 'SOD-123F' },
+      { value: 'Diode_SMD:D_SOD-323', label: 'SOD-323' },
+      { value: 'Diode_SMD:D_SOD-323F', label: 'SOD-323F' },
+    ],
+  },
+  {
+    // the position is pin 1 (the cathode), the footprint origin
+    label: 'Through-hole, lead spacing (position = pin 1)',
+    options: THT_PACKAGES.flatMap((pkg) =>
+      THT_SPACINGS.map((spacing) => ({
+        value: `Diode_THT:D_${pkg.name}_P${spacing}mm_Horizontal`,
+        label: `${pkg.label}, ${spacing} mm`,
+      })),
+    ),
+  },
 ]
 
 // Side options
@@ -186,9 +209,11 @@ function confirmRoutingMode() {
           class="form-select form-select-sm"
           aria-label="Select diode footprint type"
         >
-          <option v-for="option in diodeFootprintOptions" :key="option.value" :value="option.value">
-            {{ option.label }}
-          </option>
+          <optgroup v-for="group in diodeFootprintGroups" :key="group.label" :label="group.label">
+            <option v-for="option in group.options" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </option>
+          </optgroup>
         </select>
       </div>
 

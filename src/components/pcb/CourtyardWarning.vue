@@ -1,5 +1,6 @@
 <!--
-  CourtyardWarning: names the parts whose courtyards overlap (see
+  CourtyardWarning: names the parts whose courtyards overlap, or whose holes
+  are inside another part's courtyard (see
   courtyard-collisions.ts), over the bottom of the preview. A warning only:
   Generate still works, and KiCad's DRC reports the same overlap.
 -->
@@ -13,14 +14,23 @@ const props = defineProps<{ collisions: readonly CourtyardCollision[] }>()
 const NAMES: Record<string, string> = { SW: 'switch', D: 'diode', LED: 'LED', C: 'capacitor' }
 const name = (owner: string) => NAMES[owner] ?? owner
 const capitalize = (s: string) => `${s[0]!.toUpperCase()}${s.slice(1)}`
+const hasHole = computed(() => props.collisions.some((c) => c.kind === 'hole'))
 
-const lines = computed(() =>
-  props.collisions.map((c) =>
-    c.neighbour
-      ? `${capitalize(name(c.a))} courtyard overlaps the next key's ${name(c.b)} (${c.side})`
-      : `${capitalize(name(c.a))} and ${name(c.b)} courtyards overlap (${c.side})`,
-  ),
-)
+/** "diode", or "the next key's diode" for the neighbour's part. */
+function part(c: CourtyardCollision, which: 'a' | 'b'): string {
+  return c.neighbour === which ? `the next key's ${name(c[which])}` : name(c[which])
+}
+
+function line(c: CourtyardCollision): string {
+  const a = capitalize(part(c, 'a'))
+  const b = part(c, 'b')
+  if (c.kind === 'hole') return `${a} hole is inside the ${b} courtyard (${c.side})`
+  return c.neighbour
+    ? `${a} courtyard overlaps ${b} (${c.side})`
+    : `${a} and ${b} courtyards overlap (${c.side})`
+}
+
+const lines = computed(() => props.collisions.map(line))
 const hasNeighbour = computed(() => props.collisions.some((c) => c.neighbour))
 </script>
 
@@ -36,6 +46,7 @@ const hasNeighbour = computed(() => props.collisions.some((c) => c.neighbour))
       <div v-for="(line, i) in lines" :key="i">{{ line }}</div>
       <div class="courtyard-hint">
         Parts would collide on the board: move them apart, or put one on the other side.
+        <template v-if="hasHole">A through-hole part's leads reach both sides.</template>
         <template v-if="hasNeighbour">Next keys are {{ KEY_PITCH }} mm apart.</template>
       </div>
     </div>

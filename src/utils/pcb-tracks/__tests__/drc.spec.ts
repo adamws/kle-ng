@@ -20,10 +20,16 @@ const load = (name: string): FootprintPads =>
 
 function placed(
   switchName = 'SW_Cherry_MX_PCB_1.00u',
-  diode = { x: 5.08, y: 4, rotation: 90, side: 'BACK' as const },
+  diode: { x: number; y: number; rotation: number; side: 'FRONT' | 'BACK' } = {
+    x: 5.08,
+    y: 4,
+    rotation: 90,
+    side: 'BACK',
+  },
+  diodeName = 'D_SOD-123F',
 ): PlacedPad[] {
   const sw = placePads(load(switchName).pads, { x: 0, y: 0, rotation: 0, side: 'FRONT' })
-  const d = placePads(load('D_SOD-123F').pads, diode)
+  const d = placePads(load(diodeName).pads, diode)
   return [
     ...sw.map((pad, i) => ({ key: `SW:${i}`, owner: 'SW', pad })),
     ...d.map((pad, i) => ({ key: `D:${i}`, owner: 'D', pad })),
@@ -119,6 +125,34 @@ describe('runDrc', () => {
     expect(ratsnest).toHaveLength(1)
     const ends = [ratsnest[0]!.from, ratsnest[0]!.to]
     expect(ends).toContainEqual({ x: 2.54, y: 0.06 })
+  })
+
+  it('routes to a THT diode on either layer (pin 1, the cathode, is the position)', () => {
+    // DO-35 beside the switch, turned 90°: K (pad 1) at (8.89, 3.81), A (pad 2) at (8.89, -3.81)
+    const pads = placed(
+      'SW_Cherry_MX_PCB_1.00u',
+      { x: 8.89, y: 3.81, rotation: 90, side: 'BACK' },
+      'D_DO-35_SOD27_P7.62mm_Horizontal',
+    )
+    const anode = pads.find((p) => p.owner === 'D' && p.pad.number === '2')!
+    expect(anode.pad.at.x).toBeCloseTo(8.89, 9)
+    expect(anode.pad.at.y).toBeCloseTo(-3.81, 9)
+    // 45° off SW pad 2, then straight onto the anode, on either layer
+    const results = (['F.Cu', 'B.Cu'] as const).map((layer) => {
+      const route = [track(2.54, -5.08, 3.81, -3.81, layer), track(3.81, -3.81, 8.89, -3.81, layer)]
+      const { violations, ratsnest } = runDrc(pads, route)
+      return { layer, violations, ratsnest }
+    })
+    expect(results).toEqual([
+      { layer: 'F.Cu', violations: [], ratsnest: [] },
+      { layer: 'B.Cu', violations: [], ratsnest: [] },
+    ])
+    // on to the cathode instead is a short
+    const { violations } = runDrc(pads, [
+      track(2.54, -5.08, 3.81, -3.81),
+      track(3.81, -3.81, 8.89, 3.81),
+    ])
+    expect(violations.map((v) => v.kind)).toContain('short')
   })
 
   it('reports a short between SW pad 2 and the diode cathode', () => {

@@ -244,6 +244,51 @@ test.describe('PCB Generator track editor', () => {
     await expect(page.locator('#diodeSide')).toHaveValue('FRONT')
   })
 
+  test('routes to a through-hole diode, positioned by pin 1', async ({ page }) => {
+    await openPreview(page)
+    await page.locator('#diodeFootprint').selectOption('Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal')
+    // at the SMD default its leads come through under the switch housing
+    const warning = page.locator('[data-testid="pcb-courtyard-warning"]')
+    await expect(warning).toContainText('Diode hole is inside the switch courtyard (front)')
+    // beside the switch, turned 90°: pin 1 (K) at (8.89, 3.81), pin 2 (A) at (8.89, -3.81)
+    for (const [id, value] of [
+      ['diodePositionX', '8.89'],
+      ['diodePositionY', '3.81'],
+    ]) {
+      await page.locator(`#${id} input`).fill(value!)
+      await page.locator(`#${id} input`).press('Enter')
+    }
+    await expect(warning).toHaveCount(0)
+
+    await enterPresetMode(page)
+    // through-hole pads are on both copper layers
+    const pads = page.locator(EDITOR.PADS)
+    await expect(pads.locator('[data-layer="F.Cu"] [data-pad-key^="D:"]')).toHaveCount(2)
+    await expect(pads.locator('[data-layer="B.Cu"] [data-pad-key^="D:"]')).toHaveCount(2)
+
+    await useTool(page, 'route')
+    const sw2 = await padCentre(page, 'SW', '2')
+    const d2 = await padCentre(page, 'D', '2')
+    await page.mouse.move(sw2.x, sw2.y)
+    await page.mouse.click(sw2.x, sw2.y)
+    await page.mouse.move(d2.x, d2.y, { steps: 5 })
+    await page.mouse.click(d2.x, d2.y)
+    await expect(page.locator('[data-testid="pcb-track-overlay-track"]')).toHaveCount(2)
+    await expect(page.locator('[data-testid="pcb-drc-summary"]')).toHaveText('DRC clean')
+
+    // the settings (what the JSON tab shows and Generate sends) name the KiCad 9 footprint
+    await expect
+      .poll(() =>
+        page.evaluate(() => JSON.parse(localStorage.getItem('kle-ng-pcb-settings') ?? '{}').diode),
+      )
+      .toMatchObject({
+        footprint: 'Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal',
+        offsetX: 8.89,
+        offsetY: 3.81,
+        rotation: 90,
+      })
+  })
+
   test('drags a track sideways, Esc cancels a drag', async ({ page }) => {
     await openPreview(page)
     await enterPresetMode(page)

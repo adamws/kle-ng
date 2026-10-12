@@ -47,13 +47,25 @@ SWITCHES = {
 }
 DIODES = {
     "Diode_SMD:D_SOD-123F": f"{KICAD}/Diode_SMD.pretty:D_SOD-123F",
+    # THT: the footprint origin is pin 1, not the middle
+    "Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal": (
+        f"{KICAD}/Diode_THT.pretty:D_DO-35_SOD27_P7.62mm_Horizontal"
+    ),
 }
-# diodes with preview SVGs, for the F.Fab drawing check
-FAB_DIODES = ["D_SOD-123F", "D_SOD-123", "D_SOD-323F", "D_SOD-323"]
+# diodes with preview SVGs, for the F.Fab drawing check: name -> library
+FAB_DIODES = {
+    **{name: "Diode_SMD" for name in ("D_SOD-123F", "D_SOD-123", "D_SOD-323F", "D_SOD-323")},
+    **{
+        name: "Diode_THT"
+        for package in ("DO-34_SOD68", "DO-35_SOD27", "DO-41_SOD81")
+        for name in (f"D_{package}_P{p}mm_Horizontal" for p in ("7.62", "10.16", "12.70"))
+    },
+}
 
 MX = "Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_1.00u"
 HYBRID = "Switch_Keyboard_Hybrid:SW_Hybrid_Cherry_MX_Alps_1.00u"
 SOD123F = "Diode_SMD:D_SOD-123F"
+DO35 = "Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal"
 
 
 def cases():
@@ -64,6 +76,12 @@ def cases():
             for rotation in (0, 90, 270):
                 yield MX, SOD123F, (5.08, 4, rotation, side), switch_rotation
     yield HYBRID, SOD123F, (5.08, 4, 90, "BACK"), 0
+    # pin 1 is the position: below the switch, the body along the key's edge
+    yield MX, DO35, (0, 0, 0, "FRONT"), 0
+    for switch_rotation in (0, 37):
+        for side in ("FRONT", "BACK"):
+            for rotation in (0, 90, 270):
+                yield MX, DO35, (-3.81, 9.5, rotation, side), switch_rotation
 
 
 def main() -> int:
@@ -144,8 +162,8 @@ def main() -> int:
         )
 
     fab_segments = {}
-    for name in FAB_DIODES:
-        footprint = _load(f"{KICAD}/Diode_SMD.pretty:{name}")
+    for name, library in FAB_DIODES.items():
+        footprint = _load(f"{KICAD}/{library}.pretty:{name}")
         segments = []
         for item in footprint.GraphicalItems():
             if (

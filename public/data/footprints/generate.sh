@@ -8,9 +8,14 @@
 #   1. exports a front-side and back-side SVG from its KiCad .pretty library
 #      (kicad-cli),
 #   2. remaps KiCad's per-side layer colors to the kle-ng preview palette,
-#   3. removes all text (reference designators etc.) with strip_text.py,
+#   3. removes all text (reference designators etc.) with strip_text.py and
+#      tags copper shapes (copper.py mark),
 #   4. prettifies each SVG with svgo (if installed), then
-#   5. crops each SVG's page tightly to its content (resize_to_content.py),
+#   5. crops each SVG's page tightly to its content (resize_to_content.py);
+#      switch and diode SVGs are first moved into footprint coordinates, the
+#      origin found from their pads (copper.py, reads pads/<name>.json, so run
+#      scripts/generate-footprint-pads.mjs first), given their drills (which
+#      kicad-cli doesn't draw) and cropped around the origin,
 #   6. checks that switch and diode SVGs are centred on the footprint origin.
 #
 # The footprint name doubles as the output filename: front/<name>.svg and
@@ -116,26 +121,28 @@ prettify_svg() {
 }
 
 # The PCB generator preview centres switch and diode SVGs on their viewBox and
-# places them where kbplacer puts the footprint origin, so the viewBox centre
-# must be (0,0) in footprint coordinates. kicad-cli exports onto a page with
-# the origin at the page centre and step 5 crops to the content, so this only
-# holds for content symmetric around the origin (or SVGs in footprint
-# coordinates). Fail instead of shipping a preview that is silently offset.
+# places them where kbplacer puts the footprint origin, so they are stored in
+# footprint coordinates with the viewBox centred on (0, 0). kicad-cli centres
+# the footprint's bounding box (text included) on its page instead, so step 5
+# finds the origin from the pads (copper.py, which needs pads/<fp>.json),
+# moves it to (0, 0) and crops symmetrically around it: a THT diode's origin
+# is pin 1, not its middle. Step 6 finds the origin again in the result.
+# Fail instead of shipping a preview that is silently offset.
 check_origin_centred() {
-  python3 - "$@" <<'PY'
+  local svg="$1" pads="$2"
+  python3 - "$svg" "$(python3 copper.py origin "$svg" "$pads")" <<'PY'
 import re
 import sys
 
-failed = False
-for path in sys.argv[1:]:
-    with open(path) as f:
-        match = re.search(r'viewBox="([^"]+)"', f.read())
-    x, y, width, height = (float(v) for v in match.group(1).split())
-    cx, cy = x + width / 2, y + height / 2
-    if abs(cx) > 1e-3 or abs(cy) > 1e-3:
-        print(f"    error: {path}: viewBox centre ({cx:g}, {cy:g}) is not the footprint origin (0, 0)")
-        failed = True
-sys.exit(1 if failed else 0)
+path, origin = sys.argv[1], sys.argv[2]
+ox, oy = (float(v) for v in origin.split())
+with open(path) as f:
+    match = re.search(r'viewBox="([^"]+)"', f.read())
+x, y, width, height = (float(v) for v in match.group(1).split())
+cx, cy = x + width / 2, y + height / 2
+if max(abs(ox), abs(oy), abs(cx), abs(cy)) > 1e-3:
+    print(f"    error: {path}: footprint origin ({ox:g}, {oy:g}), viewBox centre ({cx:g}, {cy:g}); both must be (0, 0)")
+    sys.exit(1)
 PY
 }
 
@@ -156,18 +163,34 @@ generate_one() {
   remap_colors "front/$fp.svg"
   remap_colors "back/$fp.svg"
 
-  # 3. Remove all text (reference designators etc.) before fitting to content.
+  # 3. Remove all text (reference designators etc.) before fitting to content,
+  #    and tag the copper the track editor hides under its own pads.
   python3 strip_text.py "front/$fp.svg" "back/$fp.svg"
+  python3 copper.py mark "front/$fp.svg" "back/$fp.svg"
 
   # 4. Prettify (optional).
   prettify_svg "front/$fp.svg" "back/$fp.svg"
 
-  # 5. Crop both pages tightly to their content.
-  python3 resize_to_content.py "front/$fp.svg" "back/$fp.svg"
+  # 5. Crop both pages tightly to their content; switches and diodes around
+  #    their origin, which the preview places (see check_origin_centred).
+  local side
+  for side in front back; do
+    case "$fp" in
+      SW_* | D_*)
+        python3 copper.py shift "$side/$fp.svg" "$(python3 copper.py origin "$side/$fp.svg" "pads/$fp.json")"
+        python3 copper.py holes "$side/$fp.svg" "pads/$fp.json"
+        python3 resize_to_content.py --origin "0 0" "$side/$fp.svg"
+        ;;
+      *) python3 resize_to_content.py "$side/$fp.svg" ;;
+    esac
+  done
 
   # 6. Switch and diode previews must be centred on the footprint origin.
   case "$fp" in
-    SW_* | D_*) check_origin_centred "front/$fp.svg" "back/$fp.svg" ;;
+    SW_* | D_*)
+      check_origin_centred "front/$fp.svg" "pads/$fp.json"
+      check_origin_centred "back/$fp.svg" "pads/$fp.json"
+      ;;
   esac
 }
 

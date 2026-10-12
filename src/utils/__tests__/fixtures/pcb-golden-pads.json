@@ -2475,6 +2475,1605 @@
           ]
         }
       ]
+    },
+    {
+      "switch_footprint": "Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_1.00u",
+      "diode_footprint": "Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal",
+      "switch_rotation": 0,
+      "diode": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0,
+        "side": "FRONT"
+      },
+      "footprints": [
+        {
+          "reference": "SW1",
+          "layer": "F.Cu",
+          "pads": [
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -5080000,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": -5080000,
+                "y_nm": 0
+              }
+            },
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 0,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": 0,
+                "y_nm": 0
+              }
+            },
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 5080000,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": 5080000,
+                "y_nm": 0
+              }
+            },
+            {
+              "number": "1",
+              "net": "COL",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3810000,
+                "y_nm": -2540000
+              },
+              "board": {
+                "x_nm": -3810000,
+                "y_nm": -2540000
+              }
+            },
+            {
+              "number": "2",
+              "net": "SW_D",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 2540000,
+                "y_nm": -5080000
+              },
+              "board": {
+                "x_nm": 2540000,
+                "y_nm": -5080000
+              }
+            }
+          ]
+        },
+        {
+          "reference": "D1",
+          "layer": "F.Cu",
+          "pads": [
+            {
+              "number": "1",
+              "net": "ROW",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 0,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": 0,
+                "y_nm": 0
+              }
+            },
+            {
+              "number": "2",
+              "net": "SW_D",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 7620000,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": 7620000,
+                "y_nm": 0
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "switch_footprint": "Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_1.00u",
+      "diode_footprint": "Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal",
+      "switch_rotation": 0,
+      "diode": {
+        "x": -3.81,
+        "y": 9.5,
+        "rotation": 0,
+        "side": "FRONT"
+      },
+      "footprints": [
+        {
+          "reference": "SW1",
+          "layer": "F.Cu",
+          "pads": [
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -5080000,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": -5080000,
+                "y_nm": 0
+              }
+            },
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 0,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": 0,
+                "y_nm": 0
+              }
+            },
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 5080000,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": 5080000,
+                "y_nm": 0
+              }
+            },
+            {
+              "number": "1",
+              "net": "COL",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3810000,
+                "y_nm": -2540000
+              },
+              "board": {
+                "x_nm": -3810000,
+                "y_nm": -2540000
+              }
+            },
+            {
+              "number": "2",
+              "net": "SW_D",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 2540000,
+                "y_nm": -5080000
+              },
+              "board": {
+                "x_nm": 2540000,
+                "y_nm": -5080000
+              }
+            }
+          ]
+        },
+        {
+          "reference": "D1",
+          "layer": "F.Cu",
+          "pads": [
+            {
+              "number": "1",
+              "net": "ROW",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3810000,
+                "y_nm": 9500000
+              },
+              "board": {
+                "x_nm": -3810000,
+                "y_nm": 9500000
+              }
+            },
+            {
+              "number": "2",
+              "net": "SW_D",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 3810000,
+                "y_nm": 9500000
+              },
+              "board": {
+                "x_nm": 3810000,
+                "y_nm": 9500000
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "switch_footprint": "Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_1.00u",
+      "diode_footprint": "Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal",
+      "switch_rotation": 0,
+      "diode": {
+        "x": -3.81,
+        "y": 9.5,
+        "rotation": 90,
+        "side": "FRONT"
+      },
+      "footprints": [
+        {
+          "reference": "SW1",
+          "layer": "F.Cu",
+          "pads": [
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -5080000,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": -5080000,
+                "y_nm": 0
+              }
+            },
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 0,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": 0,
+                "y_nm": 0
+              }
+            },
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 5080000,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": 5080000,
+                "y_nm": 0
+              }
+            },
+            {
+              "number": "1",
+              "net": "COL",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3810000,
+                "y_nm": -2540000
+              },
+              "board": {
+                "x_nm": -3810000,
+                "y_nm": -2540000
+              }
+            },
+            {
+              "number": "2",
+              "net": "SW_D",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 2540000,
+                "y_nm": -5080000
+              },
+              "board": {
+                "x_nm": 2540000,
+                "y_nm": -5080000
+              }
+            }
+          ]
+        },
+        {
+          "reference": "D1",
+          "layer": "F.Cu",
+          "pads": [
+            {
+              "number": "1",
+              "net": "ROW",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3810000,
+                "y_nm": 9500000
+              },
+              "board": {
+                "x_nm": -3810000,
+                "y_nm": 9500000
+              }
+            },
+            {
+              "number": "2",
+              "net": "SW_D",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3810000,
+                "y_nm": 1880000
+              },
+              "board": {
+                "x_nm": -3810000,
+                "y_nm": 1880000
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "switch_footprint": "Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_1.00u",
+      "diode_footprint": "Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal",
+      "switch_rotation": 0,
+      "diode": {
+        "x": -3.81,
+        "y": 9.5,
+        "rotation": 270,
+        "side": "FRONT"
+      },
+      "footprints": [
+        {
+          "reference": "SW1",
+          "layer": "F.Cu",
+          "pads": [
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -5080000,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": -5080000,
+                "y_nm": 0
+              }
+            },
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 0,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": 0,
+                "y_nm": 0
+              }
+            },
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 5080000,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": 5080000,
+                "y_nm": 0
+              }
+            },
+            {
+              "number": "1",
+              "net": "COL",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3810000,
+                "y_nm": -2540000
+              },
+              "board": {
+                "x_nm": -3810000,
+                "y_nm": -2540000
+              }
+            },
+            {
+              "number": "2",
+              "net": "SW_D",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 2540000,
+                "y_nm": -5080000
+              },
+              "board": {
+                "x_nm": 2540000,
+                "y_nm": -5080000
+              }
+            }
+          ]
+        },
+        {
+          "reference": "D1",
+          "layer": "F.Cu",
+          "pads": [
+            {
+              "number": "1",
+              "net": "ROW",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3810000,
+                "y_nm": 9500000
+              },
+              "board": {
+                "x_nm": -3810000,
+                "y_nm": 9500000
+              }
+            },
+            {
+              "number": "2",
+              "net": "SW_D",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3810000,
+                "y_nm": 17120000
+              },
+              "board": {
+                "x_nm": -3810000,
+                "y_nm": 17120000
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "switch_footprint": "Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_1.00u",
+      "diode_footprint": "Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal",
+      "switch_rotation": 0,
+      "diode": {
+        "x": -3.81,
+        "y": 9.5,
+        "rotation": 0,
+        "side": "BACK"
+      },
+      "footprints": [
+        {
+          "reference": "SW1",
+          "layer": "F.Cu",
+          "pads": [
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -5080000,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": -5080000,
+                "y_nm": 0
+              }
+            },
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 0,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": 0,
+                "y_nm": 0
+              }
+            },
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 5080000,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": 5080000,
+                "y_nm": 0
+              }
+            },
+            {
+              "number": "1",
+              "net": "COL",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3810000,
+                "y_nm": -2540000
+              },
+              "board": {
+                "x_nm": -3810000,
+                "y_nm": -2540000
+              }
+            },
+            {
+              "number": "2",
+              "net": "SW_D",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 2540000,
+                "y_nm": -5080000
+              },
+              "board": {
+                "x_nm": 2540000,
+                "y_nm": -5080000
+              }
+            }
+          ]
+        },
+        {
+          "reference": "D1",
+          "layer": "B.Cu",
+          "pads": [
+            {
+              "number": "1",
+              "net": "ROW",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3810000,
+                "y_nm": 9500000
+              },
+              "board": {
+                "x_nm": -3810000,
+                "y_nm": 9500000
+              }
+            },
+            {
+              "number": "2",
+              "net": "SW_D",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 3810000,
+                "y_nm": 9500000
+              },
+              "board": {
+                "x_nm": 3810000,
+                "y_nm": 9500000
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "switch_footprint": "Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_1.00u",
+      "diode_footprint": "Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal",
+      "switch_rotation": 0,
+      "diode": {
+        "x": -3.81,
+        "y": 9.5,
+        "rotation": 90,
+        "side": "BACK"
+      },
+      "footprints": [
+        {
+          "reference": "SW1",
+          "layer": "F.Cu",
+          "pads": [
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -5080000,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": -5080000,
+                "y_nm": 0
+              }
+            },
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 0,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": 0,
+                "y_nm": 0
+              }
+            },
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 5080000,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": 5080000,
+                "y_nm": 0
+              }
+            },
+            {
+              "number": "1",
+              "net": "COL",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3810000,
+                "y_nm": -2540000
+              },
+              "board": {
+                "x_nm": -3810000,
+                "y_nm": -2540000
+              }
+            },
+            {
+              "number": "2",
+              "net": "SW_D",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 2540000,
+                "y_nm": -5080000
+              },
+              "board": {
+                "x_nm": 2540000,
+                "y_nm": -5080000
+              }
+            }
+          ]
+        },
+        {
+          "reference": "D1",
+          "layer": "B.Cu",
+          "pads": [
+            {
+              "number": "1",
+              "net": "ROW",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3810000,
+                "y_nm": 9500000
+              },
+              "board": {
+                "x_nm": -3810000,
+                "y_nm": 9500000
+              }
+            },
+            {
+              "number": "2",
+              "net": "SW_D",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3810000,
+                "y_nm": 1880000
+              },
+              "board": {
+                "x_nm": -3810000,
+                "y_nm": 1880000
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "switch_footprint": "Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_1.00u",
+      "diode_footprint": "Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal",
+      "switch_rotation": 0,
+      "diode": {
+        "x": -3.81,
+        "y": 9.5,
+        "rotation": 270,
+        "side": "BACK"
+      },
+      "footprints": [
+        {
+          "reference": "SW1",
+          "layer": "F.Cu",
+          "pads": [
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -5080000,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": -5080000,
+                "y_nm": 0
+              }
+            },
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 0,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": 0,
+                "y_nm": 0
+              }
+            },
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 5080000,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": 5080000,
+                "y_nm": 0
+              }
+            },
+            {
+              "number": "1",
+              "net": "COL",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3810000,
+                "y_nm": -2540000
+              },
+              "board": {
+                "x_nm": -3810000,
+                "y_nm": -2540000
+              }
+            },
+            {
+              "number": "2",
+              "net": "SW_D",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 2540000,
+                "y_nm": -5080000
+              },
+              "board": {
+                "x_nm": 2540000,
+                "y_nm": -5080000
+              }
+            }
+          ]
+        },
+        {
+          "reference": "D1",
+          "layer": "B.Cu",
+          "pads": [
+            {
+              "number": "1",
+              "net": "ROW",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3810000,
+                "y_nm": 9500000
+              },
+              "board": {
+                "x_nm": -3810000,
+                "y_nm": 9500000
+              }
+            },
+            {
+              "number": "2",
+              "net": "SW_D",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3810000,
+                "y_nm": 17120000
+              },
+              "board": {
+                "x_nm": -3810000,
+                "y_nm": 17120000
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "switch_footprint": "Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_1.00u",
+      "diode_footprint": "Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal",
+      "switch_rotation": 37,
+      "diode": {
+        "x": -3.81,
+        "y": 9.5,
+        "rotation": 0,
+        "side": "FRONT"
+      },
+      "footprints": [
+        {
+          "reference": "SW1",
+          "layer": "F.Cu",
+          "pads": [
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -5079999,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": -4057068,
+                "y_nm": 3057220
+              }
+            },
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 0,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": 0,
+                "y_nm": 0
+              }
+            },
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 5079999,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": 4057068,
+                "y_nm": -3057220
+              }
+            },
+            {
+              "number": "1",
+              "net": "COL",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3809999,
+                "y_nm": -2539999
+              },
+              "board": {
+                "x_nm": -4571411,
+                "y_nm": 264381
+              }
+            },
+            {
+              "number": "2",
+              "net": "SW_D",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 2540000,
+                "y_nm": -5080000
+              },
+              "board": {
+                "x_nm": -1028686,
+                "y_nm": -5585679
+              }
+            }
+          ]
+        },
+        {
+          "reference": "D1",
+          "layer": "F.Cu",
+          "pads": [
+            {
+              "number": "1",
+              "net": "ROW",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3809999,
+                "y_nm": 9499999
+              },
+              "board": {
+                "x_nm": 2674441,
+                "y_nm": 9879952
+              }
+            },
+            {
+              "number": "2",
+              "net": "SW_D",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 3810000,
+                "y_nm": 9499999
+              },
+              "board": {
+                "x_nm": 8760044,
+                "y_nm": 5294122
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "switch_footprint": "Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_1.00u",
+      "diode_footprint": "Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal",
+      "switch_rotation": 37,
+      "diode": {
+        "x": -3.81,
+        "y": 9.5,
+        "rotation": 90,
+        "side": "FRONT"
+      },
+      "footprints": [
+        {
+          "reference": "SW1",
+          "layer": "F.Cu",
+          "pads": [
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -5079999,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": -4057068,
+                "y_nm": 3057220
+              }
+            },
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 0,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": 0,
+                "y_nm": 0
+              }
+            },
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 5079999,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": 4057068,
+                "y_nm": -3057220
+              }
+            },
+            {
+              "number": "1",
+              "net": "COL",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3809999,
+                "y_nm": -2539999
+              },
+              "board": {
+                "x_nm": -4571411,
+                "y_nm": 264381
+              }
+            },
+            {
+              "number": "2",
+              "net": "SW_D",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 2540000,
+                "y_nm": -5080000
+              },
+              "board": {
+                "x_nm": -1028686,
+                "y_nm": -5585679
+              }
+            }
+          ]
+        },
+        {
+          "reference": "D1",
+          "layer": "F.Cu",
+          "pads": [
+            {
+              "number": "1",
+              "net": "ROW",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3809999,
+                "y_nm": 9499999
+              },
+              "board": {
+                "x_nm": 2674441,
+                "y_nm": 9879952
+              }
+            },
+            {
+              "number": "2",
+              "net": "SW_D",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3809999,
+                "y_nm": 1879999
+              },
+              "board": {
+                "x_nm": -1911389,
+                "y_nm": 3794349
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "switch_footprint": "Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_1.00u",
+      "diode_footprint": "Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal",
+      "switch_rotation": 37,
+      "diode": {
+        "x": -3.81,
+        "y": 9.5,
+        "rotation": 270,
+        "side": "FRONT"
+      },
+      "footprints": [
+        {
+          "reference": "SW1",
+          "layer": "F.Cu",
+          "pads": [
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -5079999,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": -4057068,
+                "y_nm": 3057220
+              }
+            },
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 0,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": 0,
+                "y_nm": 0
+              }
+            },
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 5079999,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": 4057068,
+                "y_nm": -3057220
+              }
+            },
+            {
+              "number": "1",
+              "net": "COL",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3809999,
+                "y_nm": -2539999
+              },
+              "board": {
+                "x_nm": -4571411,
+                "y_nm": 264381
+              }
+            },
+            {
+              "number": "2",
+              "net": "SW_D",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 2540000,
+                "y_nm": -5080000
+              },
+              "board": {
+                "x_nm": -1028686,
+                "y_nm": -5585679
+              }
+            }
+          ]
+        },
+        {
+          "reference": "D1",
+          "layer": "F.Cu",
+          "pads": [
+            {
+              "number": "1",
+              "net": "ROW",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3809999,
+                "y_nm": 9499999
+              },
+              "board": {
+                "x_nm": 2674441,
+                "y_nm": 9879952
+              }
+            },
+            {
+              "number": "2",
+              "net": "SW_D",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3810000,
+                "y_nm": 17119999
+              },
+              "board": {
+                "x_nm": 7260271,
+                "y_nm": 15965555
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "switch_footprint": "Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_1.00u",
+      "diode_footprint": "Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal",
+      "switch_rotation": 37,
+      "diode": {
+        "x": -3.81,
+        "y": 9.5,
+        "rotation": 0,
+        "side": "BACK"
+      },
+      "footprints": [
+        {
+          "reference": "SW1",
+          "layer": "F.Cu",
+          "pads": [
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -5079999,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": -4057068,
+                "y_nm": 3057220
+              }
+            },
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 0,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": 0,
+                "y_nm": 0
+              }
+            },
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 5079999,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": 4057068,
+                "y_nm": -3057220
+              }
+            },
+            {
+              "number": "1",
+              "net": "COL",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3809999,
+                "y_nm": -2539999
+              },
+              "board": {
+                "x_nm": -4571411,
+                "y_nm": 264381
+              }
+            },
+            {
+              "number": "2",
+              "net": "SW_D",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 2540000,
+                "y_nm": -5080000
+              },
+              "board": {
+                "x_nm": -1028686,
+                "y_nm": -5585679
+              }
+            }
+          ]
+        },
+        {
+          "reference": "D1",
+          "layer": "B.Cu",
+          "pads": [
+            {
+              "number": "1",
+              "net": "ROW",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3809999,
+                "y_nm": 9499999
+              },
+              "board": {
+                "x_nm": 2674441,
+                "y_nm": 9879952
+              }
+            },
+            {
+              "number": "2",
+              "net": "SW_D",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 3810000,
+                "y_nm": 9499999
+              },
+              "board": {
+                "x_nm": 8760044,
+                "y_nm": 5294122
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "switch_footprint": "Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_1.00u",
+      "diode_footprint": "Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal",
+      "switch_rotation": 37,
+      "diode": {
+        "x": -3.81,
+        "y": 9.5,
+        "rotation": 90,
+        "side": "BACK"
+      },
+      "footprints": [
+        {
+          "reference": "SW1",
+          "layer": "F.Cu",
+          "pads": [
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -5079999,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": -4057068,
+                "y_nm": 3057220
+              }
+            },
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 0,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": 0,
+                "y_nm": 0
+              }
+            },
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 5079999,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": 4057068,
+                "y_nm": -3057220
+              }
+            },
+            {
+              "number": "1",
+              "net": "COL",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3809999,
+                "y_nm": -2539999
+              },
+              "board": {
+                "x_nm": -4571411,
+                "y_nm": 264381
+              }
+            },
+            {
+              "number": "2",
+              "net": "SW_D",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 2540000,
+                "y_nm": -5080000
+              },
+              "board": {
+                "x_nm": -1028686,
+                "y_nm": -5585679
+              }
+            }
+          ]
+        },
+        {
+          "reference": "D1",
+          "layer": "B.Cu",
+          "pads": [
+            {
+              "number": "1",
+              "net": "ROW",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3809999,
+                "y_nm": 9499999
+              },
+              "board": {
+                "x_nm": 2674441,
+                "y_nm": 9879952
+              }
+            },
+            {
+              "number": "2",
+              "net": "SW_D",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3809999,
+                "y_nm": 1879999
+              },
+              "board": {
+                "x_nm": -1911389,
+                "y_nm": 3794349
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "switch_footprint": "Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_1.00u",
+      "diode_footprint": "Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal",
+      "switch_rotation": 37,
+      "diode": {
+        "x": -3.81,
+        "y": 9.5,
+        "rotation": 270,
+        "side": "BACK"
+      },
+      "footprints": [
+        {
+          "reference": "SW1",
+          "layer": "F.Cu",
+          "pads": [
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -5079999,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": -4057068,
+                "y_nm": 3057220
+              }
+            },
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 0,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": 0,
+                "y_nm": 0
+              }
+            },
+            {
+              "number": "",
+              "net": "",
+              "attribute": "NPTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 5079999,
+                "y_nm": 0
+              },
+              "board": {
+                "x_nm": 4057068,
+                "y_nm": -3057220
+              }
+            },
+            {
+              "number": "1",
+              "net": "COL",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3809999,
+                "y_nm": -2539999
+              },
+              "board": {
+                "x_nm": -4571411,
+                "y_nm": 264381
+              }
+            },
+            {
+              "number": "2",
+              "net": "SW_D",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": 2540000,
+                "y_nm": -5080000
+              },
+              "board": {
+                "x_nm": -1028686,
+                "y_nm": -5585679
+              }
+            }
+          ]
+        },
+        {
+          "reference": "D1",
+          "layer": "B.Cu",
+          "pads": [
+            {
+              "number": "1",
+              "net": "ROW",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3809999,
+                "y_nm": 9499999
+              },
+              "board": {
+                "x_nm": 2674441,
+                "y_nm": 9879952
+              }
+            },
+            {
+              "number": "2",
+              "net": "SW_D",
+              "attribute": "PTH",
+              "layers": ["F.Cu", "B.Cu"],
+              "switch_local": {
+                "x_nm": -3810000,
+                "y_nm": 17119999
+              },
+              "board": {
+                "x_nm": 7260271,
+                "y_nm": 15965555
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "fab_segments": {
@@ -2903,6 +4502,474 @@
         {
           "x_nm": -900000,
           "y_nm": 700000
+        }
+      ]
+    ],
+    "D_DO-34_SOD68_P7.62mm_Horizontal": [
+      [
+        {
+          "x_nm": 0,
+          "y_nm": 0
+        },
+        {
+          "x_nm": 2290000,
+          "y_nm": 0
+        }
+      ],
+      [
+        {
+          "x_nm": 2646000,
+          "y_nm": -800000
+        },
+        {
+          "x_nm": 2646000,
+          "y_nm": 800000
+        }
+      ],
+      [
+        {
+          "x_nm": 2746000,
+          "y_nm": -800000
+        },
+        {
+          "x_nm": 2746000,
+          "y_nm": 800000
+        }
+      ],
+      [
+        {
+          "x_nm": 2846000,
+          "y_nm": -800000
+        },
+        {
+          "x_nm": 2846000,
+          "y_nm": 800000
+        }
+      ],
+      [
+        {
+          "x_nm": 7620000,
+          "y_nm": 0
+        },
+        {
+          "x_nm": 5330000,
+          "y_nm": 0
+        }
+      ]
+    ],
+    "D_DO-34_SOD68_P10.16mm_Horizontal": [
+      [
+        {
+          "x_nm": 0,
+          "y_nm": 0
+        },
+        {
+          "x_nm": 3560000,
+          "y_nm": 0
+        }
+      ],
+      [
+        {
+          "x_nm": 3916000,
+          "y_nm": -800000
+        },
+        {
+          "x_nm": 3916000,
+          "y_nm": 800000
+        }
+      ],
+      [
+        {
+          "x_nm": 4016000,
+          "y_nm": -800000
+        },
+        {
+          "x_nm": 4016000,
+          "y_nm": 800000
+        }
+      ],
+      [
+        {
+          "x_nm": 4116000,
+          "y_nm": -800000
+        },
+        {
+          "x_nm": 4116000,
+          "y_nm": 800000
+        }
+      ],
+      [
+        {
+          "x_nm": 10160000,
+          "y_nm": 0
+        },
+        {
+          "x_nm": 6600000,
+          "y_nm": 0
+        }
+      ]
+    ],
+    "D_DO-34_SOD68_P12.70mm_Horizontal": [
+      [
+        {
+          "x_nm": 0,
+          "y_nm": 0
+        },
+        {
+          "x_nm": 4830000,
+          "y_nm": 0
+        }
+      ],
+      [
+        {
+          "x_nm": 5186000,
+          "y_nm": -800000
+        },
+        {
+          "x_nm": 5186000,
+          "y_nm": 800000
+        }
+      ],
+      [
+        {
+          "x_nm": 5286000,
+          "y_nm": -800000
+        },
+        {
+          "x_nm": 5286000,
+          "y_nm": 800000
+        }
+      ],
+      [
+        {
+          "x_nm": 5386000,
+          "y_nm": -800000
+        },
+        {
+          "x_nm": 5386000,
+          "y_nm": 800000
+        }
+      ],
+      [
+        {
+          "x_nm": 12700000,
+          "y_nm": 0
+        },
+        {
+          "x_nm": 7870000,
+          "y_nm": 0
+        }
+      ]
+    ],
+    "D_DO-35_SOD27_P7.62mm_Horizontal": [
+      [
+        {
+          "x_nm": 0,
+          "y_nm": 0
+        },
+        {
+          "x_nm": 1810000,
+          "y_nm": 0
+        }
+      ],
+      [
+        {
+          "x_nm": 2310000,
+          "y_nm": -1000000
+        },
+        {
+          "x_nm": 2310000,
+          "y_nm": 1000000
+        }
+      ],
+      [
+        {
+          "x_nm": 2410000,
+          "y_nm": -1000000
+        },
+        {
+          "x_nm": 2410000,
+          "y_nm": 1000000
+        }
+      ],
+      [
+        {
+          "x_nm": 2510000,
+          "y_nm": -1000000
+        },
+        {
+          "x_nm": 2510000,
+          "y_nm": 1000000
+        }
+      ],
+      [
+        {
+          "x_nm": 7620000,
+          "y_nm": 0
+        },
+        {
+          "x_nm": 5810000,
+          "y_nm": 0
+        }
+      ]
+    ],
+    "D_DO-35_SOD27_P10.16mm_Horizontal": [
+      [
+        {
+          "x_nm": 0,
+          "y_nm": 0
+        },
+        {
+          "x_nm": 3080000,
+          "y_nm": 0
+        }
+      ],
+      [
+        {
+          "x_nm": 3580000,
+          "y_nm": -1000000
+        },
+        {
+          "x_nm": 3580000,
+          "y_nm": 1000000
+        }
+      ],
+      [
+        {
+          "x_nm": 3680000,
+          "y_nm": -1000000
+        },
+        {
+          "x_nm": 3680000,
+          "y_nm": 1000000
+        }
+      ],
+      [
+        {
+          "x_nm": 3780000,
+          "y_nm": -1000000
+        },
+        {
+          "x_nm": 3780000,
+          "y_nm": 1000000
+        }
+      ],
+      [
+        {
+          "x_nm": 10160000,
+          "y_nm": 0
+        },
+        {
+          "x_nm": 7080000,
+          "y_nm": 0
+        }
+      ]
+    ],
+    "D_DO-35_SOD27_P12.70mm_Horizontal": [
+      [
+        {
+          "x_nm": 0,
+          "y_nm": 0
+        },
+        {
+          "x_nm": 4350000,
+          "y_nm": 0
+        }
+      ],
+      [
+        {
+          "x_nm": 4850000,
+          "y_nm": -1000000
+        },
+        {
+          "x_nm": 4850000,
+          "y_nm": 1000000
+        }
+      ],
+      [
+        {
+          "x_nm": 4950000,
+          "y_nm": -1000000
+        },
+        {
+          "x_nm": 4950000,
+          "y_nm": 1000000
+        }
+      ],
+      [
+        {
+          "x_nm": 5050000,
+          "y_nm": -1000000
+        },
+        {
+          "x_nm": 5050000,
+          "y_nm": 1000000
+        }
+      ],
+      [
+        {
+          "x_nm": 12700000,
+          "y_nm": 0
+        },
+        {
+          "x_nm": 8350000,
+          "y_nm": 0
+        }
+      ]
+    ],
+    "D_DO-41_SOD81_P7.62mm_Horizontal": [
+      [
+        {
+          "x_nm": 0,
+          "y_nm": 0
+        },
+        {
+          "x_nm": 1210000,
+          "y_nm": 0
+        }
+      ],
+      [
+        {
+          "x_nm": 1890000,
+          "y_nm": -1350000
+        },
+        {
+          "x_nm": 1890000,
+          "y_nm": 1350000
+        }
+      ],
+      [
+        {
+          "x_nm": 1990000,
+          "y_nm": -1350000
+        },
+        {
+          "x_nm": 1990000,
+          "y_nm": 1350000
+        }
+      ],
+      [
+        {
+          "x_nm": 2090000,
+          "y_nm": -1350000
+        },
+        {
+          "x_nm": 2090000,
+          "y_nm": 1350000
+        }
+      ],
+      [
+        {
+          "x_nm": 7620000,
+          "y_nm": 0
+        },
+        {
+          "x_nm": 6410000,
+          "y_nm": 0
+        }
+      ]
+    ],
+    "D_DO-41_SOD81_P10.16mm_Horizontal": [
+      [
+        {
+          "x_nm": 0,
+          "y_nm": 0
+        },
+        {
+          "x_nm": 2480000,
+          "y_nm": 0
+        }
+      ],
+      [
+        {
+          "x_nm": 3160000,
+          "y_nm": -1350000
+        },
+        {
+          "x_nm": 3160000,
+          "y_nm": 1350000
+        }
+      ],
+      [
+        {
+          "x_nm": 3260000,
+          "y_nm": -1350000
+        },
+        {
+          "x_nm": 3260000,
+          "y_nm": 1350000
+        }
+      ],
+      [
+        {
+          "x_nm": 3360000,
+          "y_nm": -1350000
+        },
+        {
+          "x_nm": 3360000,
+          "y_nm": 1350000
+        }
+      ],
+      [
+        {
+          "x_nm": 10160000,
+          "y_nm": 0
+        },
+        {
+          "x_nm": 7680000,
+          "y_nm": 0
+        }
+      ]
+    ],
+    "D_DO-41_SOD81_P12.70mm_Horizontal": [
+      [
+        {
+          "x_nm": 0,
+          "y_nm": 0
+        },
+        {
+          "x_nm": 3750000,
+          "y_nm": 0
+        }
+      ],
+      [
+        {
+          "x_nm": 4430000,
+          "y_nm": -1350000
+        },
+        {
+          "x_nm": 4430000,
+          "y_nm": 1350000
+        }
+      ],
+      [
+        {
+          "x_nm": 4530000,
+          "y_nm": -1350000
+        },
+        {
+          "x_nm": 4530000,
+          "y_nm": 1350000
+        }
+      ],
+      [
+        {
+          "x_nm": 4630000,
+          "y_nm": -1350000
+        },
+        {
+          "x_nm": 4630000,
+          "y_nm": 1350000
+        }
+      ],
+      [
+        {
+          "x_nm": 12700000,
+          "y_nm": 0
+        },
+        {
+          "x_nm": 8950000,
+          "y_nm": 0
         }
       ]
     ]

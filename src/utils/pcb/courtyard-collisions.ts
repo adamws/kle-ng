@@ -2,6 +2,9 @@
  * Courtyard collisions between the parts placed around a switch, the way
  * KiCad's DRC checks them: a front courtyard only collides with front
  * courtyards, a back one with back ones. Outlines that only touch are fine.
+ * A hole (plated or not) collides with another part's courtyard on either
+ * side, as KiCad's "PTH/NPTH inside courtyard" rules: a through-hole part's
+ * leads come out on the other side too.
  *
  * Besides the parts of one key, the diode, LED and capacitor are checked
  * against the parts of the eight neighbouring keys on the 1u grid (19.05 mm,
@@ -9,8 +12,9 @@
  * into the next key's switch or parts.
  */
 import type { Courtyard } from '@/utils/kicad/courtyard'
+import type { FootprintPad } from '@/utils/kicad/footprint-pads'
 import type { Point } from '@/utils/kicad/transform'
-import { cross, pointInPolygon, pointSegment, sub } from '@/utils/pcb-tracks/distance'
+import { cross, pointInPolygon, pointPolygon, pointSegment, sub } from '@/utils/pcb-tracks/distance'
 
 /** Distances below this are treated as touching (mm). */
 const EPS = 1e-6
@@ -20,21 +24,41 @@ const NUDGE = 1e-3
 /** Distance between neighbouring 1u keys (mm). */
 export const KEY_PITCH = 19.05
 
+/** A drill as a circle (a slot by its longer side). */
+export interface Hole {
+  x: number
+  y: number
+  r: number
+}
+
 export interface CourtyardPart {
   /** 'SW', 'D', 'LED' or 'C', as in the preview's pad owners. */
   owner: string
-  /** In the switch-local frame. */
+  /** In the switch-local frame; empty sides when the footprint has none. */
   courtyard: Courtyard
+  /** Drills of its pads, switch-local. */
+  holes: readonly Hole[]
 }
 
 export interface CourtyardCollision {
+  /** Courtyards overlap, or a hole of `a` is inside the courtyard of `b`. */
+  kind: 'overlap' | 'hole'
   a: string
   b: string
   side: 'front' | 'back'
-  /** `b` belongs to a neighbouring key. */
-  neighbour: boolean
-  /** The colliding outlines of both parts, switch-local, for drawing. */
+  /** Which of the two belongs to a neighbouring key, if one does. */
+  neighbour: 'a' | 'b' | null
+  /** The colliding outlines (courtyards, holes), switch-local, for drawing. */
   outlines: Point[][]
+}
+
+const HOLE_STEPS = 24
+
+/** The drills of placed pads (the drill is at the pad position). */
+export function holesOf(pads: readonly FootprintPad[]): Hole[] {
+  return pads.flatMap((pad) =>
+    pad.drill ? [{ x: pad.at.x, y: pad.at.y, r: Math.max(pad.drill.w, pad.drill.h) / 2 }] : [],
+  )
 }
 
 const sign = (v: number) => (v > EPS ? 1 : v < -EPS ? -1 : 0)
@@ -86,10 +110,26 @@ function overlapping(p: readonly Point[][], q: readonly Point[][]): boolean {
   return p.some((a) => q.some((b) => outlinesOverlap(a, b)))
 }
 
-function translate(c: Courtyard, o: Point): Courtyard {
+/** The hole reaches into the outline (not just touching it). */
+function holeInside(h: Hole, pts: readonly Point[]): boolean {
+  return pointPolygon(h, pts).d < h.r - EPS
+}
+
+function circle(h: Hole): Point[] {
+  return Array.from({ length: HOLE_STEPS }, (_, i) => {
+    const t = (2 * Math.PI * i) / HOLE_STEPS
+    return { x: h.x + h.r * Math.cos(t), y: h.y + h.r * Math.sin(t) }
+  })
+}
+
+function translate(part: CourtyardPart, o: Point): CourtyardPart {
   const move = (outlines: Point[][]) =>
     outlines.map((pts) => pts.map((p) => ({ x: p.x + o.x, y: p.y + o.y })))
-  return { front: move(c.front), back: move(c.back) }
+  return {
+    owner: part.owner,
+    courtyard: { front: move(part.courtyard.front), back: move(part.courtyard.back) },
+    holes: part.holes.map((h) => ({ ...h, x: h.x + o.x, y: h.y + o.y })),
+  }
 }
 
 /**
@@ -103,25 +143,49 @@ export function findCourtyardCollisions(
 ): CourtyardCollision[] {
   const found: CourtyardCollision[] = []
   const seen = new Set<string>()
-  const report = (a: CourtyardPart, b: CourtyardPart, bc: Courtyard, neighbour: boolean) => {
+  const add = (c: CourtyardCollision) => {
+    const key = `${c.kind}|${c.a}|${c.b}|${c.side}|${c.neighbour}`
+    if (seen.has(key)) return
+    seen.add(key)
+    found.push(c)
+  }
+  // a's holes in b's courtyard, on either side
+  const holesIn = (a: CourtyardPart, b: CourtyardPart, neighbour: 'a' | 'b' | null) => {
     for (const side of ['front', 'back'] as const) {
-      const key = `${a.owner}|${b.owner}|${side}|${neighbour}`
-      if (seen.has(key) || !overlapping(a.courtyard[side], bc[side])) continue
-      seen.add(key)
-      found.push({
+      const holes = a.holes.filter((h) => b.courtyard[side].some((pts) => holeInside(h, pts)))
+      if (holes.length) {
+        add({
+          kind: 'hole',
+          a: a.owner,
+          b: b.owner,
+          side,
+          neighbour,
+          outlines: [...b.courtyard[side], ...holes.map(circle)],
+        })
+      }
+    }
+  }
+  // b is the neighbour's part when `neighbour`
+  const check = (a: CourtyardPart, b: CourtyardPart, neighbour: boolean) => {
+    for (const side of ['front', 'back'] as const) {
+      if (!overlapping(a.courtyard[side], b.courtyard[side])) continue
+      add({
+        kind: 'overlap',
         a: a.owner,
         b: b.owner,
         side,
-        neighbour,
-        outlines: [...a.courtyard[side], ...bc[side]],
+        neighbour: neighbour ? 'b' : null,
+        outlines: [...a.courtyard[side], ...b.courtyard[side]],
       })
     }
+    holesIn(a, b, neighbour ? 'b' : null)
+    holesIn(b, a, neighbour ? 'a' : null)
   }
-  parts.forEach((a, i) => parts.slice(i + 1).forEach((b) => report(a, b, b.courtyard, false)))
+  parts.forEach((a, i) => parts.slice(i + 1).forEach((b) => check(a, b, false)))
   // the switches' own spacing isn't a setting, so only the other parts
   for (const a of parts.filter((p) => p.owner !== 'SW')) {
     for (const o of neighbourOffsets) {
-      for (const b of parts) report(a, b, translate(b.courtyard, o), true)
+      for (const b of parts) check(a, translate(b, o), true)
     }
   }
   return found

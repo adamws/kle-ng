@@ -28,6 +28,9 @@ Usage:
 
     # Add a little breathing room around the content (in mm):
     python resize_to_content.py --margin 0.1 front/foo.svg
+
+    # Keep a point (the footprint origin, see copper.py) at the page centre:
+    python resize_to_content.py --origin "10.72 2.968" front/foo.svg
 """
 
 import argparse
@@ -98,9 +101,20 @@ def _set_attr(svg_tag: str, name: str, value: str) -> str:
     return svg_tag.replace("<svg", f'<svg {name}="{value}"', 1)
 
 
-def fit_svg_text(text: str, margin: float = 0.0) -> tuple[str, tuple]:
-    """Return (new_svg_text, (minx, miny, width, height)) fitted to content."""
+def fit_svg_text(
+    text: str, margin: float = 0.0, origin: tuple[float, float] | None = None
+) -> tuple[str, tuple]:
+    """Return (new_svg_text, (minx, miny, width, height)) fitted to content.
+
+    With ``origin`` the box grows to be symmetric around that point, so the
+    viewBox centre is the origin; the side without content stays empty.
+    """
     minx, miny, maxx, maxy = compute_content_bbox(text)
+    if origin is not None:
+        ox, oy = origin
+        half_w = max(ox - minx, maxx - ox)
+        half_h = max(oy - miny, maxy - oy)
+        minx, miny, maxx, maxy = ox - half_w, oy - half_h, ox + half_w, oy + half_h
 
     minx -= margin
     miny -= margin
@@ -125,9 +139,14 @@ def fit_svg_text(text: str, margin: float = 0.0) -> tuple[str, tuple]:
     return new_text, (minx, miny, width, height)
 
 
-def process_file(input_path: Path, output_path: Path, margin: float) -> None:
+def process_file(
+    input_path: Path,
+    output_path: Path,
+    margin: float,
+    origin: tuple[float, float] | None = None,
+) -> None:
     text = input_path.read_text(encoding="utf-8")
-    new_text, (minx, miny, width, height) = fit_svg_text(text, margin=margin)
+    new_text, (minx, miny, width, height) = fit_svg_text(text, margin=margin, origin=origin)
     output_path.write_text(new_text, encoding="utf-8")
     where = str(output_path) if output_path != input_path else f"{input_path} (in place)"
     print(
@@ -153,7 +172,12 @@ def main() -> None:
         default=0.0,
         help="Extra breathing room around the content, in mm (default: 0)",
     )
+    parser.add_argument(
+        "--origin",
+        help='Point "X Y" (user units) to keep at the centre of the cropped page',
+    )
     args = parser.parse_args()
+    origin = tuple(float(v) for v in args.origin.split()) if args.origin else None
 
     if args.output is not None and len(args.inputs) != 1:
         parser.error("-o/--output can only be used with a single input file")
@@ -162,7 +186,7 @@ def main() -> None:
     for input_path in args.inputs:
         output_path = args.output if args.output is not None else input_path
         try:
-            process_file(input_path, output_path, args.margin)
+            process_file(input_path, output_path, args.margin, origin)
         except Exception as exc:  # keep going through the batch, report at end
             print(f"Error processing {input_path}: {exc}", file=sys.stderr)
             exit_code = 1

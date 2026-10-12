@@ -1,11 +1,12 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, it, expect } from 'vitest'
 import { placeCourtyard, type Courtyard } from '@/utils/kicad/courtyard'
-import type { FootprintPads } from '@/utils/kicad/footprint-pads'
+import { placePads, type FootprintPads } from '@/utils/kicad/footprint-pads'
 import type { Placement } from '@/utils/kicad/transform'
 import {
   findCourtyardCollisions,
+  holesOf,
   NEIGHBOUR_OFFSETS,
   outlinesOverlap,
   type CourtyardPart,
@@ -50,13 +51,18 @@ describe('outlinesOverlap', () => {
 })
 
 const PADS_DIR = resolve(__dirname, '../../../../public/data/footprints/pads')
-const courtyardOf = (name: string): Courtyard =>
-  (JSON.parse(readFileSync(resolve(PADS_DIR, `${name}.json`), 'utf8')) as FootprintPads).courtyard!
+const load = (name: string): FootprintPads =>
+  JSON.parse(readFileSync(resolve(PADS_DIR, `${name}.json`), 'utf8'))
+const NONE: Courtyard = { front: [], back: [] }
 
-const part = (owner: string, name: string, placement: Placement): CourtyardPart => ({
-  owner,
-  courtyard: placeCourtyard(courtyardOf(name), placement),
-})
+const part = (owner: string, name: string, placement: Placement): CourtyardPart => {
+  const fp = load(name)
+  return {
+    owner,
+    courtyard: placeCourtyard(fp.courtyard ?? NONE, placement),
+    holes: holesOf(placePads(fp.pads, placement)),
+  }
+}
 const SWITCH = { x: 0, y: 0, rotation: 0, side: 'FRONT' } as const
 const DIODE = { x: 5.08, y: 4, rotation: 90, side: 'BACK' } as const
 
@@ -73,7 +79,7 @@ describe('findCourtyardCollisions', () => {
     ]
     const found = findCourtyardCollisions(parts, NEIGHBOUR_OFFSETS)
     expect(found.map(({ a, b, side, neighbour }) => ({ a, b, side, neighbour }))).toEqual([
-      { a: 'SW', b: 'D', side: 'front', neighbour: false },
+      { a: 'SW', b: 'D', side: 'front', neighbour: null },
     ])
     expect(found[0]!.outlines).toHaveLength(2)
   })
@@ -83,13 +89,54 @@ describe('findCourtyardCollisions', () => {
       part('SW', 'SW_Hotswap_Kailh_MX_1.00u', SWITCH),
       part('D', 'D_SOD-123F', { ...DIODE, x: 0, y: -4.8 }),
     ]
-    expect(findCourtyardCollisions(parts).map((c) => c.side)).toEqual(['back'])
-    // the socket's notch around the centre is free
+    // the bodies overlap, and a socket hole reaches into the diode's courtyard
+    expect(findCourtyardCollisions(parts).map((c) => `${c.kind} ${c.a} ${c.side}`)).toEqual([
+      'overlap SW back',
+      'hole SW back',
+    ])
+    // below the socket, clear of the switch's holes
     const clear = [
       part('SW', 'SW_Hotswap_Kailh_MX_1.00u', SWITCH),
-      part('D', 'D_SOD-123F', { ...DIODE, rotation: 0, x: 2, y: 1 }),
+      part('D', 'D_SOD-123F', { ...DIODE, rotation: 0, x: 4, y: 4 }),
     ]
     expect(findCourtyardCollisions(clear)).toEqual([])
+  })
+
+  it('is clear for every switch with the default diode', () => {
+    const switches = readdirSync(PADS_DIR).filter((f) => f.startsWith('SW_'))
+    expect(switches.length).toBeGreaterThan(10)
+    const colliding = switches.filter((file) => {
+      const parts = [
+        part('SW', file.replace(/\.json$/, ''), SWITCH),
+        part('D', 'D_SOD-123F', DIODE),
+      ]
+      return findCourtyardCollisions(parts, NEIGHBOUR_OFFSETS).length > 0
+    })
+    expect(colliding).toEqual([])
+  })
+
+  it("finds a THT diode's pins inside the switch housing on the other side", () => {
+    // on the back at the SMD default: its leads come through under the switch
+    const parts = [
+      part('SW', 'SW_Cherry_MX_PCB_1.00u', SWITCH),
+      part('D', 'D_DO-35_SOD27_P7.62mm_Horizontal', DIODE),
+    ]
+    const found = findCourtyardCollisions(parts, NEIGHBOUR_OFFSETS)
+    expect(found.map((c) => `${c.kind} ${c.a} ${c.b} ${c.side}`)).toContain('hole D SW front')
+  })
+
+  it('is clear for a THT diode beside the switch', () => {
+    // pin 1 (the origin) at (8.89, 3.81), turned 90°: pin 2 at (8.89, -3.81)
+    const parts = [
+      part('SW', 'SW_Cherry_MX_PCB_1.00u', SWITCH),
+      part('D', 'D_DO-35_SOD27_P7.62mm_Horizontal', {
+        x: 8.89,
+        y: 3.81,
+        rotation: 90,
+        side: 'BACK',
+      }),
+    ]
+    expect(findCourtyardCollisions(parts, NEIGHBOUR_OFFSETS)).toEqual([])
   })
 
   it("finds a front diode past the key's edge in the next key's switch", () => {
@@ -100,7 +147,7 @@ describe('findCourtyardCollisions', () => {
     expect(findCourtyardCollisions(parts)).toEqual([])
     const found = findCourtyardCollisions(parts, NEIGHBOUR_OFFSETS)
     expect(found.map(({ a, b, side, neighbour }) => ({ a, b, side, neighbour }))).toEqual([
-      { a: 'D', b: 'SW', side: 'front', neighbour: true },
+      { a: 'D', b: 'SW', side: 'front', neighbour: 'b' },
     ])
   })
 })

@@ -39,15 +39,18 @@ const cases = golden.cases as GoldenCase[]
 const FOOTPRINTS_DIR = resolve(__dirname, '../../../public/data/footprints')
 // kbplacer rounds positions to integer nanometres
 const TOLERANCE_MM = 1e-5
+// kicad-cli writes SVG coordinates with 4 decimals, so a pad's outline (arcs as
+// polylines) can be a step off centre
+const SVG_TOLERANCE_MM = 2e-4
 
 const mm = (p: { x_nm: number; y_nm: number }): Point => ({ x: p.x_nm / 1e6, y: p.y_nm / 1e6 })
 
-function expectPoint(actual: Point, expected: Point, label: string) {
+function expectPoint(actual: Point, expected: Point, label: string, tolerance = TOLERANCE_MM) {
   expect(Math.abs(actual.x - expected.x), `${label} x: ${actual.x} vs ${expected.x}`).toBeLessThan(
-    TOLERANCE_MM,
+    tolerance,
   )
   expect(Math.abs(actual.y - expected.y), `${label} y: ${actual.y} vs ${expected.y}`).toBeLessThan(
-    TOLERANCE_MM,
+    tolerance,
   )
 }
 
@@ -62,11 +65,24 @@ function pads(c: GoldenCase, reference: string): GoldenPad[] {
   return footprint.pads
 }
 
-// Diode pads in the diode's own footprint frame: the identity placement case.
-const identity = cases.find(
-  (c) => c.diode.x === 0 && c.diode.y === 0 && c.diode.rotation === 0 && c.diode.side === 'FRONT',
-)!
-const diodeLocal = new Map(pads(identity, 'D1').map((p) => [p.number, mm(p.switch_local)]))
+// Diode pads in the diode's own footprint frame: each footprint's identity placement case.
+function diodeLocalOf(footprint: string): Map<string, Point> {
+  const identity = cases.find(
+    (c) =>
+      c.diode_footprint === footprint &&
+      c.diode.x === 0 &&
+      c.diode.y === 0 &&
+      c.diode.rotation === 0 &&
+      c.diode.side === 'FRONT',
+  )
+  if (!identity) throw new Error(`no identity case for ${footprint}`)
+  return new Map(pads(identity, 'D1').map((p) => [p.number, mm(p.switch_local)]))
+}
+const diodeLocal = diodeLocalOf('Diode_SMD:D_SOD-123F')
+const diodeFootprints = [...new Set(cases.map((c) => c.diode_footprint))]
+const svgName = (footprint: string) => footprint.split(':')[1]!
+const diodeSvg = (side: string, footprint: string) =>
+  readFileSync(resolve(FOOTPRINTS_DIR, side, `${svgName(footprint)}.svg`), 'utf-8')
 
 /** Evaluates an SVG transform attribute (translate/rotate/scale) on a point. */
 function applySvgTransform(transform: string, p: Point): Point {
@@ -132,9 +148,9 @@ function svgPaths(svg: string, pads: boolean): Point[][] {
     .map((m) => pathPoints(m[2]!))
 }
 
-/** Bounding box centres of the pad paths of a footprint SVG. */
+/** Bounding box centres of the pad paths of a footprint SVG, and its round pads' centres. */
 function svgPadCentres(svg: string): Point[] {
-  return svgPaths(svg, true).map((points) => {
+  const paths = svgPaths(svg, true).map((points) => {
     const xs = points.map((p) => p.x)
     const ys = points.map((p) => p.y)
     return {
@@ -142,6 +158,14 @@ function svgPadCentres(svg: string): Point[] {
       y: (Math.min(...ys) + Math.max(...ys)) / 2,
     }
   })
+  const circles = [...svg.matchAll(/<circle\b[^>]*>/g)]
+    .map((m) => m[0])
+    .filter((tag) => tag.includes('class="hoverable"'))
+    .map((tag) => ({
+      x: Number(/\bcx="([^"]+)"/.exec(tag)![1]),
+      y: Number(/\bcy="([^"]+)"/.exec(tag)![1]),
+    }))
+  return [...paths, ...circles]
 }
 
 describe('PCB preview coordinate contract (kbplacer golden pads)', () => {
@@ -161,67 +185,79 @@ describe('PCB preview coordinate contract (kbplacer golden pads)', () => {
     expectPoint(placePoint(diodeLocal.get('2')!, placement), { x: 5.08, y: 2.6 }, 'A')
   })
 
-  describe.each(cases.map((c) => [caseName(c), c] as const))('%s', (_, c) => {
-    const placement = { ...c.diode }
-
-    it('maps diode pads to switch-local and board coordinates', () => {
-      expect.hasAssertions()
-      for (const pad of pads(c, 'D1')) {
-        const local = placePoint(diodeLocal.get(pad.number)!, placement)
-        expectPoint(local, mm(pad.switch_local), `D1 pad ${pad.number} local`)
-        expectPoint(
-          switchLocalToBoard(local, c.switch_rotation),
-          mm(pad.board),
-          `D1 pad ${pad.number} board`,
-        )
-      }
-    })
-
-    it('maps switch pads to board coordinates', () => {
-      expect.hasAssertions()
-      for (const pad of pads(c, 'SW1')) {
-        expectPoint(
-          switchLocalToBoard(mm(pad.switch_local), c.switch_rotation),
-          mm(pad.board),
-          `SW1 pad ${pad.number}`,
-        )
-      }
-    })
-
-    it('hover coordinates match kbplacer', () => {
-      expect.hasAssertions()
-      // the shipped SOD-123F SVG is centred on the footprint origin
-      const vb = { x: -3, y: -1, width: 6, height: 2 }
-      for (const pad of pads(c, 'D1')) {
-        const local = diodeLocal.get(pad.number)!
-        const world = applyDiodeTransform(
-          local.x,
-          local.y,
-          vb,
-          c.diode.x,
-          c.diode.y,
-          c.diode.rotation,
-          c.switch_rotation,
-          c.diode.side,
-        )
-        expectPoint(world, mm(pad.board), `D1 pad ${pad.number}`)
-      }
-      const switchVB = { x: -10, y: -10, width: 20, height: 20 }
-      for (const pad of pads(c, 'SW1')) {
-        const local = mm(pad.switch_local)
-        const world = applySwitchTransform(local.x, local.y, switchVB, c.switch_rotation)
-        expectPoint(world, mm(pad.board), `SW1 pad ${pad.number}`)
-      }
-    })
+  it('covers a THT diode, whose origin is pin 1', () => {
+    expect(diodeFootprints).toContain('Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal')
+    const local = diodeLocalOf('Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal')
+    expectPoint(local.get('1')!, { x: 0, y: 0 }, 'K')
+    expectPoint(local.get('2')!, { x: 7.62, y: 0 }, 'A')
   })
+
+  describe.each(cases.map((c) => [`${caseName(c)}, ${svgName(c.diode_footprint)}`, c] as const))(
+    '%s',
+    (_, c) => {
+      const placement = { ...c.diode }
+      const diodeLocal = diodeLocalOf(c.diode_footprint)
+
+      it('maps diode pads to switch-local and board coordinates', () => {
+        expect.hasAssertions()
+        for (const pad of pads(c, 'D1')) {
+          const local = placePoint(diodeLocal.get(pad.number)!, placement)
+          expectPoint(local, mm(pad.switch_local), `D1 pad ${pad.number} local`)
+          expectPoint(
+            switchLocalToBoard(local, c.switch_rotation),
+            mm(pad.board),
+            `D1 pad ${pad.number} board`,
+          )
+        }
+      })
+
+      it('maps switch pads to board coordinates', () => {
+        expect.hasAssertions()
+        for (const pad of pads(c, 'SW1')) {
+          expectPoint(
+            switchLocalToBoard(mm(pad.switch_local), c.switch_rotation),
+            mm(pad.board),
+            `SW1 pad ${pad.number}`,
+          )
+        }
+      })
+
+      it('hover coordinates match kbplacer', () => {
+        expect.hasAssertions()
+        // the shipped diode SVG is centred on the footprint origin
+        const vb = parseViewBox(diodeSvg(c.diode.side.toLowerCase(), c.diode_footprint))
+        for (const pad of pads(c, 'D1')) {
+          const local = diodeLocal.get(pad.number)!
+          const world = applyDiodeTransform(
+            local.x,
+            local.y,
+            vb,
+            c.diode.x,
+            c.diode.y,
+            c.diode.rotation,
+            c.switch_rotation,
+            c.diode.side,
+          )
+          expectPoint(world, mm(pad.board), `D1 pad ${pad.number}`)
+        }
+        const switchVB = { x: -10, y: -10, width: 20, height: 20 }
+        for (const pad of pads(c, 'SW1')) {
+          const local = mm(pad.switch_local)
+          const world = applySwitchTransform(local.x, local.y, switchVB, c.switch_rotation)
+          expectPoint(world, mm(pad.board), `SW1 pad ${pad.number}`)
+        }
+      })
+    },
+  )
 })
 
 describe('Rendered footprint SVGs', () => {
   const svg = (side: string, name: string) =>
     readFileSync(resolve(FOOTPRINTS_DIR, side, `${name}.svg`), 'utf-8')
 
-  it('draws the diode SVG pads where kbplacer places them', () => {
-    const diodeSvg = svg('back', 'D_SOD-123F')
+  it.each(diodeFootprints)('draws the %s SVG pads where kbplacer places them', (footprint) => {
+    const diodeLocal = diodeLocalOf(footprint)
+    const diodeSvg = svg('back', svgName(footprint))
     const vb = parseViewBox(diodeSvg)
     // SVG pads carry no numbers: number them by their footprint position, so
     // swapped pads (e.g. K and A) fail the comparison below
@@ -236,7 +272,7 @@ describe('Rendered footprint SVGs', () => {
     )
     expect(svgPads.size).toBe(diodeLocal.size)
 
-    for (const c of cases.filter((c) => c.diode_footprint === 'Diode_SMD:D_SOD-123F')) {
+    for (const c of cases.filter((c) => c.diode_footprint === footprint)) {
       const transform = offsetSvgTransform(
         {
           vb,
@@ -252,6 +288,7 @@ describe('Rendered footprint SVGs', () => {
           applySvgTransform(transform, svgPads.get(pad.number)!),
           mm(pad.board),
           `${caseName(c)} D1 pad ${pad.number}`,
+          SVG_TOLERANCE_MM,
         )
       }
     }
