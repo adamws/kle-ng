@@ -289,6 +289,41 @@ test.describe('PCB Generator track editor', () => {
       })
   })
 
+  test('zoom to fit centres a through-hole diode beside the switch', async ({ page }) => {
+    await openPreview(page)
+    // pin 1 is the footprint origin, so the SVG page is twice the body's length
+    await page.locator('#diodeFootprint').selectOption('Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal')
+    for (const [id, value] of [
+      ['diodePositionX', '8.89'],
+      ['diodePositionY', '3.81'],
+    ]) {
+      await page.locator(`#${id} input`).fill(value!)
+      await page.locator(`#${id} input`).press('Enter')
+    }
+    await enterPresetMode(page)
+    await page.locator(EDITOR.FIT).click()
+    await centreCanvas(page)
+
+    // the drawn footprints sit in the middle of the canvas
+    const canvas = (await page.locator(`${EDITOR.CANVAS} svg.preview-svg`).boundingBox())!
+    const drawn = await page.locator(`${EDITOR.CANVAS} .footprint-svg`).evaluateAll((groups) => {
+      const rects = groups.map((g) => g.getBoundingClientRect())
+      return {
+        x0: Math.min(...rects.map((r) => r.left)),
+        y0: Math.min(...rects.map((r) => r.top)),
+        x1: Math.max(...rects.map((r) => r.right)),
+        y1: Math.max(...rects.map((r) => r.bottom)),
+      }
+    })
+    const tolerance = 0.02 * Math.min(canvas.width, canvas.height)
+    expect(Math.abs((drawn.x0 + drawn.x1) / 2 - (canvas.x + canvas.width / 2))).toBeLessThan(
+      tolerance,
+    )
+    expect(Math.abs((drawn.y0 + drawn.y1) / 2 - (canvas.y + canvas.height / 2))).toBeLessThan(
+      tolerance,
+    )
+  })
+
   test('drags a track sideways, Esc cancels a drag', async ({ page }) => {
     await openPreview(page)
     await enterPresetMode(page)

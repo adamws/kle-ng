@@ -297,31 +297,36 @@ const baseViewBox = computed(() => {
   )
 })
 
-// The placed parts' courtyards (board axes), which the zoom must not crop: a
-// THT diode reaches past the switch's own viewBox
-const PARTS_PADDING = 1.0 // mm
+// The placed parts' courtyards (board axes), once every part has one. They
+// frame the view: the SVG pages keep the footprint origin at their centre, so
+// a page can be much larger than the drawing, e.g. a THT diode's origin is
+// pad 1 and its page has an empty half.
 const partsBounds = computed(() => {
-  const points = courtyardParts.value
-    .filter((part) => part.owner !== 'SW')
+  const parts = courtyardParts.value
+  const framed = (part: CourtyardPart) => part.courtyard.front.length || part.courtyard.back.length
+  if (!parts.length || !parts.every(framed)) return null
+  const points = parts
     .flatMap((part) => [...part.courtyard.front, ...part.courtyard.back].flat())
     .map((p) => switchLocalToBoard(p, settings.value.switchRotation))
-  if (!points.length) return null
   const xs = points.map((p) => p.x)
   const ys = points.map((p) => p.y)
+  const x0 = Math.min(...xs) - CONTAINER_PADDING
+  const y0 = Math.min(...ys) - CONTAINER_PADDING
   return {
-    x0: Math.min(...xs) - PARTS_PADDING,
-    y0: Math.min(...ys) - PARTS_PADDING,
-    x1: Math.max(...xs) + PARTS_PADDING,
-    y1: Math.max(...ys) + PARTS_PADDING,
+    x: x0,
+    y: y0,
+    width: Math.max(...xs) + CONTAINER_PADDING - x0,
+    height: Math.max(...ys) + CONTAINER_PADDING - y0,
   }
 })
 
-// Computed composite viewBox with zoom applied
-// Separated for better memoization - zoom calculation only runs when baseViewBox changes
+// The view framing the placed parts: their courtyards, or until those load,
+// the SVG pages zoomed in by ZOOM_FACTOR
 const fittedViewBox = computed<ViewBox>(() => {
   if (!baseViewBox.value) {
     return { x: 0, y: 0, width: 100, height: 100 } // Default fallback
   }
+  if (partsBounds.value) return partsBounds.value
 
   // Parse viewBox values
   const parts = baseViewBox.value.split(' ').map(Number)
@@ -337,16 +342,12 @@ const fittedViewBox = computed<ViewBox>(() => {
   // Adjust minX/minY to keep centered after zoom
   const centerX = minX + width / 2
   const centerY = minY + height / 2
-  const zoomedMinX = centerX - zoomedWidth / 2
-  const zoomedMinY = centerY - zoomedHeight / 2
-
-  // grow back where the zoom would cut a placed part
-  const bounds = partsBounds.value
-  const x0 = Math.min(zoomedMinX, bounds?.x0 ?? Infinity)
-  const y0 = Math.min(zoomedMinY, bounds?.y0 ?? Infinity)
-  const x1 = Math.max(zoomedMinX + zoomedWidth, bounds?.x1 ?? -Infinity)
-  const y1 = Math.max(zoomedMinY + zoomedHeight, bounds?.y1 ?? -Infinity)
-  return { x: x0, y: y0, width: x1 - x0, height: y1 - y0 }
+  return {
+    x: centerX - zoomedWidth / 2,
+    y: centerY - zoomedHeight / 2,
+    width: zoomedWidth,
+    height: zoomedHeight,
+  }
 })
 
 const compositeViewBox = computed(() => {
@@ -521,6 +522,12 @@ const courtyardParts = computed<CourtyardPart[]>(() => {
       holes: holesOf(previewPads.value.filter((p) => p.owner === owner).map((p) => p.pad)),
     }
   })
+})
+
+// the courtyards frame the parts once loaded (see partsBounds): refit a
+// preset mode opened before they loaded
+watch(padsReady, (ready) => {
+  if (ready && editMode.value && baseViewBox.value) panZoom.fit(fittedViewBox.value)
 })
 
 // Parts whose courtyards overlap, in every routing mode: placement is set
