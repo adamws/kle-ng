@@ -6,6 +6,7 @@ import PcbWorkerStatus from './PcbWorkerStatus.vue'
 import PcbGeneratorSettings from './PcbGeneratorSettings.vue'
 import PcbLedSettings from './PcbLedSettings.vue'
 import PcbJsonView from './PcbJsonView.vue'
+import PcbSettingsLock from './PcbSettingsLock.vue'
 import PcbGeneratorControls from './PcbGeneratorControls.vue'
 import PcbGeneratorResults from './PcbGeneratorResults.vue'
 import PcbDownloadButton from './PcbDownloadButton.vue'
@@ -59,17 +60,23 @@ onUnmounted(() => {
           <ScrollableTabs v-model="activeTab" :tabs="tabs" testid-prefix="pcb-tab">
             <!-- Switches Tab -->
             <template #switches>
-              <PcbGeneratorSettings />
+              <PcbSettingsLock :locked="pcbStore.isSettingsLocked">
+                <PcbGeneratorSettings />
+              </PcbSettingsLock>
             </template>
 
             <!-- LEDs Tab -->
             <template #leds>
-              <PcbLedSettings />
+              <PcbSettingsLock :locked="pcbStore.isSettingsLocked">
+                <PcbLedSettings />
+              </PcbSettingsLock>
             </template>
 
             <!-- JSON Tab -->
             <template #json>
-              <PcbJsonView />
+              <PcbSettingsLock :locked="pcbStore.isSettingsLocked" :overlay="false">
+                <PcbJsonView />
+              </PcbSettingsLock>
             </template>
           </ScrollableTabs>
         </div>

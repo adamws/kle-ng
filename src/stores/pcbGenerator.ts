@@ -120,6 +120,10 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
       taskStatus.value?.task_status === 'PENDING' || taskStatus.value?.task_status === 'PROGRESS',
   )
 
+  // Settings stay as they were submitted while a task or its result is shown,
+  // the user starts a new task (resetTask) to edit them again.
+  const isSettingsLocked = computed(() => taskStatus.value !== null)
+
   const isTaskSuccess = computed(() => taskStatus.value?.task_status === 'SUCCESS')
 
   const isTaskFailed = computed(() => taskStatus.value?.task_status === 'FAILURE')
@@ -698,6 +702,7 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
     isLogStreamActive,
     isPolling,
     isTaskActive,
+    isSettingsLocked,
     isTaskSuccess,
     isTaskFailed,
     isBackendAvailable,

@@ -366,6 +366,20 @@ describe('pcbGenerator store', () => {
       expect(store.isTaskFailed).toBe(true)
     })
 
+    it('should lock settings while a task or its result is shown, until resetTask', () => {
+      const store = usePcbGeneratorStore()
+
+      expect(store.isSettingsLocked).toBe(false)
+
+      for (const task_status of ['PENDING', 'SUCCESS', 'FAILURE'] as const) {
+        store.taskStatus = { task_id: 'test-123', task_status, task_result: {} }
+        expect(store.isSettingsLocked).toBe(true)
+      }
+
+      store.resetTask()
+      expect(store.isSettingsLocked).toBe(false)
+    })
+
     it('should compute isBackendAvailable correctly', () => {
       const store = usePcbGeneratorStore()
 

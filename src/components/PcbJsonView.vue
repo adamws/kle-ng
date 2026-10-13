@@ -104,6 +104,8 @@ function onEditorChange(text: string): void {
 }
 
 function applyEdits(): void {
+  // Ctrl+Enter bypasses the disabled Apply button
+  if (pcbStore.isSettingsLocked) return
   if (!canApply.value || !parsedJson.value) return
   isDirty.value = false
   pcbStore.applySettings(parsedJson.value)
@@ -192,9 +194,16 @@ async function rebuildEditor(): Promise<void> {
   editorView = cm.createJsonEditor(editorContainer.value, content, getTheme(), {
     onChange: onEditorChange,
     onSubmit: applyEdits,
-    readOnly: false,
+    readOnly: pcbStore.isSettingsLocked,
   })
 }
+
+watch(
+  () => pcbStore.isSettingsLocked,
+  (locked) => {
+    if (editorView) getLoadedCodeMirror()?.setReadOnly(editorView, locked)
+  },
+)
 
 // Store watch: update editor only when clean
 watch(
