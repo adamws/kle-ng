@@ -568,7 +568,7 @@ in kbplacer's JSON preset format (kicad-kbplacer `docs/switch-preset.schema.json
 The client edits it in the track editor (below) or through the settings JSON `tracks` section, and
 draws it over the footprint preview (`FootprintPreview.vue`, switch-local frame). The preview follows
 kbplacer's placement exactly; `utils/__tests__/pcb-coordinate-contract.spec.ts` checks it against pad
-positions of footprints placed by kbplacer (`scripts/generate-pcb-golden-pads.py`).
+positions of footprints placed by kbplacer (see [Coordinate contract](#coordinate-contract)).
 
 ### Track editor {#track-editor}
 
@@ -610,8 +610,53 @@ diodes' `KathodeUp` to `CathodeUp`) and exports SVGs differently.
    footprint coordinates and draws the pads' drills, which kicad-cli leaves out. Then
    `resize_to_content.py` crops symmetrically around the origin. The
    preview centres these SVGs on their viewBox, and a THT diode's origin is pin 1, not its middle.
-3. For a new diode, add a case to `scripts/generate-pcb-golden-pads.py` (run in the same image) so
-   `pcb-coordinate-contract.spec.ts` checks the preview against kbplacer's placement.
+3. For a new diode, add a case to `scripts/generate-pcb-golden-pads.py` and regenerate the fixture
+   (see [Coordinate contract](#coordinate-contract)) so `pcb-coordinate-contract.spec.ts` checks the
+   preview against kbplacer's placement.
+
+### Coordinate contract {#coordinate-contract}
+
+The footprint preview and the track editor repeat kbplacer's switch-diode placement in TypeScript
+(`placePads` in `utils/kicad/footprint-pads.ts`), and a track preset is only valid if both agree on
+every pad. `src/utils/__tests__/fixtures/pcb-golden-pads.json` holds pads of footprints placed by
+real kbplacer and pcbnew, and two specs check the client against it:
+
+- `utils/__tests__/pcb-coordinate-contract.spec.ts`: preview placement and SVG orientation (each
+  pad's `switch_local` and `board` centre, and the `fab_segments` F.Fab lines of the preview diodes,
+  which catch mirrored SVGs).
+- `utils/__tests__/footprint-pads.spec.ts`: `placePads` on the committed `pads/*.json`.
+
+The cases cover the MX and Hybrid MX/Alps switches (duplicated pad numbers), SOD-123F and DO-35
+(a THT origin at pin 1) diodes, diode rotations 0/90/270 on FRONT and BACK, and switch rotations
+0/90/37. Positions are integer nanometres relative to the switch origin, +Y down: `switch_local` is
+rotated back to a 0° switch, `board` keeps the board axes.
+
+`scripts/generate-pcb-golden-pads.py` writes the fixture. It builds a one-key board with
+`kbplacer.pair_pads` (kbplacer's own `KeyPlacer.place_element`, so the dump follows kbplacer, not a
+copy of its maths) and keeps the fields the specs use. Run it in the worker image, which has the
+backend's KiCad, kbplacer and footprint libraries, then format the output like the rest of `src/`:
+
+```sh
+docker run --rm -v "$PWD":/kle-ng -w /kle-ng \
+  admwscki/keyboard-tools-kicad:latest \
+  python3 scripts/generate-pcb-golden-pads.py
+npx prettier --write src/utils/__tests__/fixtures/pcb-golden-pads.json
+```
+
+If the image's kbplacer predates `kbplacer.pair_pads`, put a kicad-kbplacer checkout in front of it
+with `-v /path/to/kicad-kbplacer:/kbplacer:ro -e PYTHONPATH=/kbplacer`.
+
+Regenerate it when:
+
+- a switch or diode is added to the generator: add a case to `cases()` in the script (and a
+  `SWITCHES`/`DIODES` entry; preview diodes also go in `FAB_DIODES`);
+- the worker image gets a new kbplacer or KiCad. kbplacer's `tests/test_pair_pads.py` compares its
+  placements with a snapshot, so a change to kbplacer's diode placement fails there first. When that
+  snapshot changes, this fixture is stale too.
+
+A regenerated fixture that differs only in `kicad_version` needs no client change. Any other
+difference means kbplacer places pads differently: fix `placePads` (and the preview) until both
+specs pass, don't edit the fixture by hand.
 
 ### LED chain (LEDs tab)
 
