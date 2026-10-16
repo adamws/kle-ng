@@ -6,14 +6,17 @@ src/utils/__tests__/fixtures/pcb-golden-pads.json. The footprint preview is
 tested against it, so the preview shows footprints exactly where kbplacer puts
 them.
 
-Needs KiCad's pcbnew, kbplacer and kbplacer's tools/dump_pair_pads.py. The
+Needs KiCad's pcbnew and kbplacer with the `kbplacer.pair_pads` module. The
 kle-ng-api worker image has the same KiCad and kbplacer as the backend:
 
     docker run --rm \\
-        -v /path/to/kicad-kbplacer/tools:/kbtools:ro \\
         -v "$PWD":/kle-ng -w /kle-ng \\
         admwscki/keyboard-tools-kicad:latest \\
-        python3 scripts/generate-pcb-golden-pads.py --tools /kbtools
+        python3 scripts/generate-pcb-golden-pads.py
+
+If the image's kbplacer predates `kbplacer.pair_pads`, put a kicad-kbplacer
+checkout in front of it with
+`-v /path/to/kicad-kbplacer:/kbplacer:ro -e PYTHONPATH=/kbplacer`.
 
 Coordinates are integer nanometres relative to the switch origin, +Y down:
 `switch_local` is rotated back to a 0 degree switch, `board` keeps the board
@@ -66,6 +69,8 @@ MX = "Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_1.00u"
 HYBRID = "Switch_Keyboard_Hybrid:SW_Hybrid_Cherry_MX_Alps_1.00u"
 SOD123F = "Diode_SMD:D_SOD-123F"
 DO35 = "Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal"
+# fields of kbplacer.pair_pads pad dumps kept in the fixture
+PAD_KEYS = ("number", "net", "attribute", "layers", "switch_local", "board")
 
 
 def cases():
@@ -86,7 +91,6 @@ def cases():
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--tools", required=True, help="kicad-kbplacer tools directory")
     parser.add_argument(
         "--output",
         default="src/utils/__tests__/fixtures/pcb-golden-pads.json",
@@ -94,62 +98,34 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    sys.path.insert(0, args.tools)
     import pcbnew
-    from dump_pair_pads import _load, build_board, dump  # type: ignore[import-not-found]
 
-    from kbplacer.element_position import Side
+    from kbplacer.element_position import ElementPosition, Side
+    from kbplacer.pair_pads import (
+        build_pair_board,
+        dump_pair_pads,
+        load_footprint_by_identifier,
+    )
 
     result = []
     for switch, diode, (x, y, rotation, side), switch_rotation in cases():
-        board = build_board(
-            argparse.Namespace(
-                switch_footprint=SWITCHES[switch],
-                diode_footprint=DIODES[diode],
-                diode_position=f"{x} {y} {rotation} {side}",
-                switch_rotation=switch_rotation,
-                switch_side=Side.FRONT,
-            )
+        board = build_pair_board(
+            SWITCHES[switch],
+            DIODES[diode],
+            ElementPosition(x, y, rotation, Side.get(side)),
+            switch_rotation=switch_rotation,
         )
-        local = dump(board)
-        origin = board.FindFootprintByReference("SW1").GetPosition()
-
-        footprints = []
-        for footprint in local["footprints"]:
-            board_footprint = board.FindFootprintByReference(footprint["reference"])
-            # dump() sorts pads by number and switch-local position, keep the
-            # board positions in the same order by matching pad by pad
-            board_pads = list(board_footprint.Pads())
-            pads = []
-            for pad in footprint["pads"]:
-                match = next(
-                    p
-                    for p in board_pads
-                    if p.GetNumber() == pad["number"]
-                    and _local(p, origin, switch_rotation) == pad["position"]
-                )
-                board_pads.remove(match)
-                position = match.GetPosition()
-                pads.append(
-                    {
-                        "number": pad["number"],
-                        "net": pad["net"],
-                        "attribute": pad["attribute"],
-                        "layers": pad["layers"],
-                        "switch_local": pad["position"],
-                        "board": {
-                            "x_nm": int(position.x - origin.x),
-                            "y_nm": int(position.y - origin.y),
-                        },
-                    }
-                )
-            footprints.append(
-                {
-                    "reference": footprint["reference"],
-                    "layer": footprint["layer"],
-                    "pads": pads,
-                }
-            )
+        footprints = [
+            {
+                "reference": footprint["reference"],
+                "layer": footprint["layer"],
+                "pads": [
+                    {key: pad[key] for key in PAD_KEYS}
+                    for pad in footprint["pads"]
+                ],
+            }
+            for footprint in dump_pair_pads(board)["footprints"]
+        ]
 
         result.append(
             {
@@ -163,7 +139,7 @@ def main() -> int:
 
     fab_segments = {}
     for name, library in FAB_DIODES.items():
-        footprint = _load(f"{KICAD}/{library}.pretty:{name}")
+        footprint = load_footprint_by_identifier(f"{KICAD}/{library}.pretty:{name}")
         segments = []
         for item in footprint.GraphicalItems():
             if (
@@ -192,17 +168,6 @@ def main() -> int:
     output.write_text(json.dumps(fixture, indent=2) + "\n")
     print(f"Wrote {len(result)} cases to {output}")
     return 0
-
-
-def _local(pad, origin, switch_rotation):
-    from kbplacer.board_modifier import position_in_rotated_coordinates
-    import pcbnew
-
-    position = pad.GetPosition()
-    relative = pcbnew.VECTOR2I(position.x - origin.x, position.y - origin.y)
-    if switch_rotation:
-        relative = position_in_rotated_coordinates(relative, -switch_rotation)
-    return {"x_nm": int(relative.x), "y_nm": int(relative.y)}
 
 
 if __name__ == "__main__":
