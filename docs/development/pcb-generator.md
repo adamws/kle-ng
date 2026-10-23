@@ -593,6 +593,22 @@ every pointer move); the serializer converts to nm.
 | `stores/pcbTracks.ts`                                                                                        | Editor state: tools, the route in progress (vertices, per-segment layers and the vias placed with `V`), selection, the drag in progress (its preview replaces the saved items and follows the cursor across obstacles; a release on a design-rule error falls back to the last legal preview), DRC of preset + route + preview, and undo/redo (`composables/useSnapshotHistory.ts`). Finished operations write `pcbGenerator.settings.trackPreset` in one step; an outside write (JSON Apply, Reset, Upload, Clear) is detected by object identity and resets the history.                                                                           |
 | `components/pcb/*.vue`                                                                                       | `PadLayer`, `GridLayer`, `TrackLayer`, `TrackEditorLayer`, `DrcLayer`, `CourtyardLayer` (SVG layers), `CourtyardWarning`, `TrackEditorToolbar`, `TrackSelectionBar`, `StalePresetBanner`. Pan/zoom is `composables/usePanZoom.ts`.                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
+**Part placement:** in every routing mode (and for a back-side switch) the preview places the diode,
+LED and capacitor with the mouse. `utils/pcb/movable-parts.ts` maps each part (the pad owners `D`,
+`LED`, `C`) to its `PcbSettings` position and rotation fields and picks the part at a switch-local
+point: the owner of the pad under it, else the smallest courtyard outline around it, never the
+switch. In `FootprintPreview.vue` a left click selects that part (outlined, with its position and
+rotation in the readout) or clears the selection; in the track editor a click that selects or starts
+a track wins, and tracks and parts aren't selected together. A middle-button press on a part (the
+layout editor's key drag) selects it, and dragged past the box threshold writes its position on
+every move (the cursor's switch-local delta, snapped to the View grid, `editorSettings.grid`; the
+form fields aren't snapped). `Shift+R` steps the rotation by −90° (clockwise on screen, KiCad's
+`Shift+R`) of the dragged part, else the selected one, else the one under the cursor. `Esc` restores
+the position and rotation from the press, or clears the selection. Moving a part keeps the view, and
+the middle button pans everywhere off the parts. Nothing moves while the settings are locked or
+while a track is drawn or dragged. The settings stay the only source, so a moved diode makes a drawn
+preset stale as the form fields do, and moves aren't in the editor's undo history.
+
 Items are written in chain order, walking outward from a pad, and shared vertices are the same
 point: kbplacer places items in order and matches track ends exactly. Tests live next to each module
 (`utils/pcb-tracks/__tests__`, `stores/__tests__/pcbTracks.spec.ts`) and in

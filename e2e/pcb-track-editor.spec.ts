@@ -78,7 +78,22 @@ async function useTool(page: Page, tool: 'select' | 'route' | 'via') {
   await centreCanvas(page)
 }
 
+/** Screen position of a point in the preview's board axes (the switch-local frame at 0°). */
+async function svgToScreen(page: Page, x: number, y: number) {
+  return page.locator(`${EDITOR.CANVAS} svg.preview-svg`).evaluate(
+    (svg, p) => {
+      const m = (svg as SVGSVGElement).getScreenCTM()!
+      return { x: m.a * p.x + m.c * p.y + m.e, y: m.b * p.x + m.d * p.y + m.f }
+    },
+    { x, y },
+  )
+}
+
+const diodeX = (page: Page) => page.locator('#diodePositionX input')
 const diodeY = (page: Page) => page.locator('#diodePositionY input')
+const diodeRotation = (page: Page) => page.locator('#diodeRotation')
+const partReadout = (page: Page) => page.locator('[data-testid="pcb-part-readout"]')
+const partSelection = (page: Page) => page.locator('[data-testid="pcb-part-selection"]')
 
 async function viewBoxWidth(page: Page): Promise<number> {
   const vb = await page.locator(`${EDITOR.CANVAS} svg.preview-svg`).getAttribute('viewBox')
@@ -852,6 +867,190 @@ test.describe('PCB Generator track editor', () => {
     await expect(vias).toHaveCount(0)
   })
 
+  test('drags and rotates the diode outside the track editor', async ({ page }) => {
+    await openPreview(page)
+    await centreCanvas(page)
+    const svg = page.locator(`${EDITOR.CANVAS} svg.preview-svg`)
+    const viewBox = await svg.getAttribute('viewBox')
+    const from = await svgToScreen(page, 5.08, 4)
+    const to = await svgToScreen(page, 7.08, 5)
+
+    // the left button doesn't move it
+    await page.mouse.move(from.x, from.y)
+    await page.mouse.down()
+    await page.mouse.move(to.x, to.y, { steps: 5 })
+    await page.mouse.up()
+    await expect(diodeX(page)).toHaveValue('5.08')
+
+    // the default diode at (5.08, 4) mm, 90°; middle-dragged 2 mm right and 1 mm down
+    await page.mouse.move(from.x, from.y)
+    await page.mouse.down({ button: 'middle' })
+    await page.mouse.move(to.x, to.y, { steps: 5 })
+    await expect(page.locator(EDITOR.CANVAS)).toHaveClass(/part-dragging/)
+    await expect(partReadout(page)).toHaveText('Diode X 7.000 Y 5.000 mm · 90°')
+    // the view holds still under the cursor while dragging
+    await expect(svg).toHaveAttribute('viewBox', viewBox!)
+    // Shift+R turns it a quarter turn clockwise, also while dragging
+    await page.keyboard.press('Shift+R')
+    await expect(partReadout(page)).toContainText('0°')
+    await page.mouse.up({ button: 'middle' })
+
+    // snapped to the View grid (0.25 mm), written to the diode settings
+    await expect(diodeX(page)).toHaveValue('7')
+    await expect(diodeY(page)).toHaveValue('5')
+    await expect(diodeRotation(page)).toHaveValue('0')
+    // the dragged diode stays selected: Shift+R turns it, no drag needed; 0° → 270°
+    await expect(partSelection(page)).toHaveAttribute('data-part', 'D')
+    await page.keyboard.press('Shift+R')
+    await expect(diodeRotation(page)).toHaveValue('270')
+  })
+
+  test('Esc cancels a diode drag', async ({ page }) => {
+    await openPreview(page)
+    await centreCanvas(page)
+    const from = await svgToScreen(page, 5.08, 4)
+    const to = await svgToScreen(page, 2, 2)
+    await page.mouse.move(from.x, from.y)
+    await page.mouse.down({ button: 'middle' })
+    await page.mouse.move(to.x, to.y, { steps: 5 })
+    await page.keyboard.press('Shift+R')
+    await expect(diodeX(page)).toHaveValue('2')
+    await page.keyboard.press('Escape')
+    await expect(diodeX(page)).toHaveValue('5.08')
+    await expect(diodeY(page)).toHaveValue('4')
+    await expect(diodeRotation(page)).toHaveValue('90')
+    // moving on after Esc doesn't drag again
+    await page.mouse.move(from.x, from.y, { steps: 3 })
+    await page.mouse.up({ button: 'middle' })
+    await expect(diodeX(page)).toHaveValue('5.08')
+  })
+
+  test('middle-drags the diode in the track editor, snapped to the grid', async ({ page }) => {
+    await openPreview(page)
+    await enterPresetMode(page)
+
+    // the middle button on a diode pad drags the diode (grid 0.25 mm)
+    const d2 = await padCentre(page, 'D', '2')
+    const sw2 = await padCentre(page, 'SW', '2')
+    const scale = (d2.y - sw2.y) / 7.68 // screen px per mm
+    const vb = await page.locator(`${EDITOR.CANVAS} svg.preview-svg`).getAttribute('viewBox')
+    await page.mouse.move(d2.x, d2.y)
+    await page.mouse.down({ button: 'middle' })
+    await page.mouse.move(d2.x - 1.08 * scale, d2.y + 1 * scale, { steps: 5 })
+    await page.mouse.up({ button: 'middle' })
+    await expect(diodeX(page)).toHaveValue('4')
+    await expect(diodeY(page)).toHaveValue('5')
+    // it didn't pan, and no track started
+    await expect(page.locator(`${EDITOR.CANVAS} svg.preview-svg`)).toHaveAttribute('viewBox', vb!)
+    await expect(page.locator('[data-testid="pcb-route-status"]')).toHaveCount(0)
+
+    // D pad 2 follows the diode: 1.08 mm left and 1 mm down
+    const moved = await padCentre(page, 'D', '2')
+    expect(moved.x).toBeCloseTo(d2.x - 1.08 * scale, 0)
+    expect(moved.y).toBeCloseTo(d2.y + 1 * scale, 0)
+
+    // the middle button off the diode still pans
+    await page.mouse.move(sw2.x - 3 * scale, sw2.y)
+    await page.mouse.down({ button: 'middle' })
+    await page.mouse.move(sw2.x - 3 * scale + 40, sw2.y, { steps: 5 })
+    await page.mouse.up({ button: 'middle' })
+    await expect(page.locator(`${EDITOR.CANVAS} svg.preview-svg`)).not.toHaveAttribute(
+      'viewBox',
+      vb!,
+    )
+    await expect(diodeX(page)).toHaveValue('4')
+
+    await page.keyboard.press('Shift+R')
+    await expect(diodeRotation(page)).toHaveValue('0')
+  })
+
+  test('selects a part with a click', async ({ page }) => {
+    await openPreview(page)
+    await centreCanvas(page)
+    const diode = await svgToScreen(page, 5.08, 4)
+    await expect(partSelection(page)).toHaveCount(0)
+
+    await page.mouse.click(diode.x, diode.y)
+    await expect(partSelection(page)).toHaveAttribute('data-part', 'D')
+    await expect(partReadout(page)).toHaveText('Diode X 5.080 Y 4.000 mm · 90°')
+    // Shift+R turns the selected part
+    await page.keyboard.press('Shift+R')
+    await expect(diodeRotation(page)).toHaveValue('0')
+    await expect(partReadout(page)).toHaveText('Diode X 5.080 Y 4.000 mm · 0°')
+
+    // a click off the parts (the switch isn't one) clears the selection
+    const empty = await svgToScreen(page, -5, 0)
+    await page.mouse.click(empty.x, empty.y)
+    await expect(partSelection(page)).toHaveCount(0)
+    await expect(partReadout(page)).toHaveCount(0)
+    // Esc clears it too
+    await page.mouse.click(diode.x, diode.y)
+    await expect(partSelection(page)).toHaveCount(1)
+    await page.keyboard.press('Escape')
+    await expect(partSelection(page)).toHaveCount(0)
+  })
+
+  test('moves and rotates the LED and its capacitor', async ({ page }) => {
+    await openPreview(page)
+    await page.locator('[data-testid="pcb-tab-leds"]').click()
+    await page.locator('[data-testid="led-enable"]').check()
+    await expect(page.locator('#ledPositionY input')).toBeEnabled()
+    // the view refits around the LED parts once their pads load
+    await waitForView(page)
+    await centreCanvas(page)
+
+    // the LED at (0, 5.25) mm, middle-dragged up to (0, 4) on the 0.25 mm grid
+    const led = await svgToScreen(page, 0, 5.25)
+    const up = await svgToScreen(page, 0, 4)
+    await page.mouse.move(led.x, led.y)
+    await page.mouse.down({ button: 'middle' })
+    await page.mouse.move(up.x, up.y, { steps: 5 })
+    await expect(partReadout(page)).toHaveText('LED X 0.000 Y 4.000 mm · 0°')
+    await page.mouse.up({ button: 'middle' })
+    await expect(page.locator('#ledPositionY input')).toHaveValue('4')
+    await page.keyboard.press('Shift+R')
+    await expect(page.locator('#ledRotation')).toHaveValue('270')
+
+    // the capacitor at (5.5, 5.75) mm overlaps the diode's pad 1 by default: picked by its pad 2
+    const cap = await svgToScreen(page, 6.3, 5.75)
+    await page.mouse.click(cap.x, cap.y)
+    await expect(partSelection(page)).toHaveAttribute('data-part', 'C')
+    await page.keyboard.press('Shift+R')
+    await expect(page.locator('#ledCapacitorRotation')).toHaveValue('270')
+    // the collision warning now covers the bottom of the canvas, and the capacitor with it
+    // in Firefox: pan it up, middle-dragging off the parts
+    const empty = await svgToScreen(page, -5, 0)
+    await page.mouse.move(empty.x, empty.y)
+    await page.mouse.down({ button: 'middle' })
+    await page.mouse.move(empty.x, empty.y - 150, { steps: 5 })
+    await page.mouse.up({ button: 'middle' })
+    // turned, its pad 2 is below its centre
+    const pad2 = await svgToScreen(page, 5.5, 6.55)
+    const right = await svgToScreen(page, 6.5, 6.55)
+    await page.mouse.move(pad2.x, pad2.y)
+    await page.mouse.down({ button: 'middle' })
+    await page.mouse.move(right.x, right.y, { steps: 5 })
+    await page.mouse.up({ button: 'middle' })
+    await expect(page.locator('#ledCapacitorPositionX input')).toHaveValue('6.5')
+    // the LED didn't move
+    await expect(page.locator('#ledPositionY input')).toHaveValue('4')
+  })
+
+  test('selects the diode by its body in the track editor', async ({ page }) => {
+    await openPreview(page)
+    await enterPresetMode(page)
+    // between the pads: not a pad that would start a track
+    const body = await svgToScreen(page, 5.08, 4)
+    await page.mouse.click(body.x, body.y)
+    await expect(partSelection(page)).toHaveAttribute('data-part', 'D')
+    await expect(page.locator('[data-testid="pcb-route-status"]')).toHaveCount(0)
+    await page.keyboard.press('Shift+R')
+    await expect(diodeRotation(page)).toHaveValue('0')
+    // Esc drops it
+    await page.keyboard.press('Escape')
+    await expect(partSelection(page)).toHaveCount(0)
+  })
+
   test('has the View controls outside the track editor', async ({ page }) => {
     await openPreview(page)
     await centreCanvas(page)
@@ -874,6 +1073,23 @@ test.describe('PCB Generator track editor', () => {
     await page.locator(EDITOR.FIT).click()
     await centreCanvas(page)
     await expect.poll(() => viewBoxWidth(page)).toBeCloseTo(width, 3)
+
+    // a drag snaps to the grid chosen in View
+    await page.locator('[data-testid="pcb-grid-select"]').selectOption('1')
+    await centreCanvas(page)
+    const from = await svgToScreen(page, 5.08, 4)
+    const to = await svgToScreen(page, 7.3, 5.2)
+    await page.mouse.move(from.x, from.y)
+    await page.mouse.down({ button: 'middle' })
+    await page.mouse.move(to.x, to.y, { steps: 5 })
+    await page.mouse.up({ button: 'middle' })
+    await expect(diodeX(page)).toHaveValue('7')
+    await expect(diodeY(page)).toHaveValue('5')
+
+    // the position fields still take an exact value, off the grid
+    await diodeX(page).fill('5.13')
+    await diodeX(page).press('Enter')
+    await expect(partReadout(page)).toHaveText('Diode X 5.130 Y 5.000 mm · 90°')
   })
 
   test('draws the next key a part collides with', async ({ page }) => {
