@@ -7,6 +7,7 @@ import type { Placement } from '@/utils/kicad/transform'
 import {
   findCourtyardCollisions,
   holesOf,
+  KEY_PITCH,
   NEIGHBOUR_OFFSETS,
   outlinesOverlap,
   type CourtyardPart,
@@ -149,5 +150,22 @@ describe('findCourtyardCollisions', () => {
     expect(found.map(({ a, b, side, neighbour }) => ({ a, b, side, neighbour }))).toEqual([
       { a: 'D', b: 'SW', side: 'front', neighbour: 'b' },
     ])
+  })
+
+  it('says which neighbouring key a part collides with, once per key', () => {
+    const parts = [
+      part('SW', 'SW_Cherry_MX_PCB_1.00u', SWITCH),
+      part('D', 'D_SOD-123F', { ...DIODE, side: 'FRONT', y: 12 }),
+    ]
+    expect(findCourtyardCollisions(parts).map((c) => c.offset)).toEqual([])
+    const found = findCourtyardCollisions(parts, NEIGHBOUR_OFFSETS)
+    // the key below, nowhere else
+    expect(found.map((c) => c.offset)).toEqual([{ x: 0, y: KEY_PITCH }])
+    // and within the key no offset
+    const own = findCourtyardCollisions([
+      part('SW', 'SW_Cherry_MX_PCB_1.00u', SWITCH),
+      part('D', 'D_SOD-123F', { ...DIODE, side: 'FRONT' }),
+    ])
+    expect(own.map((c) => c.offset)).toEqual([null])
   })
 })

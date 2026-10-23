@@ -30,7 +30,8 @@ function line(c: CourtyardCollision): string {
     : `${a} and ${b} courtyards overlap (${c.side})`
 }
 
-const lines = computed(() => props.collisions.map(line))
+// one line for a collision with several neighbouring keys
+const lines = computed(() => [...new Set(props.collisions.map(line))])
 const hasNeighbour = computed(() => props.collisions.some((c) => c.neighbour))
 </script>
 
@@ -47,7 +48,9 @@ const hasNeighbour = computed(() => props.collisions.some((c) => c.neighbour))
       <div class="courtyard-hint">
         Parts would collide on the board: move them apart, or put one on the other side.
         <template v-if="hasHole">A through-hole part's leads reach both sides.</template>
-        <template v-if="hasNeighbour">Next keys are {{ KEY_PITCH }} mm apart.</template>
+        <template v-if="hasNeighbour"
+          >Next keys, {{ KEY_PITCH }} mm apart, are drawn faded.</template
+        >
       </div>
     </div>
   </div>

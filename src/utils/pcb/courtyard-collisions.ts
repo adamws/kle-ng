@@ -48,6 +48,8 @@ export interface CourtyardCollision {
   side: 'front' | 'back'
   /** Which of the two belongs to a neighbouring key, if one does. */
   neighbour: 'a' | 'b' | null
+  /** Where that neighbouring key is (switch-local), null within the key. */
+  offset: Point | null
   /** The colliding outlines (courtyards, holes), switch-local, for drawing. */
   outlines: Point[][]
 }
@@ -144,13 +146,19 @@ export function findCourtyardCollisions(
   const found: CourtyardCollision[] = []
   const seen = new Set<string>()
   const add = (c: CourtyardCollision) => {
-    const key = `${c.kind}|${c.a}|${c.b}|${c.side}|${c.neighbour}`
+    // per neighbouring key: each one shows where it collides
+    const key = `${c.kind}|${c.a}|${c.b}|${c.side}|${c.neighbour}|${c.offset?.x},${c.offset?.y}`
     if (seen.has(key)) return
     seen.add(key)
     found.push(c)
   }
   // a's holes in b's courtyard, on either side
-  const holesIn = (a: CourtyardPart, b: CourtyardPart, neighbour: 'a' | 'b' | null) => {
+  const holesIn = (
+    a: CourtyardPart,
+    b: CourtyardPart,
+    neighbour: 'a' | 'b' | null,
+    offset: Point | null,
+  ) => {
     for (const side of ['front', 'back'] as const) {
       const holes = a.holes.filter((h) => b.courtyard[side].some((pts) => holeInside(h, pts)))
       if (holes.length) {
@@ -160,13 +168,15 @@ export function findCourtyardCollisions(
           b: b.owner,
           side,
           neighbour,
+          offset,
           outlines: [...b.courtyard[side], ...holes.map(circle)],
         })
       }
     }
   }
-  // b is the neighbour's part when `neighbour`
-  const check = (a: CourtyardPart, b: CourtyardPart, neighbour: boolean) => {
+  // b is the part of the neighbouring key at `offset`, if given
+  const check = (a: CourtyardPart, b: CourtyardPart, offset: Point | null) => {
+    const neighbour = offset !== null
     for (const side of ['front', 'back'] as const) {
       if (!overlapping(a.courtyard[side], b.courtyard[side])) continue
       add({
@@ -175,17 +185,18 @@ export function findCourtyardCollisions(
         b: b.owner,
         side,
         neighbour: neighbour ? 'b' : null,
+        offset,
         outlines: [...a.courtyard[side], ...b.courtyard[side]],
       })
     }
-    holesIn(a, b, neighbour ? 'b' : null)
-    holesIn(b, a, neighbour ? 'a' : null)
+    holesIn(a, b, neighbour ? 'b' : null, offset)
+    holesIn(b, a, neighbour ? 'a' : null, offset)
   }
-  parts.forEach((a, i) => parts.slice(i + 1).forEach((b) => check(a, b, false)))
+  parts.forEach((a, i) => parts.slice(i + 1).forEach((b) => check(a, b, null)))
   // the switches' own spacing isn't a setting, so only the other parts
   for (const a of parts.filter((p) => p.owner !== 'SW')) {
     for (const o of neighbourOffsets) {
-      for (const b of parts) check(a, translate(b, o), true)
+      for (const b of parts) check(a, translate(b, o), o)
     }
   }
   return found

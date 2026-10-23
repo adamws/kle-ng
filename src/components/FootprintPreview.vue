@@ -64,6 +64,7 @@ import { padInfos } from '@/utils/pcb-tracks/connectivity'
 import TrackSelectionBar from './pcb/TrackSelectionBar.vue'
 import CourtyardLayer from './pcb/CourtyardLayer.vue'
 import CourtyardWarning from './pcb/CourtyardWarning.vue'
+import NeighbourKeyLayer from './pcb/NeighbourKeyLayer.vue'
 import StalePresetBanner from './pcb/StalePresetBanner.vue'
 import type { Point } from '@/composables/usePanZoom'
 import BiInfoCircle from 'bootstrap-icons/icons/info-circle.svg'
@@ -539,6 +540,14 @@ const courtyardCollisions = computed(() => {
     NEIGHBOUR_OFFSETS.map((o) => boardToSwitchLocal(o, rotation)),
   )
 })
+/** The neighbouring keys a part collides with, switch-local, drawn faded. */
+const collidingNeighbours = computed(() => {
+  const offsets = new Map<string, Point>()
+  for (const { offset } of courtyardCollisions.value) {
+    if (offset) offsets.set(`${offset.x},${offset.y}`, offset)
+  }
+  return [...offsets.values()]
+})
 /**
  * The SVGs and pads of the current footprints are loaded and the view fitted
  * to them (the padsReady watcher runs before the render), so what is drawn
@@ -1008,6 +1017,14 @@ onMounted(() => {
 
         <!-- DRC markers, ratsnest and overlapping courtyards (switch-local frame) -->
         <g v-if="padsReady" :transform="switchLocalTransform">
+          <NeighbourKeyLayer
+            :offsets="collidingNeighbours"
+            :pads="previewPads"
+            :parts="courtyardParts"
+            :switch-rotation="settings.switchRotation"
+            :visible-layers="visibleLayers"
+            :px-per-mm="pxPerMm"
+          />
           <CourtyardLayer :collisions="courtyardCollisions" :px-per-mm="pxPerMm" />
           <DrcLayer
             :violations="drc?.violations ?? []"

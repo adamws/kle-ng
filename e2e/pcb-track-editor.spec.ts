@@ -78,6 +78,8 @@ async function useTool(page: Page, tool: 'select' | 'route' | 'via') {
   await centreCanvas(page)
 }
 
+const diodeY = (page: Page) => page.locator('#diodePositionY input')
+
 async function viewBoxWidth(page: Page): Promise<number> {
   const vb = await page.locator(`${EDITOR.CANVAS} svg.preview-svg`).getAttribute('viewBox')
   return Number(vb?.split(' ')[2])
@@ -845,5 +847,30 @@ test.describe('PCB Generator track editor', () => {
     await page.locator('[data-testid="pcb-undo"]').click()
     await page.locator('[data-testid="pcb-undo"]').click()
     await expect(vias).toHaveCount(0)
+  })
+
+  test('draws the next key a part collides with', async ({ page }) => {
+    await openPreview(page)
+    await expect(page.locator('[data-testid="pcb-neighbour-key"]')).toHaveCount(0)
+    await expect(page.locator('[data-testid="pcb-own-key"]')).toHaveCount(0)
+
+    // a front diode past the key's bottom edge, in the next key's switch
+    await page.locator('#diodeSide').selectOption('FRONT')
+    await diodeY(page).fill('12')
+    await diodeY(page).press('Enter')
+    await expect(page.locator('[data-testid="pcb-courtyard-warning"]')).toContainText(
+      "Diode courtyard overlaps the next key's switch (front)",
+    )
+    const next = page.locator('[data-testid="pcb-neighbour-key"]')
+    await expect(next).toHaveCount(1)
+    await expect(next).toHaveAttribute('transform', 'translate(0 19.05)')
+    await expect(next).toContainText('next key')
+    await expect(page.locator('[data-testid="pcb-own-key"]')).toHaveCount(1)
+
+    // moved back into its key: nothing more to show
+    await diodeY(page).fill('4')
+    await diodeY(page).press('Enter')
+    await page.locator('#diodeSide').selectOption('BACK')
+    await expect(next).toHaveCount(0)
   })
 })
