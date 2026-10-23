@@ -43,9 +43,15 @@ async function openPreview(page: Page) {
     await collapseBtn.click()
   }
   await expect(page.locator(EDITOR.CANVAS)).toBeVisible()
-  // footprints loaded: the view doesn't move under the pointer any more
-  await expect(page.locator('.footprint-preview .preview-overlay')).toHaveCount(0)
-  await expect(page.locator(`${EDITOR.CANVAS} .footprint-svg circle`).first()).toBeAttached()
+  await waitForView(page)
+}
+
+/**
+ * Footprints and pads loaded and the view fitted to them: it doesn't move
+ * under the pointer any more. Needed after every footprint change.
+ */
+async function waitForView(page: Page) {
+  await expect(page.locator(`${EDITOR.CANVAS}[data-ready]`)).toBeAttached()
 }
 
 /** A preset routing mode opens the track editor. */
@@ -218,6 +224,7 @@ test.describe('PCB Generator track editor', () => {
     const frontSvg = page.waitForResponse((r) => r.url().endsWith('/front/D_SOD-123F.svg'))
     await page.locator('#diodeSide').selectOption('FRONT')
     await frontSvg
+    await waitForView(page)
     // the SMD pads move to F.Cu, and the drawn B.Cu tracks no longer fit
     const pads = page.locator(EDITOR.PADS)
     await expect(pads.locator('[data-layer="F.Cu"] [data-pad-key^="D:"]')).toHaveCount(2)
@@ -247,6 +254,7 @@ test.describe('PCB Generator track editor', () => {
   test('routes to a through-hole diode, positioned by pin 1', async ({ page }) => {
     await openPreview(page)
     await page.locator('#diodeFootprint').selectOption('Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal')
+    await waitForView(page)
     // at the SMD default its leads come through under the switch housing
     const warning = page.locator('[data-testid="pcb-courtyard-warning"]')
     await expect(warning).toContainText('Diode hole is inside the switch courtyard (front)')
@@ -293,6 +301,7 @@ test.describe('PCB Generator track editor', () => {
     await openPreview(page)
     // pin 1 is the footprint origin, so the SVG page is twice the body's length
     await page.locator('#diodeFootprint').selectOption('Diode_THT:D_DO-35_SOD27_P7.62mm_Horizontal')
+    await waitForView(page)
     for (const [id, value] of [
       ['diodePositionX', '8.89'],
       ['diodePositionY', '3.81'],

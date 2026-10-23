@@ -539,6 +539,12 @@ const courtyardCollisions = computed(() => {
     NEIGHBOUR_OFFSETS.map((o) => boardToSwitchLocal(o, rotation)),
   )
 })
+/**
+ * The SVGs and pads of the current footprints are loaded and the view fitted
+ * to them (the padsReady watcher runs before the render), so what is drawn
+ * stays put until the settings change.
+ */
+const viewReady = computed(() => padsReady.value && !isLoading.value && !!baseViewBox.value)
 const showDrc = computed(() => editMode.value && padsReady.value)
 // the store runs DRC on the preset, plus the route and its preview while routing
 const drc = computed(() => (showDrc.value ? tracks.drc : null))
@@ -928,6 +934,7 @@ onMounted(() => {
         'pad-hover': hoveredPad !== undefined,
       }"
       :tabindex="editMode ? 0 : undefined"
+      :data-ready="viewReady ? '' : undefined"
       data-testid="pcb-preview-canvas"
       @blur="panZoom.onBlur()"
     >
