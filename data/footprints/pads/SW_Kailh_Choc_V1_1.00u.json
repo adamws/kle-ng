@@ -1,0 +1,168 @@
+{
+  "footprint": "SW_Kailh_Choc_V1_1.00u",
+  "pads": [
+    {
+      "number": "1",
+      "type": "thru_hole",
+      "shape": "circle",
+      "at": {
+        "x": 0,
+        "y": -5.9,
+        "rot": 0
+      },
+      "size": {
+        "w": 2.2,
+        "h": 2.2
+      },
+      "layers": [
+        "F.Cu",
+        "B.Cu",
+        "F.Mask",
+        "B.Mask"
+      ],
+      "drill": {
+        "w": 1.2,
+        "h": 1.2,
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "number": "2",
+      "type": "thru_hole",
+      "shape": "circle",
+      "at": {
+        "x": 5,
+        "y": -3.8,
+        "rot": 0
+      },
+      "size": {
+        "w": 2.2,
+        "h": 2.2
+      },
+      "layers": [
+        "F.Cu",
+        "B.Cu",
+        "F.Mask",
+        "B.Mask"
+      ],
+      "drill": {
+        "w": 1.2,
+        "h": 1.2,
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "number": "",
+      "type": "np_thru_hole",
+      "shape": "circle",
+      "at": {
+        "x": 0,
+        "y": 0,
+        "rot": 0
+      },
+      "size": {
+        "w": 3.45,
+        "h": 3.45
+      },
+      "layers": [
+        "F.Cu",
+        "B.Cu",
+        "F.Mask",
+        "B.Mask"
+      ],
+      "drill": {
+        "w": 3.45,
+        "h": 3.45,
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "number": "",
+      "type": "np_thru_hole",
+      "shape": "circle",
+      "at": {
+        "x": -5.5,
+        "y": 0,
+        "rot": 0
+      },
+      "size": {
+        "w": 1.9,
+        "h": 1.9
+      },
+      "layers": [
+        "F.Cu",
+        "B.Cu",
+        "F.Mask",
+        "B.Mask"
+      ],
+      "drill": {
+        "w": 1.9,
+        "h": 1.9,
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "number": "",
+      "type": "np_thru_hole",
+      "shape": "circle",
+      "at": {
+        "x": 5.5,
+        "y": 0,
+        "rot": 0
+      },
+      "size": {
+        "w": 1.9,
+        "h": 1.9
+      },
+      "layers": [
+        "F.Cu",
+        "B.Cu",
+        "F.Mask",
+        "B.Mask"
+      ],
+      "drill": {
+        "w": 1.9,
+        "h": 1.9,
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    }
+  ],
+  "courtyard": {
+    "front": [
+      [
+        {
+          "x": -7.75,
+          "y": -7.75
+        },
+        {
+          "x": -7.75,
+          "y": 7.75
+        },
+        {
+          "x": 7.75,
+          "y": 7.75
+        },
+        {
+          "x": 7.75,
+          "y": -7.75
+        }
+      ]
+    ],
+    "back": []
+  }
+}

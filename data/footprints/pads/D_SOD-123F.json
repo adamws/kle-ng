@@ -1,0 +1,68 @@
+{
+  "footprint": "D_SOD-123F",
+  "pads": [
+    {
+      "number": "1",
+      "type": "smd",
+      "shape": "roundrect",
+      "at": {
+        "x": -1.4,
+        "y": 0,
+        "rot": 0
+      },
+      "size": {
+        "w": 1.1,
+        "h": 1.1
+      },
+      "layers": [
+        "F.Cu",
+        "F.Mask",
+        "F.Paste"
+      ],
+      "rratio": 0.227273
+    },
+    {
+      "number": "2",
+      "type": "smd",
+      "shape": "roundrect",
+      "at": {
+        "x": 1.4,
+        "y": 0,
+        "rot": 0
+      },
+      "size": {
+        "w": 1.1,
+        "h": 1.1
+      },
+      "layers": [
+        "F.Cu",
+        "F.Mask",
+        "F.Paste"
+      ],
+      "rratio": 0.227273
+    }
+  ],
+  "courtyard": {
+    "front": [
+      [
+        {
+          "x": -2.2,
+          "y": -1.15
+        },
+        {
+          "x": -2.2,
+          "y": 1.15
+        },
+        {
+          "x": 2.2,
+          "y": 1.15
+        },
+        {
+          "x": 2.2,
+          "y": -1.15
+        }
+      ]
+    ],
+    "back": []
+  }
+}
