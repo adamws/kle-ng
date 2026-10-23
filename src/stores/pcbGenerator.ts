@@ -19,6 +19,7 @@ import {
 } from '@/utils/pcb/pcb-settings-serializer'
 import { validatePcbSettingsJson } from '@/utils/pcb/pcb-settings-validator'
 import { applyViaEncoderSwitchMount } from '@/utils/pcb-encoder'
+import { stripGhostKeys } from '@/utils/pcb-ghost-keys'
 import { useKeyboardStore } from '@/stores/keyboard'
 import { useToast } from '@/composables/useToast'
 import { trackPresetToWire } from '@/utils/pcb/track-preset'
@@ -225,7 +226,9 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
       abortController.value = new AbortController()
 
       const keyboardStore = useKeyboardStore()
-      const layout = keyboardStore.getSerializedData('kle-internal')
+      // Ghost keys are not wired, drop them before the backend sees them
+      // (temporary until kbplacer ignores them itself).
+      const layout = stripGhostKeys(keyboardStore.getSerializedData('kle-internal'))
 
       // Validate layout size
       // kle-internal format returns: { meta: {...}, keys: [...] }
