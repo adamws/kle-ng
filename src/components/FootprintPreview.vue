@@ -351,43 +351,33 @@ const fittedViewBox = computed<ViewBox>(() => {
   }
 })
 
-const compositeViewBox = computed(() => {
-  const vb = fittedViewBox.value
-  return `${vb.x} ${vb.y} ${vb.width} ${vb.height}`
-})
-
-// Track editor: pan/zoom, pads from the pad geometry JSON, grid, drawing.
-// It shows in a preset routing mode (the settings hold a preset, see
-// utils/pcb/routing-mode.ts). The editor works in the switch-local frame,
-// which presets are defined for, so it needs a front-side switch.
+// Pan/zoom and the grid work in every routing mode, like KiCad's canvas. The
+// track editor (pads from the pad geometry JSON, drawing) shows in a preset
+// routing mode (the settings hold a preset, see utils/pcb/routing-mode.ts). It
+// works in the switch-local frame, which presets are defined for, so it needs
+// a front-side switch.
 const svgRef = ref<SVGSVGElement | null>(null)
 const containerRef = ref<HTMLDivElement | null>(null)
 const canEdit = computed(() => settings.value.switchSide === 'FRONT')
 const editMode = computed(() => settings.value.trackPreset !== undefined && canEdit.value)
 const panZoom = usePanZoom(svgRef, fittedViewBox.value)
-const svgViewBox = computed(() =>
-  editMode.value ? panZoom.viewBoxString.value : compositeViewBox.value,
-)
 
 const visibleLayers = ref<Record<CopperLayer, boolean>>({ 'F.Cu': true, 'B.Cu': true })
 const cursorLocal = ref<{ x: number; y: number } | null>(null)
 const hoveredPadKey = ref<string | null>(null)
 
-// entering or leaving the editor: nothing in progress survives
+// entering or leaving the editor: nothing in progress survives, the view stays
 watch(
   editMode,
   (editing) => {
     tracks.reset()
-    if (editing) {
-      panZoom.fit(fittedViewBox.value)
-      nextTick(() => containerRef.value?.focus({ preventScroll: true }))
-    }
+    if (editing) nextTick(() => containerRef.value?.focus({ preventScroll: true }))
   },
   { immediate: true },
 )
-// a preset mode restored on load opens the editor before the footprints load
+// the first footprints loaded: show them
 watch(baseViewBox, (vb, before) => {
-  if (vb && !before && editMode.value) panZoom.fit(fittedViewBox.value)
+  if (vb && !before) panZoom.fit(fittedViewBox.value)
 })
 
 // Size of the SVG on screen, for the grid density
@@ -406,7 +396,7 @@ onMounted(() => {
 onUnmounted(() => resizeObserver?.disconnect())
 
 const pxPerMm = computed(() => {
-  const vb = editMode.value ? panZoom.viewBox.value : fittedViewBox.value
+  const vb = panZoom.viewBox.value
   const { width, height } = svgSize.value
   return width && height ? Math.min(width / vb.width, height / vb.height) : 1
 })
@@ -525,10 +515,11 @@ const courtyardParts = computed<CourtyardPart[]>(() => {
   })
 })
 
-// the courtyards frame the parts once loaded (see partsBounds): refit a
-// preset mode opened before they loaded
+// the courtyards frame the parts once loaded (see partsBounds): refit when
+// they load, i.e. on start and when a footprint or the LED chain changes
+// (a new position keeps the view, like KiCad)
 watch(padsReady, (ready) => {
-  if (ready && editMode.value && baseViewBox.value) panZoom.fit(fittedViewBox.value)
+  if (ready && baseViewBox.value) panZoom.fit(fittedViewBox.value)
 })
 
 // Parts whose courtyards overlap, in every routing mode: placement is set
@@ -603,8 +594,12 @@ const drcSummary = computed(() => {
 
 /** The help line under the canvas: what the mouse and keys do now. */
 const statusHint = computed(() => {
-  if (!editMode.value)
-    return ratsnestLines.value.length ? 'dashed line: unrouted switch-diode connection' : ''
+  if (!editMode.value) {
+    const hint = 'wheel: zoom · middle/Space+drag: pan'
+    return ratsnestLines.value.length
+      ? `${hint} · dashed line: unrouted switch-diode connection`
+      : hint
+  }
   if (tracks.isDragging) return 'release: drop · Esc: cancel'
   if (tracks.isRouting)
     return 'click: add corner · V: via · / flip · Backspace: undo · double-click/End: finish · Esc: cancel'
@@ -634,9 +629,8 @@ const showCrosshair = computed(
 )
 
 function updateHoveredPad(local: Point | null) {
-  const layers = editMode.value ? visibleLayerList.value : (['F.Cu', 'B.Cu'] as const)
   hoveredPadKey.value = local
-    ? (padAt(previewPadInfos.value, local, layers)?.placed.key ?? null)
+    ? (padAt(previewPadInfos.value, local, visibleLayerList.value)?.placed.key ?? null)
     : null
 }
 
@@ -704,11 +698,11 @@ function dragHandleUnder(local: Point | null): DragHandle | null {
 }
 
 function onCanvasPointerDown(event: PointerEvent) {
-  if (!editMode.value) return
   containerRef.value?.focus({ preventScroll: true })
-  clickIsPan = panZoom.onPointerDown(event)
   clickIsBox = false
   pendingDrag = null
+  clickIsPan = panZoom.onPointerDown(event)
+  if (!editMode.value) return
   if (clickIsPan || event.button !== 0 || tracks.tool !== 'select') return
   const board = panZoom.screenToSvg(event.clientX, event.clientY)
   if (!board) return
@@ -722,12 +716,12 @@ function onCanvasPointerDown(event: PointerEvent) {
 }
 
 function onCanvasPointerMove(event: PointerEvent) {
-  if (editMode.value && panZoom.onPointerMove(event)) return
+  if (panZoom.onPointerMove(event)) return
   const p = panZoom.screenToSvg(event.clientX, event.clientY)
   cursorLocal.value = p ? boardToSwitchLocal(p, settings.value.switchRotation) : null
   updateHoveredPad(cursorLocal.value)
+  if (editMode.value) tracks.setCursor(cursorLocal.value)
   if (!editMode.value) return
-  tracks.setCursor(cursorLocal.value)
   if (pendingDrag) {
     const moved = Math.hypot(
       event.clientX - pendingDrag.client.x,
@@ -839,13 +833,13 @@ function isTextField(target: EventTarget | null): boolean {
 
 /** Editor shortcuts, scoped to the editor (canvas and its toolbars). */
 function onEditorKeyDown(event: KeyboardEvent) {
-  if (!editMode.value || isTextField(event.target)) return
+  if (isTextField(event.target)) return
   // Space pans on the canvas, but still presses a focused toolbar button
   if (event.code === 'Space' && event.target !== containerRef.value) return
   // a mouse drag ends with the button or Esc; other keys would act on the items under it
   if (tracks.isDragging && event.key !== 'Escape') return
   panZoom.onKeyDown(event)
-  if (event.altKey) return
+  if (!editMode.value || event.altKey) return
   const mod = event.ctrlKey || event.metaKey
   const key = event.key.toLowerCase()
   const handled = (() => {
@@ -898,11 +892,11 @@ function onEditorKeyDown(event: KeyboardEvent) {
 }
 
 function onEditorKeyUp(event: KeyboardEvent) {
-  if (editMode.value) panZoom.onKeyUp(event)
+  panZoom.onKeyUp(event)
 }
 
 function onCanvasWheel(event: WheelEvent) {
-  if (editMode.value) panZoom.onWheel(event)
+  panZoom.onWheel(event)
 }
 
 // Watch for settings changes and reload footprints. Includes LED/capacitor
@@ -940,16 +934,15 @@ onMounted(() => {
         'pan-ready': panZoom.spaceHeld.value,
         'drag-hover': editMode && (dragHover !== null || tracks.isDragging),
         'blocked-flash': blockedFlash || tracks.dragViolation !== null,
-        'pad-hover': hoveredPad !== undefined,
       }"
-      :tabindex="editMode ? 0 : undefined"
+      tabindex="0"
       :data-ready="viewReady ? '' : undefined"
       data-testid="pcb-preview-canvas"
       @blur="panZoom.onBlur()"
     >
       <svg
         ref="svgRef"
-        :viewBox="svgViewBox"
+        :viewBox="panZoom.viewBoxString.value"
         class="preview-svg"
         xmlns="http://www.w3.org/2000/svg"
         @wheel="onCanvasWheel"
@@ -958,12 +951,12 @@ onMounted(() => {
         @pointerup="onCanvasPointerUp"
         @pointercancel="onCanvasPointerUp"
         @pointerleave="onCanvasPointerLeave"
-        @mousedown.middle="editMode && $event.preventDefault()"
+        @mousedown.middle.prevent
         @click="onCanvasClick"
         @dblclick="onCanvasDoubleClick"
       >
-        <!-- Grid (switch-local frame, track editor only) -->
-        <g v-if="editMode" :transform="switchLocalTransform">
+        <!-- Grid (switch-local frame) -->
+        <g :transform="switchLocalTransform">
           <GridLayer :grid="editorSettings.grid" :px-per-mm="pxPerMm" :extent="gridExtent" />
         </g>
 
@@ -991,14 +984,14 @@ onMounted(() => {
           <g v-html="capacitorSvgContent"></g>
         </g>
 
-        <!-- Pads from the pad geometry JSON (switch-local frame, track editor only) -->
-        <g v-if="editMode" :transform="switchLocalTransform">
+        <!-- Pads from the pad geometry JSON (switch-local frame), in place of the SVGs' copper -->
+        <g :transform="switchLocalTransform">
           <PadLayer
             :pads="previewPads"
             :visible-layers="visibleLayers"
             :hovered-key="hoveredPadKey"
             :active-layer="editorSettings.layer"
-            :highlight-net="tracks.highlightNet"
+            :highlight-net="editMode ? tracks.highlightNet : null"
           />
         </g>
 
@@ -1010,7 +1003,7 @@ onMounted(() => {
             :highlight-net="editMode ? tracks.highlightNet : null"
             :selected="editMode ? tracks.selection : []"
             :hovered="editMode ? hoveredTrack : null"
-            :visible-layers="editMode ? visibleLayers : undefined"
+            :visible-layers="visibleLayers"
             :px-per-mm="pxPerMm"
           />
         </g>
@@ -1084,7 +1077,7 @@ onMounted(() => {
 
       <!-- Over the canvas's top edge: the view controls on the left, the selected
            tracks' panel on the right, or under them when both don't fit -->
-      <div v-if="editMode" class="canvas-top">
+      <div class="canvas-top">
         <!-- View controls (what is shown and the snap grid, never what is drawn) -->
         <div class="view-controls" role="toolbar" aria-label="View" @pointerdown.stop>
           <span class="view-caption">View</span>
@@ -1150,13 +1143,17 @@ onMounted(() => {
         </div>
 
         <!-- Width, layer and delete for the selected tracks -->
-        <TrackSelectionBar />
+        <TrackSelectionBar v-if="editMode" />
       </div>
 
       <!-- Notices over the bottom of the canvas, so they never move the preview -->
       <div class="canvas-notices">
         <!-- Readouts: hovered pad, cursor, route, DRC and why something was refused -->
-        <div v-if="hoveredPad || editMode" class="canvas-readout" data-testid="pcb-readout">
+        <div
+          v-if="hoveredPad || editMode || cursorLocal || padsError"
+          class="canvas-readout"
+          data-testid="pcb-readout"
+        >
           <div class="readout-row">
             <template v-if="hoveredPad">
               <span data-testid="pcb-hovered-pad">{{ padLabel(hoveredPad) }}</span>
@@ -1165,7 +1162,7 @@ onMounted(() => {
                 {{ formatCoordinate(hoveredPad.pad.at.y) }} mm
               </span>
             </template>
-            <span v-else-if="editMode && cursorLocal" data-testid="pcb-cursor-readout">
+            <span v-else-if="cursorLocal" data-testid="pcb-cursor-readout">
               X {{ formatCoordinate(cursorLocal.x) }} Y {{ formatCoordinate(cursorLocal.y) }} mm
             </span>
             <span
@@ -1187,8 +1184,8 @@ onMounted(() => {
             >
               Can't drop here · {{ tracks.dragViolation.message }}
             </div>
-            <div v-if="padsError" class="text-warning-emphasis">{{ padsError }}</div>
           </template>
+          <div v-if="padsError" class="text-warning-emphasis">{{ padsError }}</div>
         </div>
         <!-- Parts placed on top of each other -->
         <CourtyardWarning :collisions="courtyardCollisions" />
@@ -1255,6 +1252,10 @@ onMounted(() => {
   overflow: hidden;
 }
 
+.svg-container:focus {
+  outline: none;
+}
+
 .svg-container.svg-hidden {
   opacity: 0;
   pointer-events: none;
@@ -1296,9 +1297,7 @@ onMounted(() => {
   color: rgba(255, 255, 255, 0.8);
 }
 
-/* Track editor */
-.svg-container.editing {
-  outline: none;
+.svg-container {
   cursor: crosshair;
   touch-action: none;
 }
@@ -1319,8 +1318,8 @@ onMounted(() => {
   cursor: grabbing;
 }
 
-/* the pad layer replaces the SVG copper and holes while editing */
-.svg-container.editing :deep(.footprint-svg .hoverable) {
+/* the pad layer replaces the SVG copper and holes */
+.svg-container :deep(.footprint-svg .hoverable) {
   display: none;
 }
 
@@ -1537,10 +1536,5 @@ onMounted(() => {
   fill: #ff0000;
   fill-opacity: 0.6;
   stroke: #ffffff;
-}
-
-/* over a pad outside the editor (the editor sets its own cursors) */
-.svg-container.pad-hover:not(.editing) {
-  cursor: crosshair;
 }
 </style>

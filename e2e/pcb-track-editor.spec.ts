@@ -88,9 +88,12 @@ async function viewBoxWidth(page: Page): Promise<number> {
 test.describe('PCB Generator track editor', () => {
   test('shows pads from the pad JSON with a grid and cursor readout', async ({ page }) => {
     await openPreview(page)
-    await expect(page.locator(EDITOR.PADS)).toHaveCount(0)
+    // the preview draws the same pads; the editor only adds its tools
+    await expect(page.locator(EDITOR.PADS)).toBeVisible()
+    await expect(page.locator('[data-testid="pcb-tool-route"]')).toHaveCount(0)
 
     await enterPresetMode(page)
+    await expect(page.locator('[data-testid="pcb-tool-route"]')).toBeVisible()
 
     const pads = page.locator(EDITOR.PADS)
     await expect(pads).toBeVisible()
@@ -555,7 +558,7 @@ test.describe('PCB Generator track editor', () => {
     await routing.selectOption('Full')
     await page.locator('[data-testid="pcb-routing-confirm-ok"]').click()
     await expect(routing).toHaveValue('Full')
-    await expect(page.locator(EDITOR.PADS)).toHaveCount(0)
+    await expect(page.locator('[data-testid="pcb-tool-route"]')).toHaveCount(0)
     await expect(tracks).toHaveCount(0)
     await expect(page.locator('[data-testid="pcb-ratsnest"]')).toHaveCount(1)
   })
@@ -847,6 +850,30 @@ test.describe('PCB Generator track editor', () => {
     await page.locator('[data-testid="pcb-undo"]').click()
     await page.locator('[data-testid="pcb-undo"]').click()
     await expect(vias).toHaveCount(0)
+  })
+
+  test('has the View controls outside the track editor', async ({ page }) => {
+    await openPreview(page)
+    await centreCanvas(page)
+    // the same View controls in every routing mode
+    await expect(page.locator(EDITOR.GRID)).toBeVisible()
+    await expect(page.locator(EDITOR.FIT)).toBeVisible()
+    const pads = page.locator(EDITOR.PADS)
+    await expect(pads.locator('[data-layer="B.Cu"] [data-pad-key^="D:"]')).toHaveCount(2)
+    await page.locator('[data-testid="pcb-layer-toggle-B.Cu"]').click()
+    await centreCanvas(page)
+    await expect(pads.locator('[data-layer="B.Cu"]')).toHaveCount(0)
+    await page.locator('[data-testid="pcb-layer-toggle-B.Cu"]').click()
+    await centreCanvas(page)
+    await expect(pads.locator('[data-layer="B.Cu"] [data-pad-key^="D:"]')).toHaveCount(2)
+
+    const width = await viewBoxWidth(page)
+    await page.locator('[data-testid="pcb-zoom-in"]').click()
+    await centreCanvas(page)
+    await expect.poll(() => viewBoxWidth(page)).toBeLessThan(width)
+    await page.locator(EDITOR.FIT).click()
+    await centreCanvas(page)
+    await expect.poll(() => viewBoxWidth(page)).toBeCloseTo(width, 3)
   })
 
   test('draws the next key a part collides with', async ({ page }) => {

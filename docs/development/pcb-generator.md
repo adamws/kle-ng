@@ -573,8 +573,12 @@ positions of footprints placed by kbplacer (see [Coordinate contract](#coordinat
 ### Track editor {#track-editor}
 
 A preset routing mode (`settings.trackPreset` defined, front-side switch) turns the preview in
-`FootprintPreview.vue` into a small KiCad-style router for the preset. Outside it, the preview still
-shows the ratsnest of the bare pads. Everything works in the switch-local frame in plain-number mm (no Decimal.js: DRC runs on
+`FootprintPreview.vue` into a small KiCad-style router for the preset. Outside it, the preview is the
+same canvas without the editor's extras (Draw toolbar, tracks, DRC, selected-tracks panel, net
+highlight): pan/zoom, grid, View controls, `PadLayer` in place of the SVGs' copper and holes, and
+the ratsnest of the bare pads. The viewBox is always `usePanZoom`'s: it fits the parts when their
+pads load (on start, and when a footprint or the LED chain changes), not when a position changes.
+Everything works in the switch-local frame in plain-number mm (no Decimal.js: DRC runs on
 every pointer move); the serializer converts to nm.
 
 | Part                                                                                                         | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
