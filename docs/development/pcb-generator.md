@@ -578,6 +578,10 @@ same canvas without the editor's extras (Draw toolbar, tracks, DRC, selected-tra
 highlight): pan/zoom, grid, View controls, `PadLayer` in place of the SVGs' copper and holes, and
 the ratsnest of the bare pads. The viewBox is always `usePanZoom`'s: it fits the parts when their
 pads load (on start, and when a footprint or the LED chain changes), not when a position changes.
+In every mode `DrcLayer` also dashes the LED's VCC connection to its capacitor from
+`utils/pcb/led-connections.ts` (kbplacer's pads: LED 3 and capacitor 1, the closest pair). GND (LED
+1, capacitor 2) isn't drawn: it usually goes through a ground plane. The line is a guide for placing
+the capacitor, not an editor net: presets connect the switch and diode only, so it isn't unrouted.
 Everything works in the switch-local frame in plain-number mm (no Decimal.js: DRC runs on
 every pointer move); the serializer converts to nm.
 

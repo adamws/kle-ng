@@ -1036,6 +1036,64 @@ test.describe('PCB Generator track editor', () => {
     await expect(page.locator('#ledPositionY input')).toHaveValue('4')
   })
 
+  test('draws a dashed line from the LED VCC pad to the capacitor', async ({ page }) => {
+    await openPreview(page)
+    const lines = page.locator('[data-testid="pcb-led-connection"]')
+    await expect(lines).toHaveCount(0)
+    await page.locator('[data-testid="pcb-tab-leds"]').click()
+    await page.locator('[data-testid="led-enable"]').check()
+    await expect(page.locator('#ledPositionY input')).toBeEnabled()
+    await waitForView(page)
+    await centreCanvas(page)
+    // VCC only: GND goes through a ground plane
+    await expect(lines).toHaveCount(1)
+    await expect(lines).toHaveAttribute('data-net', 'VCC')
+
+    /** Screen distance from each end of the line to the centre of the pad it should join. */
+    const ends = () =>
+      page.evaluate(() => {
+        const line = document.querySelector<SVGLineElement>('[data-testid="pcb-led-connection"]')!
+        const m = line.getScreenCTM()!
+        const screen = (x: number, y: number) => ({
+          x: m.a * x + m.c * y + m.e,
+          y: m.b * x + m.d * y + m.f,
+        })
+        const centre = (owner: string, number: string) => {
+          const r = document
+            .querySelector(`[data-pad-key^="${owner}:"][data-pad-number="${number}"]`)!
+            .getBoundingClientRect()
+          return { x: r.x + r.width / 2, y: r.y + r.height / 2 }
+        }
+        // SK6812MINI-E pad 3 VCC, the capacitor's pad 1 VCC
+        const d = (a: { x: number; y: number }, b: { x: number; y: number }) =>
+          Math.hypot(a.x - b.x, a.y - b.y)
+        const { x1, y1, x2, y2 } = line
+        return [
+          d(screen(x1.baseVal.value, y1.baseVal.value), centre('LED', '3')),
+          d(screen(x2.baseVal.value, y2.baseVal.value), centre('C', '1')),
+        ]
+      })
+    for (const d of await ends()) expect(d).toBeLessThan(1)
+    await expect(page.locator('[data-testid="pcb-preview-status"]')).toContainText(
+      'LED-capacitor VCC',
+    )
+
+    // the line follows a moved capacitor: by its pad 2, clear of the diode's pad 1
+    const cap = await svgToScreen(page, 6.3, 5.75)
+    const right = await svgToScreen(page, 8.3, 5.75)
+    await page.mouse.move(cap.x, cap.y)
+    await page.mouse.down({ button: 'middle' })
+    await page.mouse.move(right.x, right.y, { steps: 5 })
+    await page.mouse.up({ button: 'middle' })
+    await expect(page.locator('#ledCapacitorPositionX input')).toHaveValue('7.5')
+    for (const d of await ends()) expect(d).toBeLessThan(1)
+
+    // none without the capacitor
+    await page.locator('[data-testid="pcb-tab-leds"]').click()
+    await page.locator('#ledDecoupling').uncheck()
+    await expect(lines).toHaveCount(0)
+  })
+
   test('selects the diode by its body in the track editor', async ({ page }) => {
     await openPreview(page)
     await enterPresetMode(page)

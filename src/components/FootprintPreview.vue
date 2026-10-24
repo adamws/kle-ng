@@ -41,6 +41,7 @@ import {
 } from '@/utils/footprintUtils'
 import { usePanZoom } from '@/composables/usePanZoom'
 import { footprintNameFromSvg, loadFootprintPads } from '@/utils/pcb/footprint-pads-loader'
+import { ledCapacitorConnections } from '@/utils/pcb/led-connections'
 import { placePads, type FootprintPad } from '@/utils/kicad/footprint-pads'
 import { placeCourtyard, type Courtyard } from '@/utils/kicad/courtyard'
 import {
@@ -565,6 +566,8 @@ const drc = computed(() => (showDrc.value ? tracks.drc : null))
 // the diode connects to while placing it. Without a preset (or for a back-side
 // switch, which presets don't apply to) it joins the bare pads.
 const ratsnestLines = computed(() => (padsReady.value ? tracks.drc.ratsnest : []))
+// the LED's VCC to its capacitor (GND goes through a plane), in every routing mode, to place it by
+const ledLines = computed(() => (padsReady.value ? ledCapacitorConnections(previewPads.value) : []))
 
 watch(previewPads, (pads) => tracks.setPads(pads), { immediate: true })
 // anchors attract the cursor within a few screen pixels
@@ -611,9 +614,11 @@ const statusHint = computed(() => {
   if (!editMode.value) {
     const hint =
       'click part: select · drag: box · middle-drag part: move selected · Shift+R: rotate part · wheel: zoom · middle/Space+drag: pan'
-    return ratsnestLines.value.length
-      ? `${hint} · dashed line: unrouted switch-diode connection`
-      : hint
+    const dashed = [
+      ratsnestLines.value.length && 'unrouted switch-diode connection',
+      ledLines.value.length && 'LED-capacitor VCC',
+    ].filter(Boolean)
+    return dashed.length ? `${hint} · dashed line: ${dashed.join(', ')}` : hint
   }
   if (tracks.isDragging) return 'release: drop · Esc: cancel'
   if (tracks.isRouting)
@@ -1254,6 +1259,7 @@ onMounted(() => {
           <DrcLayer
             :violations="drc?.violations ?? []"
             :ratsnest="ratsnestLines"
+            :led-connections="ledLines"
             :px-per-mm="pxPerMm"
           />
         </g>
