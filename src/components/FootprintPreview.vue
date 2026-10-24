@@ -566,8 +566,17 @@ const drc = computed(() => (showDrc.value ? tracks.drc : null))
 // the diode connects to while placing it. Without a preset (or for a back-side
 // switch, which presets don't apply to) it joins the bare pads.
 const ratsnestLines = computed(() => (padsReady.value ? tracks.drc.ratsnest : []))
-// the LED's VCC to its capacitor (GND goes through a plane), in every routing mode, to place it by
-const ledLines = computed(() => (padsReady.value ? ledCapacitorConnections(previewPads.value) : []))
+// the LED's VCC to its capacitor (GND goes through a plane), in every routing mode, to place it
+// by, until the preset's tracks connect them
+const ledLines = computed(() => {
+  if (!padsReady.value) return []
+  const { padCluster } = tracks.drc.connectivity
+  const cluster = new Map(tracks.pads.map((p, i) => [p.key, padCluster[i]]))
+  return ledCapacitorConnections(
+    previewPads.value,
+    (a, b) => cluster.get(a.key) === cluster.get(b.key),
+  )
+})
 
 watch(previewPads, (pads) => tracks.setPads(pads), { immediate: true })
 // anchors attract the cursor within a few screen pixels

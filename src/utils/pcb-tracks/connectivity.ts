@@ -21,7 +21,7 @@ import {
   type Shape,
   type Vec,
 } from './distance'
-import { placedPadNet, type NetName, type PlacedPad } from './netlist'
+import { isMatrixNet, placedPadNet, type MatrixNet, type NetName, type PlacedPad } from './netlist'
 import { padCopperShapes, viaShape } from './shapes'
 // coincident points: within 1 nm (kbplacer matches ends in exact nm)
 import { NM } from './units'
@@ -219,7 +219,7 @@ function itemsConnect(a: TrackItem, b: TrackItem): boolean {
 }
 
 export interface RatsnestLine {
-  net: NetName
+  net: MatrixNet
   from: Vec
   to: Vec
 }
@@ -246,8 +246,10 @@ function anchors(
 }
 
 /**
- * Unrouted connections: for every net with pads in several clusters, the
- * shortest lines joining those clusters (Prim's minimum spanning tree).
+ * Unrouted connections: for every matrix net with pads in several clusters,
+ * the shortest lines joining those clusters (Prim's minimum spanning tree).
+ * LED and capacitor nets may be routed but aren't required: GND usually goes
+ * through a ground plane, and the chain between keys isn't in the preview.
  */
 export function ratsnest(
   pads: readonly PadInfo[],
@@ -255,7 +257,9 @@ export function ratsnest(
   conn: Connectivity,
 ): RatsnestLine[] {
   const lines: RatsnestLine[] = []
-  const nets = [...new Set(pads.map((p) => p.net).filter((n): n is NetName => n !== null))]
+  const nets = [
+    ...new Set(pads.map((p) => p.net).filter((n): n is MatrixNet => n !== null && isMatrixNet(n))),
+  ]
   for (const net of nets) {
     // clusters holding pads of this net (a shorted cluster still counts)
     const roots = [

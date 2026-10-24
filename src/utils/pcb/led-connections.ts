@@ -5,8 +5,8 @@
  * usually connected through a ground plane, not a track between the two.
  *
  * The preview draws it as a dashed line, so the capacitor can be placed next
- * to the pad it decouples. It isn't a net of the track editor: its presets
- * connect the switch and diode only.
+ * to the pad it decouples. It isn't in the track editor's ratsnest (a preset
+ * needn't route it), but a preset may route it, and then the line goes.
  */
 import type { Vec } from '@/utils/pcb-tracks/distance'
 import type { PlacedPad } from '@/utils/pcb-tracks/netlist'
@@ -22,16 +22,24 @@ const CAPACITOR_VCC_PAD = '1'
 
 /**
  * The line between the closest LED and capacitor VCC pads (a footprint may
- * repeat a pad number); none without the capacitor.
+ * repeat a pad number); none without the capacitor, or when `connected` says
+ * tracks join an LED and a capacitor VCC pad already.
  */
-export function ledCapacitorConnections(pads: readonly PlacedPad[]): LedConnection[] {
-  const centres = (owner: string, number: string) =>
-    pads
-      .filter((p) => p.owner === owner && p.pad.number === number && p.pad.type !== 'np_thru_hole')
-      .map((p) => ({ x: p.pad.at.x, y: p.pad.at.y }))
+export function ledCapacitorConnections(
+  pads: readonly PlacedPad[],
+  connected: (a: PlacedPad, b: PlacedPad) => boolean = () => false,
+): LedConnection[] {
+  const vccPads = (owner: string, number: string) =>
+    pads.filter(
+      (p) => p.owner === owner && p.pad.number === number && p.pad.type !== 'np_thru_hole',
+    )
+  const leds = vccPads('LED', LED_VCC_PAD)
+  const caps = vccPads('C', CAPACITOR_VCC_PAD)
+  if (leds.some((a) => caps.some((b) => connected(a, b)))) return []
+  const centre = (p: PlacedPad) => ({ x: p.pad.at.x, y: p.pad.at.y })
   let best: (LedConnection & { d: number }) | null = null
-  for (const from of centres('LED', LED_VCC_PAD)) {
-    for (const to of centres('C', CAPACITOR_VCC_PAD)) {
+  for (const from of leds.map(centre)) {
+    for (const to of caps.map(centre)) {
       const d = Math.hypot(to.x - from.x, to.y - from.y)
       if (!best || d < best.d) best = { net: 'VCC', from, to, d }
     }

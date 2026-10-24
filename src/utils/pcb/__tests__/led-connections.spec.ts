@@ -44,6 +44,12 @@ describe('ledCapacitorConnections', () => {
     ])
   })
 
+  it('draws nothing once tracks connect an LED and a capacitor VCC pad', () => {
+    const cap = [pad('C', '1', 10, 0), pad('C', '1', 3, -1)]
+    const routed = (a: PlacedPad, b: PlacedPad) => a.pad.number === '3' && b.pad.at.x === 10
+    expect(ledCapacitorConnections([...led, ...cap], routed)).toEqual([])
+  })
+
   it('draws nothing without the capacitor', () => {
     expect(ledCapacitorConnections(led)).toEqual([])
   })

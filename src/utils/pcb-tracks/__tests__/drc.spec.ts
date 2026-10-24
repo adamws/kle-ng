@@ -55,7 +55,53 @@ describe('netlist', () => {
     expect(padNet('D', '1')).toBe('ROW')
     expect(padNet('D', '2')).toBe('SW_D')
     expect(padNet('SW', '')).toBeNull()
-    expect(padNet('LED', '2')).toBeNull()
+    expect(padNet('LED', '1')).toBe('GND')
+    expect(padNet('LED', '2')).toBe('DIN')
+    expect(padNet('LED', '3')).toBe('VCC')
+    expect(padNet('LED', '4')).toBe('DOUT')
+    expect(padNet('C', '1')).toBe('VCC')
+    expect(padNet('C', '2')).toBe('GND')
+    expect(padNet('LED', '5')).toBeNull()
+    expect(padNet('LED', 'constructor')).toBeNull()
+    expect(padNet('ST', '1')).toBeNull()
+  })
+})
+
+describe('LED and capacitor pads', () => {
+  // LED at the default 0 5.25 BACK, the capacitor under it, clear of the diode
+  const pads = [
+    ...placed(),
+    ...placePads(load('LED_SK6812MINI-E_3.2x2.8mm_P1.5mm_ReverseMount').pads, {
+      x: 0,
+      y: 5.25,
+      rotation: 0,
+      side: 'BACK',
+    }).map((pad, i) => ({ key: `LED:${i}`, owner: 'LED', pad })),
+    ...placePads(load('C_0603_1608Metric').pads, {
+      x: 5.5,
+      y: 8,
+      rotation: 0,
+      side: 'BACK',
+    }).map((pad, i) => ({ key: `C:${i}`, owner: 'C', pad })),
+  ]
+  it('routes the LED’s VCC to the capacitor without a short or a ratsnest line', () => {
+    // LED pad 3 (2.725 6) down, then across to capacitor pad 1 (4.725 8)
+    const vcc = [track(2.725, 6, 2.725, 8), track(2.725, 8, 4.725, 8)]
+    const { violations, ratsnest, itemNets } = runDrc(pads, [...DEFAULT_PRESET, ...vcc])
+    expect(violations).toEqual([])
+    expect(itemNets.slice(2)).toEqual(['VCC', 'VCC'])
+    expect(ratsnest).toEqual([])
+  })
+
+  it('reports a track from VCC to GND as a short', () => {
+    // on to capacitor pad 2 (6.275 8) through pad 1
+    const { violations } = runDrc(pads, [track(2.725, 6, 2.725, 8), track(2.725, 8, 6.275, 8)])
+    expect(violations.find((v) => v.kind === 'short')?.message).toContain('C pad 2 (GND)')
+  })
+
+  it('leaves the LED and capacitor nets out of the ratsnest', () => {
+    expect(runDrc(pads, DEFAULT_PRESET).ratsnest).toEqual([])
+    expect(runDrc(pads, []).ratsnest.map((l) => l.net)).toEqual(['SW_D'])
   })
 })
 

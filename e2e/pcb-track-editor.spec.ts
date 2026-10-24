@@ -14,7 +14,7 @@ const EDITOR = {
   FIT: '[data-testid="pcb-zoom-fit"]',
 }
 
-async function padCentre(page: Page, owner: 'SW' | 'D', number: string) {
+async function padCentre(page: Page, owner: 'SW' | 'D' | 'LED' | 'C', number: string) {
   const box = (await page
     .locator(`[data-layer="B.Cu"] [data-pad-key^="${owner}:"][data-pad-number="${number}"]`)
     .first()
@@ -1092,6 +1092,44 @@ test.describe('PCB Generator track editor', () => {
     await page.locator('[data-testid="pcb-tab-leds"]').click()
     await page.locator('#ledDecoupling').uncheck()
     await expect(lines).toHaveCount(0)
+  })
+
+  test('routes the LED’s VCC to its capacitor', async ({ page }) => {
+    await openPreview(page)
+    await page.locator('[data-testid="pcb-tab-leds"]').click()
+    await page.locator('[data-testid="led-enable"]').check()
+    // the capacitor under the LED, clear of the diode: pad 1 (VCC) at 4.725 8,
+    // 45° from LED pad 3 (VCC) at 2.725 6
+    const capY = page.locator('#ledCapacitorPositionY input')
+    await capY.fill('8')
+    await capY.press('Enter')
+    await enterPresetMode(page)
+    await waitForView(page)
+    const guide = page.locator('[data-testid="pcb-led-connection"]')
+    await expect(guide).toHaveCount(1)
+
+    await useTool(page, 'route')
+    const vcc = await padCentre(page, 'LED', '3')
+    const cap = await padCentre(page, 'C', '1')
+    await page.mouse.move(vcc.x, vcc.y)
+    await page.mouse.click(vcc.x, vcc.y)
+    await expect(page.locator('[data-testid="pcb-route-status"]')).toContainText('Routing VCC')
+    await page.mouse.move(cap.x, cap.y, { steps: 5 })
+    await expect(page.locator('[data-testid="pcb-route-blocked"]')).toHaveCount(0)
+    await page.mouse.click(cap.x, cap.y)
+    await expect(page.locator('[data-testid="pcb-route-status"]')).toHaveCount(0)
+    await expect(page.locator('[data-testid="pcb-track-overlay-track"]')).toHaveCount(1)
+    // routed: the guide goes, and VCC isn't an unrouted connection
+    await expect(guide).toHaveCount(0)
+    await expect(page.locator('[data-testid="pcb-drc-marker"]')).toHaveCount(0)
+
+    // GND to the capacitor's VCC is a short
+    const gnd = await padCentre(page, 'LED', '1')
+    await page.mouse.move(gnd.x, gnd.y)
+    await page.mouse.click(gnd.x, gnd.y)
+    await expect(page.locator('[data-testid="pcb-route-status"]')).toContainText('Routing GND')
+    await page.mouse.move(cap.x, cap.y, { steps: 5 })
+    await expect(page.locator('[data-testid="pcb-route-blocked"]')).toContainText('Short')
   })
 
   test('selects the diode by its body in the track editor', async ({ page }) => {
