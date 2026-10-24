@@ -597,14 +597,20 @@ every pointer move); the serializer converts to nm.
 LED and capacitor with the mouse. `utils/pcb/movable-parts.ts` maps each part (the pad owners `D`,
 `LED`, `C`) to its `PcbSettings` position and rotation fields and picks the part at a switch-local
 point: the owner of the pad under it, else the smallest courtyard outline around it, never the
-switch. In `FootprintPreview.vue` a left click selects that part (outlined, with its position and
-rotation in the readout) or clears the selection; in the track editor a click that selects or starts
-a track wins, and tracks and parts aren't selected together. A middle-button press on a part (the
-layout editor's key drag) selects it, and dragged past the box threshold writes its position on
-every move (the cursor's switch-local delta, snapped to the View grid, `editorSettings.grid`; the
-form fields aren't snapped). `Shift+R` steps the rotation by −90° (clockwise on screen, KiCad's
-`Shift+R`) of the dragged part, else the selected one, else the one under the cursor. `Esc` restores
-the position and rotation from the press, or clears the selection. Moving a part keeps the view, and
+switch; `partsInBox` picks the parts a box selection encloses (left to right) or touches (right
+to left), by courtyard, else by pad centres, never the switch. In `FootprintPreview.vue` a left click
+selects that part (outlined, with its position and rotation in the readout; several selected parts
+are listed by name) or clears the selection, `Shift`+click toggles it; in the track editor a click
+that selects or starts a track wins, and a click doesn't select tracks and parts together. A left
+drag from empty space draws the box in every routing mode (in the track editor with the Select tool,
+where it selects tracks as well); `Shift` adds to the selection. A middle-button press on a part (the
+layout editor's key drag) drags the selection when the part is in it, else selects the part alone,
+and dragged past the box threshold writes the positions on every move: the grabbed part follows the
+cursor's switch-local delta, snapped to the View grid (`editorSettings.grid`; the form fields aren't
+snapped), and the others move by the same offset. `Shift+R` steps the rotation by −90° (clockwise
+on screen, KiCad's `Shift+R`) of each dragged part, else each selected one, else the one under the
+cursor, each about its own origin. `Esc` restores the positions and rotations from the press, or
+clears the selection. Moving a part keeps the view, and
 the middle button pans everywhere off the parts. Nothing moves while the settings are locked or
 while a track is drawn or dragged. The settings stay the only source, so a moved diode makes a drawn
 preset stale as the form fields do, and moves aren't in the editor's undo history.

@@ -1051,6 +1051,87 @@ test.describe('PCB Generator track editor', () => {
     await expect(partSelection(page)).toHaveCount(0)
   })
 
+  test('box-selects parts and drags them together', async ({ page }) => {
+    await openPreview(page)
+    await page.locator('[data-testid="pcb-tab-leds"]').click()
+    await page.locator('[data-testid="led-enable"]').check()
+    await expect(page.locator('#ledPositionY input')).toBeEnabled()
+    await waitForView(page)
+    await centreCanvas(page)
+
+    // left to right around the diode (5.08, 4), LED (0, 5.25) and capacitor (5.5, 5.75):
+    // the switch's courtyard isn't inside, and the switch is never selected
+    const a = await svgToScreen(page, -4, 0.5)
+    const b = await svgToScreen(page, 9, 8.5)
+    await page.mouse.move(a.x, a.y)
+    await page.mouse.down()
+    await page.mouse.move(b.x, b.y, { steps: 5 })
+    await expect(page.locator('[data-testid="pcb-selection-box"]')).toBeVisible()
+    await page.mouse.up()
+    await expect(page.locator('[data-testid="pcb-selection-box"]')).toHaveCount(0)
+    await expect(partSelection(page)).toHaveAttribute('data-part', 'D LED C')
+    await expect(partReadout(page)).toHaveText('3 parts: Diode, LED, Capacitor')
+
+    // middle-dragging one of them moves all three: the diode snaps to the grid (0.25 mm),
+    // the others keep their offsets from it
+    const from = await svgToScreen(page, 5.08, 4)
+    const to = await svgToScreen(page, 6.08, 3)
+    await page.mouse.move(from.x, from.y)
+    await page.mouse.down({ button: 'middle' })
+    await page.mouse.move(to.x, to.y, { steps: 5 })
+    await page.mouse.up({ button: 'middle' })
+    await expect(diodeX(page)).toHaveValue('6')
+    await expect(diodeY(page)).toHaveValue('3')
+    await expect(page.locator('#ledPositionX input')).toHaveValue('0.92')
+    await expect(page.locator('#ledPositionY input')).toHaveValue('4.25')
+    await expect(page.locator('#ledCapacitorPositionX input')).toHaveValue('6.42')
+    await expect(page.locator('#ledCapacitorPositionY input')).toHaveValue('4.75')
+    // Shift+R turns each of them
+    await page.keyboard.press('Shift+R')
+    await expect(diodeRotation(page)).toHaveValue('0')
+    await expect(page.locator('#ledRotation')).toHaveValue('270')
+
+    // Esc puts a cancelled group drag back
+    await page.mouse.move(to.x, to.y)
+    await page.mouse.down({ button: 'middle' })
+    await page.mouse.move(from.x, from.y, { steps: 5 })
+    await expect(diodeX(page)).toHaveValue('5')
+    await page.keyboard.press('Escape')
+    await page.mouse.up({ button: 'middle' })
+    await expect(diodeX(page)).toHaveValue('6')
+    await expect(page.locator('#ledPositionX input')).toHaveValue('0.92')
+
+    // Shift+click drops one from the selection; a part outside it is dragged alone
+    const led = await svgToScreen(page, 0.92, 4.25)
+    await page.keyboard.down('Shift')
+    await page.mouse.click(led.x, led.y)
+    await page.keyboard.up('Shift')
+    await expect(partSelection(page)).toHaveAttribute('data-part', 'D C')
+    const right = await svgToScreen(page, 1.92, 4.25)
+    await page.mouse.move(led.x, led.y)
+    await page.mouse.down({ button: 'middle' })
+    await page.mouse.move(right.x, right.y, { steps: 5 })
+    await page.mouse.up({ button: 'middle' })
+    await expect(page.locator('#ledPositionX input')).toHaveValue('2')
+    await expect(diodeX(page)).toHaveValue('6')
+    await expect(partSelection(page)).toHaveAttribute('data-part', 'LED')
+  })
+
+  test('box-selects parts in the track editor, by touching right to left', async ({ page }) => {
+    await openPreview(page)
+    await enterPresetMode(page)
+    // right to left across the diode's body only
+    const a = await svgToScreen(page, 5.6, 4.5)
+    const b = await svgToScreen(page, 4.6, 3.5)
+    await page.mouse.move(a.x, a.y)
+    await page.mouse.down()
+    await page.mouse.move(b.x, b.y, { steps: 5 })
+    await page.mouse.up()
+    await expect(partSelection(page)).toHaveAttribute('data-part', 'D')
+    // no track started
+    await expect(page.locator('[data-testid="pcb-route-status"]')).toHaveCount(0)
+  })
+
   test('has the View controls outside the track editor', async ({ page }) => {
     await openPreview(page)
     await centreCanvas(page)

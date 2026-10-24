@@ -64,6 +64,7 @@ import {
   isMovablePart,
   partAt,
   partPlacement,
+  partsInBox,
   PART_NAMES,
   rotateClockwise,
   setPartPlacement,
@@ -71,6 +72,7 @@ import {
   type PartPlacement,
 } from '@/utils/pcb/movable-parts'
 import { snapToGrid } from '@/utils/pcb-tracks/posture'
+import { roundNmValue } from '@/utils/pcb-tracks/units'
 import { padInfos } from '@/utils/pcb-tracks/connectivity'
 import TrackSelectionBar from './pcb/TrackSelectionBar.vue'
 import CourtyardLayer from './pcb/CourtyardLayer.vue'
@@ -605,10 +607,10 @@ const drcSummary = computed(() => {
 
 /** The help line under the canvas: what the mouse and keys do now. */
 const statusHint = computed(() => {
-  if (draggedPart.value) return 'release: drop · Shift+R: rotate · Esc: cancel'
+  if (draggedParts.value.length) return 'release: drop · Shift+R: rotate · Esc: cancel'
   if (!editMode.value) {
     const hint =
-      'click part: select · middle-drag part: move · Shift+R: rotate part · wheel: zoom · middle/Space+drag: pan'
+      'click part: select · drag: box · middle-drag part: move selected · Shift+R: rotate part · wheel: zoom · middle/Space+drag: pan'
     return ratsnestLines.value.length
       ? `${hint} · dashed line: unrouted switch-diode connection`
       : hint
@@ -639,7 +641,7 @@ const hoveredPad = computed(() =>
 /** The crosshair shows outside the editor and with the select tool (routing has its snap marker). */
 const showCrosshair = computed(
   () =>
-    !draggedPart.value &&
+    !draggedParts.value.length &&
     (!editMode.value || (tracks.tool === 'select' && !tracks.isRouting && !tracks.isDragging)),
 )
 
@@ -713,23 +715,26 @@ function dragHandleUnder(local: Point | null): DragHandle | null {
 }
 
 // The diode, LED and capacitor are placed with the mouse in every routing
-// mode: a click selects one, the middle button drags one by its courtyard or
-// pads (as keys are dragged in the layout editor), and Shift+R turns it. Both
-// write the part's settings, like the Diode Configuration and LEDs fields.
+// mode: a click (Shift toggles) or a box selects them, the middle button drags
+// the selection by one's courtyard or pads (as keys are dragged in the layout
+// editor), and Shift+R turns each. Both write the parts' settings, like the
+// Diode Configuration and LEDs fields. The switch is the anchor and never moves.
 
-/** The part a click selected, for Shift+R and the readout. */
-const selectedPart = ref<MovablePart | null>(null)
-/** A middle-button press on a part: dragging it past the threshold moves it. */
+/** The parts a click or a box selected, for Shift+R, the readout and dragging. */
+const selectedParts = ref<MovablePart[]>([])
+/** A middle-button press on a part: dragging it past the threshold moves the parts. */
 let partPress: {
-  part: MovablePart
+  /** The part under the press, snapped to the grid; the others keep their offsets. */
+  grabbed: MovablePart
+  parts: MovablePart[]
   client: Point
   local: Point
-  from: PartPlacement
+  from: Map<MovablePart, PartPlacement>
   started: boolean
   cancelled: boolean
 } | null = null
-/** The part being dragged. */
-const draggedPart = ref<MovablePart | null>(null)
+/** The parts being dragged. */
+const draggedParts = ref<MovablePart[]>([])
 
 /** Parts can be moved: the settings aren't locked, and no track is being drawn or dragged. */
 const canMoveParts = computed(
@@ -742,8 +747,23 @@ const shownParts = computed(() =>
 )
 // a part that is no longer shown can't stay selected
 watch(shownParts, (parts) => {
-  if (selectedPart.value && !parts.includes(selectedPart.value)) selectedPart.value = null
+  const kept = selectedParts.value.filter((part) => parts.includes(part))
+  if (kept.length !== selectedParts.value.length) selectedParts.value = kept
 })
+
+/** Click selection of a part: replaces the selection, Shift toggles the part. */
+function selectPartClick(part: MovablePart | null, additive: boolean) {
+  if (!additive) selectedParts.value = part ? [part] : []
+  else if (part)
+    selectedParts.value = selectedParts.value.includes(part)
+      ? selectedParts.value.filter((p) => p !== part)
+      : [...selectedParts.value, part]
+}
+
+/** The parts shown highlighted: the dragged ones, else the selected ones. */
+const outlinedParts = computed(() =>
+  draggedParts.value.length ? draggedParts.value : selectedParts.value,
+)
 
 function partUnder(local: Point | null): MovablePart | null {
   return local
@@ -751,16 +771,19 @@ function partUnder(local: Point | null): MovablePart | null {
     : null
 }
 
-/** The selected (or dragged) part's courtyard, switch-local, to outline it. */
-const selectedOutlines = computed(() => {
-  const part = draggedPart.value ?? selectedPart.value
-  const placed = part && courtyardParts.value.find((p) => p.owner === part)
-  return placed ? [...placed.courtyard.front, ...placed.courtyard.back] : []
-})
+/** The selected (or dragged) parts' courtyards, switch-local, to outline them. */
+const selectedOutlines = computed(() =>
+  courtyardParts.value
+    .filter((p) => (outlinedParts.value as string[]).includes(p.owner))
+    .flatMap((p) => [...p.courtyard.front, ...p.courtyard.back]),
+)
 
-/** What the readout says about the selected or dragged part. */
+/** What the readout says about the selected or dragged parts. */
 const partReadout = computed(() => {
-  const part = draggedPart.value ?? selectedPart.value
+  const parts = outlinedParts.value
+  if (parts.length > 1)
+    return `${parts.length} parts: ${parts.map((p) => PART_NAMES[p]).join(', ')}`
+  const part = parts[0]
   if (!part) return null
   const { x, y, rotation } = partPlacement(settings.value, part)
   return `${PART_NAMES[part]} X ${formatCoordinate(x)} Y ${formatCoordinate(y)} mm · ${rotation}°`
@@ -773,55 +796,79 @@ function movePartDrag(event: PointerEvent, local: Point | null) {
   if (!press.started) {
     if (moved < BOX_THRESHOLD_PX) return
     press.started = true
-    draggedPart.value = press.part
+    draggedParts.value = press.parts
   }
-  // on the View grid, like KiCad; the position fields take any value
+  // the grabbed part on the View grid, like KiCad; the position fields take any value
   const grid = editorSettings.value.grid
+  const from = press.from.get(press.grabbed)!
   const at = snapToGrid(
     {
-      x: press.from.x + local.x - press.local.x,
-      y: press.from.y + local.y - press.local.y,
+      x: from.x + local.x - press.local.x,
+      y: from.y + local.y - press.local.y,
     },
     grid,
   )
-  setPartPlacement(settings.value, press.part, at)
+  const dx = at.x - from.x
+  const dy = at.y - from.y
+  for (const part of press.parts) {
+    const start = press.from.get(part)!
+    // to 1 nm like the grid snap, so the offsets don't pick up float noise
+    setPartPlacement(settings.value, part, {
+      x: roundNmValue(start.x + dx),
+      y: roundNmValue(start.y + dy),
+    })
+  }
 }
 
-/** Ends a part drag; a cancelled one puts the part back where it was. */
+/** Ends a part drag; a cancelled one puts the parts back where they were. */
 function endPartDrag(cancel: boolean) {
   if (!partPress) return
   if (cancel) {
-    setPartPlacement(settings.value, partPress.part, partPress.from)
+    for (const [part, from] of partPress.from) setPartPlacement(settings.value, part, from)
     partPress.cancelled = true
   } else {
     partPress = null
   }
-  draggedPart.value = null
+  draggedParts.value = []
 }
 
-/** Shift+R turns the dragged part, else the selected one, else the one under the cursor. */
+/** Shift+R turns the dragged parts, else the selected ones, else the one under the cursor. */
 function rotatePart() {
-  const part = draggedPart.value ?? selectedPart.value ?? partUnder(cursorLocal.value)
-  if (!part || (!draggedPart.value && !canMoveParts.value)) return
-  const { rotation } = partPlacement(settings.value, part)
-  setPartPlacement(settings.value, part, {
-    rotation: rotateClockwise(rotation),
-  })
+  const dragging = draggedParts.value.length > 0
+  const under = partUnder(cursorLocal.value)
+  const parts = dragging
+    ? draggedParts.value
+    : selectedParts.value.length
+      ? selectedParts.value
+      : under
+        ? [under]
+        : []
+  if (!parts.length || (!dragging && !canMoveParts.value)) return
+  for (const part of parts) {
+    const { rotation } = partPlacement(settings.value, part)
+    setPartPlacement(settings.value, part, { rotation: rotateClockwise(rotation) })
+  }
 }
 
-/** Selects the part under a middle-button press and starts dragging it. Returns true if it did. */
+/**
+ * A middle-button press on a part starts dragging it, with the rest of the
+ * selection when it is selected, else alone (it becomes the selection).
+ * Returns true if it did.
+ */
 function startPartPress(event: PointerEvent): boolean {
   if (event.button !== 1 || !canMoveParts.value) return false
   const board = panZoom.screenToSvg(event.clientX, event.clientY)
   const local = board ? boardToSwitchLocal(board, settings.value.switchRotation) : null
   const part = partUnder(local)
   if (!local || !part) return false
-  selectedPart.value = part
+  if (!selectedParts.value.includes(part)) selectedParts.value = [part]
+  const parts = [...selectedParts.value]
   partPress = {
-    part,
+    grabbed: part,
+    parts,
     client: { x: event.clientX, y: event.clientY },
     local,
-    from: partPlacement(settings.value, part),
+    from: new Map(parts.map((p) => [p, partPlacement(settings.value, p)])),
     started: false,
     cancelled: false,
   }
@@ -837,13 +884,14 @@ function onCanvasPointerDown(event: PointerEvent) {
   pendingDrag = null
   // the middle button on a part drags it, elsewhere it pans
   clickIsPan = !startPartPress(event) && panZoom.onPointerDown(event)
-  if (partPress || !editMode.value) return
-  if (clickIsPan || event.button !== 0 || tracks.tool !== 'select') return
+  if (partPress || clickIsPan || event.button !== 0) return
+  // a left drag selects with a box, outside the editor too; in it, only the select tool
+  if (editMode.value && tracks.tool !== 'select') return
   const board = panZoom.screenToSvg(event.clientX, event.clientY)
   if (!board) return
   const client = { x: event.clientX, y: event.clientY }
   const local = boardToSwitchLocal(board, settings.value.switchRotation)
-  const handle = dragHandleUnder(local)
+  const handle = editMode.value ? dragHandleUnder(local) : null
   if (handle) pendingDrag = { handle, client, local, started: false }
   else boxStart = { client, board }
   // keep receiving the drag when it leaves the canvas
@@ -860,7 +908,6 @@ function onCanvasPointerMove(event: PointerEvent) {
     movePartDrag(event, cursorLocal.value)
     return
   }
-  if (!editMode.value) return
   if (pendingDrag) {
     const moved = Math.hypot(
       event.clientX - pendingDrag.client.x,
@@ -873,7 +920,8 @@ function onCanvasPointerMove(event: PointerEvent) {
     if (tracks.isDragging && cursorLocal.value) tracks.moveDrag(cursorLocal.value)
     return
   }
-  dragHover.value = boxStart ? null : (dragHandleUnder(cursorLocal.value)?.kind ?? null)
+  dragHover.value =
+    boxStart || !editMode.value ? null : (dragHandleUnder(cursorLocal.value)?.kind ?? null)
   if (boxStart && p) {
     const moved = Math.hypot(event.clientX - boxStart.client.x, event.clientY - boxStart.client.y)
     if (selectionBox.value || moved >= BOX_THRESHOLD_PX) {
@@ -901,12 +949,12 @@ function onCanvasPointerUp(event: PointerEvent) {
   selectionBox.value = null
   if (!box) return
   clickIsBox = true
-  selectedPart.value = null
   const rotation = settings.value.switchRotation
-  tracks.selectItems(
-    tracksInBox(tracks.presetItems, box, (q) => switchLocalToBoard(q, rotation), isVisibleItem),
-    event.shiftKey,
-  )
+  const toBoard = (q: Point) => switchLocalToBoard(q, rotation)
+  const parts = partsInBox(box, previewPadInfos.value, courtyardParts.value, toBoard)
+  selectedParts.value = event.shiftKey ? [...new Set([...selectedParts.value, ...parts])] : parts
+  if (editMode.value)
+    tracks.selectItems(tracksInBox(tracks.presetItems, box, toBoard, isVisibleItem), event.shiftKey)
 }
 
 function onCanvasPointerLeave() {
@@ -923,7 +971,7 @@ function onCanvasClick(event: MouseEvent) {
     return
   }
   if (!editMode.value) {
-    selectedPart.value = partUnder(cursorLocal.value)
+    selectPartClick(partUnder(cursorLocal.value), event.shiftKey)
     return
   }
   const padNet = hoveredPad.value ? placedPadNet(hoveredPad.value) : null
@@ -946,13 +994,15 @@ function onCanvasClick(event: MouseEvent) {
     if (layers.length && !layers.includes(editorSettings.value.layer))
       editorSettings.value.layer = layers[0]!
     if (tracks.startRoute()) {
-      selectedPart.value = null
+      selectedParts.value = []
       return
     }
   }
   tracks.selectClick(item, padNet, event.shiftKey)
-  // a click off the tracks selects the part under it, tracks and parts aren't selected together
-  selectedPart.value = item === null && !event.shiftKey ? partUnder(cursorLocal.value) : null
+  // a click off the tracks selects the part under it, a click doesn't select tracks and
+  // parts together (Shift adds to both, as a box does)
+  if (item === null) selectPartClick(partUnder(cursorLocal.value), event.shiftKey)
+  else if (!event.shiftKey) selectedParts.value = []
 }
 
 /** Double-click finishes a route, or selects every track connected to the one clicked. */
@@ -974,7 +1024,7 @@ function onCanvasDoubleClick() {
 }
 
 function selectAllVisible() {
-  selectedPart.value = null
+  selectedParts.value = []
   tracks.selectItems(
     tracks.presetItems.flatMap((item, i) => (isVisibleItem(item) ? [i] : [])),
     false,
@@ -989,7 +1039,7 @@ function isTextField(target: EventTarget | null): boolean {
 /** Editor shortcuts, scoped to the editor (canvas and its toolbars). */
 function onEditorKeyDown(event: KeyboardEvent) {
   if (isTextField(event.target)) return
-  if (draggedPart.value && event.key === 'Escape') {
+  if (draggedParts.value.length && event.key === 'Escape') {
     endPartDrag(true)
     event.preventDefault()
     return
@@ -1002,8 +1052,8 @@ function onEditorKeyDown(event: KeyboardEvent) {
     return
   }
   // Esc drops the part selection (and in the editor does its own work too)
-  if (event.key === 'Escape' && selectedPart.value) {
-    selectedPart.value = null
+  if (event.key === 'Escape' && selectedParts.value.length) {
+    selectedParts.value = []
     if (!editMode.value) event.preventDefault()
   }
   // Space pans on the canvas, but still presses a focused toolbar button
@@ -1105,7 +1155,7 @@ onMounted(() => {
         panning: panZoom.isPanning.value,
         'pan-ready': panZoom.spaceHeld.value,
         'drag-hover': editMode && (dragHover !== null || tracks.isDragging),
-        'part-dragging': draggedPart !== null,
+        'part-dragging': draggedParts.length > 0,
         'blocked-flash': blockedFlash || tracks.dragViolation !== null,
       }"
       tabindex="0"
@@ -1213,7 +1263,7 @@ onMounted(() => {
           />
         </g>
 
-        <!-- Box selection (board axes): solid selects enclosed, dashed touched tracks -->
+        <!-- Box selection (board axes): solid selects enclosed, dashed touched tracks and parts -->
         <rect
           v-if="selectionBox"
           :x="Math.min(selectionBox.from.x, selectionBox.to.x)"
@@ -1226,12 +1276,12 @@ onMounted(() => {
           data-testid="pcb-selection-box"
         />
 
-        <!-- The selected part's courtyard (switch-local frame) -->
+        <!-- The selected parts' courtyards (switch-local frame) -->
         <g
           v-if="selectedOutlines.length"
           :transform="switchLocalTransform"
           class="part-selection"
-          :data-part="draggedPart ?? selectedPart"
+          :data-part="outlinedParts.join(' ')"
           data-testid="pcb-part-selection"
         >
           <path

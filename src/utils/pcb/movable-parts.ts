@@ -7,8 +7,8 @@
 import type { PcbSettings } from '@/types/pcb'
 import type { CopperLayer } from '@/types/tracks'
 import type { PadInfo } from '@/utils/pcb-tracks/connectivity'
-import { pointInPolygon, type Vec } from '@/utils/pcb-tracks/distance'
-import { padAt } from '@/utils/pcb-tracks/selection'
+import { pointInPolygon, segmentPolygon, type Vec } from '@/utils/pcb-tracks/distance'
+import { boxPolygon, isCrossing, padAt, type Box } from '@/utils/pcb-tracks/selection'
 import type { CourtyardPart } from './courtyard-collisions'
 
 /** Pad owners in the preview, see FootprintPreview's pad sources. */
@@ -97,4 +97,43 @@ export function partAt(
     }
   }
   return best?.part ?? null
+}
+
+/**
+ * The movable parts a box selection picks, like tracksInBox: dragging left to
+ * right picks parts whose courtyard (else pad centres) is inside the box,
+ * right to left also parts the box touches. The box is in board axes, parts
+ * switch-local, so their points go through `toBoard` first.
+ */
+export function partsInBox(
+  box: Box,
+  pads: readonly PadInfo[],
+  parts: readonly CourtyardPart[],
+  toBoard: (p: Vec) => Vec,
+): MovablePart[] {
+  const rect = boxPolygon(box)
+  const crossing = isCrossing(box)
+  const found: MovablePart[] = []
+  for (const { owner, courtyard } of parts) {
+    if (!isMovablePart(owner)) continue
+    const outlines = [...courtyard.front, ...courtyard.back].map((o) => o.map(toBoard))
+    const centres = pads
+      .filter((p) => p.placed.owner === owner)
+      .map((p) => toBoard(p.placed.pad.at))
+    let hit: boolean
+    if (!outlines.length) {
+      const inside = (q: Vec) => pointInPolygon(q, rect)
+      hit = centres.length > 0 && (crossing ? centres.some(inside) : centres.every(inside))
+    } else if (crossing) {
+      hit = outlines.some(
+        (o) =>
+          o.some((q, i) => segmentPolygon(q, o[(i + 1) % o.length]!, rect).d === 0) ||
+          pointInPolygon(rect[0]!, o),
+      )
+    } else {
+      hit = outlines.every((o) => o.every((q) => pointInPolygon(q, rect)))
+    }
+    if (hit) found.push(owner)
+  }
+  return found
 }

@@ -7,6 +7,7 @@ import {
   isMovablePart,
   partAt,
   partPlacement,
+  partsInBox,
   rotateClockwise,
   setPartPlacement,
 } from '../movable-parts'
@@ -92,5 +93,40 @@ describe('movable parts', () => {
     // the switch's pads don't pick it
     const swPads = padInfos([{ key: 'SW:0', owner: 'SW', pad: smdPad(5, 5) }])
     expect(partAt({ x: 5, y: 5 }, swPads, parts)).toBe('C')
+  })
+
+  it('picks the parts a box encloses, or touches when dragged right to left', () => {
+    const parts = [
+      part('SW', square(-7, -7, 14)),
+      part('D', square(0, 0, 2)),
+      part('C', square(4, 0, 2)),
+    ]
+    const id = (p: { x: number; y: number }) => p
+    // left to right: inside only, never the switch
+    expect(partsInBox({ from: { x: -1, y: -1 }, to: { x: 3, y: 3 } }, [], parts, id)).toEqual(['D'])
+    expect(partsInBox({ from: { x: -1, y: -1 }, to: { x: 5, y: 3 } }, [], parts, id)).toEqual(['D'])
+    // right to left: touched too, and a box inside a courtyard touches it
+    expect(partsInBox({ from: { x: 5, y: 3 }, to: { x: -1, y: -1 } }, [], parts, id)).toEqual([
+      'D',
+      'C',
+    ])
+    expect(partsInBox({ from: { x: 1.5, y: 1.5 }, to: { x: 0.5, y: 0.5 } }, [], parts, id)).toEqual(
+      ['D'],
+    )
+    // in board axes: a part turned out of the box isn't in it
+    const flip = (p: { x: number; y: number }) => ({ x: -p.x, y: -p.y })
+    expect(partsInBox({ from: { x: -1, y: -1 }, to: { x: 3, y: 3 } }, [], parts, flip)).toEqual([])
+  })
+
+  it('picks a part without a courtyard by its pad centres', () => {
+    const pads = padInfos([
+      { key: 'D:0', owner: 'D', pad: smdPad(1, 1) },
+      { key: 'D:1', owner: 'D', pad: smdPad(3, 1) },
+    ])
+    const parts = [{ owner: 'D', courtyard: { front: [], back: [] }, holes: [] }]
+    const id = (p: { x: number; y: number }) => p
+    expect(partsInBox({ from: { x: 0, y: 0 }, to: { x: 2, y: 2 } }, pads, parts, id)).toEqual([])
+    expect(partsInBox({ from: { x: 2, y: 2 }, to: { x: 0, y: 0 } }, pads, parts, id)).toEqual(['D'])
+    expect(partsInBox({ from: { x: 0, y: 0 }, to: { x: 4, y: 2 } }, pads, parts, id)).toEqual(['D'])
   })
 })
