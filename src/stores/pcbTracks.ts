@@ -127,6 +127,18 @@ interface DragCommon {
   strict: boolean
 }
 
+/** Selected tracks and vias moved by an offset, with the parts dragged in the preview. */
+interface MoveState {
+  /** Indexes of the moved items in `base`. */
+  moved: ReadonlySet<number>
+  /** The saved items at the start. */
+  base: TrackItem[]
+  /** The preview: `base` with the moved items at the current offset. */
+  result: TrackItem[]
+  /** The preset fitted the settings at the start: it is drawn for the moved parts at the end. */
+  restamp: boolean
+}
+
 /** A segment or corner drag, on the line through the grabbed track. */
 interface LineDrag extends DragCommon {
   handle: Exclude<DragHandle, { kind: 'via' }>
@@ -243,10 +255,17 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
   )
   /** A track drag in progress; its preview replaces the saved items until it ends. */
   const drag = shallowRef<DragState | null>(null)
-  /** The items shown and checked: the saved preset, or the drag preview. */
-  const presetItems = computed<TrackItem[]>(() => drag.value?.result.items ?? savedItems.value)
+  /**
+   * Selected items moved rigidly with the parts dragged in the preview; the
+   * moved items replace the saved ones until the move ends.
+   */
+  const move = shallowRef<MoveState | null>(null)
+  /** The items shown and checked: the saved preset, or the drag or move preview. */
+  const presetItems = computed<TrackItem[]>(
+    () => drag.value?.result.items ?? move.value?.result ?? savedItems.value,
+  )
   /** DRC of the shown items; a drag keeps its preview's DRC, so it isn't run twice. */
-  const presetDrc = computed(() => drag.value?.drc ?? runDrc(pads.value, savedItems.value))
+  const presetDrc = computed(() => drag.value?.drc ?? runDrc(pads.value, presetItems.value))
 
   const target = computed<SnapTarget | null>(() => {
     if (!cursor.value) return null
@@ -383,6 +402,7 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
   function clearPreset() {
     cancelRoute()
     cancelDrag()
+    cancelMove()
     selection.value = []
     ownPreset = undefined
     pcb.settings.trackPreset = undefined
@@ -393,6 +413,7 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
   function clearAll() {
     cancelRoute()
     cancelDrag()
+    cancelMove()
     selection.value = []
     if (savedItems.value.length) writeItems([])
   }
@@ -415,6 +436,7 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
   function undo() {
     cancelRoute()
     cancelDrag()
+    cancelMove()
     selection.value = []
     const snapshot = history.undo()
     if (snapshot) writePreset(snapshot)
@@ -423,6 +445,7 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
   function redo() {
     cancelRoute()
     cancelDrag()
+    cancelMove()
     selection.value = []
     const snapshot = history.redo()
     if (snapshot) writePreset(snapshot)
@@ -789,6 +812,56 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     drag.value = null
   }
 
+  /**
+   * Starts moving the selected tracks and vias rigidly, as the preview drags
+   * the selected parts (no 45° rebuild: lines to anything that stays put come
+   * apart, as in KiCad). False when nothing is selected.
+   */
+  function startMove(): boolean {
+    cancelRoute()
+    cancelDrag()
+    move.value = null
+    if (!selection.value.length) return false
+    const base = savedItems.value
+    move.value = {
+      moved: new Set(selection.value),
+      base,
+      result: base,
+      restamp: staleChanges.value.length === 0,
+    }
+    return true
+  }
+
+  /** The moved items at offset `d` (switch-local mm) from where they started. */
+  function previewMove(d: Pt) {
+    const state = move.value
+    if (!state) return
+    const shift = (p: Pt) => roundNm({ x: p.x + d.x, y: p.y + d.y })
+    const result = state.base.map((item, i) => {
+      if (!state.moved.has(i)) return item
+      if (item.type === 'track') return { ...item, start: shift(item.start), end: shift(item.end) }
+      if (item.type === 'via') return { ...item, position: shift(item.position) }
+      return item
+    })
+    move.value = { ...state, result }
+  }
+
+  /**
+   * Ends the move as one undoable step. A preset that fitted the settings at
+   * the start is drawn for the moved parts, so moving the diode with its
+   * tracks doesn't make it stale.
+   */
+  function endMove() {
+    const state = move.value
+    move.value = null
+    if (!state || state.result === state.base) return
+    writeItems(state.result, true, state.restamp)
+  }
+
+  function cancelMove() {
+    move.value = null
+  }
+
   function setPads(value: readonly PlacedPad[]) {
     pads.value = value
   }
@@ -991,6 +1064,7 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
   /** Leaving the editor: nothing in progress survives. */
   function reset() {
     drag.value = null
+    move.value = null
     route.value = null
     cursor.value = null
     selectedNet.value = null
@@ -1026,6 +1100,11 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     moveDrag,
     endDrag,
     cancelDrag,
+    isMoving: computed(() => move.value !== null),
+    startMove,
+    previewMove,
+    endMove,
+    cancelMove,
     staleChanges,
     keepPreset,
     clearPreset,

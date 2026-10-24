@@ -730,6 +730,49 @@ describe('pcbTracks selection and history', () => {
     tracks.endDrag()
   })
 
+  it('moves selected tracks with the parts, as one undo step that keeps a fitting preset', () => {
+    routeDefault()
+    const before = items().map((t) => ({ start: t.start, end: t.end }))
+    // only the diode-side track
+    tracks.selectItems([1], false)
+    expect(tracks.startMove()).toBe(true)
+    tracks.previewMove({ x: 1, y: -0.5 })
+    // the preview, not the preset, shows the moved track
+    expect(items()[1]!.end).toEqual(before[1]!.end)
+    const moved = tracks.presetItems[1] as TrackSegment
+    expect(moved.start).toEqual({ x: before[1]!.start.x + 1, y: before[1]!.start.y - 0.5 })
+    expect(moved.end).toEqual({ x: 6.08, y: 2.1 })
+    expect(tracks.presetItems[0]).toEqual(items()[0])
+
+    // the diode moved with it: drawn for the new placement, not stale
+    pcb.settings.diodePositionX = 6.08
+    pcb.settings.diodePositionY = 3.5
+    tracks.endMove()
+    expect(tracks.isMoving).toBe(false)
+    expect(items()[1]!.end).toEqual({ x: 6.08, y: 2.1 })
+    expect(tracks.staleChanges).toEqual([])
+    expect(tracks.selection).toEqual([1])
+    tracks.undo()
+    expect(items()[1]!.end).toEqual(before[1]!.end)
+  })
+
+  it('cancels a move, and moves nothing without a selection', () => {
+    routeDefault()
+    const saved = items()
+    tracks.selectItems([], false)
+    expect(tracks.startMove()).toBe(false)
+    tracks.previewMove({ x: 1, y: 0 })
+    tracks.endMove()
+    expect(items()).toBe(saved)
+    tracks.selectItems([0, 1], false)
+    tracks.startMove()
+    tracks.previewMove({ x: 1, y: 0 })
+    tracks.cancelMove()
+    expect(tracks.presetItems).toEqual(saved)
+    tracks.endMove()
+    expect(items()).toBe(saved)
+  })
+
   it('cancels a drag with Esc', () => {
     routeDefault()
     tracks.startDrag(

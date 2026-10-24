@@ -1132,6 +1132,66 @@ test.describe('PCB Generator track editor', () => {
     await expect(page.locator('[data-testid="pcb-route-status"]')).toHaveCount(0)
   })
 
+  test('moves the selected tracks with the dragged parts', async ({ page }) => {
+    await openPreview(page)
+    await enterPresetMode(page)
+    await useTool(page, 'route')
+    const sw2 = await padCentre(page, 'SW', '2')
+    const d2 = await padCentre(page, 'D', '2')
+    await page.mouse.move(sw2.x, sw2.y)
+    await page.mouse.click(sw2.x, sw2.y)
+    await page.mouse.move(d2.x, d2.y, { steps: 5 })
+    await page.mouse.click(d2.x, d2.y)
+    await useTool(page, 'select')
+
+    // right to left across the diagonal track and the diode's courtyard, not the straight track
+    const a = await svgToScreen(page, 6.2, 2.4)
+    const b = await svgToScreen(page, 3.6, 1.4)
+    await page.mouse.move(a.x, a.y)
+    await page.mouse.down()
+    await page.mouse.move(b.x, b.y, { steps: 5 })
+    await page.mouse.up()
+    await expect(partSelection(page)).toHaveAttribute('data-part', 'D')
+    await expect(page.locator('[data-testid="pcb-selection-count"]')).toHaveText('1 track selected')
+
+    // the diode snaps to (6, 5) on the 0.25 mm grid, the track moves by the same offset
+    const from = await svgToScreen(page, 5.08, 4)
+    const to = await svgToScreen(page, 6.08, 5)
+    await page.mouse.move(from.x, from.y)
+    await page.mouse.down({ button: 'middle' })
+    await page.mouse.move(to.x, to.y, { steps: 5 })
+    await page.mouse.up({ button: 'middle' })
+    await expect(diodeX(page)).toHaveValue('6')
+    await expect(diodeY(page)).toHaveValue('5')
+    // still selected, and the preset is drawn for the moved diode: not stale
+    await expect(page.locator('[data-testid="pcb-selection-count"]')).toHaveText('1 track selected')
+    await expect(page.locator('[data-testid="pcb-stale-preset"]')).toHaveCount(0)
+    const saved = () =>
+      page.evaluate(() => {
+        const raw = localStorage.getItem('kle-ng-pcb-settings')
+        const tracks = raw ? JSON.parse(raw).tracks : null
+        return tracks ? { items: tracks.items, x: tracks.basis.diodePositionX } : null
+      })
+    await expect.poll(saved).toMatchObject({
+      items: [
+        { start: { x_nm: 2540000, y_nm: -5080000 }, end: { x_nm: 2540000, y_nm: 60000 } },
+        { start: { x_nm: 3460000, y_nm: 1060000 }, end: { x_nm: 6000000, y_nm: 3600000 } },
+      ],
+      x: 6,
+    })
+
+    // Esc puts the tracks back with the parts
+    await page.mouse.move(to.x, to.y)
+    await page.mouse.down({ button: 'middle' })
+    await page.mouse.move(from.x, from.y, { steps: 5 })
+    await page.keyboard.press('Escape')
+    await page.mouse.up({ button: 'middle' })
+    await expect(diodeX(page)).toHaveValue('6')
+    await expect.poll(saved).toMatchObject({
+      items: [{}, { end: { x_nm: 6000000, y_nm: 3600000 } }],
+    })
+  })
+
   test('has the View controls outside the track editor', async ({ page }) => {
     await openPreview(page)
     await centreCanvas(page)

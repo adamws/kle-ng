@@ -607,13 +607,18 @@ where it selects tracks as well); `Shift` adds to the selection. A middle-button
 layout editor's key drag) drags the selection when the part is in it, else selects the part alone,
 and dragged past the box threshold writes the positions on every move: the grabbed part follows the
 cursor's switch-local delta, snapped to the View grid (`editorSettings.grid`; the form fields aren't
-snapped), and the others move by the same offset. `Shift+R` steps the rotation by −90° (clockwise
+snapped), and the others move by the same offset. In the track editor the selected tracks and vias
+come along: `pcbTracks` `startMove` / `previewMove` / `endMove` translate them rigidly (no 45°
+rebuild), with the preview replacing the saved items like a track drag, and write them as one undo
+step after the parts; a preset that fitted the settings at the start is restamped for the new
+diode placement. A middle press on an unselected part clears the track selection. `Shift+R` steps the rotation by −90° (clockwise
 on screen, KiCad's `Shift+R`) of each dragged part, else each selected one, else the one under the
 cursor, each about its own origin. `Esc` restores the positions and rotations from the press, or
 clears the selection. Moving a part keeps the view, and
 the middle button pans everywhere off the parts. Nothing moves while the settings are locked or
 while a track is drawn or dragged. The settings stay the only source, so a moved diode makes a drawn
-preset stale as the form fields do, and moves aren't in the editor's undo history.
+preset stale as the form fields do (unless its tracks moved with it), and part moves aren't in the
+editor's undo history: undoing a move with tracks puts the tracks back, not the parts.
 
 Items are written in chain order, walking outward from a pad, and shared vertices are the same
 point: kbplacer places items in order and matches track ends exactly. Tests live next to each module

@@ -619,9 +619,9 @@ const statusHint = computed(() => {
   if (tracks.isRouting)
     return 'click: add corner · V: via · / flip · Backspace: undo · double-click/End: finish · Esc: cancel'
   if (tracks.tool === 'route')
-    return 'click or X: start a track · wheel: zoom · middle/Space+drag: pan · middle-drag part: move'
+    return 'click or X: start a track · wheel: zoom · middle/Space+drag: pan · middle-drag part: move selected'
   if (tracks.tool === 'via') return 'click: place a via · X: route from it · Esc: back to Select'
-  return 'click: select · click unrouted pad: route · double-click/U: connected · drag track or via: move · middle-drag part: move · Shift+R: rotate part · drag empty: box · Ctrl+A: all · Del: delete · X: route'
+  return 'click: select · click unrouted pad: route · double-click/U: connected · drag track or via: move · middle-drag part: move selected · Shift+R: rotate part · drag empty: box · Ctrl+A: all · Del: delete · X: route'
 })
 
 /** What the preview shows outside the track editor, in the row the toolbar takes there. */
@@ -797,6 +797,8 @@ function movePartDrag(event: PointerEvent, local: Point | null) {
     if (moved < BOX_THRESHOLD_PX) return
     press.started = true
     draggedParts.value = press.parts
+    // in the track editor, the selected tracks and vias come along
+    if (editMode.value) tracks.startMove()
   }
   // the grabbed part on the View grid, like KiCad; the position fields take any value
   const grid = editorSettings.value.grid
@@ -810,6 +812,7 @@ function movePartDrag(event: PointerEvent, local: Point | null) {
   )
   const dx = at.x - from.x
   const dy = at.y - from.y
+  tracks.previewMove({ x: dx, y: dy })
   for (const part of press.parts) {
     const start = press.from.get(part)!
     // to 1 nm like the grid snap, so the offsets don't pick up float noise
@@ -825,8 +828,11 @@ function endPartDrag(cancel: boolean) {
   if (!partPress) return
   if (cancel) {
     for (const [part, from] of partPress.from) setPartPlacement(settings.value, part, from)
+    tracks.cancelMove()
     partPress.cancelled = true
   } else {
+    // after the parts, so a preset that fitted is drawn for where they are now
+    tracks.endMove()
     partPress = null
   }
   draggedParts.value = []
@@ -852,8 +858,8 @@ function rotatePart() {
 
 /**
  * A middle-button press on a part starts dragging it, with the rest of the
- * selection when it is selected, else alone (it becomes the selection).
- * Returns true if it did.
+ * selection (selected tracks too) when it is selected, else alone (it becomes
+ * the selection). Returns true if it did.
  */
 function startPartPress(event: PointerEvent): boolean {
   if (event.button !== 1 || !canMoveParts.value) return false
@@ -861,7 +867,10 @@ function startPartPress(event: PointerEvent): boolean {
   const local = board ? boardToSwitchLocal(board, settings.value.switchRotation) : null
   const part = partUnder(local)
   if (!local || !part) return false
-  if (!selectedParts.value.includes(part)) selectedParts.value = [part]
+  if (!selectedParts.value.includes(part)) {
+    selectedParts.value = [part]
+    tracks.selectItems([], false)
+  }
   const parts = [...selectedParts.value]
   partPress = {
     grabbed: part,
@@ -1059,7 +1068,7 @@ function onEditorKeyDown(event: KeyboardEvent) {
   // Space pans on the canvas, but still presses a focused toolbar button
   if (event.code === 'Space' && event.target !== containerRef.value) return
   // a mouse drag ends with the button or Esc; other keys would act on the items under it
-  if (tracks.isDragging && event.key !== 'Escape') return
+  if ((tracks.isDragging || draggedParts.value.length) && event.key !== 'Escape') return
   panZoom.onKeyDown(event)
   if (!editMode.value || event.altKey) return
   const mod = event.ctrlKey || event.metaKey
