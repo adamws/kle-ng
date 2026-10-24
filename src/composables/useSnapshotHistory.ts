@@ -33,6 +33,17 @@ export function useSnapshotHistory<T>(limit = DEFAULT_HISTORY_LIMIT) {
     index.value = next.length - 1
   }
 
+  /**
+   * Changes the current state in place, without a new step: for what the next
+   * step's undo must restore that the state didn't record when it was pushed.
+   */
+  function amend(update: (state: T) => T) {
+    if (index.value < 0) return
+    const next = [...states.value]
+    next[index.value] = copy(update(copy(next[index.value]!)))
+    states.value = next
+  }
+
   /** The previous state, or undefined when there is none. */
   function undo(): T | undefined {
     if (!canUndo.value) return undefined
@@ -47,5 +58,5 @@ export function useSnapshotHistory<T>(limit = DEFAULT_HISTORY_LIMIT) {
     return copy(states.value[index.value]!)
   }
 
-  return { canUndo, canRedo, reset, push, undo, redo }
+  return { canUndo, canRedo, reset, push, amend, undo, redo }
 }

@@ -735,7 +735,7 @@ describe('pcbTracks selection and history', () => {
     const before = items().map((t) => ({ start: t.start, end: t.end }))
     // only the diode-side track
     tracks.selectItems([1], false)
-    expect(tracks.startMove()).toBe(true)
+    tracks.startMove(['D'])
     tracks.previewMove({ x: 1, y: -0.5 })
     // the preview, not the preset, shows the moved track
     expect(items()[1]!.end).toEqual(before[1]!.end)
@@ -752,25 +752,58 @@ describe('pcbTracks selection and history', () => {
     expect(items()[1]!.end).toEqual({ x: 6.08, y: 2.1 })
     expect(tracks.staleChanges).toEqual([])
     expect(tracks.selection).toEqual([1])
+
+    // undo puts the diode back with the track, redo moves both again
     tracks.undo()
     expect(items()[1]!.end).toEqual(before[1]!.end)
+    expect([pcb.settings.diodePositionX, pcb.settings.diodePositionY]).toEqual([5.08, 4])
+    expect(tracks.staleChanges).toEqual([])
+    tracks.redo()
+    expect(items()[1]!.end).toEqual({ x: 6.08, y: 2.1 })
+    expect([pcb.settings.diodePositionX, pcb.settings.diodePositionY]).toEqual([6.08, 3.5])
+    expect(tracks.staleChanges).toEqual([])
   })
 
-  it('cancels a move, and moves nothing without a selection', () => {
+  it('undoes a part drag without tracks, and the route before it leaves the parts', () => {
     routeDefault()
     const saved = items()
     tracks.selectItems([], false)
-    expect(tracks.startMove()).toBe(false)
-    tracks.previewMove({ x: 1, y: 0 })
+    tracks.startMove(['D', 'LED'])
+    pcb.settings.diodeRotation = 0
+    pcb.settings.ledPositionY = 3
     tracks.endMove()
-    expect(items()).toBe(saved)
+    // the tracks didn't move: the preset is stale for the turned diode
+    expect(items()).toEqual(saved)
+    expect(tracks.staleChanges.map((c) => c.label)).toEqual(['diode rotation'])
+
+    tracks.undo()
+    expect(pcb.settings.diodeRotation).toBe(90)
+    expect(pcb.settings.ledPositionY).toBe(5.25)
+    expect(tracks.staleChanges).toEqual([])
+    // the step before records no placements: undoing the route leaves the parts
+    pcb.settings.diodePositionX = 6
+    tracks.undo()
+    expect(items()).toEqual([])
+    expect(pcb.settings.diodePositionX).toBe(6)
+    tracks.redo()
+    tracks.redo()
+    expect(pcb.settings.diodeRotation).toBe(0)
+    expect(pcb.settings.ledPositionY).toBe(3)
+  })
+
+  it('records nothing for a drag that moves nothing, or one cancelled', () => {
+    routeDefault()
+    const preset = pcb.settings.trackPreset
+    tracks.startMove(['D'])
+    tracks.endMove()
+    expect(pcb.settings.trackPreset).toBe(preset)
     tracks.selectItems([0, 1], false)
-    tracks.startMove()
+    tracks.startMove(['D'])
     tracks.previewMove({ x: 1, y: 0 })
     tracks.cancelMove()
-    expect(tracks.presetItems).toEqual(saved)
+    expect(tracks.presetItems).toEqual(preset!.items)
     tracks.endMove()
-    expect(items()).toBe(saved)
+    expect(pcb.settings.trackPreset).toBe(preset)
   })
 
   it('cancels a drag with Esc', () => {

@@ -1190,6 +1190,21 @@ test.describe('PCB Generator track editor', () => {
     await expect.poll(saved).toMatchObject({
       items: [{}, { end: { x_nm: 6000000, y_nm: 3600000 } }],
     })
+
+    // undo puts the diode back with the track, still not stale; redo moves both again
+    await page.keyboard.press('Control+z')
+    await expect(diodeX(page)).toHaveValue('5.08')
+    await expect(diodeY(page)).toHaveValue('4')
+    await expect.poll(saved).toMatchObject({
+      items: [{}, { end: { x_nm: 5080000, y_nm: 2600000 } }],
+      x: 5.08,
+    })
+    await expect(page.locator('[data-testid="pcb-stale-preset"]')).toHaveCount(0)
+    await page.keyboard.press('Control+Shift+z')
+    await expect(diodeX(page)).toHaveValue('6')
+    await expect.poll(saved).toMatchObject({
+      items: [{}, { end: { x_nm: 6000000, y_nm: 3600000 } }],
+    })
   })
 
   test('has the View controls outside the track editor', async ({ page }) => {

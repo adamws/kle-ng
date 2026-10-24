@@ -597,28 +597,32 @@ every pointer move); the serializer converts to nm.
 LED and capacitor with the mouse. `utils/pcb/movable-parts.ts` maps each part (the pad owners `D`,
 `LED`, `C`) to its `PcbSettings` position and rotation fields and picks the part at a switch-local
 point: the owner of the pad under it, else the smallest courtyard outline around it, never the
-switch; `partsInBox` picks the parts a box selection encloses (left to right) or touches (right
-to left), by courtyard, else by pad centres, never the switch. In `FootprintPreview.vue` a left click
+switch; `partsInBox` picks the parts a box selection encloses (left to right) or touches (right to
+left), by courtyard, else by pad centres, never the switch. In `FootprintPreview.vue` a left click
 selects that part (outlined, with its position and rotation in the readout; several selected parts
 are listed by name) or clears the selection, `Shift`+click toggles it; in the track editor a click
 that selects or starts a track wins, and a click doesn't select tracks and parts together. A left
 drag from empty space draws the box in every routing mode (in the track editor with the Select tool,
-where it selects tracks as well); `Shift` adds to the selection. A middle-button press on a part (the
-layout editor's key drag) drags the selection when the part is in it, else selects the part alone,
-and dragged past the box threshold writes the positions on every move: the grabbed part follows the
-cursor's switch-local delta, snapped to the View grid (`editorSettings.grid`; the form fields aren't
-snapped), and the others move by the same offset. In the track editor the selected tracks and vias
-come along: `pcbTracks` `startMove` / `previewMove` / `endMove` translate them rigidly (no 45°
-rebuild), with the preview replacing the saved items like a track drag, and write them as one undo
-step after the parts; a preset that fitted the settings at the start is restamped for the new
-diode placement. A middle press on an unselected part clears the track selection. `Shift+R` steps the rotation by −90° (clockwise
-on screen, KiCad's `Shift+R`) of each dragged part, else each selected one, else the one under the
-cursor, each about its own origin. `Esc` restores the positions and rotations from the press, or
-clears the selection. Moving a part keeps the view, and
-the middle button pans everywhere off the parts. Nothing moves while the settings are locked or
-while a track is drawn or dragged. The settings stay the only source, so a moved diode makes a drawn
-preset stale as the form fields do (unless its tracks moved with it), and part moves aren't in the
-editor's undo history: undoing a move with tracks puts the tracks back, not the parts.
+where it selects tracks as well); `Shift` adds to the selection. A middle-button press on a part
+(the layout editor's key drag) drags the selection when the part is in it, else selects the part
+alone, and dragged past the box threshold writes the positions on every move: the grabbed part
+follows the cursor's switch-local delta, snapped to the View grid (`editorSettings.grid`; the form
+fields aren't snapped), and the others move by the same offset. In the track editor the selected
+tracks and vias come along: `pcbTracks` `startMove` / `previewMove` / `endMove` translate them
+rigidly (no 45° rebuild), with the preview replacing the saved items like a track drag, and write
+them as one undo step after the parts (`startMove` takes the dragged parts and runs before they
+move); a preset that fitted the settings at the start is restamped for the new diode placement. A
+middle press on an unselected part clears the track selection. `Shift+R` steps the rotation by −90°
+(clockwise on screen, KiCad's `Shift+R`) of each dragged part, else each selected one, else the one
+under the cursor, each about its own origin. `Esc` restores the positions and rotations from the
+press, or clears the selection. Moving a part keeps the view, and the middle button pans everywhere
+off the parts. Nothing moves while the settings are locked or while a track is drawn or dragged. The
+settings stay the only source, so a moved diode makes a drawn preset stale as the form fields do
+(unless its tracks moved with it). In the track editor every part drag is one step of the editor's
+history: a snapshot carries the placements of the parts it dragged (`parts`), and `endMove` amends
+the step before with their placements from before the drag, so undo and redo restore the parts with
+the tracks. Steps without placements leave the parts alone, so undoing a route doesn't undo a
+placement typed into the form; outside the editor there is no undo.
 
 Items are written in chain order, walking outward from a pad, and shared vertices are the same
 point: kbplacer places items in order and matches track ends exactly. Tests live next to each module

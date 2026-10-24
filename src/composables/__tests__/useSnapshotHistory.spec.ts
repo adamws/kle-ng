@@ -46,4 +46,14 @@ describe('useSnapshotHistory', () => {
     expect(h.undo()).toBe(3)
     expect(h.undo()).toBeUndefined()
   })
+
+  it('amends the current state without a new step', () => {
+    const h = useSnapshotHistory<{ n: number; note?: string }>()
+    h.reset({ n: 0 })
+    h.amend((s) => ({ ...s, note: 'before 1' }))
+    h.push({ n: 1 })
+    expect(h.canRedo.value).toBe(false)
+    expect(h.undo()).toEqual({ n: 0, note: 'before 1' })
+    expect(h.undo()).toBeUndefined()
+  })
 })

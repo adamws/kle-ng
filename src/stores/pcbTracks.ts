@@ -65,6 +65,12 @@ import {
   type TrackLine,
 } from '@/utils/pcb-tracks/line'
 import { FLOAT_EPS, roundNm, samePoint } from '@/utils/pcb-tracks/units'
+import {
+  partPlacement,
+  setPartPlacement,
+  type MovablePart,
+  type PartPlacement,
+} from '@/utils/pcb/movable-parts'
 
 export interface TrackEditorSettings {
   /** Track width, mm. */
@@ -127,15 +133,23 @@ interface DragCommon {
   strict: boolean
 }
 
+/** Placements of some of the parts the preview moves. */
+type PartPlacements = Partial<Record<MovablePart, PartPlacement>>
+
 /** Selected tracks and vias moved by an offset, with the parts dragged in the preview. */
 interface MoveState {
+  /** The dragged parts' placements at the start. */
+  parts: PartPlacements
   /** Indexes of the moved items in `base`. */
   moved: ReadonlySet<number>
   /** The saved items at the start. */
   base: TrackItem[]
   /** The preview: `base` with the moved items at the current offset. */
   result: TrackItem[]
-  /** The preset fitted the settings at the start: it is drawn for the moved parts at the end. */
+  /**
+   * Tracks move, and the preset fitted the settings at the start: it is drawn
+   * for the moved parts at the end.
+   */
   restamp: boolean
 }
 
@@ -340,8 +354,12 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
   // Selection (indexes into the preset items) and history
 
   const selection = ref<number[]>([])
-  /** A history step: the items with the basis they were drawn for, so undo restores staleness too. */
-  type Snapshot = Pick<TrackPreset, 'items' | 'basis'>
+  /**
+   * A history step: the items with the basis they were drawn for, so undo
+   * restores staleness too, and the placements of parts dragged in the
+   * preview: those of the step's drag, and before the next step's drag.
+   */
+  type Snapshot = Pick<TrackPreset, 'items' | 'basis'> & { parts?: PartPlacements }
   const history = useSnapshotHistory<Snapshot>()
   /** The preset object this store wrote last; anything else is an outside write. */
   let ownPreset: unknown = undefined
@@ -365,13 +383,21 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
    * Keep (`restamp`) or drawing into an empty preset stamps the current
    * settings. An empty preset stays: it is what keeps a preset routing mode.
    */
-  function writeItems(items: TrackItem[], record = true, restamp = false) {
+  function writeItems(items: TrackItem[], record = true, restamp = false, parts?: PartPlacements) {
     const current = pcb.settings.trackPreset
     const stale =
       !restamp && !!current?.items.length && basisChanges(current.basis, pcb.settings).length > 0
-    const snapshot = { items, basis: stale ? current!.basis : presetBasis(pcb.settings) }
+    const snapshot: Snapshot = { items, basis: stale ? current!.basis : presetBasis(pcb.settings) }
     writePreset(snapshot)
+    if (parts) snapshot.parts = parts
     if (record) history.push(snapshot)
+  }
+
+  /** An undo or redo step: the preset, and the part placements it recorded. */
+  function restore(snapshot: Snapshot) {
+    for (const [part, placement] of Object.entries(snapshot.parts ?? {}))
+      setPartPlacement(pcb.settings, part as MovablePart, placement)
+    writePreset(snapshot)
   }
 
   ownPreset = toRaw(pcb.settings.trackPreset)
@@ -439,7 +465,7 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     cancelMove()
     selection.value = []
     const snapshot = history.undo()
-    if (snapshot) writePreset(snapshot)
+    if (snapshot) restore(snapshot)
   }
 
   function redo() {
@@ -448,7 +474,7 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     cancelMove()
     selection.value = []
     const snapshot = history.redo()
-    if (snapshot) writePreset(snapshot)
+    if (snapshot) restore(snapshot)
   }
 
   /** Index of the via or track under `p` within `tolerance` mm, on visible layers. */
@@ -813,23 +839,21 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
   }
 
   /**
-   * Starts moving the selected tracks and vias rigidly, as the preview drags
-   * the selected parts (no 45° rebuild: lines to anything that stays put come
-   * apart, as in KiCad). False when nothing is selected.
+   * Starts a drag of `parts` in the preview, before they move: the selected
+   * tracks and vias move with them rigidly (no 45° rebuild: lines to anything
+   * that stays put come apart, as in KiCad), and the drag is one undo step.
    */
-  function startMove(): boolean {
+  function startMove(parts: readonly MovablePart[]) {
     cancelRoute()
     cancelDrag()
-    move.value = null
-    if (!selection.value.length) return false
     const base = savedItems.value
     move.value = {
+      parts: Object.fromEntries(parts.map((p) => [p, partPlacement(pcb.settings, p)])),
       moved: new Set(selection.value),
       base,
       result: base,
-      restamp: staleChanges.value.length === 0,
+      restamp: selection.value.length > 0 && staleChanges.value.length === 0,
     }
-    return true
   }
 
   /** The moved items at offset `d` (switch-local mm) from where they started. */
@@ -847,15 +871,24 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
   }
 
   /**
-   * Ends the move as one undoable step. A preset that fitted the settings at
-   * the start is drawn for the moved parts, so moving the diode with its
-   * tracks doesn't make it stale.
+   * Ends the move, after the parts moved, as one undoable step: undo puts the
+   * parts and tracks back. A preset that fitted the settings at the start is
+   * drawn for the moved parts, so moving the diode with its tracks doesn't
+   * make it stale.
    */
   function endMove() {
     const state = move.value
     move.value = null
-    if (!state || state.result === state.base) return
-    writeItems(state.result, true, state.restamp)
+    if (!state) return
+    const parts: PartPlacements = Object.fromEntries(
+      Object.keys(state.parts).map((p) => [p, partPlacement(pcb.settings, p as MovablePart)]),
+    )
+    const partsMoved = JSON.stringify(parts) !== JSON.stringify(state.parts)
+    const tracksMoved = JSON.stringify(state.result) !== JSON.stringify(state.base)
+    if (!partsMoved && !tracksMoved) return
+    // the step before this one restores the placements from before the drag
+    if (partsMoved) history.amend((s) => ({ ...s, parts: { ...s.parts, ...state.parts } }))
+    writeItems(state.result, true, state.restamp && tracksMoved, partsMoved ? parts : undefined)
   }
 
   function cancelMove() {

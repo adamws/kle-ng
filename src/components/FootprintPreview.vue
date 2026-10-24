@@ -797,8 +797,8 @@ function movePartDrag(event: PointerEvent, local: Point | null) {
     if (moved < BOX_THRESHOLD_PX) return
     press.started = true
     draggedParts.value = press.parts
-    // in the track editor, the selected tracks and vias come along
-    if (editMode.value) tracks.startMove()
+    // in the track editor, the selected tracks and vias come along, and the drag can be undone
+    if (editMode.value) tracks.startMove(press.parts)
   }
   // the grabbed part on the View grid, like KiCad; the position fields take any value
   const grid = editorSettings.value.grid
