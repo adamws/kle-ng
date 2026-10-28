@@ -62,18 +62,17 @@ $link-hover-decoration: underline;
   --input-focus-border-color: #{$input-focus-border-color};
 }
 
-.form-control:focus {
-  border-color: var(--input-focus-border-color);
-  box-shadow: 0 0 0 2px var(--input-focus-border-color);
-}
-
-textarea.form-control:focus {
+/* one solid focus ring for every form field, instead of Bootstrap's translucent glow */
+.form-control:focus,
+.form-select:focus,
+.form-check-input:focus {
   border-color: var(--input-focus-border-color);
   box-shadow: 0 0 0 2px var(--input-focus-border-color);
 }
 
 .form-control.is-invalid:focus,
-textarea.form-control.is-invalid:focus {
+.form-select.is-invalid:focus,
+.form-check-input.is-invalid:focus {
   border-color: var(--bs-form-invalid-border-color, #dc3545);
   box-shadow: 0 0 0 2px var(--bs-form-invalid-border-color, #dc3545);
 }

@@ -251,7 +251,7 @@ onUnmounted(() => {
 
 .color-picker-button:hover:not(.disabled) {
   border-color: var(--input-focus-border-color);
-  box-shadow: 0 0 0 0.25rem var(--bs-focus-ring-color);
+  box-shadow: 0 0 0 2px var(--input-focus-border-color);
   z-index: 9999;
 }
 

@@ -420,7 +420,7 @@ onUnmounted(() => {
 
 .tool-button:focus {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  box-shadow: 0 0 0 2px var(--input-focus-border-color);
 }
 
 .tool-button:disabled {

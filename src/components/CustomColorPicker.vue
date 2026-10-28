@@ -726,8 +726,8 @@ onUnmounted(() => {
 
 .color-input:focus {
   outline: none;
-  border-color: var(--bs-primary);
-  box-shadow: 0 0 0 0.25rem var(--bs-focus-ring-color);
+  border-color: var(--input-focus-border-color);
+  box-shadow: 0 0 0 2px var(--input-focus-border-color);
 }
 
 /* Preset Colors */
