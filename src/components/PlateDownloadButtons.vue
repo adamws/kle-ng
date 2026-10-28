@@ -16,6 +16,10 @@ const showButtons = computed(() => (isSuccess.value && hasResult.value) || isGen
 
 const result = computed(() => generationState.value.result)
 
+// A separate outline file comes with the cutouts in one zip
+const svgIsZip = computed(() => result.value?.outlineSvgDownload !== undefined)
+const dxfIsZip = computed(() => result.value?.outlineDxfContent !== undefined)
+
 function handleDownloadSvg() {
   plateStore.downloadAllSvg()
 }
@@ -33,8 +37,16 @@ function handleDownloadDxf() {
         class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center gap-2"
         @click="handleDownloadSvg"
         :disabled="isGenerating"
-        aria-label="Download plate as SVG file"
-        title="Download SVG for use in vector editors like Inkscape or Adobe Illustrator"
+        :aria-label="
+          svgIsZip
+            ? 'Download plate cutouts and outline as SVG files in a zip'
+            : 'Download plate as SVG file'
+        "
+        :title="
+          svgIsZip
+            ? 'Download a .zip with the cutouts and outline SVG files, for vector editors like Inkscape or Adobe Illustrator'
+            : 'Download SVG for use in vector editors like Inkscape or Adobe Illustrator'
+        "
         data-testid="plate-download-svg"
       >
         <BiDownload aria-hidden="true" />
@@ -45,8 +57,16 @@ function handleDownloadDxf() {
         class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center gap-2"
         @click="handleDownloadDxf"
         :disabled="isGenerating"
-        aria-label="Download plate as DXF file"
-        title="Download DXF for use in CAD software or laser cutting services (units: millimeters)"
+        :aria-label="
+          dxfIsZip
+            ? 'Download plate cutouts and outline as DXF files in a zip'
+            : 'Download plate as DXF file'
+        "
+        :title="
+          dxfIsZip
+            ? 'Download a .zip with the cutouts and outline DXF files, for CAD software or laser cutting services (units: millimeters)'
+            : 'Download DXF for use in CAD software or laser cutting services (units: millimeters)'
+        "
         data-testid="plate-download-dxf"
       >
         <BiDownload aria-hidden="true" />

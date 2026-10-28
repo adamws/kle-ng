@@ -255,6 +255,7 @@ export const SELECTORS = {
     DOWNLOAD_DXF: '[data-testid="plate-download-dxf"]',
     TAB_OUTLINE: '[data-testid="plate-tab-outline"]',
     OUTLINE_TYPE_SELECT: '#outlineType',
+    MERGE_WITH_CUTOUTS: '#mergeWithCutouts',
     RESULTS_TAB_3D: '[data-testid="plate-results-tab-3d"]',
     THREE_CANVAS: '[data-testid="plate-3d-canvas"]',
     TAB_JSON: '[data-testid="plate-tab-json"]',

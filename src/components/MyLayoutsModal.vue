@@ -420,6 +420,7 @@ import { useLayoutsStore, MAX_NAME_LENGTH, type SavedLayout } from '@/stores/lay
 import { encodeLayoutToUrl, decodeLayoutFromUrl } from '@/utils/url-sharing'
 import { getSerializedData, stringifyWithRounding } from '@/utils/serialization'
 import { createZip, type ZipEntry } from '@/utils/zip'
+import { saveBlob } from '@/utils/download'
 import { toast } from '@/composables/useToast'
 import LayoutThumbnail from './LayoutThumbnail.vue'
 import HintTooltip from './HintTooltip.vue'
@@ -788,21 +789,6 @@ const toEntryName = (stem: string, taken: Set<string>) => {
   }
   taken.add(candidate.toLowerCase())
   return candidate
-}
-
-/**
- * The revoke is deferred rather than run in the same turn as `click()`: current
- * browsers snapshot the blob synchronously, but that is not guaranteed and revoking
- * immediately has historically raced the download handoff. A macrotask is enough — the
- * navigation has been queued by then.
- */
-const saveBlob = (blob: Blob, filename: string) => {
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = filename
-  anchor.click()
-  setTimeout(() => URL.revokeObjectURL(url), 0)
 }
 
 /**

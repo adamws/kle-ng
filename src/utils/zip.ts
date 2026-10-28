@@ -2,9 +2,10 @@
  * Minimal ZIP writer, stored (uncompressed) entries only.
  *
  * Exists so "Download all" in My Layouts can hand back one file containing one
- * ordinary .json per layout, each importable on its own. A dependency would be a
- * lot of surface for that: the archives here are a handful of small text files, and
- * compressing them buys little next to the JSON they hold.
+ * ordinary .json per layout, each importable on its own, and so the plate generator
+ * can hand back its cutouts and separate outline in one download. A dependency would
+ * be a lot of surface for that: the archives here are a handful of small text files,
+ * and compressing them buys little next to the JSON they hold.
  *
  * Deliberately not implemented, because nothing here needs it: compression methods
  * other than store, data descriptors, encryption, directory entries, and ZIP64. The
@@ -70,7 +71,7 @@ function dosDateTime(date: Date): { time: number; date: number } {
 export interface ZipEntry {
   /** Path inside the archive. Written as UTF-8. */
   name: string
-  /** File contents. Text only — everything this packs is JSON. */
+  /** File contents. Text only — everything this packs is JSON, SVG or DXF. */
   text: string
 }
 

@@ -40,7 +40,9 @@ const { settings } = storeToRefs(plateStore)
             >Merge with Cutouts</label
           >
         </div>
-        <div class="form-text small">Download outline and cutouts as a single file</div>
+        <div class="form-text small">
+          Outline and cutouts in a single file. Off: separate files, downloaded together as a .zip
+        </div>
       </div>
 
       <!-- Rectangular: 4-directional margins -->

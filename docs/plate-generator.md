@@ -103,11 +103,11 @@ The **Tight** outline is useful for non-rectangular layouts or split keyboards. 
 
 ### Configuring the Outline
 
-| Setting                | Description                                                                                                                        |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| **Margin / Margins**   | Distance from cutout bounds to outline edge (switch and stabilizer cutouts are considered; holes are not)                          |
-| **Fillet Radius**      | Rounds corners of the outline                                                                                                      |
-| **Merge with Cutouts** | Place cutouts and outline in a single file; if separate, the outline file shares the same (0,0) origin for easier CAD/CAM handling |
+| Setting                | Description                                                                                                                                                                      |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Margin / Margins**   | Distance from cutout bounds to outline edge (switch and stabilizer cutouts are considered; holes are not)                                                                        |
+| **Fillet Radius**      | Rounds corners of the outline                                                                                                                                                    |
+| **Merge with Cutouts** | Place cutouts and outline in a single file; if separate, both files download together as a `.zip`, and the outline file shares the same (0,0) origin for easier CAD/CAM handling |
 
 ## 3D Settings {#3d-settings}
 

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { test, expect } from '@playwright/test'
 import { KeyboardEditorPage } from './pages/KeyboardEditorPage'
 import { CanvasTestHelper } from './helpers/canvas-test-helpers'
@@ -93,5 +94,55 @@ test.describe('Plate Generator', () => {
     await helper.expandSection()
     await page.locator(PG.TAB_OUTLINE).click()
     await expect(page.locator(PG.OUTLINE_TYPE_SELECT)).toHaveValue('rectangular')
+  })
+
+  test('downloads a separate outline with the cutouts as one zip', async ({ page }) => {
+    const editor = new KeyboardEditorPage(page)
+    await editor.goto()
+    const canvas = new CanvasTestHelper(page)
+    await canvas.loadJsonLayout(JSON.stringify([['A', 'B', 'C']]))
+
+    const helper = new PlateGeneratorHelper(page)
+    await helper.expandSection()
+    await helper.enableOutline('rectangular')
+    await page.locator(PG.MERGE_WITH_CUTOUTS).uncheck()
+    await helper.generateAndWait()
+
+    // Browsers block or drop a second download started by the same click
+    const downloads: string[] = []
+    page.on('download', (d) => downloads.push(d.suggestedFilename()))
+
+    const [svg] = await Promise.all([
+      page.waitForEvent('download'),
+      page.locator(PG.DOWNLOAD_SVG).click(),
+    ])
+    expect(svg.suggestedFilename()).toBe('keyboard-plate-svg.zip')
+    // Stored (uncompressed) entries, so the names are plain bytes in the archive
+    const archive = readFileSync((await svg.path())!).toString('latin1')
+    expect(archive.startsWith('PK')).toBe(true)
+    expect(archive).toContain('keyboard-plate.svg')
+    expect(archive).toContain('keyboard-plate-outline.svg')
+
+    const [dxf] = await Promise.all([
+      page.waitForEvent('download'),
+      page.locator(PG.DOWNLOAD_DXF).click(),
+    ])
+    expect(dxf.suggestedFilename()).toBe('keyboard-plate-dxf.zip')
+
+    // With the outline merged, one plain file again
+    await page.locator(PG.MERGE_WITH_CUTOUTS).check()
+    // The plate regenerates after a debounce; the tooltip follows the new result
+    await expect(page.locator(PG.DOWNLOAD_SVG)).toHaveAttribute('title', /^Download SVG/)
+    const [merged] = await Promise.all([
+      page.waitForEvent('download'),
+      page.locator(PG.DOWNLOAD_SVG).click(),
+    ])
+    expect(merged.suggestedFilename()).toBe('keyboard-plate.svg')
+
+    expect(downloads).toEqual([
+      'keyboard-plate-svg.zip',
+      'keyboard-plate-dxf.zip',
+      'keyboard-plate.svg',
+    ])
   })
 })

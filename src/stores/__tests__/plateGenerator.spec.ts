@@ -1,6 +1,15 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { usePlateGeneratorStore } from '../plateGenerator'
+import type { PlateGenerationResult } from '@/types/plate'
+import { saveBlob } from '@/utils/download'
+import { createZip } from '@/utils/zip'
+
+vi.mock('@/utils/download', () => ({ saveBlob: vi.fn() }))
+vi.mock('@/utils/zip', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/utils/zip')>()
+  return { ...actual, createZip: vi.fn(actual.createZip) }
+})
 
 describe('plateGenerator store', () => {
   beforeEach(() => {
@@ -51,6 +60,83 @@ describe('plateGenerator store', () => {
       store.applySettings({ outline: { outlineType: 'rectangular' } })
       expect(store.settings.outline.marginTop).toBe(5)
       expect(store.settings.backsideFeatures[0]!.enabled).toBe(false)
+    })
+  })
+
+  describe('SVG and DXF downloads', () => {
+    beforeEach(() => {
+      vi.mocked(saveBlob).mockClear()
+      vi.mocked(createZip).mockClear()
+    })
+
+    function storeWithResult(result: Partial<PlateGenerationResult>) {
+      const store = usePlateGeneratorStore()
+      store.generationState = {
+        status: 'success',
+        error: null,
+        result: {
+          svgDownload: 'CUT-SVG',
+          dxfContent: 'CUT-DXF',
+          ...result,
+        } as PlateGenerationResult,
+      }
+      return store
+    }
+
+    /** [filename, MIME type] of each saved file. */
+    const saved = () => vi.mocked(saveBlob).mock.calls.map(([blob, name]) => [name, blob.type])
+
+    it('saves only the cutouts when there is no outline', () => {
+      const store = storeWithResult({})
+
+      store.downloadAllSvg()
+      store.downloadAllDxf()
+
+      expect(saved()).toEqual([
+        ['keyboard-plate.svg', 'image/svg+xml'],
+        ['keyboard-plate.dxf', 'application/dxf'],
+      ])
+      expect(createZip).not.toHaveBeenCalled()
+    })
+
+    it('saves the merged file when the outline is merged with the cutouts', async () => {
+      const store = storeWithResult({
+        mergedSvgDownload: 'MERGED-SVG',
+        mergedDxfContent: 'MERGED-DXF',
+      })
+
+      store.downloadAllSvg()
+      store.downloadAllDxf()
+
+      expect(saved()).toEqual([
+        ['keyboard-plate.svg', 'image/svg+xml'],
+        ['keyboard-plate.dxf', 'application/dxf'],
+      ])
+      expect(await vi.mocked(saveBlob).mock.calls[0]![0].text()).toBe('MERGED-SVG')
+      expect(createZip).not.toHaveBeenCalled()
+    })
+
+    // Two downloads from one click get blocked or dropped by browsers
+    it('saves the cutouts and a separate outline as one zip', () => {
+      const store = storeWithResult({ outlineSvgDownload: 'OUT-SVG', outlineDxfContent: 'OUT-DXF' })
+
+      store.downloadAllSvg()
+      store.downloadAllDxf()
+
+      expect(saved()).toEqual([
+        ['keyboard-plate-svg.zip', 'application/zip'],
+        ['keyboard-plate-dxf.zip', 'application/zip'],
+      ])
+      expect(vi.mocked(createZip).mock.calls.map(([entries]) => entries)).toEqual([
+        [
+          { name: 'keyboard-plate.svg', text: 'CUT-SVG' },
+          { name: 'keyboard-plate-outline.svg', text: 'OUT-SVG' },
+        ],
+        [
+          { name: 'keyboard-plate.dxf', text: 'CUT-DXF' },
+          { name: 'keyboard-plate-outline.dxf', text: 'OUT-DXF' },
+        ],
+      ])
     })
   })
 })

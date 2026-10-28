@@ -21,6 +21,8 @@ import {
   type PlateSettingsJson,
 } from '@/utils/plate/plate-settings-serializer'
 import { validatePlateSettingsJson } from '@/utils/plate/plate-settings-validator'
+import { saveBlob } from '@/utils/download'
+import { createZip } from '@/utils/zip'
 
 const STORAGE_KEY = 'kle-ng-plate-settings'
 
@@ -273,45 +275,51 @@ export const usePlateGeneratorStore = defineStore('plateGenerator', () => {
   }
 
   /**
-   * Download all SVG files (cutouts and outline if enabled)
-   * If merge is enabled, downloads single combined file; otherwise separate files
+   * Download the SVG: the merged file when the outline is merged with the cutouts,
+   * otherwise the cutouts and the separate outline file as one zip.
    */
   function downloadAllSvg(): void {
     const result = generationState.value.result
     if (!result) return
-
-    if (result.mergedSvgDownload) {
-      // Merge enabled: download single combined file
-      downloadFile(result.mergedSvgDownload, 'keyboard-plate.svg', 'image/svg+xml')
-    } else {
-      // Merge disabled: download separate files
-      downloadFile(result.svgDownload, 'keyboard-plate.svg', 'image/svg+xml')
-
-      if (result.outlineSvgDownload) {
-        downloadFile(result.outlineSvgDownload, 'keyboard-plate-outline.svg', 'image/svg+xml')
-      }
-    }
+    downloadCutoutsAndOutline(
+      result.mergedSvgDownload ?? result.svgDownload,
+      result.outlineSvgDownload,
+      'svg',
+      'image/svg+xml',
+    )
   }
 
-  /**
-   * Download all DXF files (cutouts and outline if enabled)
-   * If merge is enabled, downloads single combined file; otherwise separate files
-   */
+  /** Download the DXF, as `downloadAllSvg` does the SVG. */
   function downloadAllDxf(): void {
     const result = generationState.value.result
     if (!result) return
+    downloadCutoutsAndOutline(
+      result.mergedDxfContent ?? result.dxfContent,
+      result.outlineDxfContent,
+      'dxf',
+      'application/dxf',
+    )
+  }
 
-    if (result.mergedDxfContent) {
-      // Merge enabled: download single combined file
-      downloadFile(result.mergedDxfContent, 'keyboard-plate.dxf', 'application/dxf')
-    } else {
-      // Merge disabled: download separate files
-      downloadFile(result.dxfContent, 'keyboard-plate.dxf', 'application/dxf')
-
-      if (result.outlineDxfContent) {
-        downloadFile(result.outlineDxfContent, 'keyboard-plate-outline.dxf', 'application/dxf')
-      }
+  /**
+   * One file, or with a separate outline both in a zip: browsers block or drop the
+   * second of two downloads started by one click (see saveBlob).
+   */
+  function downloadCutoutsAndOutline(
+    cutouts: string,
+    outline: string | undefined,
+    extension: string,
+    mimeType: string,
+  ): void {
+    if (outline === undefined) {
+      downloadFile(cutouts, `keyboard-plate.${extension}`, mimeType)
+      return
     }
+    const zip = createZip([
+      { name: `keyboard-plate.${extension}`, text: cutouts },
+      { name: `keyboard-plate-outline.${extension}`, text: outline },
+    ])
+    saveBlob(new Blob([zip], { type: 'application/zip' }), `keyboard-plate-${extension}.zip`)
   }
 
   /**
@@ -332,19 +340,8 @@ export const usePlateGeneratorStore = defineStore('plateGenerator', () => {
     downloadFile(script, 'keyboard-plate.jscad', 'text/plain')
   }
 
-  /**
-   * Helper function to trigger file download
-   */
   function downloadFile(content: string, filename: string, mimeType: string): void {
-    const blob = new Blob([content], { type: mimeType })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = filename
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+    saveBlob(new Blob([content], { type: mimeType }), filename)
   }
 
   // Settings persistence
