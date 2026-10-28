@@ -213,6 +213,16 @@ describe('deserializePlateSettings', () => {
     expect(settings.outline.outlineType).toBe('rectangular')
   })
 
+  it('keeps an explicit none outline when the default type is another one', () => {
+    const defaults = {
+      ...baseDefaults,
+      outline: { ...baseDefaults.outline, outlineType: 'rectangular' as const },
+    }
+    const settings = deserializePlateSettings({ outline: { outlineType: 'none' } }, defaults)
+    expect(settings.outline.outlineType).toBe('none')
+    expect(settings.outline.marginTop).toBe(5)
+  })
+
   it('round-trips rectangular outline correctly', () => {
     const original = makeSettings({
       outline: {

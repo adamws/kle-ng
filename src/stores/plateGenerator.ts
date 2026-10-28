@@ -39,7 +39,7 @@ const defaultSettings: PlateSettings = {
   rotaryEncoderHandwired: false,
   thickness: 1.5,
   outline: {
-    outlineType: 'none' as const,
+    outlineType: 'rectangular' as const,
     marginTop: 5,
     marginBottom: 5,
     marginLeft: 5,

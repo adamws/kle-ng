@@ -93,11 +93,11 @@ Generate a border around the key cluster.
 
 ### Outline Types
 
-| Type            | Description                                                                      |
-| --------------- | -------------------------------------------------------------------------------- |
-| **None**        | No outline generated                                                             |
-| **Rectangular** | Axis-aligned bounding box with independent top/bottom/left/right margins         |
-| **Tight**       | A convex hull that encloses the key cluster, expanded by a single uniform margin |
+| Type            | Description                                                                        |
+| --------------- | ---------------------------------------------------------------------------------- |
+| **None**        | No outline generated                                                               |
+| **Rectangular** | Axis-aligned bounding box with independent top/bottom/left/right margins (default) |
+| **Tight**       | A convex hull that encloses the key cluster, expanded by a single uniform margin   |
 
 The **Tight** outline is useful for non-rectangular layouts or split keyboards. **Ghost keys** (keys with the _Ghost_ property enabled) are included in the hull calculation without producing switch cutouts — place them at the edges of the layout to fine-tune the outline shape.
 

@@ -88,10 +88,10 @@ test.describe('Plate Generator', () => {
       .poll(() =>
         page.evaluate(() => JSON.parse(localStorage.getItem('kle-ng-plate-settings') ?? '{}')),
       )
-      .toMatchObject({ outline: { outlineType: 'none' } })
+      .toMatchObject({ outline: { outlineType: 'rectangular' } })
     await page.reload()
     await helper.expandSection()
     await page.locator(PG.TAB_OUTLINE).click()
-    await expect(page.locator(PG.OUTLINE_TYPE_SELECT)).toHaveValue('none')
+    await expect(page.locator(PG.OUTLINE_TYPE_SELECT)).toHaveValue('rectangular')
   })
 })

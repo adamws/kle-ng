@@ -12,6 +12,17 @@ describe('plateGenerator store', () => {
     localStorage.clear()
   })
 
+  it('should default to a rectangular outline, and keep a saved none outline', () => {
+    expect(usePlateGeneratorStore().settings.outline.outlineType).toBe('rectangular')
+
+    localStorage.setItem(
+      'kle-ng-plate-settings',
+      JSON.stringify({ outline: { outlineType: 'none' } }),
+    )
+    setActivePinia(createPinia())
+    expect(usePlateGeneratorStore().settings.outline.outlineType).toBe('none')
+  })
+
   describe('getDefaultSettingsJson', () => {
     it('should give the defaults, which applySettings restores after edits', () => {
       localStorage.setItem(
@@ -31,12 +42,11 @@ describe('plateGenerator store', () => {
       // The initial settings once shared nested objects with the defaults, so
       // editing them changed the defaults too.
       const store = usePlateGeneratorStore()
-      store.settings.outline.outlineType = 'rectangular'
       store.settings.outline.marginTop = 42
       store.settings.backsideFeatures[0]!.enabled = true
 
       const defaults = store.getDefaultSettingsJson()
-      expect(defaults.outline).toEqual({ outlineType: 'none' })
+      expect(defaults.outline).toMatchObject({ outlineType: 'rectangular', marginTop: 5 })
 
       store.applySettings({ outline: { outlineType: 'rectangular' } })
       expect(store.settings.outline.marginTop).toBe(5)

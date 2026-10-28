@@ -206,6 +206,9 @@ export function deserializePlateSettings(
       marginLeft: defaults.outline.marginLeft,
       marginRight: defaults.outline.marginRight,
     }
+  } else if (jsonOutline?.outlineType === 'none') {
+    // Explicit: the default outline type isn't 'none'
+    outline = { ...defaults.outline, outlineType: 'none' }
   } else {
     outline = { ...defaults.outline }
   }
