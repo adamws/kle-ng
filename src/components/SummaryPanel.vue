@@ -309,6 +309,7 @@ import KeyCentersTable from './KeyCentersTable.vue'
 import BiGrid3x3 from 'bootstrap-icons/icons/grid-3x3.svg'
 import BiDownload from 'bootstrap-icons/icons/download.svg'
 import { getKeyCenter, getKeyCenterMm } from '@/utils/keyboard-geometry'
+import { saveBlob } from '@/utils/download'
 
 const keyboardStore = useKeyboardStore()
 
@@ -494,12 +495,10 @@ const downloadCsv = () => {
   })
 
   const blob = new Blob([csv], { type: 'text/csv' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}-summary.csv`
-  a.click()
-  URL.revokeObjectURL(url)
+  saveBlob(
+    blob,
+    `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}-summary.csv`,
+  )
 }
 </script>
 

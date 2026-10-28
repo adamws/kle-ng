@@ -289,6 +289,7 @@ import BiQuestionCircle from 'bootstrap-icons/icons/question-circle.svg'
 import BiUpload from 'bootstrap-icons/icons/upload.svg'
 import BiDownload from 'bootstrap-icons/icons/download.svg'
 import BiArrowsFullscreen from 'bootstrap-icons/icons/arrows-fullscreen.svg'
+import { saveBlob } from '@/utils/download'
 
 // Props
 interface Props {
@@ -490,14 +491,7 @@ const handleFileChange = async (e: Event) => {
 const handleSave = () => {
   const json = themeStore.exportThemeJson()
   const blob = new Blob([json], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `${themeStore.currentTheme?.name ?? 'theme'}.json`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  setTimeout(() => URL.revokeObjectURL(url), 100)
+  saveBlob(blob, `${themeStore.currentTheme?.name ?? 'theme'}.json`)
 }
 
 const handleApply = () => {

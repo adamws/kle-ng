@@ -12,6 +12,7 @@ import { encodeKeyboardToErgogenUrl } from '@/utils/ergogen-loader'
 import { encodeKeyboardToZmkWizardUrl } from '@/utils/url-sharing'
 import { normalizeLayoutInput, htmlLayoutRenderer, svgLayoutRenderer } from '@/utils/layout-export'
 import type { ExtendedKeyboardMetadata } from '@/utils/json-layout-processor'
+import { saveBlob } from '@/utils/download'
 
 interface SaveFilePickerWindow {
   showSaveFilePicker(options?: {
@@ -49,24 +50,20 @@ export function useKeyboardExport() {
   const downloadJson = () => {
     const data = keyboardStore.getSerializedData('kle')
     const blob = new Blob([stringifyWithRounding(data, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}.json`
-    a.click()
-    URL.revokeObjectURL(url)
+    saveBlob(
+      blob,
+      `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}.json`,
+    )
     keyboardStore.updateBaseline()
   }
 
   const downloadKleInternalJson = () => {
     const data = keyboardStore.getSerializedData('kle-internal')
     const blob = new Blob([stringifyWithRounding(data, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}-internal.json`
-    a.click()
-    URL.revokeObjectURL(url)
+    saveBlob(
+      blob,
+      `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}-internal.json`,
+    )
   }
 
   const downloadViaJson = () => {
@@ -82,12 +79,10 @@ export function useKeyboardExport() {
     }
 
     const blob = new Blob([JSON.stringify(viaData, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}-via.json`
-    a.click()
-    URL.revokeObjectURL(url)
+    saveBlob(
+      blob,
+      `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}-via.json`,
+    )
   }
 
   const downloadQmkJson = () => {
@@ -103,12 +98,10 @@ export function useKeyboardExport() {
     }
 
     const blob = new Blob([formatQmkJson(qmkData)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}-qmk.json`
-    a.click()
-    URL.revokeObjectURL(url)
+    saveBlob(
+      blob,
+      `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}-qmk.json`,
+    )
   }
 
   const exportToErgogenWebGui = async () => {
@@ -235,12 +228,10 @@ export function useKeyboardExport() {
         await writable.close()
         toast.showSuccess('PNG image with embedded layout saved successfully', 'Export Successful')
       } else {
-        const url = URL.createObjectURL(pngWithMetadata)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}.png`
-        a.click()
-        URL.revokeObjectURL(url)
+        saveBlob(
+          pngWithMetadata,
+          `${keyboardStore.filename || keyboardStore.metadata.name || 'keyboard-layout'}.png`,
+        )
       }
     } catch (error: unknown) {
       if (error instanceof Error) {
@@ -332,12 +323,7 @@ export function useKeyboardExport() {
         await writable.close()
         toast.showSuccess('HTML file saved successfully', 'Export Successful')
       } else {
-        const url = URL.createObjectURL(htmlBlob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = suggestedName
-        a.click()
-        URL.revokeObjectURL(url)
+        saveBlob(htmlBlob, suggestedName)
         toast.showSuccess('HTML file download started', 'Export Started')
       }
     } catch (err: unknown) {
@@ -380,12 +366,7 @@ export function useKeyboardExport() {
         await writable.close()
         toast.showSuccess('SVG file saved successfully', 'Export Successful')
       } else {
-        const url = URL.createObjectURL(svgBlob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = suggestedName
-        a.click()
-        URL.revokeObjectURL(url)
+        saveBlob(svgBlob, suggestedName)
         toast.showSuccess('SVG file download started', 'Export Started')
       }
     } catch (err: unknown) {

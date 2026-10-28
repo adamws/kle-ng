@@ -11,6 +11,7 @@ import BiDownload from 'bootstrap-icons/icons/download.svg'
 import BiArrowCounterclockwise from 'bootstrap-icons/icons/arrow-counterclockwise.svg'
 import BiArrowsFullscreen from 'bootstrap-icons/icons/arrows-fullscreen.svg'
 import JsonExpandModal from './JsonExpandModal.vue'
+import { saveBlob } from '@/utils/download'
 
 const plateStore = usePlateGeneratorStore()
 
@@ -158,14 +159,7 @@ function loadDefaults(): void {
 function downloadJson(): void {
   const text = isDirty.value ? editorText.value : getCanonicalJson()
   const blob = new Blob([text], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = 'plate-settings.json'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
+  saveBlob(blob, 'plate-settings.json')
 }
 
 function triggerUpload(): void {
