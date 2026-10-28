@@ -32,6 +32,12 @@ describe('plateGenerator store', () => {
     expect(usePlateGeneratorStore().settings.outline.outlineType).toBe('none')
   })
 
+  it('should default to sharp cutout corners', () => {
+    const store = usePlateGeneratorStore()
+    expect(store.settings.filletRadius).toBe(0)
+    expect(store.settings.stabilizerFilletRadius).toBe(0)
+  })
+
   describe('getDefaultSettingsJson', () => {
     it('should give the defaults, which applySettings restores after edits', () => {
       localStorage.setItem(

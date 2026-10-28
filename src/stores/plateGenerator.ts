@@ -32,8 +32,8 @@ const STORAGE_KEY = 'kle-ng-plate-settings'
 const defaultSettings: PlateSettings = {
   cutoutType: 'cherry-mx-basic',
   stabilizerType: 'mx-basic',
-  filletRadius: 0.5,
-  stabilizerFilletRadius: 0.5,
+  filletRadius: 0,
+  stabilizerFilletRadius: 0,
   sizeAdjust: 0,
   customCutoutWidth: 14,
   customCutoutHeight: 14,

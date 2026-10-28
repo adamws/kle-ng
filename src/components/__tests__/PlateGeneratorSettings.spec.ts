@@ -60,7 +60,7 @@ describe('PlateGeneratorSettings', () => {
   })
 
   describe('Fillet radius invalid/clear default', () => {
-    it('falls back to 0.5, not the field minimum, when the switch fillet radius is cleared or invalid', async () => {
+    it('falls back to the default 0 when the switch fillet radius is cleared or invalid', async () => {
       const store = usePlateGeneratorStore()
       store.settings.filletRadius = 1
 
@@ -79,8 +79,7 @@ describe('PlateGeneratorSettings', () => {
       await input.trigger('blur')
       await wrapper.vm.$nextTick()
 
-      // Should default to 0.5, not the field's min (0)
-      expect(store.settings.filletRadius).toBe(0.5)
+      expect(store.settings.filletRadius).toBe(0)
     })
   })
 })

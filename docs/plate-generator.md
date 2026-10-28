@@ -46,7 +46,7 @@ Configure the shape and size of switch cutouts.
 
 ### Fillet Radius
 
-Rounds the corners of cutouts. Useful for CNC routing where sharp internal corners are not achievable. Note: the upper limit for fillet values is dictated by geometry, not by actual application constraints.
+Rounds the corners of cutouts; the default is 0 (sharp corners). Useful for CNC routing where sharp internal corners are not achievable. Note: the upper limit for fillet values is dictated by geometry, not by actual application constraints.
 
 ### Size Adjustment (Kerf) {#kerf}
 
@@ -188,8 +188,8 @@ All sections and fields are optional — omitted fields fall back to defaults. H
   "cutout": {
     "switchType": "cherry-mx-basic",
     "stabilizerType": "mx-basic",
-    "switchFilletRadius": 0.5,
-    "stabilizerFilletRadius": 0.5,
+    "switchFilletRadius": 0,
+    "stabilizerFilletRadius": 0,
     "kerf": 0,
     "merge": false
   },
