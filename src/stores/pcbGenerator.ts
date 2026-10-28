@@ -57,7 +57,7 @@ const DEFAULT_SETTINGS: PcbSettings = {
 
 export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
   // Settings state (stored as numeric values)
-  const settings = ref<PcbSettings>({ ...DEFAULT_SETTINGS })
+  const settings = ref<PcbSettings>(structuredClone(DEFAULT_SETTINGS))
 
   // Task state
   const currentTaskId = ref<string | null>(null)
@@ -676,6 +676,11 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
     settings.value = deserializePcbSettings(json, DEFAULT_SETTINGS)
   }
 
+  /** The default settings in the JSON format, e.g. to load them into the JSON editor. */
+  function getDefaultSettingsJson(): PcbSettingsJson {
+    return serializePcbSettings(DEFAULT_SETTINGS)
+  }
+
   // Manual debounce helper
   function useDebounceFn<T extends (...args: unknown[]) => unknown>(fn: T, delay: number) {
     let timeoutId: number | null = null
@@ -725,5 +730,6 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
     setBackendUrl,
     resetBackendUrl,
     applySettings,
+    getDefaultSettingsJson,
   }
 })

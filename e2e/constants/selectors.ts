@@ -257,5 +257,9 @@ export const SELECTORS = {
     OUTLINE_TYPE_SELECT: '#outlineType',
     RESULTS_TAB_3D: '[data-testid="plate-results-tab-3d"]',
     THREE_CANVAS: '[data-testid="plate-3d-canvas"]',
+    TAB_JSON: '[data-testid="plate-tab-json"]',
+    JSON_DEFAULTS_BTN: '[data-testid="plate-json-defaults-btn"]',
+    JSON_APPLY_BTN: '.plate-json-view button:has-text("Apply")',
+    JSON_STATUS: '.plate-json-view .status-bar',
   },
 } as const

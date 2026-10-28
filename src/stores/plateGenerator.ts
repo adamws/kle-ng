@@ -62,8 +62,9 @@ const defaultSettings: PlateSettings = {
 }
 
 export const usePlateGeneratorStore = defineStore('plateGenerator', () => {
-  // Settings state
-  const settings = ref<PlateSettings>({ ...defaultSettings })
+  // Settings state. A deep copy: nested objects shared with the defaults would
+  // be mutated through the ref, changing what later loads fall back to.
+  const settings = ref<PlateSettings>(structuredClone(defaultSettings))
 
   // Auto-refresh state (persisted separately from plate settings)
   const autoRefresh = ref(false)
@@ -374,6 +375,11 @@ export const usePlateGeneratorStore = defineStore('plateGenerator', () => {
     settings.value = deserializePlateSettings(json, defaultSettings)
   }
 
+  /** The default settings in the JSON format, e.g. to load them into the JSON editor. */
+  function getDefaultSettingsJson(): PlateSettingsJson {
+    return serializePlateSettings(defaultSettings)
+  }
+
   // Manual debounce helper
   function useDebounceFn<T extends (...args: unknown[]) => unknown>(fn: T, delay: number) {
     let timeoutId: number | null = null
@@ -455,6 +461,7 @@ export const usePlateGeneratorStore = defineStore('plateGenerator', () => {
     resetGeneration,
     requestRegenerate,
     applySettings,
+    getDefaultSettingsJson,
     downloadSvg,
     downloadDxf,
     downloadAllSvg,

@@ -70,6 +70,7 @@ The **JSON** tab shows the current switch, diode, routing, and LED settings as a
 <img src="/pcb-generator-json-tab-dark.png" class="docs-screenshot dark-only" alt="PCB Generator JSON tab showing switch, stabilizer, diode and routing settings as JSON" style="max-width:372px" />
 
 - **Edit** — Change values directly in the editor and click **Apply** (or press `Ctrl+Enter`) to update the form. Invalid JSON is flagged in the status bar and cannot be applied; **Reset** discards your edits.
+- **Defaults** — Load the default settings into the editor. Click **Apply** to use them (this also removes any drawn [track preset](#track-presets)), or **Reset** to keep your current settings.
 - **Download** — Save the current settings as `pcb-settings.json`.
 - **Upload** — Load a previously saved `pcb-settings.json`. Valid files are applied immediately; invalid files are loaded into the editor so you can correct them.
 

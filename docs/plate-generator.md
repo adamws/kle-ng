@@ -167,6 +167,7 @@ The JSON editor displays the current settings in real-time. Use it to:
 
 - **Edit settings directly** — Modify values and click **Apply** (or press Ctrl+Enter) to apply changes to the preview
 - **Reset** — Discard unsaved edits and revert to the last applied settings
+- **Defaults** — Load the default settings into the editor. Settings are saved in your browser between sessions; this is how to start over. Click **Apply** to use the defaults, or **Reset** to keep your current settings
 - **Download** — Save the current settings as a `plate-settings.json` file
 - **Upload** — Load a previously saved `plate-settings.json` file. If valid JSON is provided, it applies immediately; if there are syntax errors, the editor loads the file so you can fix it
 - **Resize** — Drag the handle below the editor to adjust its height
@@ -175,6 +176,7 @@ The status bar at the bottom shows:
 
 - `In sync` when the editor matches applied settings
 - `Modified — press Apply or Ctrl+Enter to apply` when unsaved changes exist
+- `Defaults loaded — press Apply to use them` after clicking **Defaults**
 - Error or warning messages if the JSON is invalid
 
 ### JSON Format

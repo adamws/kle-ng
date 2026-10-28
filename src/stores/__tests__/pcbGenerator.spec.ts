@@ -320,6 +320,30 @@ describe('pcbGenerator store', () => {
     })
   })
 
+  describe('getDefaultSettingsJson', () => {
+    it('should give the defaults, which applySettings restores after edits', () => {
+      localStorageMock['kle-ng-pcb-settings'] = JSON.stringify({
+        switch: { footprint: 'Custom:SW', rotation: 90, side: 'BACK' },
+        routing: 'Disabled',
+      })
+      const store = usePcbGeneratorStore()
+      store.settings.trackPreset = { version: 1, items: [] }
+
+      const defaults = store.getDefaultSettingsJson()
+      expect(defaults.routing).toBe('Full')
+      expect(defaults.switch?.side).toBe('FRONT')
+
+      store.applySettings(defaults)
+
+      expect(store.settings.switchFootprint).toBe(
+        'Switch_Keyboard_Cherry_MX:SW_Cherry_MX_PCB_{:.2f}u',
+      )
+      expect(store.settings.switchSide).toBe('FRONT')
+      expect(store.settings.routing).toBe('Full')
+      expect(store.settings.trackPreset).toBeUndefined()
+    })
+  })
+
   describe('computed properties', () => {
     it('should compute isTaskActive correctly', () => {
       const store = usePcbGeneratorStore()

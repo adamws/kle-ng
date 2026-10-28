@@ -8,6 +8,7 @@ import type { PcbSettingsJson } from '@/utils/pcb/pcb-settings-serializer'
 import type { EditorView } from '@codemirror/view'
 import BiUpload from 'bootstrap-icons/icons/upload.svg'
 import BiDownload from 'bootstrap-icons/icons/download.svg'
+import BiArrowCounterclockwise from 'bootstrap-icons/icons/arrow-counterclockwise.svg'
 import BiArrowsFullscreen from 'bootstrap-icons/icons/arrows-fullscreen.svg'
 import JsonExpandModal from './JsonExpandModal.vue'
 
@@ -33,6 +34,10 @@ const validationError = ref<string | null>(null)
 const validationWarnings = ref<string[]>([])
 const parsedJson = ref<PcbSettingsJson | null>(null)
 const editorText = ref('')
+// The defaults as last loaded by the Defaults button, and whether they matched
+// the settings already (then nothing is loaded, only the status says so).
+const defaultsText = ref<string | null>(null)
+const defaultsAlreadyApplied = ref(false)
 
 // ---------------------------------------------------------------------------
 // Derived state
@@ -42,11 +47,20 @@ const canApply = computed(
 )
 const canReset = computed(() => isDirty.value)
 
+// Derived from the text, so any edit or upload that replaces it ends this state.
+const defaultsLoaded = computed(
+  () => isDirty.value && defaultsText.value !== null && editorText.value === defaultsText.value,
+)
+
 const statusText = computed(() => {
   if (validationError.value) return `Error: ${validationError.value}`
   if (validationWarnings.value.length > 0)
     return `${validationWarnings.value.length} warning(s): ${validationWarnings.value[0]}`
+  if (defaultsLoaded.value && pcbStore.settings.trackPreset?.items.length)
+    return 'Defaults loaded — Apply also removes the drawn tracks'
+  if (defaultsLoaded.value) return 'Defaults loaded — press Apply to use them'
   if (isDirty.value) return 'Modified — press Apply or Ctrl+Enter to apply'
+  if (defaultsAlreadyApplied.value) return 'In sync — settings already use the defaults'
   return 'In sync'
 })
 
@@ -100,6 +114,7 @@ function onEditorChange(text: string): void {
   if (isProgrammaticUpdate) return
   editorText.value = text
   isDirty.value = true
+  defaultsAlreadyApplied.value = false
   validate(text)
 }
 
@@ -124,6 +139,25 @@ function resetEdits(): void {
 // ---------------------------------------------------------------------------
 // Button actions
 // ---------------------------------------------------------------------------
+
+/**
+ * Loads the default settings into the editor as an unapplied edit: Apply uses
+ * them, Reset goes back to the current settings.
+ */
+function loadDefaults(): void {
+  const text = JSON.stringify(pcbStore.getDefaultSettingsJson(), null, 2)
+  if (text === getCanonicalJson()) {
+    resetEdits()
+    defaultsAlreadyApplied.value = true
+    return
+  }
+  defaultsText.value = text
+  editorText.value = text
+  isDirty.value = true
+  defaultsAlreadyApplied.value = false
+  validate(text)
+  setEditorContent(text)
+}
 
 function downloadJson(): void {
   const text = isDirty.value ? editorText.value : getCanonicalJson()
@@ -209,6 +243,7 @@ watch(
 watch(
   () => pcbStore.settings,
   () => {
+    defaultsAlreadyApplied.value = false
     if (isDirty.value) return
     if (!editorView) return
     setEditorContent(getCanonicalJson())
@@ -309,6 +344,15 @@ onUnmounted(() => {
         </button>
       </div>
       <div class="button-bar-right">
+        <button
+          class="btn btn-outline-secondary btn-sm"
+          title="Load the default settings into the editor, then Apply to use them"
+          data-testid="pcb-json-defaults-btn"
+          @click="loadDefaults"
+        >
+          <BiArrowCounterclockwise aria-hidden="true" />
+          Defaults
+        </button>
         <button
           class="btn btn-outline-secondary btn-sm"
           :class="{ 'btn-outline-warning': isDirty && validationError }"
