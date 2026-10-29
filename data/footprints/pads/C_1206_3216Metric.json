@@ -1,0 +1,68 @@
+{
+  "footprint": "C_1206_3216Metric",
+  "pads": [
+    {
+      "number": "1",
+      "type": "smd",
+      "shape": "roundrect",
+      "at": {
+        "x": -1.475,
+        "y": 0,
+        "rot": 0
+      },
+      "size": {
+        "w": 1.15,
+        "h": 1.8
+      },
+      "layers": [
+        "F.Cu",
+        "F.Mask",
+        "F.Paste"
+      ],
+      "rratio": 0.217391
+    },
+    {
+      "number": "2",
+      "type": "smd",
+      "shape": "roundrect",
+      "at": {
+        "x": 1.475,
+        "y": 0,
+        "rot": 0
+      },
+      "size": {
+        "w": 1.15,
+        "h": 1.8
+      },
+      "layers": [
+        "F.Cu",
+        "F.Mask",
+        "F.Paste"
+      ],
+      "rratio": 0.217391
+    }
+  ],
+  "courtyard": {
+    "front": [
+      [
+        {
+          "x": -2.3,
+          "y": -1.15
+        },
+        {
+          "x": 2.3,
+          "y": -1.15
+        },
+        {
+          "x": 2.3,
+          "y": 1.15
+        },
+        {
+          "x": -2.3,
+          "y": 1.15
+        }
+      ]
+    ],
+    "back": []
+  }
+}
