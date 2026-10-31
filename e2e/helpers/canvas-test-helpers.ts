@@ -15,7 +15,7 @@ export class CanvasTestHelper {
     await this.waitForRender() // Wait for key to be added
   }
 
-  async addMultipleKeys(count: 5 | 10 | 25) {
+  async addMultipleKeys(count: number) {
     // The multiple key add functionality is no longer available in the canvas toolbar
     // Fall back to adding keys individually for now
     for (let i = 0; i < count; i++) {

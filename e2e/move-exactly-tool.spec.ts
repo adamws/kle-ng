@@ -137,9 +137,7 @@ test.describe('Move Exactly Tool', () => {
           __VUE_DEVTOOLS_GLOBAL_HOOK__?: { apps?: { store?: { clearKeys?: () => void } }[] }
         }
       ).__VUE_DEVTOOLS_GLOBAL_HOOK__?.apps?.[0]?.store
-      if (store) {
-        store.clearKeys()
-      }
+      store?.clearKeys?.()
     })
   })
 

@@ -728,7 +728,7 @@ test.describe('Legend Tools Panel', () => {
 
       // Verify it's still valid KLE JSON
       expect(Array.isArray(jsonData)).toBe(true)
-      expect(jsonData.length).toBeGreaterThan(0)
+      expect((jsonData as unknown[]).length).toBeGreaterThan(0)
     })
 
     test('should verify JSON after removing legends by position', async () => {

@@ -35,7 +35,7 @@ test.describe('Theme switching functionality', () => {
 
     // HTML element should have data-bs-theme set to light or dark based on system preference when in auto mode
     const dataBsTheme = await theme.getHtmlElement().getAttribute('data-bs-theme')
-    expect(['light', 'dark'].includes(dataBsTheme)).toBeTruthy()
+    expect(['light', 'dark'].includes(dataBsTheme ?? '')).toBeTruthy()
   })
 
   test('should switch to dark theme', async () => {
@@ -117,7 +117,7 @@ test.describe('Theme switching functionality', () => {
 
     // For auto mode, HTML should have data-bs-theme set to light or dark based on system preference
     const dataBsTheme = await theme.getHtmlElement().getAttribute('data-bs-theme')
-    expect(['light', 'dark'].includes(dataBsTheme)).toBeTruthy()
+    expect(['light', 'dark'].includes(dataBsTheme ?? '')).toBeTruthy()
   })
 
   test('auto theme mode should respond to system preference changes', async ({ page }) => {
@@ -126,7 +126,7 @@ test.describe('Theme switching functionality', () => {
 
     // Get the current computed theme
     const initialTheme = await theme.getHtmlElement().getAttribute('data-bs-theme')
-    expect(['light', 'dark'].includes(initialTheme)).toBeTruthy()
+    expect(['light', 'dark'].includes(initialTheme ?? '')).toBeTruthy()
 
     // Simulate changing system preference by evaluating script
     // This simulates what would happen if user changed their OS theme preference
@@ -157,7 +157,7 @@ test.describe('Theme switching functionality', () => {
 
     // Verify that the theme is still valid (light or dark)
     const updatedTheme = await theme.getHtmlElement().getAttribute('data-bs-theme')
-    expect(['light', 'dark'].includes(updatedTheme)).toBeTruthy()
+    expect(['light', 'dark'].includes(updatedTheme ?? '')).toBeTruthy()
   })
 
   test('theme switching should affect app appearance', async ({ page }) => {

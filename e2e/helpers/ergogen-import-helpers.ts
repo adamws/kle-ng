@@ -313,7 +313,7 @@ export class ErgogenImportHelper {
       }
     }
 
-    expect(matchedPositions.len).toBe(uiPositions.len)
+    expect(matchedPositions.length).toBe(uiPositions.length)
     // Compare matched positions with 5 decimal places precision
     for (const { ui, expected } of matchedPositions) {
       expect(ui.x).toBeCloseTo(expected.x, 5)

@@ -1,7 +1,14 @@
 {
   "extends": "@tsconfig/node22/tsconfig.json",
   "include": ["./**/*"],
+  "exclude": ["./test-output", "./screenshots", "./snapshots"],
   "compilerOptions": {
+    "noEmit": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    // page.evaluate() callbacks run in the browser and use DOM globals
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "types": ["node"],
     "noUncheckedIndexedAccess": false
   }
 }
