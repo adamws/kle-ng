@@ -61,7 +61,7 @@ in **Redis**, managed by [asynq](https://github.com/hibiken/asynq); there is no 
 
 ```
 ┌─────────────────────────────┐
-│  User clicks "Generate PCB" │
+│  User clicks "Generate"     │
 │  (PcbGeneratorControls)     │
 └─────────────┬───────────────┘
               ▼
@@ -114,10 +114,22 @@ in **Redis**, managed by [asynq](https://github.com/hibiken/asynq); there is no 
 
 ### Why VIA annotation is required
 
-The PCB Generator only accepts **VIA-annotated** layouts (every key carries a `row,col` matrix
+The PCB Generator only sends **VIA-annotated** layouts (every key carries a `row,col` matrix
 coordinate). kbplacer needs the matrix to wire the switch–diode network and the row/column buses;
-without it there is nothing to route. `PcbGeneratorControls` disables the **Generate PCB** button
-unless `keyboardStore.isViaAnnotated` is true, prompting the user to run
+without it there is nothing to route.
+
+With **Annotate automatically** on (`pcbStore.annotateAutomatically`, default `true`, persisted
+under `kle-ng-pcb-annotate-automatically`, not part of `PcbSettings`) and the layout not
+`isViaAnnotated`, `startTask` takes a copy of the keys (`getSerializedData('internal')`) and runs
+`annotateMatrixAutomatically` (`utils/matrix-annotation/auto-annotate.ts`) on it: the same
+`clusterSymmetryAnnotationAlgorithm` and re-indexing as the tool's **Annotate Automatically**
+button. It writes labels[0], clears a labels[8] that is not `option,choice`, and keeps the other
+labels. An unassigned key or a duplicate position without `option,choice` throws an `ApiError`
+pointing to the tool. The editor's keys are never touched. A fully annotated layout is always sent
+with the user's annotation.
+
+With the option off, `PcbGeneratorControls` disables the **Generate** button unless
+`keyboardStore.isViaAnnotated` is true, prompting the user to run
 **Tools → Add Switch Matrix Coordinates** (see [matrix-annotation.md](./matrix-annotation.md)). It
 also blocks generation when `hasInvalidMatrixDuplicates` is true — keys sharing a matrix position
 must carry `option,choice` labels per the VIA spec, otherwise the netlist would short two switches
@@ -137,7 +149,7 @@ as-is; kbplacer handles the matrix on the backend.
 | `PcbGeneratorSettings.vue` | [Switches tab] Selects switch footprint, stabilizer footprint (or None), switch rotation, diode footprint / rotation / X-Y offset, and routing mode. The five routing options (`utils/pcb/routing-mode.ts`) are the backend's `routing` value plus whether a track preset exists (automatic or preset); leaving a preset option with drawn tracks asks first. Footprint values are the kbplacer `lib:footprint` templates (with `{:.2f}u` size placeholders). Diode offsets use `CustomNumberInput` (mm).                                                                                                                  |
 | `PcbLedSettings.vue`       | [LEDs tab] Per-key SK6812MINI-E LED-chain settings. A master **enable** checkbox drives `createLedSchFile`; an **add decoupling capacitors** checkbox is the positive-form UI over `skipLedDecoupling`. LED and capacitor footprint / rotation / side / offset fields stay visible but disabled when not applicable.                                                                                                                                                                                                                                                                                                       |
 | `PcbJsonView.vue`          | [JSON tab] CodeMirror editor over the grouped `PcbSettingsJson` form. Live validation, **Apply** (Ctrl+Enter), **Reset**, **Download** (`pcb-settings.json`), and **Upload**. Mirrors `PlateJsonView` behavior: rebuilds on theme change, syncs from the store only when the editor has no uncommitted edits.                                                                                                                                                                                                                                                                                                              |
-| `PcbGeneratorControls.vue` | **Generate PCB** button and, once a task exists, a **New Task** button. Gates generation on submitting state, active task, backend availability, VIA annotation, and matrix-duplicate validity. Surfaces `ApiError.userMessage` in an alert and shows contextual warnings (annotation required, duplicate positions).                                                                                                                                                                                                                                                                                                      |
+| `PcbGeneratorControls.vue` | **Annotate automatically** checkbox, **Generate** button and, once a task exists, a **New Task** button. Gates generation on submitting state, active task, backend availability, VIA annotation (only with automatic annotation off), and matrix-duplicate validity. Surfaces `ApiError.userMessage` in an alert and shows contextual warnings (annotation required, duplicate positions).                                                                                                                                                                                                                                |
 | `PcbDownloadButton.vue`    | Downloads the result ZIP from `getResultDownloadUrl()` (`/api/pcb/{id}/result`). Visible only while the download is available (`isDownloadAvailable`, i.e. task succeeded and the 1-hour link has not expired).                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `PcbGeneratorResults.vue`  | Right-hand output pane. Shows an indeterminate (sliding) progress bar with the current status message while `isTaskActive` — real progress is conveyed by the live build log below it — the tabbed render viewer on success, a failure alert on `isTaskFailed`, or the idle `FootprintPreview` before any task runs.                                                                                                                                                                                                                                                                                                       |
 | `PcbRenderViewer.vue`      | Tabbed SVG viewer with independent zoom/pan for schematic vs. PCB views. One tab per schematic sheet — for multi-sheet projects the child sheets come first (alphabetically) with the root labelled **Main** last (e.g. **Key Matrix** / **LED Chain** / **Main**), otherwise the single sheet keeps its plain **Schematic** label — followed by **PCB Front** / **PCB Back**, and — when `hasLogs` is set — a trailing **Logs** tab that embeds `PcbBuildLog` so the build output stays accessible after completion. Tabs are keyed by render name so the selection survives task changes.                                |
@@ -765,7 +777,8 @@ connection under Traefik's 180s idle timeout with no special config.
 
 ## Relationship to Other Features
 
-- **Matrix annotation** — a hard prerequisite; the generator is gated on `isViaAnnotated`. See
+- **Matrix annotation** — a prerequisite: the generator annotates an unannotated layout's copy
+  automatically, or is gated on `isViaAnnotated` with that option off. See
   [matrix-annotation.md](./matrix-annotation.md).
 - **Plate Generator** — the browser-only sibling. Both consume the current keyboard layout and share
   the `sm="rot_ec11"` rotary-encoder convention, but the Plate Generator runs entirely client-side

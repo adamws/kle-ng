@@ -135,7 +135,7 @@ test.describe('PCB Generator track preset', () => {
     await applySettings(page, { switch: { side: 'BACK' }, tracks: TRACKS })
 
     await expect(page.locator(PCB.BACK_SWITCH_ERROR)).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Generate PCB' })).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'Generate', exact: true })).toBeDisabled()
     // presets are drawn for front-side switches only
     await expect(page.locator(PCB.OVERLAY)).toHaveCount(0)
   })

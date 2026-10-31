@@ -6,8 +6,14 @@ import { storeToRefs } from 'pinia'
 import { ApiError } from '@/utils/pcbApi'
 
 const pcbStore = usePcbGeneratorStore()
-const { settings, taskStatus, isTaskActive, isBackendAvailable, workerStatusError } =
-  storeToRefs(pcbStore)
+const {
+  settings,
+  annotateAutomatically,
+  taskStatus,
+  isTaskActive,
+  isBackendAvailable,
+  workerStatusError,
+} = storeToRefs(pcbStore)
 
 const keyboardStore = useKeyboardStore()
 const {
@@ -38,12 +44,21 @@ const isTrackPresetEmpty = computed(
 // Button should show when no task is active (taskStatus is null)
 const showGenerateButton = computed(() => !taskStatus.value)
 
+// The user's own annotation always wins; an unannotated layout is either
+// annotated automatically on Generate or blocks generation.
+const isAnnotationMissing = computed(() => !annotateAutomatically.value && !isViaAnnotated.value)
+
+const annotateTooltip =
+  'If the layout is not annotated, assign matrix coordinates automatically for the PCB, ' +
+  'as Tools → Add Switch Matrix Coordinates → Annotate Automatically does. ' +
+  'Your layout is not changed, and an existing annotation is always used.'
+
 const isGenerateDisabled = computed(
   () =>
     isSubmitting.value ||
     isTaskActive.value ||
     !isBackendAvailable.value ||
-    !isViaAnnotated.value ||
+    isAnnotationMissing.value ||
     hasInvalidMatrixDuplicates.value ||
     hasMalformedLayoutOptionLabels.value ||
     isTrackPresetOnBackSwitch.value ||
@@ -51,7 +66,7 @@ const isGenerateDisabled = computed(
 )
 
 const buttonTooltip = computed(() => {
-  if (!isViaAnnotated.value) {
+  if (isAnnotationMissing.value) {
     return 'Layout requires VIA annotations to generate PCB'
   }
   if (hasInvalidMatrixDuplicates.value) {
@@ -134,11 +149,11 @@ function handleNewTask() {
     </div>
 
     <!-- Control Buttons -->
-    <div class="d-grid gap-2">
+    <div class="d-flex align-items-center gap-3">
       <button
         v-if="showGenerateButton"
         type="button"
-        class="btn btn-primary btn-sm"
+        class="btn btn-primary btn-sm flex-grow-1"
         :disabled="isGenerateDisabled"
         @click="handleGeneratePcb"
         :title="buttonTooltip"
@@ -146,29 +161,45 @@ function handleNewTask() {
         <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2" role="status">
           <span class="visually-hidden">Loading...</span>
         </span>
-        Generate PCB
+        Generate
       </button>
 
       <button
         v-if="!showGenerateButton"
         type="button"
-        class="btn btn-secondary btn-sm"
+        class="btn btn-secondary btn-sm flex-grow-1"
         :disabled="isTaskActive"
         @click="handleNewTask"
       >
         New Task
       </button>
+
+      <div class="form-check mb-0 text-nowrap" :title="annotateTooltip">
+        <input
+          id="pcbAnnotateAutomatically"
+          v-model="annotateAutomatically"
+          class="form-check-input"
+          type="checkbox"
+          :disabled="!showGenerateButton"
+          data-testid="pcb-annotate-automatically"
+        />
+        <label class="form-check-label form-label-sm" for="pcbAnnotateAutomatically">
+          Annotate automatically
+        </label>
+      </div>
     </div>
 
     <!-- Annotation Required Message -->
     <div
-      v-if="!isViaAnnotated && showGenerateButton"
+      v-if="isAnnotationMissing && showGenerateButton"
       class="alert alert-warning py-2 mt-2 mb-0"
       role="alert"
+      data-testid="pcb-annotation-required"
     >
       <small>
         Layout requires VIA annotations. Use
-        <strong>Tools &rarr; Add Switch Matrix Coordinates</strong> to annotate.
+        <strong>Tools &rarr; Add Switch Matrix Coordinates</strong> to annotate, or check
+        <strong>Annotate automatically</strong>.
       </small>
     </div>
 
@@ -231,6 +262,11 @@ function handleNewTask() {
 <style scoped>
 .pcb-generator-controls {
   padding: 0;
+}
+
+.form-label-sm {
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
 .btn-primary:disabled {
