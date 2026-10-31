@@ -14,7 +14,9 @@ const localStorageMock = {
   length: 0,
   key: vi.fn(() => null),
 }
-global.localStorage = localStorageMock as Storage
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+})
 
 describe('SummaryPanel', () => {
   let store: ReturnType<typeof useKeyboardStore>

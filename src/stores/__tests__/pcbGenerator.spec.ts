@@ -79,7 +79,7 @@ describe('pcbGenerator store', () => {
 
     // Mock localStorage
     localStorageMock = {}
-    global.localStorage = {
+    const storage = {
       getItem: vi.fn((key) => localStorageMock[key] || null),
       setItem: vi.fn((key, value) => {
         localStorageMock[key] = value
@@ -93,6 +93,7 @@ describe('pcbGenerator store', () => {
       length: 0,
       key: vi.fn(),
     } as Storage
+    Object.defineProperty(window, 'localStorage', { value: storage, configurable: true })
 
     // Reset mocks
     vi.clearAllMocks()
