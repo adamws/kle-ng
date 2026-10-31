@@ -20,7 +20,9 @@ import {
 import { validatePcbSettingsJson } from '@/utils/pcb/pcb-settings-validator'
 import { applyViaEncoderSwitchMount } from '@/utils/pcb-encoder'
 import { stripGhostKeys } from '@/utils/pcb-ghost-keys'
-import { useKeyboardStore } from '@/stores/keyboard'
+import { annotateMatrixAutomatically } from '@/utils/matrix-annotation'
+import { getKleInternalFormatForExport } from '@/utils/serialization'
+import { useKeyboardStore, type Keyboard } from '@/stores/keyboard'
 import { useToast } from '@/composables/useToast'
 import { trackPresetToWire } from '@/utils/pcb/track-preset'
 import { setCustomBackendUrl, getDefaultBackendUrl } from '@/config/api'
@@ -55,9 +57,30 @@ const DEFAULT_SETTINGS: PcbSettings = {
   ledCapacitorPositionY: 5.75,
 }
 
+const ANNOTATE_AUTOMATICALLY_KEY = 'kle-ng-pcb-annotate-automatically'
+
+function loadAnnotateAutomatically(): boolean {
+  try {
+    return localStorage.getItem(ANNOTATE_AUTOMATICALLY_KEY) !== 'false'
+  } catch {
+    return true
+  }
+}
+
 export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
   // Settings state (stored as numeric values)
   const settings = ref<PcbSettings>(structuredClone(DEFAULT_SETTINGS))
+
+  // Annotate a not-yet-annotated layout automatically on Generate. A
+  // client-side option, not part of the PCB settings sent to the backend.
+  const annotateAutomatically = ref(loadAnnotateAutomatically())
+  watch(annotateAutomatically, (value) => {
+    try {
+      localStorage.setItem(ANNOTATE_AUTOMATICALLY_KEY, String(value))
+    } catch (error) {
+      console.warn('Failed to save PCB annotation setting:', error)
+    }
+  })
 
   // Task state
   const currentTaskId = ref<string | null>(null)
@@ -207,6 +230,20 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
     stopDownloadTimer()
   }
 
+  // The layout to send in kle-internal format. A layout the user has not
+  // fully annotated gets automatic matrix coordinates when enabled; that runs
+  // on a copy, the layout in the editor stays as it is.
+  function getLayoutForTask() {
+    const keyboardStore = useKeyboardStore()
+    if (!annotateAutomatically.value || keyboardStore.isViaAnnotated) {
+      return keyboardStore.getSerializedData('kle-internal')
+    }
+    const keyboard: Keyboard = keyboardStore.getSerializedData('internal')
+    const error = annotateMatrixAutomatically(keyboard.keys)
+    if (error) throw new ApiError('Validation error', error)
+    return getKleInternalFormatForExport(keyboard)
+  }
+
   // Actions
   async function startTask() {
     // Check rate limiting
@@ -225,10 +262,9 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
       abortController.value?.abort()
       abortController.value = new AbortController()
 
-      const keyboardStore = useKeyboardStore()
       // Ghost keys are not wired, drop them before the backend sees them
       // (temporary until kbplacer ignores them itself).
-      const layout = stripGhostKeys(keyboardStore.getSerializedData('kle-internal'))
+      const layout = stripGhostKeys(getLayoutForTask())
 
       // Validate layout size
       // kle-internal format returns: { meta: {...}, keys: [...] }
@@ -246,7 +282,7 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
       }
 
       // Note: Matrix duplicate validation is handled at UI level (PcbGeneratorControls.vue)
-      // The Generate PCB button is disabled when invalid duplicates are detected
+      // The Generate button is disabled when invalid duplicates are detected
 
       // Convert settings to API format
       const apiSettings: PcbApiSettings = {
@@ -699,6 +735,7 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
 
   return {
     settings,
+    annotateAutomatically,
     currentTaskId,
     taskStatus,
     renders,

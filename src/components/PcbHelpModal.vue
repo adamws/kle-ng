@@ -65,7 +65,7 @@
             Configure switch, diode, and routing options as needed, use preview window to check
             key-diode placement
           </li>
-          <li>Click the <strong>Generate PCB</strong> button</li>
+          <li>Click the <strong>Generate</strong> button</li>
           <li>Wait for the server to process your layout</li>
           <li>Once complete, preview renders will be displayed</li>
           <li>

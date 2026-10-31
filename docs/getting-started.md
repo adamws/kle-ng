@@ -118,7 +118,7 @@ See [Plate Generator](./plate-generator) for full details.
 ### Generate a PCB
 
 1. Assign matrix coordinates to all keys using **Extra Tools → Add Switch Matrix Coordinates**.
-2. Open the **PCB Generator** panel and click **Generate PCB**.
+2. Open the **PCB Generator** panel and click **Generate**.
 3. Download the zip archive with `.kicad_sch` and `.kicad_pcb` files and open it in KiCad 9+.
 
 See [PCB Generator](./pcb-generator) for full details.

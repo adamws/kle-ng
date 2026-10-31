@@ -10,3 +10,4 @@ export type {
 export { buildRowsColsFromResult } from './build-matrix'
 export { clusterAnnotationAlgorithm } from './cluster'
 export { clusterSymmetryAnnotationAlgorithm } from './cluster-symmetry'
+export { annotateMatrixAutomatically } from './auto-annotate'

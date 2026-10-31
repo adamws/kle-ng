@@ -4,6 +4,8 @@ import { usePcbGeneratorStore } from '../pcbGenerator'
 import { pcbApi, ApiError } from '@/utils/pcbApi'
 import type { TaskStatusResponse, WorkerStatusResponse } from '@/types/pcb'
 import { useToast } from '@/composables/useToast'
+import { Key, Keyboard } from '@adamws/kle-serial'
+import { clusterSymmetryAnnotationAlgorithm } from '@/utils/matrix-annotation'
 
 // Mock the pcbApi module
 vi.mock('@/utils/pcbApi', () => ({
@@ -30,6 +32,7 @@ vi.mock('@/utils/pcbApi', () => ({
 // Mock the keyboard store
 const mockKeyboardStore = {
   getSerializedData: vi.fn(),
+  isViaAnnotated: true,
   keys: [] as { x: number; y: number; labels?: string[]; ghost?: boolean; decal?: boolean }[],
 }
 
@@ -95,6 +98,7 @@ describe('pcbGenerator store', () => {
     vi.clearAllMocks()
     vi.useFakeTimers()
     mockKeyboardStore.keys = [] // Reset keys for each test
+    mockKeyboardStore.isViaAnnotated = true
 
     // Fresh WebSocket mock per test
     MockWebSocket.instances = []
@@ -680,6 +684,112 @@ describe('pcbGenerator store', () => {
       // Polling should happen every 1 second
       await vi.advanceTimersByTimeAsync(1000)
       expect(pcbApi.getTaskStatus).toHaveBeenCalledWith('test-task-123', expect.any(Object))
+    })
+  })
+
+  describe('automatic annotation', () => {
+    const makeKey = (x: number, y: number, labels: Record<number, string> = {}) => {
+      const key = new Key()
+      key.x = x
+      key.y = y
+      for (const [i, label] of Object.entries(labels)) key.labels[Number(i)] = label
+      return key
+    }
+
+    // An unannotated 2x2 block with legends; getSerializedData('internal')
+    // returns a fresh copy of it, as the real store does.
+    const useUnannotatedLayout = (keys: Key[]) => {
+      mockKeyboardStore.isViaAnnotated = false
+      mockKeyboardStore.getSerializedData.mockImplementation((format: string) => {
+        const keyboard = new Keyboard()
+        keyboard.keys = JSON.parse(JSON.stringify(keys))
+        return format === 'internal' ? keyboard : { meta: {}, keys: keyboard.keys }
+      })
+      vi.mocked(pcbApi.submitTask).mockResolvedValue({
+        task_id: 't',
+        task_status: 'PENDING',
+        task_result: {},
+      })
+    }
+
+    const submittedLabels = (): string[][] => {
+      const layout = vi.mocked(pcbApi.submitTask).mock.calls[0]![0].layout as {
+        keys: { labels: string[] }[]
+      }
+      return layout.keys.map((k) => k.labels)
+    }
+
+    it('is enabled by default and persisted', async () => {
+      const store = usePcbGeneratorStore()
+      expect(store.annotateAutomatically).toBe(true)
+
+      store.annotateAutomatically = false
+      await vi.runAllTimersAsync()
+      expect(localStorageMock['kle-ng-pcb-annotate-automatically']).toBe('false')
+
+      setActivePinia(createPinia())
+      expect(usePcbGeneratorStore().annotateAutomatically).toBe(false)
+    })
+
+    it('annotates a copy of an unannotated layout before submitting', async () => {
+      const keys = [
+        makeKey(0, 0, { 0: 'Q', 8: 'note' }),
+        makeKey(1, 0, { 0: 'W', 4: 'e0' }),
+        makeKey(0, 1, { 0: 'A' }),
+        makeKey(1, 1, { 0: 'S', 8: '0,1' }),
+      ]
+      useUnannotatedLayout(keys)
+
+      await usePcbGeneratorStore().startTask()
+
+      const labels = submittedLabels()
+      expect(labels.map((l) => l[0]).sort()).toEqual(['0,0', '0,1', '1,0', '1,1'])
+      // Other labels are kept, apart from an invalid layout-option label
+      expect(labels.find((l) => l[4] === 'e0')).toBeDefined()
+      expect(labels.find((l) => l[8] === '0,1')).toBeDefined()
+      expect(labels.some((l) => l[8] === 'note')).toBe(false)
+      // The source layout is untouched
+      expect(keys.map((k) => k.labels[0])).toEqual(['Q', 'W', 'A', 'S'])
+    })
+
+    it("uses the user's annotation when the layout is already annotated", async () => {
+      const layout = { meta: {}, keys: [{ x: 0, y: 0, labels: ['5,7'] }] }
+      mockKeyboardStore.getSerializedData.mockReturnValue(layout)
+      vi.mocked(pcbApi.submitTask).mockResolvedValue({
+        task_id: 't',
+        task_status: 'PENDING',
+        task_result: {},
+      })
+
+      await usePcbGeneratorStore().startTask()
+
+      expect(mockKeyboardStore.getSerializedData).toHaveBeenCalledWith('kle-internal')
+      expect(submittedLabels()).toEqual([['5,7']])
+    })
+
+    it('sends the layout as is when disabled', async () => {
+      useUnannotatedLayout([makeKey(0, 0, { 0: 'Q' })])
+      const store = usePcbGeneratorStore()
+      store.annotateAutomatically = false
+
+      await store.startTask()
+
+      expect(mockKeyboardStore.getSerializedData).not.toHaveBeenCalledWith('internal')
+      expect(submittedLabels()[0]![0]).toBe('Q')
+    })
+
+    it('fails when the automatic annotation leaves keys unassigned', async () => {
+      useUnannotatedLayout([makeKey(0, 0), makeKey(1, 0)])
+      vi.spyOn(clusterSymmetryAnnotationAlgorithm, 'annotate').mockReturnValue({
+        assignments: [{ row: 0, col: 0 }, null],
+        status: 'partial',
+        warnings: [],
+      })
+
+      await expect(usePcbGeneratorStore().startTask()).rejects.toMatchObject({
+        userMessage: expect.stringContaining('could not assign matrix coordinates to 1 key.'),
+      })
+      expect(pcbApi.submitTask).not.toHaveBeenCalled()
     })
   })
 

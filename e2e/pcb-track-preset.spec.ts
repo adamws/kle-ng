@@ -32,6 +32,7 @@ const PCB = {
   OVERLAY: '[data-testid="pcb-track-overlay"]',
   OVERLAY_TRACK: '[data-testid="pcb-track-overlay-track"]',
   BACK_SWITCH_ERROR: '[data-testid="pcb-track-preset-back-switch"]',
+  GENERATE_BTN: '[data-testid="pcb-generate-btn"]',
   DRC_SUMMARY: '[data-testid="pcb-drc-summary"]',
   ROUTING: '[data-testid="pcb-routing-select"]',
   DRC_MARKER: '[data-testid="pcb-drc-marker"]',
@@ -135,7 +136,7 @@ test.describe('PCB Generator track preset', () => {
     await applySettings(page, { switch: { side: 'BACK' }, tracks: TRACKS })
 
     await expect(page.locator(PCB.BACK_SWITCH_ERROR)).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Generate PCB' })).toBeDisabled()
+    await expect(page.locator(PCB.GENERATE_BTN)).toBeDisabled()
     // presets are drawn for front-side switches only
     await expect(page.locator(PCB.OVERLAY)).toHaveCount(0)
   })
