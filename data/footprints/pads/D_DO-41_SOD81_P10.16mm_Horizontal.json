@@ -1,0 +1,85 @@
+{
+  "footprint": "D_DO-41_SOD81_P10.16mm_Horizontal",
+  "pads": [
+    {
+      "number": "1",
+      "type": "thru_hole",
+      "shape": "roundrect",
+      "at": {
+        "x": 0,
+        "y": 0,
+        "rot": 0
+      },
+      "size": {
+        "w": 2.2,
+        "h": 2.2
+      },
+      "layers": [
+        "F.Cu",
+        "B.Cu",
+        "F.Mask",
+        "B.Mask"
+      ],
+      "rratio": 0.113636,
+      "drill": {
+        "w": 1.1,
+        "h": 1.1,
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "number": "2",
+      "type": "thru_hole",
+      "shape": "circle",
+      "at": {
+        "x": 10.16,
+        "y": 0,
+        "rot": 0
+      },
+      "size": {
+        "w": 2.2,
+        "h": 2.2
+      },
+      "layers": [
+        "F.Cu",
+        "B.Cu",
+        "F.Mask",
+        "B.Mask"
+      ],
+      "drill": {
+        "w": 1.1,
+        "h": 1.1,
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    }
+  ],
+  "courtyard": {
+    "front": [
+      [
+        {
+          "x": -1.35,
+          "y": -1.6
+        },
+        {
+          "x": 11.51,
+          "y": -1.6
+        },
+        {
+          "x": 11.51,
+          "y": 1.6
+        },
+        {
+          "x": -1.35,
+          "y": 1.6
+        }
+      ]
+    ],
+    "back": []
+  }
+}

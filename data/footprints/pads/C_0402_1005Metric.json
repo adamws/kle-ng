@@ -1,0 +1,68 @@
+{
+  "footprint": "C_0402_1005Metric",
+  "pads": [
+    {
+      "number": "1",
+      "type": "smd",
+      "shape": "roundrect",
+      "at": {
+        "x": -0.48,
+        "y": 0,
+        "rot": 0
+      },
+      "size": {
+        "w": 0.56,
+        "h": 0.62
+      },
+      "layers": [
+        "F.Cu",
+        "F.Mask",
+        "F.Paste"
+      ],
+      "rratio": 0.25
+    },
+    {
+      "number": "2",
+      "type": "smd",
+      "shape": "roundrect",
+      "at": {
+        "x": 0.48,
+        "y": 0,
+        "rot": 0
+      },
+      "size": {
+        "w": 0.56,
+        "h": 0.62
+      },
+      "layers": [
+        "F.Cu",
+        "F.Mask",
+        "F.Paste"
+      ],
+      "rratio": 0.25
+    }
+  ],
+  "courtyard": {
+    "front": [
+      [
+        {
+          "x": -0.91,
+          "y": -0.46
+        },
+        {
+          "x": 0.91,
+          "y": -0.46
+        },
+        {
+          "x": 0.91,
+          "y": 0.46
+        },
+        {
+          "x": -0.91,
+          "y": 0.46
+        }
+      ]
+    ],
+    "back": []
+  }
+}
