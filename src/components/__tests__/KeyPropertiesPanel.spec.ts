@@ -403,6 +403,53 @@ describe('KeyPropertiesPanel', () => {
     })
   })
 
+  describe('Multi-selection labels', () => {
+    const mountWithKeys = (...keys: Key[]) => {
+      store.keys = keys
+      store.selectedKeys = keys
+      return mount(KeyPropertiesPanel, { global: { plugins: [pinia] } })
+    }
+
+    it('shows labels shared by all selected keys and marks differing ones as mixed', async () => {
+      const key1 = new Key()
+      key1.labels = ['A', 'x', '', '', '', '', '', '', '', '', '', '']
+      const key2 = new Key()
+      key2.labels = ['A', 'y', '', '', '', '', '', '', '', '', '', '']
+      const wrapper = mountWithKeys(key1, key2)
+      await wrapper.vm.$nextTick()
+
+      const topLeft = wrapper.get('[data-testid="labels-grid"] input[title="Top Left"]')
+      const topCenter = wrapper.get('[data-testid="labels-grid"] input[title="Top Center"]')
+      const topRight = wrapper.get('[data-testid="labels-grid"] input[title="Top Right"]')
+
+      expect((topLeft.element as HTMLInputElement).value).toBe('A')
+      expect(topLeft.attributes('placeholder')).toBeUndefined()
+      expect((topCenter.element as HTMLInputElement).value).toBe('')
+      expect(topCenter.attributes('placeholder')).toBe('Mixed')
+      expect((topRight.element as HTMLInputElement).value).toBe('')
+      expect(topRight.attributes('placeholder')).toBeUndefined()
+    })
+
+    it('keeps every typed character when editing a label of multiple keys', async () => {
+      const key1 = new Key()
+      const key2 = new Key()
+      const wrapper = mountWithKeys(key1, key2)
+      await wrapper.vm.$nextTick()
+
+      const input = wrapper.get('[data-testid="labels-grid"] input[title="Top Left"]')
+      const el = input.element as HTMLInputElement
+      // Type one character at a time, appending to whatever the input holds
+      // after the panel re-syncs from the keys, as a browser would.
+      for (const char of 'test') {
+        await input.setValue(el.value + char)
+        await wrapper.vm.$nextTick()
+      }
+
+      expect(el.value).toBe('test')
+      expect(store.selectedKeys.map((key) => key.labels[0])).toEqual(['test', 'test'])
+    })
+  })
+
   describe('Label Color Behavior', () => {
     // The first 12 ColorPicker instances in KeyPropertiesPanel correspond to label
     // positions 0–11 (top-left … front top-right). Indices 12 and 13 are the key

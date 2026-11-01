@@ -345,6 +345,7 @@
                   <div class="label-input-group">
                     <input
                       v-model="labels[0]"
+                      :placeholder="mixedLabels[0] ? 'Mixed' : undefined"
                       @input="updateLabel(0)"
                       @focus="handleLabelActivity(0, $event)"
                       @click="handleLabelActivity(0, $event)"
@@ -366,6 +367,7 @@
                   <div class="label-input-group">
                     <input
                       v-model="labels[1]"
+                      :placeholder="mixedLabels[1] ? 'Mixed' : undefined"
                       @input="updateLabel(1)"
                       @focus="handleLabelActivity(1, $event)"
                       @click="handleLabelActivity(1, $event)"
@@ -387,6 +389,7 @@
                   <div class="label-input-group">
                     <input
                       v-model="labels[2]"
+                      :placeholder="mixedLabels[2] ? 'Mixed' : undefined"
                       @input="updateLabel(2)"
                       @focus="handleLabelActivity(2, $event)"
                       @click="handleLabelActivity(2, $event)"
@@ -410,6 +413,7 @@
                   <div class="label-input-group">
                     <input
                       v-model="labels[3]"
+                      :placeholder="mixedLabels[3] ? 'Mixed' : undefined"
                       @input="updateLabel(3)"
                       @focus="handleLabelActivity(3, $event)"
                       @click="handleLabelActivity(3, $event)"
@@ -431,6 +435,7 @@
                   <div class="label-input-group">
                     <input
                       v-model="labels[4]"
+                      :placeholder="mixedLabels[4] ? 'Mixed' : undefined"
                       @input="updateLabel(4)"
                       @focus="handleLabelActivity(4, $event)"
                       @click="handleLabelActivity(4, $event)"
@@ -452,6 +457,7 @@
                   <div class="label-input-group">
                     <input
                       v-model="labels[5]"
+                      :placeholder="mixedLabels[5] ? 'Mixed' : undefined"
                       @input="updateLabel(5)"
                       @focus="handleLabelActivity(5, $event)"
                       @click="handleLabelActivity(5, $event)"
@@ -475,6 +481,7 @@
                   <div class="label-input-group">
                     <input
                       v-model="labels[6]"
+                      :placeholder="mixedLabels[6] ? 'Mixed' : undefined"
                       @input="updateLabel(6)"
                       @focus="handleLabelActivity(6, $event)"
                       @click="handleLabelActivity(6, $event)"
@@ -496,6 +503,7 @@
                   <div class="label-input-group">
                     <input
                       v-model="labels[7]"
+                      :placeholder="mixedLabels[7] ? 'Mixed' : undefined"
                       @input="updateLabel(7)"
                       @focus="handleLabelActivity(7, $event)"
                       @click="handleLabelActivity(7, $event)"
@@ -517,6 +525,7 @@
                   <div class="label-input-group">
                     <input
                       v-model="labels[8]"
+                      :placeholder="mixedLabels[8] ? 'Mixed' : undefined"
                       @input="updateLabel(8)"
                       @focus="handleLabelActivity(8, $event)"
                       @click="handleLabelActivity(8, $event)"
@@ -555,6 +564,7 @@
                   <div class="label-input-group">
                     <input
                       v-model="labels[9]"
+                      :placeholder="mixedLabels[9] ? 'Mixed' : undefined"
                       @input="updateLabel(9)"
                       @focus="handleLabelActivity(9, $event)"
                       @click="handleLabelActivity(9, $event)"
@@ -576,6 +586,7 @@
                   <div class="label-input-group">
                     <input
                       v-model="labels[10]"
+                      :placeholder="mixedLabels[10] ? 'Mixed' : undefined"
                       @input="updateLabel(10)"
                       @focus="handleLabelActivity(10, $event)"
                       @click="handleLabelActivity(10, $event)"
@@ -597,6 +608,7 @@
                   <div class="label-input-group">
                     <input
                       v-model="labels[11]"
+                      :placeholder="mixedLabels[11] ? 'Mixed' : undefined"
                       @input="updateLabel(11)"
                       @focus="handleLabelActivity(11, $event)"
                       @click="handleLabelActivity(11, $event)"
@@ -1114,6 +1126,8 @@ loadRotationModePreference()
 
 // Reactive property values
 const labels = ref<(string | undefined)[]>(Array(12).fill(undefined))
+// Label positions whose value differs between the selected keys
+const mixedLabels = ref<boolean[]>(Array(12).fill(false))
 const labelColors = ref<(string | undefined)[]>(Array(12).fill(undefined))
 const labelTextSizes = ref<(number | undefined)[]>(Array(12).fill(undefined))
 const currentWidth = ref(1)
@@ -1197,6 +1211,7 @@ const displayRotationY = computed({
 })
 
 const updateCurrentValues = () => {
+  mixedLabels.value = Array(12).fill(false)
   if (selectedKeys.value.length === 0) {
     // Reset to defaults when no selection
     labels.value = Array(12).fill(undefined)
@@ -1266,8 +1281,14 @@ const updateCurrentValues = () => {
     currentManufacturingSwitchRotation.value = firstKey.switchRotation || 0
     currentManufacturingStabilizerRotation.value = firstKey.stabRotation || 0
   } else {
-    // For multi-selection, clear labels and use first key for other values
-    labels.value = Array(12).fill(undefined)
+    // For multi-selection, show labels the selected keys share and leave the
+    // rest blank (marked mixed); use first key for other values
+    const keys = selectedKeys.value
+    const shared = firstKey.labels.map((label, i) =>
+      keys.every((key) => (key.labels[i] || '') === (label || '')) ? label : undefined,
+    )
+    labels.value = shared
+    mixedLabels.value = shared.map((label) => label === undefined)
     labelColors.value = firstKey.textColor.map((color: string, i: number) =>
       firstKey.labels[i] ? color || firstKey.default.textColor : firstKey.default.textColor,
     )
