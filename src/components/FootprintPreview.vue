@@ -1145,9 +1145,46 @@ function onEditorKeyUp(event: KeyboardEvent) {
   panZoom.onKeyUp(event)
 }
 
-function onCanvasWheel(event: WheelEvent) {
-  panZoom.onWheel(event)
+/*
+ * The wheel zooms only once the canvas is clicked, until the pointer leaves it
+ * (or the focus does), so scrolling the page past the preview never zooms it.
+ * Ctrl/⌘+wheel, which a trackpad pinch also sends, always zooms. A wheel over
+ * the canvas before that scrolls the page and says how to zoom.
+ */
+const wheelZoomOn = ref(false)
+const wheelHint = ref(false)
+const zoomModifier = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'
+let wheelHintTimer: ReturnType<typeof setTimeout> | null = null
+
+function setWheelZoom(on: boolean) {
+  wheelZoomOn.value = on
+  if (on) hideWheelHint()
 }
+
+function hideWheelHint() {
+  if (wheelHintTimer) clearTimeout(wheelHintTimer)
+  wheelHintTimer = null
+  wheelHint.value = false
+}
+
+function onCanvasWheel(event: WheelEvent) {
+  if (wheelZoomOn.value || event.ctrlKey || event.metaKey) {
+    panZoom.onWheel(event)
+    return
+  }
+  wheelHint.value = true
+  if (wheelHintTimer) clearTimeout(wheelHintTimer)
+  wheelHintTimer = setTimeout(hideWheelHint, 1500)
+}
+
+function onCanvasFocusOut(event: FocusEvent) {
+  panZoom.onBlur()
+  if (!containerRef.value?.contains(event.relatedTarget as Node | null)) setWheelZoom(false)
+}
+
+onUnmounted(() => {
+  if (wheelHintTimer) clearTimeout(wheelHintTimer)
+})
 
 // Watch for settings changes and reload footprints. Includes LED/capacitor
 // URLs and visibility so toggling the feature (or its sides/footprints) reloads.
@@ -1180,7 +1217,10 @@ onMounted(() => {
       tabindex="0"
       :data-ready="viewReady ? '' : undefined"
       data-testid="pcb-preview-canvas"
-      @blur="panZoom.onBlur()"
+      :data-wheel-zoom="wheelZoomOn ? '' : undefined"
+      @focusout="onCanvasFocusOut"
+      @pointerdown.capture="setWheelZoom(true)"
+      @pointerleave="setWheelZoom(false)"
     >
       <svg
         ref="svgRef"
@@ -1348,7 +1388,7 @@ onMounted(() => {
           type="button"
           class="btn btn-sm btn-toggle"
           aria-label="Zoom in"
-          v-tooltip:right="'Zoom in (wheel)'"
+          v-tooltip:right="`Zoom in (wheel once the canvas is clicked, or ${zoomModifier}+wheel)`"
           data-testid="pcb-zoom-in"
           @click="panZoom.zoomBy(1.5)"
         >
@@ -1358,7 +1398,7 @@ onMounted(() => {
           type="button"
           class="btn btn-sm btn-toggle"
           aria-label="Zoom out"
-          v-tooltip:right="'Zoom out (wheel)'"
+          v-tooltip:right="`Zoom out (wheel once the canvas is clicked, or ${zoomModifier}+wheel)`"
           data-testid="pcb-zoom-out"
           @click="panZoom.zoomBy(1 / 1.5)"
         >
@@ -1403,6 +1443,12 @@ onMounted(() => {
           <span>{{ viewInfo }}</span>
         </div>
       </div>
+
+      <Transition name="wheel-hint">
+        <div v-if="wheelHint" class="wheel-hint" role="status" data-testid="pcb-wheel-hint">
+          Click to zoom with the wheel, or {{ zoomModifier }}+scroll
+        </div>
+      </Transition>
 
       <!-- Track editor tools, docked on the right edge as in KiCad -->
       <TrackEditorTools v-if="editMode" />
@@ -1638,6 +1684,32 @@ onMounted(() => {
 
 .preview-info > svg {
   margin-top: 0.1rem;
+}
+
+/* how to zoom, after a wheel that scrolled the page instead */
+.wheel-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 22;
+  transform: translate(-50%, -50%);
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  background-color: rgba(var(--bs-emphasis-color-rgb), 0.75);
+  color: var(--bs-body-bg);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.wheel-hint-enter-active,
+.wheel-hint-leave-active {
+  transition: opacity 0.2s;
+}
+
+.wheel-hint-enter-from,
+.wheel-hint-leave-to {
+  opacity: 0;
 }
 
 /* the row over the canvas's top edge; only its panels take the pointer */
