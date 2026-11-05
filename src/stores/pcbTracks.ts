@@ -1085,11 +1085,17 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     selectedNet.value = padNet
   }
 
-  /** Esc: cancel a drag or the route, then the selection, then the highlight, then the route tool. */
+  /**
+   * Esc: cancel a drag, or end the route at its last committed corner (only the
+   * part following the cursor goes, as in KiCad; with no corner yet, nothing is
+   * drawn), then the selection, then the highlight, then the route tool.
+   */
   function escape() {
     if (drag.value) cancelDrag()
-    else if (route.value) cancelRoute()
-    else if (selection.value.length) selection.value = []
+    else if (route.value) {
+      finish()
+      viaRefusal.value = null
+    } else if (selection.value.length) selection.value = []
     else if (selectedNet.value) selectedNet.value = null
     else tool.value = 'select'
   }

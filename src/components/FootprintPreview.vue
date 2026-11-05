@@ -635,7 +635,7 @@ const statusHint = computed(() => {
   }
   if (tracks.isDragging) return 'release: drop · Esc: cancel'
   if (tracks.isRouting)
-    return 'click: add corner · V: via · / flip · Backspace: undo · double-click/End: finish · Esc: cancel'
+    return 'click: add corner · V: via · / flip · Backspace: undo · double-click/End: finish · Esc: keep confirmed segments'
   if (tracks.tool === 'route')
     return 'click or X: start a track · wheel: zoom · middle/Space+drag: pan · middle-drag part: move selected'
   if (tracks.tool === 'via') return 'click: place a via · X: route from it · Esc: back to Select'

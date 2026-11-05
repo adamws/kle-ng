@@ -132,7 +132,7 @@ describe('pcbTracks store', () => {
     expect(tracks.previewViolations.map((v) => v.kind)).toContain('short')
   })
 
-  it('adds corners, undoes them, flips the posture and cancels', () => {
+  it('adds corners, undoes them, flips the posture and ends with Esc', () => {
     tracks.setTool('route')
     tracks.setCursor(SW2)
     tracks.click(null)
@@ -144,6 +144,20 @@ describe('pcbTracks store', () => {
     expect(tracks.route!.points.length).toBe(3)
     tracks.undoVertex()
     expect(tracks.route!.points.length).toBe(2)
+    // Esc keeps the committed segments and drops the one following the cursor
+    tracks.setCursor({ x: 3, y: 2 })
+    tracks.escape()
+    expect(tracks.isRouting).toBe(false)
+    expect(tracks.presetItems).toHaveLength(1)
+    expect(tracks.presetItems[0]).toMatchObject({ type: 'track', start: SW2 })
+    expect(pcb.settings.trackPreset?.items).toHaveLength(1)
+  })
+
+  it('cancels with Esc before the first corner', () => {
+    tracks.setTool('route')
+    tracks.setCursor(SW2)
+    tracks.click(null)
+    tracks.setCursor({ x: 0.5, y: -3 })
     tracks.escape()
     expect(tracks.isRouting).toBe(false)
     expect(pcb.settings.trackPreset).toBeUndefined()

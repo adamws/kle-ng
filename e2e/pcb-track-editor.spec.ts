@@ -507,6 +507,32 @@ test.describe('PCB Generator track editor', () => {
     await expect(page.locator('[data-testid="pcb-track-overlay-track"]')).toHaveCount(0)
   })
 
+  test('keeps the confirmed segments on Esc while routing', async ({ page }) => {
+    await openPreview(page)
+    await enterPresetMode(page)
+
+    const sw2 = await padCentre(page, 'SW', '2')
+    await page.mouse.move(sw2.x, sw2.y)
+    await page.keyboard.press('x')
+    // one corner straight down from the pad, then on towards the diode
+    const corner = await svgToScreen(page, 2.54, -2)
+    await page.mouse.move(corner.x, corner.y, { steps: 5 })
+    await page.mouse.click(corner.x, corner.y)
+    // the walk to the grid point may take two segments (the pad is off the grid)
+    const committed = page.locator('[data-testid="pcb-route-committed"]')
+    await expect(committed.first()).toBeAttached()
+    const confirmed = await committed.count()
+    const on = await svgToScreen(page, 4, 1)
+    await page.mouse.move(on.x, on.y, { steps: 5 })
+
+    // only the part following the cursor goes
+    await page.keyboard.press('Escape')
+    await expect(page.locator('[data-testid="pcb-route-status"]')).toHaveCount(0)
+    await expect(page.locator('[data-testid="pcb-track-overlay-track"]')).toHaveCount(confirmed)
+    await page.locator('[data-testid="pcb-undo"]').click()
+    await expect(page.locator('[data-testid="pcb-track-overlay-track"]')).toHaveCount(0)
+  })
+
   test('zooms at the cursor, pans and fits', async ({ page }) => {
     await openPreview(page)
     await enterPresetMode(page)
