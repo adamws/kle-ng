@@ -627,7 +627,7 @@ const statusHint = computed(() => {
   if (draggedParts.value.length) return 'release: drop · Shift+R: rotate · Esc: cancel'
   if (!editMode.value) {
     const hint =
-      'click part: select · drag: box · middle-drag part: move selected · Shift+R: rotate part · wheel: zoom · middle/Space+drag: pan'
+      'click part: select · drag: box · middle-drag part: move selected · Shift+R: rotate part · middle/Space+drag: pan'
     const dashed = [
       ratsnestLines.value.length && 'unrouted switch-diode connection',
       ledLines.value.length && 'LED-capacitor VCC',
@@ -638,7 +638,7 @@ const statusHint = computed(() => {
   if (tracks.isRouting)
     return 'click: add corner · V: via · / flip · Backspace: undo · double-click/End: finish · Esc: keep confirmed segments'
   if (tracks.tool === 'route')
-    return 'click or X: start a track · wheel: zoom · middle/Space+drag: pan · middle-drag part: move selected'
+    return 'click or X: start a track · middle/Space+drag: pan · middle-drag part: move selected'
   if (tracks.tool === 'via') return 'click: place a via · X: route from it · Esc: back to Select'
   return 'click: select · click unrouted pad: route · double-click/U: connected · drag track or via: move · middle-drag part: move selected · Shift+R: rotate part · drag empty: box · Ctrl+A: all · Del: delete · X: route'
 })
@@ -1147,47 +1147,6 @@ function onEditorKeyUp(event: KeyboardEvent) {
   panZoom.onKeyUp(event)
 }
 
-/*
- * The wheel zooms only once the canvas is clicked, until the pointer leaves it
- * (or the focus does), so scrolling the page past the preview never zooms it.
- * Ctrl/⌘+wheel, which a trackpad pinch also sends, always zooms. A wheel over
- * the canvas before that scrolls the page and says how to zoom.
- */
-const wheelZoomOn = ref(false)
-const wheelHint = ref(false)
-const zoomModifier = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'
-let wheelHintTimer: ReturnType<typeof setTimeout> | null = null
-
-function setWheelZoom(on: boolean) {
-  wheelZoomOn.value = on
-  if (on) hideWheelHint()
-}
-
-function hideWheelHint() {
-  if (wheelHintTimer) clearTimeout(wheelHintTimer)
-  wheelHintTimer = null
-  wheelHint.value = false
-}
-
-function onCanvasWheel(event: WheelEvent) {
-  if (wheelZoomOn.value || event.ctrlKey || event.metaKey) {
-    panZoom.onWheel(event)
-    return
-  }
-  wheelHint.value = true
-  if (wheelHintTimer) clearTimeout(wheelHintTimer)
-  wheelHintTimer = setTimeout(hideWheelHint, 1500)
-}
-
-function onCanvasFocusOut(event: FocusEvent) {
-  panZoom.onBlur()
-  if (!containerRef.value?.contains(event.relatedTarget as Node | null)) setWheelZoom(false)
-}
-
-onUnmounted(() => {
-  if (wheelHintTimer) clearTimeout(wheelHintTimer)
-})
-
 // Watch for settings changes and reload footprints. Includes LED/capacitor
 // URLs and visibility so toggling the feature (or its sides/footprints) reloads.
 watch([switchSvgUrl, diodeSvgUrl, ledSvgUrl, capacitorSvgUrl, showLed, showCapacitor], () => {
@@ -1219,17 +1178,13 @@ onMounted(() => {
       tabindex="0"
       :data-ready="viewReady ? '' : undefined"
       data-testid="pcb-preview-canvas"
-      :data-wheel-zoom="wheelZoomOn ? '' : undefined"
-      @focusout="onCanvasFocusOut"
-      @pointerdown.capture="setWheelZoom(true)"
-      @pointerleave="setWheelZoom(false)"
+      @blur="panZoom.onBlur()"
     >
       <svg
         ref="svgRef"
         :viewBox="panZoom.viewBoxString.value"
         class="preview-svg"
         xmlns="http://www.w3.org/2000/svg"
-        @wheel="onCanvasWheel"
         @pointerdown="onCanvasPointerDown"
         @pointermove="onCanvasPointerMove"
         @pointerup="onCanvasPointerUp"
@@ -1390,7 +1345,7 @@ onMounted(() => {
           type="button"
           class="btn btn-sm btn-toggle"
           aria-label="Zoom in"
-          v-tooltip:right="`Zoom in (wheel once the canvas is clicked, or ${zoomModifier}+wheel)`"
+          v-tooltip:right="'Zoom in'"
           data-testid="pcb-zoom-in"
           @click="panZoom.zoomBy(1.5)"
         >
@@ -1400,7 +1355,7 @@ onMounted(() => {
           type="button"
           class="btn btn-sm btn-toggle"
           aria-label="Zoom out"
-          v-tooltip:right="`Zoom out (wheel once the canvas is clicked, or ${zoomModifier}+wheel)`"
+          v-tooltip:right="'Zoom out'"
           data-testid="pcb-zoom-out"
           @click="panZoom.zoomBy(1 / 1.5)"
         >
@@ -1445,12 +1400,6 @@ onMounted(() => {
           <span>{{ viewInfo }}</span>
         </div>
       </div>
-
-      <Transition name="wheel-hint">
-        <div v-if="wheelHint" class="wheel-hint" role="status" data-testid="pcb-wheel-hint">
-          Click to zoom with the wheel, or {{ zoomModifier }}+scroll
-        </div>
-      </Transition>
 
       <!-- Track editor tools, docked on the right edge as in KiCad -->
       <TrackEditorTools v-if="editMode" />
@@ -1686,32 +1635,6 @@ onMounted(() => {
 
 .preview-info > svg {
   margin-top: 0.1rem;
-}
-
-/* how to zoom, after a wheel that scrolled the page instead */
-.wheel-hint {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  z-index: 22;
-  transform: translate(-50%, -50%);
-  padding: 0.25rem 0.75rem;
-  border-radius: 1rem;
-  background-color: rgba(var(--bs-emphasis-color-rgb), 0.75);
-  color: var(--bs-body-bg);
-  font-size: 0.8125rem;
-  white-space: nowrap;
-  pointer-events: none;
-}
-
-.wheel-hint-enter-active,
-.wheel-hint-leave-active {
-  transition: opacity 0.2s;
-}
-
-.wheel-hint-enter-from,
-.wheel-hint-leave-to {
-  opacity: 0;
 }
 
 /* the row over the canvas's top edge; only its panels take the pointer */

@@ -6,7 +6,6 @@ import {
   panViewBox,
   resizeViewBox,
   visibleViewBox,
-  wheelZoomFactor,
   zoomViewBoxAt,
 } from '../usePanZoom'
 
@@ -43,14 +42,6 @@ describe('zoomViewBoxAt', () => {
 describe('panViewBox', () => {
   it('moves the view opposite to the content', () => {
     expect(panViewBox(vb, { x: 2, y: -3 })).toEqual({ x: -12, y: -2, width: 40, height: 20 })
-  })
-})
-
-describe('wheelZoomFactor', () => {
-  it('zooms in on wheel up and out on wheel down, symmetrically', () => {
-    expect(wheelZoomFactor(-100, 0)).toBeCloseTo(1.2)
-    expect(wheelZoomFactor(100, 0)).toBeCloseTo(1 / 1.2)
-    expect(wheelZoomFactor(-3, 1)).toBeCloseTo(wheelZoomFactor(-99, 0))
   })
 })
 

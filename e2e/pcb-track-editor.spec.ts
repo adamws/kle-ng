@@ -583,55 +583,28 @@ test.describe('PCB Generator track editor', () => {
     await expect(page.locator('[data-testid="pcb-track-overlay-track"]')).toHaveCount(0)
   })
 
-  test('scrolls the page under the wheel until the canvas is clicked', async ({ page }) => {
+  test('zooms with the buttons, pans and fits', async ({ page }) => {
     await openPreview(page)
     await enterPresetMode(page)
     const fitted = await viewBoxWidth(page)
-    const canvas = page.locator(EDITOR.CANVAS)
-    const hint = page.locator('[data-testid="pcb-wheel-hint"]')
-    const centre = async () => {
-      const box = (await canvas.boundingBox())!
-      return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
-    }
 
-    let c = await centre()
-    await page.mouse.move(c.x, c.y)
+    // the wheel scrolls the page, it never zooms
+    const start = (await page.locator(EDITOR.CANVAS).boundingBox())!
+    await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2)
     const scrollY = await page.evaluate(() => window.scrollY)
     await page.mouse.wheel(0, 100)
-    await expect(hint).toBeVisible()
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(scrollY)
     expect(await viewBoxWidth(page)).toBeCloseTo(fitted, 6)
-
-    // Ctrl+wheel (and a trackpad pinch) always zooms
     await centreCanvas(page)
-    c = await centre()
-    await page.mouse.move(c.x, c.y)
-    await page.keyboard.down('Control')
-    await page.mouse.wheel(0, -100)
-    await page.keyboard.up('Control')
-    await expect.poll(() => viewBoxWidth(page)).toBeLessThan(fitted)
-    await page.locator(EDITOR.FIT).click()
 
-    // a click turns the wheel to zooming, until the pointer leaves the canvas
-    await page.mouse.click(c.x, c.y)
-    await expect(canvas).toHaveAttribute('data-wheel-zoom', '')
-    await expect(hint).toBeHidden()
-    await page.mouse.wheel(0, -100)
-    await expect.poll(() => viewBoxWidth(page)).toBeLessThan(fitted)
-    await page.mouse.move(5, 5)
-    await expect(canvas).not.toHaveAttribute('data-wheel-zoom')
-  })
-
-  test('zooms at the cursor, pans and fits', async ({ page }) => {
-    await openPreview(page)
-    await enterPresetMode(page)
-    const fitted = await viewBoxWidth(page)
-
+    await page.locator('[data-testid="pcb-zoom-in"]').click()
+    await expect.poll(() => viewBoxWidth(page)).toBeCloseTo(fitted / 1.5, 6)
+    await page.locator('[data-testid="pcb-zoom-out"]').click()
+    await expect.poll(() => viewBoxWidth(page)).toBeCloseTo(fitted, 6)
+    await page.locator('[data-testid="pcb-zoom-in"]').click()
+    await centreCanvas(page)
     const box = (await page.locator(EDITOR.CANVAS).boundingBox())!
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
-    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
-    await page.mouse.wheel(0, -300)
-    await expect.poll(() => viewBoxWidth(page)).toBeLessThan(fitted / 1.5)
 
     const svg = page.locator(`${EDITOR.CANVAS} svg.preview-svg`)
     const before = await svg.getAttribute('viewBox')

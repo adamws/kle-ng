@@ -1,7 +1,7 @@
 /**
  * Pan and zoom for an SVG canvas, by driving its viewBox.
  *
- * - wheel zooms at the cursor,
+ * - `zoomBy(factor)` zooms around the centre of the view (the zoom buttons),
  * - middle-button drag, or Space + left-button drag, pans,
  * - `fit(viewBox)` resets the view.
  *
@@ -25,8 +25,6 @@ export interface Point {
 /** Zoom limits, as viewBox width in SVG units (mm). */
 export const MIN_VIEW_WIDTH = 1
 export const MAX_VIEW_WIDTH = 400
-/** Zoom factor for one wheel notch (100 px of deltaY). */
-export const WHEEL_ZOOM_STEP = 1.2
 
 /**
  * Zooms a viewBox by `factor` (> 1 zooms in) keeping `at` fixed on screen.
@@ -46,13 +44,6 @@ export function zoomViewBoxAt(vb: ViewBox, at: Point, factor: number): ViewBox {
 /** Moves a viewBox so the content moves by `delta` SVG units. */
 export function panViewBox(vb: ViewBox, delta: Point): ViewBox {
   return { ...vb, x: vb.x - delta.x, y: vb.y - delta.y }
-}
-
-/** Zoom factor for a wheel event's deltaY, normalised to pixels. */
-export function wheelZoomFactor(deltaY: number, deltaMode: number): number {
-  // deltaMode 1 = lines, 2 = pages
-  const px = deltaMode === 1 ? deltaY * 33 : deltaMode === 2 ? deltaY * 800 : deltaY
-  return Math.pow(WHEEL_ZOOM_STEP, -px / 100)
 }
 
 export interface Size {
@@ -132,21 +123,10 @@ export function usePanZoom(svgRef: Ref<SVGSVGElement | null>, initial: ViewBox) 
     size = { ...next }
   }
 
-  function zoomAt(at: Point, factor: number) {
-    viewBox.value = zoomViewBoxAt(viewBox.value, at, factor)
-  }
-
   /** Zooms around the centre of the view (toolbar buttons). */
   function zoomBy(factor: number) {
     const vb = viewBox.value
-    zoomAt({ x: vb.x + vb.width / 2, y: vb.y + vb.height / 2 }, factor)
-  }
-
-  function onWheel(event: WheelEvent) {
-    const at = screenToSvg(event.clientX, event.clientY)
-    if (!at) return
-    event.preventDefault()
-    zoomAt(at, wheelZoomFactor(event.deltaY, event.deltaMode))
+    viewBox.value = zoomViewBoxAt(vb, { x: vb.x + vb.width / 2, y: vb.y + vb.height / 2 }, factor)
   }
 
   /** Starts a pan on middle button, or left button with Space held. Returns true if it did. */
@@ -207,7 +187,6 @@ export function usePanZoom(svgRef: Ref<SVGSVGElement | null>, initial: ViewBox) 
     fit,
     setSize,
     zoomBy,
-    onWheel,
     onPointerDown,
     onPointerMove,
     onPointerUp,
