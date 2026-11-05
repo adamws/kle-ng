@@ -101,7 +101,7 @@ async function viewBoxWidth(page: Page): Promise<number> {
 }
 
 test.describe('PCB Generator track editor', () => {
-  test("shows the tools' tooltips beside them, also on disabled tools", async ({ page }) => {
+  test("shows the strips' tooltips beside them, also on disabled tools", async ({ page }) => {
     await openPreview(page)
     await enterPresetMode(page)
     const tooltip = page.locator('.tooltip.show')
@@ -117,10 +117,11 @@ test.describe('PCB Generator track editor', () => {
     await expect(tooltip).toHaveText('Undo (Ctrl+Z)')
     await expect(tooltip).toHaveAttribute('data-popper-placement', 'left')
 
-    // and the Route tool's panel
+    // the panels' fields and buttons say what they are: no tooltips
     await useTool(page, 'route')
     await page.locator('[data-testid="pcb-posture-90"]').hover()
-    await expect(tooltip).toHaveText('New tracks bend at 90° (/ flips the corner while routing)')
+    await page.waitForTimeout(300)
+    await expect(tooltip).toHaveCount(0)
   })
 
   test('shows pads from the pad JSON with a grid and cursor readout', async ({ page }) => {

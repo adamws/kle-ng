@@ -248,8 +248,7 @@ $link-hover-decoration: underline;
 }
 
 /* hover still reaches a disabled tool, so its tooltip can say why (no click does) */
-.pcb-toolstrip > .btn:disabled,
-.pcb-panel .btn:disabled {
+.pcb-toolstrip > .btn:disabled {
   pointer-events: auto;
 }
 
