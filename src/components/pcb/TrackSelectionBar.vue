@@ -1,8 +1,9 @@
 <!--
   TrackSelectionBar: width and layer of the selected tracks, size of the
-  selected vias, and delete (vias are moved by dragging). A panel
-  floating over the canvas's top-right corner (under the view controls when
-  the canvas is too narrow for both), so a selection never moves the preview.
+  selected vias, and delete (vias are moved by dragging), as KiCad's
+  Properties panel: a title, then one property per row (.pcb-panel). It
+  floats over the canvas's top-left corner, by the view tools, so a selection
+  never moves the preview.
 
   Via fields are the sizes kbplacer's preset format holds: diameter and
   drill (through vias only, nets from connectivity). Their limits are
@@ -73,13 +74,14 @@ function setDrill(d: number | undefined) {
 <template>
   <div
     v-if="selected.length || viaCount"
-    class="track-selection-bar"
+    class="pcb-panel"
     role="group"
-    aria-label="Selected tracks"
+    aria-label="Properties"
     data-testid="pcb-selection-bar"
   >
+    <div class="pcb-panel-title">Properties</div>
     <span class="selection-count" data-testid="pcb-selection-count">{{ summary }}</span>
-    <label v-if="selected.length" class="bar-field" title="Width of the selected tracks, mm">
+    <label v-if="selected.length" class="pcb-panel-field" title="Width of the selected tracks, mm">
       <span>Width</span>
       <CustomNumberInput
         v-model="width"
@@ -113,7 +115,10 @@ function setDrill(d: number | undefined) {
       </button>
     </div>
     <template v-if="viaCount">
-      <label class="bar-field" title="Via diameter, mm (at least 0.5); new vias take this size">
+      <label
+        class="pcb-panel-field"
+        title="Via diameter, mm (at least 0.5); new vias take this size"
+      >
         <span>Via ⌀</span>
         <CustomNumberInput
           :model-value="diameter"
@@ -128,7 +133,7 @@ function setDrill(d: number | undefined) {
         />
       </label>
       <label
-        class="bar-field"
+        class="pcb-panel-field"
         title="Via drill, mm (at least 0.3, leaving a 0.1 mm ring); new vias take this size"
       >
         <span>Drill</span>
@@ -158,51 +163,7 @@ function setDrill(d: number | undefined) {
 </template>
 
 <style scoped>
-.track-selection-bar {
-  /* in FootprintPreview's row over the canvas: the top-right corner, or under
-     the view controls when both don't fit */
-  margin-left: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.375rem;
-  padding: 0.5rem;
-  font-size: 0.875rem;
-  background-color: var(--bs-body-bg);
-  border: 1px solid var(--bs-border-color);
-  border-radius: 0.375rem;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-}
-
-.track-selection-bar .btn-group {
-  display: flex;
-}
-
-.track-selection-bar .btn-group .btn {
-  flex: 1 1 0;
-  justify-content: center;
-}
-
-.track-selection-bar .btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-
 .selection-count {
   font-weight: 600;
-}
-
-.bar-field {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.375rem;
-  margin: 0;
-  color: var(--bs-body-color);
-}
-
-.bar-field :deep(.custom-number-input) {
-  width: 5rem;
 }
 </style>

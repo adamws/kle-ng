@@ -472,11 +472,11 @@ test.describe('PCB Generator track editor', () => {
     await page.mouse.click(d2.x, d2.y)
     await useTool(page, 'select')
 
-    // left to right around everything: both tracks
+    // left to right around everything: both tracks (inside the tool strips on the edges)
     const canvas = (await page.locator(EDITOR.CANVAS).boundingBox())!
-    await page.mouse.move(canvas.x + 20, canvas.y + 60)
+    await page.mouse.move(canvas.x + 60, canvas.y + 60)
     await page.mouse.down()
-    await page.mouse.move(canvas.x + canvas.width - 20, canvas.y + canvas.height - 20, {
+    await page.mouse.move(canvas.x + canvas.width - 60, canvas.y + canvas.height - 20, {
       steps: 5,
     })
     await expect(page.locator('[data-testid="pcb-selection-box"]')).toBeVisible()

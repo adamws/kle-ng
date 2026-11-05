@@ -56,7 +56,8 @@ import type { PlacedPad } from '@/utils/pcb-tracks/netlist'
 import GridLayer from './pcb/GridLayer.vue'
 import DrcLayer from './pcb/DrcLayer.vue'
 import TrackEditorLayer from './pcb/TrackEditorLayer.vue'
-import TrackEditorToolbar from './pcb/TrackEditorToolbar.vue'
+import TrackRouteSettings from './pcb/TrackRouteSettings.vue'
+import TrackEditorTools from './pcb/TrackEditorTools.vue'
 import { GRID_OPTIONS, usePcbTracksStore } from '@/stores/pcbTracks'
 import { placedPadNet } from '@/utils/pcb-tracks/netlist'
 import type { DragHandle } from '@/utils/pcb-tracks/drag'
@@ -88,7 +89,6 @@ import BiZoomOut from 'bootstrap-icons/icons/zoom-out.svg'
 import BiFullscreen from 'bootstrap-icons/icons/fullscreen.svg'
 import BiEye from 'bootstrap-icons/icons/eye.svg'
 import BiEyeSlash from 'bootstrap-icons/icons/eye-slash.svg'
-import BiGrid3x3 from 'bootstrap-icons/icons/grid-3x3.svg'
 
 // Constants for footprint positioning
 const CONTAINER_PADDING = 2.0 // mm
@@ -587,6 +587,10 @@ const routeStatus = computed(() => {
   if (!r) return null
   return `Routing ${r.net ?? 'new net'} on ${r.layer}, ${editorSettings.value.width} mm`
 })
+/** Something to say about the route or a refused action (the readout's editor lines). */
+const editorMessage = computed(
+  () => !!(routeStatus.value || blockedReason.value || tracks.dragViolation),
+)
 const blockedReason = computed(
   () =>
     tracks.previewViolations[0]?.message ??
@@ -638,7 +642,7 @@ const statusHint = computed(() => {
   return 'click: select · click unrouted pad: route · double-click/U: connected · drag track or via: move · middle-drag part: move selected · Shift+R: rotate part · drag empty: box · Ctrl+A: all · Del: delete · X: route'
 })
 
-/** What the preview shows outside the track editor, in the row the toolbar takes there. */
+/** What the preview shows outside the track editor, in a note over the canvas. */
 const viewInfo = computed(() => {
   if (settings.value.trackPreset !== undefined) return 'Preset tracks need a front-side switch.'
   if (settings.value.routing === 'Disabled')
@@ -1158,16 +1162,6 @@ onMounted(() => {
 
 <template>
   <div class="footprint-preview" @keydown="onEditorKeyDown" @keyup="onEditorKeyUp">
-    <!-- Fixed-height rows above and below the canvas keep it in place in every state -->
-    <div class="preview-top-row">
-      <!-- Track editor drawing tools (route, history, layer, width, posture) -->
-      <TrackEditorToolbar v-if="editMode" />
-      <div v-else class="preview-info" data-testid="pcb-preview-info">
-        <BiInfoCircle class="flex-shrink-0" />
-        <span>{{ viewInfo }}</span>
-      </div>
-    </div>
-
     <!-- SVG Container (always present to maintain height) -->
     <div
       ref="containerRef"
@@ -1175,6 +1169,7 @@ onMounted(() => {
       :class="{
         'svg-hidden': error,
         editing: editMode,
+        'has-tools': editMode,
         panning: panZoom.isPanning.value,
         'pan-ready': panZoom.spaceHeld.value,
         'drag-hover': editMode && (dragHover !== null || tracks.isDragging),
@@ -1338,82 +1333,85 @@ onMounted(() => {
         </g>
       </svg>
 
-      <!-- Over the canvas's top edge: the view controls on the left, the selected
-           tracks' panel on the right, or under them when both don't fit -->
-      <div class="canvas-top">
-        <!-- View controls (what is shown and the snap grid, never what is drawn) -->
-        <div class="view-controls" role="toolbar" aria-label="View" @pointerdown.stop>
-          <span class="view-caption">View</span>
-          <div class="btn-group btn-group-sm" role="group" aria-label="Copper layer visibility">
-            <button
-              v-for="layer in ['F.Cu', 'B.Cu'] as const"
-              :key="layer"
-              type="button"
-              class="btn btn-toggle layer-btn"
-              :class="layer === 'F.Cu' ? 'layer-front' : 'layer-back'"
-              :aria-pressed="visibleLayers[layer]"
-              :title="`${visibleLayers[layer] ? 'Hide' : 'Show'} ${layer} copper (view only)`"
-              :data-testid="`pcb-layer-toggle-${layer}`"
-              @click="visibleLayers[layer] = !visibleLayers[layer]"
-            >
-              <span class="layer-eye"
-                ><BiEye v-if="visibleLayers[layer]" /><BiEyeSlash v-else
-              /></span>
-              <span class="layer-swatch"></span>{{ layer }}
-            </button>
-          </div>
-          <label class="view-field" title="Grid: shown, and what the cursor snaps to, mm">
-            <BiGrid3x3 aria-hidden="true" />
-            <span class="view-field-label">Grid</span>
-            <select
-              v-model.number="editorSettings.grid"
-              class="form-select form-select-sm"
-              aria-label="Grid, mm"
-              data-testid="pcb-grid-select"
-            >
-              <option v-for="g in GRID_OPTIONS" :key="g" :value="g">{{ g }}</option>
-            </select>
-          </label>
-          <div class="btn-group btn-group-sm" role="group" aria-label="Zoom">
-            <button
-              type="button"
-              class="btn btn-toggle"
-              title="Zoom in (wheel)"
-              data-testid="pcb-zoom-in"
-              @click="panZoom.zoomBy(1.5)"
-            >
-              <BiZoomIn />
-            </button>
-            <button
-              type="button"
-              class="btn btn-toggle"
-              title="Zoom out (wheel)"
-              data-testid="pcb-zoom-out"
-              @click="panZoom.zoomBy(1 / 1.5)"
-            >
-              <BiZoomOut />
-            </button>
-            <button
-              type="button"
-              class="btn btn-toggle"
-              title="Zoom to fit"
-              data-testid="pcb-zoom-fit"
-              @click="panZoom.fit(fittedViewBox)"
-            >
-              <BiFullscreen />
-            </button>
-          </div>
-        </div>
-
-        <!-- Width, layer and delete for the selected tracks -->
-        <TrackSelectionBar v-if="editMode" />
+      <!-- View tools, docked on the left edge like KiCad's left toolbar: zoom and
+           copper layer visibility (what is shown, never what is drawn) -->
+      <div
+        class="pcb-toolstrip pcb-toolstrip-left"
+        role="toolbar"
+        aria-label="View"
+        aria-orientation="vertical"
+        data-testid="pcb-view-tools"
+        @pointerdown.stop
+      >
+        <button
+          type="button"
+          class="btn btn-sm btn-toggle"
+          aria-label="Zoom in"
+          title="Zoom in (wheel)"
+          data-testid="pcb-zoom-in"
+          @click="panZoom.zoomBy(1.5)"
+        >
+          <BiZoomIn />
+        </button>
+        <button
+          type="button"
+          class="btn btn-sm btn-toggle"
+          aria-label="Zoom out"
+          title="Zoom out (wheel)"
+          data-testid="pcb-zoom-out"
+          @click="panZoom.zoomBy(1 / 1.5)"
+        >
+          <BiZoomOut />
+        </button>
+        <button
+          type="button"
+          class="btn btn-sm btn-toggle"
+          aria-label="Zoom to fit"
+          title="Zoom to fit"
+          data-testid="pcb-zoom-fit"
+          @click="panZoom.fit(fittedViewBox)"
+        >
+          <BiFullscreen />
+        </button>
+        <span class="pcb-toolstrip-separator" aria-hidden="true"></span>
+        <button
+          v-for="layer in ['F.Cu', 'B.Cu'] as const"
+          :key="layer"
+          type="button"
+          class="btn btn-sm btn-toggle layer-btn"
+          :class="layer === 'F.Cu' ? 'layer-front' : 'layer-back'"
+          :aria-pressed="visibleLayers[layer]"
+          :aria-label="`${layer} visible`"
+          :title="`${visibleLayers[layer] ? 'Hide' : 'Show'} ${layer} copper (view only)`"
+          :data-testid="`pcb-layer-toggle-${layer}`"
+          @click="visibleLayers[layer] = !visibleLayers[layer]"
+        >
+          <BiEye v-if="visibleLayers[layer]" /><BiEyeSlash v-else />
+        </button>
       </div>
+
+      <!-- Over the canvas's top-left corner, by the view tools: the Route tool's
+           settings and the selection's properties, or what the preview shows -->
+      <div class="canvas-top">
+        <template v-if="editMode">
+          <TrackRouteSettings v-if="tracks.tool === 'route'" />
+          <TrackSelectionBar />
+        </template>
+        <div v-else class="preview-info" data-testid="pcb-preview-info">
+          <BiInfoCircle class="flex-shrink-0" />
+          <span>{{ viewInfo }}</span>
+        </div>
+      </div>
+
+      <!-- Track editor tools, docked on the right edge as in KiCad -->
+      <TrackEditorTools v-if="editMode" />
 
       <!-- Notices over the bottom of the canvas, so they never move the preview -->
       <div class="canvas-notices">
-        <!-- Readouts: hovered pad, cursor, route, DRC and why something was refused -->
+        <!-- Like KiCad's message panel: the hovered pad, the selected parts, the
+             route and why something was refused -->
         <div
-          v-if="hoveredPad || editMode || partReadout || cursorLocal || padsError"
+          v-if="hoveredPad || partReadout || padsError || (editMode && editorMessage)"
           class="canvas-readout"
           data-testid="pcb-readout"
         >
@@ -1426,15 +1424,6 @@ onMounted(() => {
                 {{ formatCoordinate(hoveredPad.pad.at.y) }} mm
               </span>
             </template>
-            <span v-else-if="cursorLocal" data-testid="pcb-cursor-readout">
-              X {{ formatCoordinate(cursorLocal.x) }} Y {{ formatCoordinate(cursorLocal.y) }} mm
-            </span>
-            <span
-              v-if="editMode && drcSummary"
-              :class="drcSummary.ok ? 'text-success-emphasis' : 'text-danger-emphasis'"
-              data-testid="pcb-drc-summary"
-              >{{ drcSummary.text }}</span
-            >
           </div>
           <template v-if="editMode">
             <div v-if="routeStatus" data-testid="pcb-route-status">{{ routeStatus }}</div>
@@ -1466,9 +1455,37 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Help line under the canvas (the readouts are on the canvas) -->
-    <div class="editor-status" :data-testid="editMode ? 'pcb-editor-status' : 'pcb-preview-status'">
-      <span v-if="statusHint" class="editor-hint" :title="statusHint">{{ statusHint }}</span>
+    <!-- Status bar under the canvas, like KiCad's: help, cursor, grid and DRC -->
+    <div class="status-bar">
+      <span
+        class="editor-hint"
+        :title="statusHint"
+        :data-testid="editMode ? 'pcb-editor-status' : 'pcb-preview-status'"
+        >{{ statusHint }}</span
+      >
+      <span class="status-field status-cursor" data-testid="pcb-cursor-readout">
+        <template v-if="cursorLocal">
+          X {{ formatCoordinate(cursorLocal.x) }} Y {{ formatCoordinate(cursorLocal.y) }}
+        </template>
+      </span>
+      <label class="status-field" title="Grid: shown, and what the cursor snaps to, mm">
+        <span class="status-field-label">grid</span>
+        <select
+          v-model.number="editorSettings.grid"
+          class="form-select form-select-sm"
+          aria-label="Grid, mm"
+          data-testid="pcb-grid-select"
+        >
+          <option v-for="g in GRID_OPTIONS" :key="g" :value="g">{{ g }}</option>
+        </select>
+      </label>
+      <span
+        v-if="editMode && drcSummary"
+        class="status-field"
+        :class="drcSummary.ok ? 'text-success-emphasis' : 'text-danger-emphasis'"
+        data-testid="pcb-drc-summary"
+        >{{ drcSummary.text }}</span
+      >
     </div>
 
     <!-- Loading State Overlay -->
@@ -1501,6 +1518,15 @@ onMounted(() => {
   /* fill the results card; the canvas takes the height the rows leave */
   flex: 1 1 auto;
   min-height: 0;
+  /* one frame, like KiCad's window: the canvas between its tool strips, and
+     the status bar */
+  border: 1px solid var(--bs-border-color);
+  border-radius: 0.375rem;
+  overflow: hidden;
+  background-color: var(--bs-body-bg);
+  /* the toolbars' button size, and the tool strips' width */
+  --pcb-tool-size: 28px;
+  --pcb-tools-width: 2.25rem;
 }
 
 .svg-container {
@@ -1510,8 +1536,6 @@ onMounted(() => {
   min-height: 300px;
   /* never taller than the screen with the toolbar and status rows */
   max-height: calc(100dvh - 9rem);
-  border: 1px solid var(--bs-border-color);
-  border-radius: 0.375rem;
   position: relative;
   overflow: hidden;
 }
@@ -1591,55 +1615,35 @@ onMounted(() => {
   display: none;
 }
 
-.layer-btn[aria-pressed='false'] .layer-swatch {
-  opacity: 0.3;
-}
-
-/* the toolbar or an info line, always this high */
-.preview-top-row {
-  height: 2.5rem;
-  padding: 0.25rem 0;
-  flex-shrink: 0;
-}
-
-/* too narrow for the toolbar on one line: its two rows stacked, in every state
-   (TrackEditorToolbar's breakpoint) */
-@container (max-width: 760px) {
-  .preview-top-row {
-    height: 4.75rem;
-  }
-}
-
+/* what the preview shows outside the track editor: a note over the canvas */
 .preview-info {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  height: 100%;
-  font-size: 0.8125rem;
+  align-items: flex-start;
+  gap: 0.375rem;
+  max-width: 26rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  background-color: rgba(var(--bs-body-bg-rgb), 0.85);
+  border: 1px solid var(--bs-border-color);
+  font-size: 0.75rem;
+  line-height: 1.35;
   color: var(--bs-secondary-color);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.view-caption {
-  align-self: center;
-  padding: 0.125rem 0.375rem;
-  border-radius: 0.25rem;
-  /* like the layout editor toolbar's section labels */
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: var(--bs-body-color);
-  background-color: var(--bs-body-bg);
+/* a note never takes a click from the canvas */
+.canvas-top > .preview-info {
+  pointer-events: none;
+}
+
+.preview-info > svg {
+  margin-top: 0.1rem;
 }
 
 /* the row over the canvas's top edge; only its panels take the pointer */
 .canvas-top {
   position: absolute;
   top: 8px;
-  left: 8px;
+  left: calc(var(--pcb-tools-width) + 8px);
   right: 8px;
   display: flex;
   flex-wrap: wrap;
@@ -1653,74 +1657,103 @@ onMounted(() => {
   pointer-events: auto;
 }
 
-/* view controls in the top-left corner: light-weight and translucent, unlike
-   the Draw toolbar; they wrap only in the narrowest preview */
-.view-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.375rem;
-  padding: 0.25rem;
-  border-radius: 0.375rem;
-  background-color: rgba(var(--bs-body-bg-rgb), 0.75);
-  border: 1px dashed var(--bs-border-color);
+/* the overlays stay clear of the tool strips */
+.svg-container.has-tools .canvas-top,
+.svg-container.has-tools .canvas-notices {
+  right: calc(var(--pcb-tools-width) + 8px);
 }
 
-.view-controls .btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
+/* a layer's visibility, as KiCad's layer list: an eye in the layer's colour,
+   struck through and grey while hidden (not the pressed fill of a tool) */
+.layer-btn.btn-toggle[aria-pressed] {
+  --bs-btn-bg: var(--bs-body-bg);
+  --bs-btn-hover-bg: var(--bs-tertiary-bg);
+  --bs-btn-active-bg: var(--bs-secondary-bg);
+  --bs-btn-border-color: var(--bs-border-color);
+  --bs-btn-hover-border-color: var(--bs-border-color);
+  --bs-btn-active-border-color: var(--bs-border-color);
+  --bs-btn-color: var(--layer-color);
+  --bs-btn-hover-color: var(--layer-color);
+  --bs-btn-active-color: var(--layer-color);
+  border-bottom: 3px solid var(--layer-color);
 }
 
-.layer-eye {
-  display: inline-flex;
+.layer-btn.layer-front {
+  --layer-color: var(--pcb-fcu);
 }
 
-.view-field {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  margin: 0;
-  padding-left: 0.25rem;
-  font-size: 0.875rem;
-  color: var(--bs-body-color);
+.layer-btn.layer-back {
+  --layer-color: var(--pcb-bcu);
 }
 
-.view-field select {
-  width: auto;
-  /* as tall as the buttons */
-  height: 31px;
-  padding-top: 0;
-  padding-bottom: 0;
-  padding-right: 1.75rem;
+.layer-btn.btn-toggle[aria-pressed='false'] {
+  --bs-btn-color: var(--bs-secondary-color);
+  --bs-btn-hover-color: var(--bs-secondary-color);
+  border-bottom-color: color-mix(in srgb, var(--layer-color) 30%, transparent);
 }
 
-/* a narrow canvas: the controls lose their words before they wrap */
-@container (max-width: 560px) {
-  .view-caption,
-  .view-field-label {
-    display: none;
-  }
-}
-
-@container (max-width: 440px) {
-  /* the pressed state and the swatch still say what is shown */
-  .layer-eye {
-    display: none;
-  }
-}
-
-/* the help line: one line (a wrapping one would move the canvas under the cursor) */
-.editor-status {
+/* the status bar: one line (a wrapping one would move the canvas under the
+   cursor); the help gives way to the fields */
+.status-bar {
   display: flex;
   flex-wrap: nowrap;
+  align-items: center;
   white-space: nowrap;
-  gap: 0.125rem 1rem;
-  padding: 0.25rem 0.125rem 0;
-  height: 1.75rem;
+  height: 2rem;
   flex-shrink: 0;
-  font-family: var(--bs-font-monospace);
+  padding: 0 0.125rem 0 0.25rem;
+  border-top: 1px solid var(--bs-border-color);
   font-size: 0.75rem;
   color: var(--bs-body-color);
+}
+
+/* KiCad's status bar fields, between thin rules */
+.status-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-shrink: 0;
+  height: 1.25rem;
+  margin: 0;
+  padding: 0 0.5rem;
+  border-left: 1px solid var(--bs-border-color);
+  font-family: var(--bs-font-monospace);
+}
+
+/* as wide as the widest coordinates, so the fields after it never move */
+.status-cursor {
+  width: 18ch;
+}
+
+.status-field select {
+  width: auto;
+  height: 1.5rem;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 0.375rem;
+  padding-right: 1.5rem;
+  background-position: right 0.25rem center;
+  font-family: var(--bs-font-monospace);
+  font-size: 0.75rem;
+}
+
+.status-field-label {
+  color: var(--bs-secondary-color);
+}
+
+@container (max-width: 480px) {
+  .editor-hint,
+  .status-field-label {
+    display: none;
+  }
+
+  .status-cursor {
+    width: auto;
+    min-width: 15ch;
+    margin-right: auto;
+    border-left: none;
+    padding-left: 0.125rem;
+  }
 }
 
 .selection-box {
@@ -1731,7 +1764,7 @@ onMounted(() => {
 
 .canvas-notices {
   position: absolute;
-  left: 8px;
+  left: calc(var(--pcb-tools-width) + 8px);
   right: 8px;
   bottom: 8px;
   display: flex;
@@ -1746,9 +1779,9 @@ onMounted(() => {
   color: var(--bs-secondary-color);
   flex: 1 1 0;
   min-width: 0;
+  padding: 0 0.5rem 0 0.125rem;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-family: var(--bs-body-font-family);
 }
 
 /* readouts over the canvas's bottom-left corner, one item per line, as wide as
