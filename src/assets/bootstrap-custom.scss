@@ -62,6 +62,12 @@ $link-hover-decoration: underline;
   --input-focus-border-color: #{$input-focus-border-color};
 }
 
+/* tooltips only say something: they never take the pointer from what is under them,
+   such as the PCB canvas a tool strip's tooltip opens over */
+.tooltip {
+  pointer-events: none;
+}
+
 /* one solid focus ring for every form field, instead of Bootstrap's translucent glow */
 .form-control:focus,
 .form-select:focus,

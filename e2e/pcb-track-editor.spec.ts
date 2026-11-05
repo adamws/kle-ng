@@ -160,6 +160,34 @@ test.describe('PCB Generator track editor', () => {
     await expect(page.locator('[data-testid="pcb-courtyard-warning"]')).toHaveCount(0)
   })
 
+  test('keeps the route preview under tooltips and over the panels', async ({ page }) => {
+    await openPreview(page)
+    await enterPresetMode(page)
+    await useTool(page, 'route')
+    const preview = page.locator('[data-testid="pcb-route-preview"]')
+
+    const sw2 = await padCentre(page, 'SW', '2')
+    const d2 = await padCentre(page, 'D', '2')
+    await page.mouse.move(sw2.x, sw2.y)
+    await page.mouse.click(sw2.x, sw2.y)
+    await page.mouse.move(d2.x, d2.y, { steps: 5 })
+    await expect(preview).toHaveCount(2)
+
+    // a tool's tooltip opens over the canvas; the canvas still has the pointer
+    const via = (await page.locator('[data-testid="pcb-tool-via"]').boundingBox())!
+    await page.mouse.move(via.x + via.width / 2, via.y + via.height / 2)
+    await expect(page.locator('.tooltip.show')).toBeVisible()
+    const tip = (await page.locator('.tooltip.show').boundingBox())!
+    await page.mouse.move(tip.x + tip.width / 2, tip.y + tip.height / 2, { steps: 3 })
+    await expect(page.locator('[data-testid="pcb-cursor-readout"]')).toContainText('X')
+    await expect(preview).not.toHaveCount(0)
+
+    // over the Route tracks panel, the preview stays where the pointer left
+    const panel = (await page.locator('[data-testid="pcb-route-settings"]').boundingBox())!
+    await page.mouse.move(panel.x + panel.width / 2, panel.y + panel.height / 2, { steps: 5 })
+    await expect(preview).not.toHaveCount(0)
+  })
+
   test('routes SW pad 2 to D pad 2 into the track preset', async ({ page }) => {
     await openPreview(page)
     await enterPresetMode(page)

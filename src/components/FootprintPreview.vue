@@ -989,7 +989,9 @@ function onCanvasPointerLeave() {
   dragHover.value = null
   cursorLocal.value = null
   hoveredPadKey.value = null
-  tracks.setCursor(null)
+  // a route keeps its preview where the pointer left, as in KiCad: over a panel
+  // or a tool strip it still shows what a click back on the canvas continues
+  if (!tracks.isRouting) tracks.setCursor(null)
 }
 
 function onCanvasClick(event: MouseEvent) {
