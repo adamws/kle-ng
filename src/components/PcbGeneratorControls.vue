@@ -29,7 +29,8 @@ const isSubmitting = ref(false)
 
 // A preset routing mode (the settings hold a preset, see routing-mode.ts).
 // Presets are drawn for a front-side switch, the backend can't flip them, so
-// back-side switches are rejected up front; an empty preset has nothing to send.
+// back-side switches are rejected up front; an empty preset has nothing to send
+// (the preview says so over its canvas, so drawing a track shifts no layout).
 const isPresetMode = computed(() => settings.value.trackPreset !== undefined)
 const isTrackPresetOnBackSwitch = computed(
   () => isPresetMode.value && settings.value.switchSide === 'BACK',
@@ -244,17 +245,6 @@ function handleNewTask() {
       <small>
         <strong>Track presets support only front-side switches.</strong>
         Set the switch side to front, or choose an automatic routing option.
-      </small>
-    </div>
-    <div
-      v-if="isTrackPresetEmpty && showGenerateButton"
-      class="alert alert-warning py-2 mt-2 mb-0"
-      role="alert"
-      data-testid="pcb-track-preset-empty"
-    >
-      <small>
-        <strong>No tracks drawn.</strong> Draw the switch-diode tracks in the preview, or choose an
-        automatic routing option.
       </small>
     </div>
   </div>

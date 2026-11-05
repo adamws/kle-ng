@@ -1442,6 +1442,20 @@ onMounted(() => {
         <CourtyardWarning :collisions="courtyardCollisions" />
         <!-- The preset was drawn for other footprints or diode placement -->
         <StalePresetBanner />
+        <!-- Generate needs tracks; over the canvas, so drawing the first one moves
+             nothing on the page -->
+        <div
+          v-if="editMode && !settings.trackPreset?.items.length"
+          class="alert alert-warning empty-preset"
+          role="status"
+          data-testid="pcb-track-preset-empty"
+        >
+          <BiExclamationTriangle class="empty-preset-icon" />
+          <span>
+            <strong>No tracks drawn.</strong> Draw the switch-diode tracks, or choose an automatic
+            routing option.
+          </span>
+        </div>
       </div>
 
       <!-- Fallback warning overlay -->
@@ -1780,6 +1794,22 @@ onMounted(() => {
   padding: 0 0.5rem 0 0.125rem;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* a notice only: the canvas under it keeps the pointer */
+.empty-preset {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  margin: 0;
+  font-size: 0.8125rem;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.15);
+}
+
+.empty-preset-icon {
+  flex: none;
+  margin-top: 0.1875rem;
 }
 
 /* readouts over the canvas's bottom-left corner, one item per line, as wide as

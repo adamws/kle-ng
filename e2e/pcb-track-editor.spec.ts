@@ -686,8 +686,11 @@ test.describe('PCB Generator track editor', () => {
     const c = (await canvas.boundingBox())!
     expect(card.y + card.height - (c.y + c.height)).toBeLessThan(60)
 
-    // the settings column changes height while editing (the "No tracks drawn"
-    // warning goes away), the canvas follows it, the drawing stays put
+    // drawing the first track takes "No tracks drawn" off the canvas: nothing
+    // around it changes height, and the drawing stays put
+    await expect(
+      page.locator(`${EDITOR.CANVAS} [data-testid="pcb-track-preset-empty"]`),
+    ).toBeVisible()
     const sw2 = await padCentre(page, 'SW', '2')
     const d2 = await padCentre(page, 'D', '2')
     await useTool(page, 'route')
@@ -696,6 +699,7 @@ test.describe('PCB Generator track editor', () => {
     await page.mouse.move(d2.x, d2.y, { steps: 5 })
     await page.mouse.click(d2.x, d2.y)
     await expect(page.locator('[data-testid="pcb-track-preset-empty"]')).toHaveCount(0)
+    expect((await canvas.boundingBox())!.height).toBe(c.height)
 
     // a selection opens its panel over the canvas
     await useTool(page, 'select')
