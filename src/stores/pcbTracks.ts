@@ -904,8 +904,10 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     viaRefusal.value = null
   }
 
+  /** The selection belongs to the Select tool: another tool drops it, with its panel. */
   function setTool(value: TrackTool) {
     if (value !== 'route') cancelRoute()
+    if (value !== 'select') selection.value = []
     tool.value = value
   }
 
@@ -913,6 +915,7 @@ export const usePcbTracksStore = defineStore('pcbTracks', () => {
     const t = target.value
     if (!t) return false
     cancelDrag()
+    selection.value = []
     tool.value = 'route'
     const net = t.kind === 'grid' ? null : t.net
     route.value = {

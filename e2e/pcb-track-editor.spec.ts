@@ -715,6 +715,11 @@ test.describe('PCB Generator track editor', () => {
     const after = await padCentre(page, 'SW', '2')
     expect(Math.abs(after.x - now.x - (sw2.x - c.x))).toBeLessThan(0.5)
     expect(Math.abs(after.y - now.y - (sw2.y - c.y))).toBeLessThan(0.5)
+
+    // the Route tool drops the selection: only its own panel shows
+    await useTool(page, 'route')
+    await expect(page.locator('[data-testid="pcb-selection-bar"]')).toHaveCount(0)
+    await expect(page.locator('[data-testid="pcb-route-settings"]')).toBeVisible()
   })
 
   test('selects connected tracks, hides layers and clears all', async ({ page }) => {

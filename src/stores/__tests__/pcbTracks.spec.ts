@@ -467,6 +467,29 @@ describe('pcbTracks selection and history', () => {
     expect(tracks.trackAt({ x: 0, y: 0 }, 0.05, ['B.Cu'])).toBeNull()
   })
 
+  it('drops the selection when another tool is picked or a route starts', () => {
+    routeDefault()
+    tracks.setTool('select')
+    tracks.selectClick(0, null, false)
+    tracks.setTool('select')
+    expect(tracks.selection).toEqual([0])
+    tracks.setTool('route')
+    expect(tracks.selection).toEqual([])
+
+    tracks.setTool('select')
+    tracks.selectClick(0, null, false)
+    tracks.setTool('via')
+    expect(tracks.selection).toEqual([])
+
+    // X, or a click on an unrouted pad, routes from the Select tool
+    tracks.setTool('select')
+    tracks.selectClick(1, null, false)
+    tracks.setCursor({ x: 2.6, y: -5 })
+    expect(tracks.startRoute()).toBe(true)
+    expect(tracks.tool).toBe('route')
+    expect(tracks.selection).toEqual([])
+  })
+
   it('selects, toggles with Shift, extends to connected tracks and clears with Esc', () => {
     routeDefault()
     tracks.selectClick(0, null, false)
