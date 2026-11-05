@@ -7,6 +7,7 @@
 import { computed } from 'vue'
 import { usePcbTracksStore } from '@/stores/pcbTracks'
 import BiExclamationTriangle from 'bootstrap-icons/icons/exclamation-triangle.svg'
+import { vTooltip } from '@/directives/vTooltip'
 
 const tracks = usePcbTracksStore()
 
@@ -30,14 +31,14 @@ const details = computed(() =>
     data-testid="pcb-stale-preset"
   >
     <BiExclamationTriangle class="stale-icon" />
-    <div class="stale-text" :title="details">
+    <div class="stale-text" v-tooltip="details">
       {{ message }}
     </div>
     <div class="stale-actions">
       <button
         type="button"
         class="btn btn-sm btn-outline-secondary"
-        title="The tracks still connect: keep them and hide this message"
+        v-tooltip="'The tracks still connect: keep them and hide this message'"
         data-testid="pcb-stale-keep"
         @click="tracks.keepPreset()"
       >
@@ -46,7 +47,7 @@ const details = computed(() =>
       <button
         type="button"
         class="btn btn-sm btn-outline-danger"
-        title="Remove all tracks"
+        v-tooltip="'Remove all tracks'"
         data-testid="pcb-stale-clear"
         @click="tracks.clearAll()"
       >

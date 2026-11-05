@@ -3,7 +3,7 @@
   and corner angle), in a panel over the canvas's top-left corner like the
   selection's Properties (.pcb-panel). It shows while the Route tool is
   active, so a click on a tool never moves the preview. Shortcuts are listed in
-  the titles. The layer is fixed while routing: V places a via and continues
+  the tooltips. The layer is fixed while routing: V places a via and continues
   on the other layer.
 
   Clearance is not editable: kle-ng-api boards use KiCad's default netclass
@@ -13,6 +13,8 @@
 import { storeToRefs } from 'pinia'
 import { usePcbTracksStore } from '@/stores/pcbTracks'
 import CustomNumberInput from '../CustomNumberInput.vue'
+import PcbIcon from './PcbIcon.vue'
+import { vTooltip } from '@/directives/vTooltip'
 
 const tracks = usePcbTracksStore()
 const { editorSettings, isRouting } = storeToRefs(tracks)
@@ -23,7 +25,7 @@ const { editorSettings, isRouting } = storeToRefs(tracks)
     <div class="pcb-panel-title">Route tracks</div>
     <label
       class="pcb-panel-field"
-      title="Width of new tracks, mm (W / Shift+W: next / previous preset)"
+      v-tooltip:right="'Width of new tracks, mm (W / Shift+W: next / previous preset)'"
     >
       <span>Width</span>
       <CustomNumberInput
@@ -45,7 +47,7 @@ const { editorSettings, isRouting } = storeToRefs(tracks)
         :class="layer === 'F.Cu' ? 'layer-front' : 'layer-back'"
         :aria-pressed="editorSettings.layer === layer"
         :disabled="isRouting"
-        :title="
+        v-tooltip:right="
           isRouting
             ? 'Press V to change layer while routing (it places a via)'
             : `Draw new tracks on ${layer}`
@@ -63,27 +65,13 @@ const { editorSettings, isRouting } = storeToRefs(tracks)
         type="button"
         class="btn btn-toggle"
         :aria-pressed="editorSettings.posture === p"
-        :title="`New tracks bend at ${p}° (/ flips the corner while routing)`"
+        v-tooltip:right="`New tracks bend at ${p}° (/ flips the corner while routing)`"
         :data-testid="`pcb-posture-${p}`"
         @click="editorSettings.posture = p"
       >
-        <svg viewBox="0 0 16 16" class="posture-icon" aria-hidden="true">
-          <path v-if="p === '45'" d="M2 13h5l7-7V2" />
-          <path v-else d="M2 13h12V2" />
-        </svg>
+        <PcbIcon :name="`posture-${p}`" />
         {{ p }}°
       </button>
     </div>
   </div>
 </template>
-
-<style scoped>
-.posture-icon {
-  width: 14px;
-  height: 14px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.75;
-  stroke-linejoin: round;
-}
-</style>

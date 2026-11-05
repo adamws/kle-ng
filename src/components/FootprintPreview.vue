@@ -89,6 +89,7 @@ import BiZoomOut from 'bootstrap-icons/icons/zoom-out.svg'
 import BiFullscreen from 'bootstrap-icons/icons/fullscreen.svg'
 import BiEye from 'bootstrap-icons/icons/eye.svg'
 import BiEyeSlash from 'bootstrap-icons/icons/eye-slash.svg'
+import { vTooltip } from '@/directives/vTooltip'
 
 // Constants for footprint positioning
 const CONTAINER_PADDING = 2.0 // mm
@@ -1347,7 +1348,7 @@ onMounted(() => {
           type="button"
           class="btn btn-sm btn-toggle"
           aria-label="Zoom in"
-          title="Zoom in (wheel)"
+          v-tooltip:right="'Zoom in (wheel)'"
           data-testid="pcb-zoom-in"
           @click="panZoom.zoomBy(1.5)"
         >
@@ -1357,7 +1358,7 @@ onMounted(() => {
           type="button"
           class="btn btn-sm btn-toggle"
           aria-label="Zoom out"
-          title="Zoom out (wheel)"
+          v-tooltip:right="'Zoom out (wheel)'"
           data-testid="pcb-zoom-out"
           @click="panZoom.zoomBy(1 / 1.5)"
         >
@@ -1367,7 +1368,7 @@ onMounted(() => {
           type="button"
           class="btn btn-sm btn-toggle"
           aria-label="Zoom to fit"
-          title="Zoom to fit"
+          v-tooltip:right="'Zoom to fit'"
           data-testid="pcb-zoom-fit"
           @click="panZoom.fit(fittedViewBox)"
         >
@@ -1382,7 +1383,7 @@ onMounted(() => {
           :class="layer === 'F.Cu' ? 'layer-front' : 'layer-back'"
           :aria-pressed="visibleLayers[layer]"
           :aria-label="`${layer} visible`"
-          :title="`${visibleLayers[layer] ? 'Hide' : 'Show'} ${layer} copper (view only)`"
+          v-tooltip:right="`${visibleLayers[layer] ? 'Hide' : 'Show'} ${layer} copper (view only)`"
           :data-testid="`pcb-layer-toggle-${layer}`"
           @click="visibleLayers[layer] = !visibleLayers[layer]"
         >

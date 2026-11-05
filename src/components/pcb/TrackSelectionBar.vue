@@ -16,6 +16,7 @@ import type { CopperLayer, TrackSegment, TrackVia } from '@/types/tracks'
 import { DEFAULT_DRC_RULES } from '@/utils/pcb-tracks/drc'
 import CustomNumberInput from '../CustomNumberInput.vue'
 import BiTrash3 from 'bootstrap-icons/icons/trash3.svg'
+import { vTooltip } from '@/directives/vTooltip'
 
 const tracks = usePcbTracksStore()
 
@@ -81,7 +82,11 @@ function setDrill(d: number | undefined) {
   >
     <div class="pcb-panel-title">Properties</div>
     <span class="selection-count" data-testid="pcb-selection-count">{{ summary }}</span>
-    <label v-if="selected.length" class="pcb-panel-field" title="Width of the selected tracks, mm">
+    <label
+      v-if="selected.length"
+      class="pcb-panel-field"
+      v-tooltip:right="'Width of the selected tracks, mm'"
+    >
       <span>Width</span>
       <CustomNumberInput
         v-model="width"
@@ -107,7 +112,7 @@ function setDrill(d: number | undefined) {
         class="btn btn-toggle"
         :class="l === 'F.Cu' ? 'layer-front' : 'layer-back'"
         :aria-pressed="layer === l"
-        :title="`Move the selected tracks to ${l}`"
+        v-tooltip:right="`Move the selected tracks to ${l}`"
         :data-testid="`pcb-selection-layer-${l}`"
         @click="setLayer(l)"
       >
@@ -117,7 +122,7 @@ function setDrill(d: number | undefined) {
     <template v-if="viaCount">
       <label
         class="pcb-panel-field"
-        title="Via diameter, mm (at least 0.5); new vias take this size"
+        v-tooltip:right="'Via diameter, mm (at least 0.5); new vias take this size'"
       >
         <span>Via ⌀</span>
         <CustomNumberInput
@@ -134,7 +139,9 @@ function setDrill(d: number | undefined) {
       </label>
       <label
         class="pcb-panel-field"
-        title="Via drill, mm (at least 0.3, leaving a 0.1 mm ring); new vias take this size"
+        v-tooltip:right="
+          'Via drill, mm (at least 0.3, leaving a 0.1 mm ring); new vias take this size'
+        "
       >
         <span>Drill</span>
         <CustomNumberInput
@@ -153,7 +160,7 @@ function setDrill(d: number | undefined) {
     <button
       type="button"
       class="btn btn-sm btn-outline-danger justify-content-center"
-      title="Delete the selection (Delete)"
+      v-tooltip:right="'Delete the selection (Delete)'"
       data-testid="pcb-selection-delete"
       @click="tracks.deleteSelection()"
     >

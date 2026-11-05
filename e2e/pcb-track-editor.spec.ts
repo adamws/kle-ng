@@ -101,6 +101,28 @@ async function viewBoxWidth(page: Page): Promise<number> {
 }
 
 test.describe('PCB Generator track editor', () => {
+  test("shows the tools' tooltips beside them, also on disabled tools", async ({ page }) => {
+    await openPreview(page)
+    await enterPresetMode(page)
+    const tooltip = page.locator('.tooltip.show')
+
+    await page.locator(EDITOR.FIT).hover()
+    await expect(tooltip).toHaveText('Zoom to fit')
+    await expect(tooltip).toHaveAttribute('data-popper-placement', 'right')
+
+    // nothing to undo yet: disabled, and still explained
+    const undo = page.locator('[data-testid="pcb-undo"]')
+    await expect(undo).toBeDisabled()
+    await undo.hover()
+    await expect(tooltip).toHaveText('Undo (Ctrl+Z)')
+    await expect(tooltip).toHaveAttribute('data-popper-placement', 'left')
+
+    // and the Route tool's panel
+    await useTool(page, 'route')
+    await page.locator('[data-testid="pcb-posture-90"]').hover()
+    await expect(tooltip).toHaveText('New tracks bend at 90° (/ flips the corner while routing)')
+  })
+
   test('shows pads from the pad JSON with a grid and cursor readout', async ({ page }) => {
     await openPreview(page)
     // the preview draws the same pads; the editor only adds its tools
