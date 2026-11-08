@@ -7,9 +7,8 @@
  * - a centered square backside pocket (this module) that clears the encoder body
  *   on the back face, subtracted from the extruded plate for STL/JSCAD output only.
  */
-import * as jscadModeling from '@jscad/modeling'
 import { fmt, ScriptShapeRegistry } from './geom-utils'
-import type { BacksideCut3D, Geom3 } from './backside-features'
+import { placedRectangle, type BacksideCut3D } from './backside-features'
 
 /**
  * Radius of the circular encoder through-plate cutout (mm), used for the
@@ -39,15 +38,15 @@ export function createRotaryEncoderBacksideCut(
   depth: number,
   registry?: ScriptShapeRegistry,
 ): BacksideCut3D {
-  const { cuboid } = jscadModeling.primitives
-  const { translate } = jscadModeling.transforms
-
-  const localGeom = translate(
-    [0, 0, depth / 2],
-    cuboid({ size: [ENCODER_BACKSIDE_SIZE, ENCODER_BACKSIDE_SIZE, depth] }),
-  ) as Geom3
-
-  const positioned = translate([keyCenterX, keyCenterY, 0], localGeom) as Geom3
+  const footprint = placedRectangle(
+    ENCODER_BACKSIDE_SIZE,
+    ENCODER_BACKSIDE_SIZE,
+    0,
+    0,
+    0,
+    keyCenterX,
+    keyCenterY,
+  )
 
   const varName = `encoder_backside_${index}`
   const size = fmt(ENCODER_BACKSIDE_SIZE)
@@ -71,7 +70,8 @@ export function createRotaryEncoderBacksideCut(
 
   return {
     varName,
-    geom: positioned,
+    footprint,
+    depth,
     scriptLines: [`const ${varName} = ${finalExpr}`],
   }
 }

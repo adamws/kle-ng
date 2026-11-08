@@ -548,26 +548,45 @@ function outlineToGeom2(makerjs: typeof MakerJs, outlineModel: MakerJs.IModel): 
 /**
  * Build an ASCII STL string using pure @jscad/modeling v2 booleans.
  * No maker.js chain extraction — all geometry is pre-built as Geom2.
+ *
+ * Backside cuts are pockets from the back face, so the plate is built as layers
+ * stacked from z = 0: each is the plate minus the pockets reaching past its
+ * bottom, and every subtraction is 2D. Subtracting the pockets from the
+ * extruded plate in 3D took over 10 s for a full-size layout with filleted
+ * cutouts (a pocket per switch, against hundreds of arc facets).
  */
 function buildStl(
   outlineGeom: Geom2,
   cutoutGeoms: Geom2[],
   thickness: number,
-  backsideCuts: Geom3[] = [],
+  backsideCuts: BacksideCut3D[] = [],
 ): string | undefined {
   const { extrudeLinear } = jscadModeling.extrusions
   const { subtract, union } = jscadModeling.booleans
+  const { translate } = jscadModeling.transforms
 
   let plate2D: Geom2 = outlineGeom
   if (cutoutGeoms.length > 0) {
-    const allCutouts = cutoutGeoms.reduce((a, b) => union(a, b) as Geom2)
-    plate2D = subtract(outlineGeom, allCutouts) as Geom2
+    // one call: folding them in one at a time re-walks the growing union each time
+    plate2D = subtract(outlineGeom, union(...cutoutGeoms)) as Geom2
   }
 
-  let solid = extrudeLinear({ height: thickness }, plate2D)
-  if (backsideCuts.length > 0) {
-    solid = subtract(solid, ...backsideCuts)
+  const reach = (cut: BacksideCut3D) => Math.min(cut.depth, thickness)
+  const tops = [...new Set([...backsideCuts.map(reach), thickness])]
+    .filter((z) => z > 0)
+    .sort((a, b) => a - b)
+  const layers: Geom3[] = []
+  let bottom = 0
+  for (const top of tops) {
+    const pockets = backsideCuts.filter((cut) => reach(cut) >= top).map((cut) => cut.footprint)
+    // the pockets merged first, so the large plate is walked once
+    const layer2D = pockets.length > 0 ? (subtract(plate2D, union(...pockets)) as Geom2) : plate2D
+    layers.push(
+      translate([0, 0, bottom], extrudeLinear({ height: top - bottom }, layer2D)) as Geom3,
+    )
+    bottom = top
   }
+  const solid = layers.length === 1 ? layers[0]! : (union(...layers) as Geom3)
 
   const output = serializeStl({ binary: false }, solid)
   return Array.isArray(output) ? output.join('') : String(output)
@@ -1475,7 +1494,7 @@ export async function buildPlate(
         outlineNamedGeom.geom,
         namedGeoms.map((g) => g.geom),
         thickness,
-        backsideCuts.map((b) => b.geom),
+        backsideCuts,
       )
     } catch (err) {
       console.warn('STL generation failed:', err)

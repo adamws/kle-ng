@@ -8,6 +8,7 @@ const { translate, rotateZ } = jscadModeling.transforms
 const { geom2 } = jscadModeling.geometries
 
 export type Geom2 = ReturnType<typeof jscadModeling.primitives.polygon>
+export type Geom3 = ReturnType<typeof jscadModeling.primitives.cuboid>
 
 /**
  * Place a Geom2 shape at a given center position with optional rotation.

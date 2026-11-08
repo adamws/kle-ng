@@ -5,7 +5,7 @@
  * appear in 2D SVG/DXF output.
  */
 import * as jscadModeling from '@jscad/modeling'
-import { fmt, ScriptShapeRegistry } from './geom-utils'
+import { fmt, ScriptShapeRegistry, type Geom2 } from './geom-utils'
 import type { StabType } from './stabilizer-cutouts'
 
 /** Width of the snap notch rectangle (mm). */
@@ -40,14 +40,37 @@ export const STAB_BACKSIDE_OVERHANGS: Record<StabType, StabBacksideOverhang> = {
   'alps-at101': { left: 0, right: 0, top: 0, bottom: 0 },
 }
 
-export type Geom3 = ReturnType<typeof jscadModeling.primitives.cuboid>
-
+/**
+ * A pocket cut into the plate from the back face (z = 0) up to `depth`: its
+ * placed footprint, which the STL takes out of the plate's bottom layer
+ * with a 2D boolean (see buildStl).
+ */
 export interface BacksideCut3D {
   varName: string
-  /** Placed 3D solid ready for boolean subtraction from the extruded plate. */
-  geom: Geom3
+  /** Placed outline of the pocket on the back face. */
+  footprint: Geom2
+  /** How far the pocket reaches into the plate, mm. */
+  depth: number
   /** JSCAD script lines; last line assigns `varName`. */
   scriptLines: string[]
+}
+
+/** A rectangle centred at (cx, cy) in its own frame, turned and placed on the back face. */
+export function placedRectangle(
+  width: number,
+  height: number,
+  cx: number,
+  cy: number,
+  rotationDeg: number,
+  x: number,
+  y: number,
+): Geom2 {
+  const { rectangle } = jscadModeling.primitives
+  const { translate, rotateZ } = jscadModeling.transforms
+  const local = rectangle({ size: [width, height], center: [cx, cy] }) as Geom2
+  const rotated =
+    rotationDeg !== 0 ? (rotateZ(rotationDeg * (Math.PI / 180), local) as Geom2) : local
+  return translate([x, y, 0], rotated) as Geom2
 }
 
 // ---------------------------------------------------------------------------
@@ -68,18 +91,17 @@ export function createCherryMxSnapNotchCuts(
   depth: number,
   registry?: ScriptShapeRegistry,
 ): BacksideCut3D {
-  const { cuboid } = jscadModeling.primitives
-  const { translate, rotateZ } = jscadModeling.transforms
-
-  const localGeom = translate(
-    [0, 0, depth / 2],
-    cuboid({ size: [SNAP_NOTCH_WIDTH, SNAP_NOTCH_HEIGHT, depth] }),
-  ) as Geom3
+  const footprint = placedRectangle(
+    SNAP_NOTCH_WIDTH,
+    SNAP_NOTCH_HEIGHT,
+    0,
+    0,
+    rotationDeg,
+    keyCenterX,
+    keyCenterY,
+  )
 
   const rotRad = rotationDeg * (Math.PI / 180)
-  const rotated = rotationDeg !== 0 ? (rotateZ(rotRad, localGeom) as Geom3) : localGeom
-  const positioned = translate([keyCenterX, keyCenterY, 0], rotated) as Geom3
-
   const varName = `snap_notch_${index}`
   const w = fmt(SNAP_NOTCH_WIDTH)
   const nh = fmt(SNAP_NOTCH_HEIGHT)
@@ -104,7 +126,8 @@ export function createCherryMxSnapNotchCuts(
 
   return {
     varName,
-    geom: positioned,
+    footprint,
+    depth,
     scriptLines: [`const ${varName} = ${finalExpr}`],
   }
 }
@@ -140,23 +163,23 @@ export function createStabBacksideCut(
   overhang: StabBacksideOverhang,
   registry?: ScriptShapeRegistry,
 ): BacksideCut3D {
-  const { cuboid } = jscadModeling.primitives
-  const { translate, rotateZ } = jscadModeling.transforms
-
   const [[minX, minY], [maxX, maxY]] = localBbox
   const totalWidth = maxX - minX + overhang.left + overhang.right
   const totalHeight = maxY - minY + overhang.top + overhang.bottom
   const centerX = (minX + maxX) / 2 + (overhang.right - overhang.left) / 2
   const centerY = (minY + maxY) / 2 + (overhang.top - overhang.bottom) / 2
 
-  const localGeom = translate(
-    [centerX, centerY, depth / 2],
-    cuboid({ size: [totalWidth, totalHeight, depth] }),
-  ) as Geom3
+  const footprint = placedRectangle(
+    totalWidth,
+    totalHeight,
+    centerX,
+    centerY,
+    totalStabRotationDeg,
+    keyCenterX,
+    keyCenterY,
+  )
 
   const rotRad = totalStabRotationDeg * (Math.PI / 180)
-  const rotated = totalStabRotationDeg !== 0 ? (rotateZ(rotRad, localGeom) as Geom3) : localGeom
-  const positioned = translate([keyCenterX, keyCenterY, 0], rotated) as Geom3
 
   const varName = `stab_backside_${index}`
   const rectExpr = `translate([${fmt(centerX)}, ${fmt(centerY)}, ${fmt(depth / 2)}], cuboid({ size: [${fmt(totalWidth)}, ${fmt(totalHeight)}, ${fmt(depth)}] }))`
@@ -178,7 +201,8 @@ export function createStabBacksideCut(
 
   return {
     varName,
-    geom: positioned,
+    footprint,
+    depth,
     scriptLines: [`const ${varName} = ${finalExpr}`],
   }
 }

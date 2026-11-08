@@ -1,4 +1,4 @@
-export type { Geom2 } from './geom-utils'
+export type { Geom2, Geom3 } from './geom-utils'
 export {
   placeGeom2,
   extractGeom2Points,
@@ -36,7 +36,6 @@ export {
   STAB_BACKSIDE_OVERHANGS,
   type StabBacksideOverhang,
   type BacksideCut3D,
-  type Geom3,
 } from './backside-features'
 export {
   createRotaryEncoderBacksideCut,

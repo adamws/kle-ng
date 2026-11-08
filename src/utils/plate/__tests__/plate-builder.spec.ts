@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
+import * as jscadModeling from '@jscad/modeling'
 import { Key } from '@adamws/kle-serial'
 import DxfParser from 'dxf-json'
 import type { PolylineEntity } from 'dxf-json'
@@ -804,5 +805,69 @@ describe('Plate Builder – rotary encoder cutouts (sm === rot_ec11)', () => {
     expect(polylineDimensions(rect!).width).toBe(14)
     expect(polylineDimensions(rect!).height).toBe(14)
     expect(isCircular(circle!, 4)).toBe(true)
+  })
+})
+
+describe('Plate Builder – STL backside features', () => {
+  /** Volume enclosed by an ASCII STL, from its triangles' signed tetrahedra. */
+  function stlVolume(stl: string): number {
+    const v = [...stl.matchAll(/vertex\s+(\S+)\s+(\S+)\s+(\S+)/g)].map((m) =>
+      m.slice(1, 4).map(Number),
+    )
+    let volume = 0
+    for (let i = 0; i + 2 < v.length; i += 3) {
+      const [a, b, c] = [v[i]!, v[i + 1]!, v[i + 2]!]
+      volume +=
+        (a[0]! * (b[1]! * c[2]! - b[2]! * c[1]!) -
+          a[1]! * (b[0]! * c[2]! - b[2]! * c[0]!) +
+          a[2]! * (b[0]! * c[1]! - b[1]! * c[0]!)) /
+        6
+    }
+    return Math.abs(volume)
+  }
+
+  const options = (backsideDepth: number): PlateBuilderOptions => ({
+    cutoutType: 'cherry-mx-basic',
+    stabilizerType: 'none',
+    thickness: 1.5,
+    outline: {
+      outlineType: 'rectangular',
+      marginTop: 5,
+      marginBottom: 5,
+      marginLeft: 5,
+      marginRight: 5,
+      tightMargin: 5,
+      mergeWithCutouts: true,
+      filletRadius: 0,
+    },
+    backsideFeatures: [{ type: 'cherry-mx-snap-notch', enabled: true }],
+    backsideDepth,
+  })
+
+  it('cuts the snap notch from the back face, depth deep', async () => {
+    const keys = [createKey({ x: 0, y: 0 }), createKey({ x: 1, y: 0 })]
+    const plain = await buildPlate(keys, options(0))
+    const notched = await buildPlate(keys, options(0.5))
+    // per key, the 7 × 17 mm notch takes what the 14 × 14 mm hole leaves: 7 × 3 mm
+    expect(stlVolume(notched.stlData!)).toBeCloseTo(stlVolume(plain.stlData!) - 2 * 21 * 0.5, 2)
+  })
+
+  it('cuts the pockets with 2D booleans only', async () => {
+    // a 3D subtraction of a notch per switch from the plate, against the facets of
+    // filleted cutouts, took over 10 s for a full-size layout
+    const subtract = vi.spyOn(jscadModeling.booleans, 'subtract')
+    try {
+      const keys = [createKey({ x: 0, y: 0 }), createKey({ x: 1, y: 0, width: 2 })]
+      const result = await buildPlate(keys, {
+        ...options(0.5),
+        stabilizerType: 'mx-basic',
+        filletRadius: 0.5,
+      })
+      expect(result.stlData).toBeDefined()
+      const solids = subtract.mock.calls.flat().filter((g) => 'polygons' in (g as object))
+      expect(solids).toEqual([])
+    } finally {
+      subtract.mockRestore()
+    }
   })
 })
