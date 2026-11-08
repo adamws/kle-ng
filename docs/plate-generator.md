@@ -158,8 +158,8 @@ The **JSON** tab provides direct access to plate settings as formatted JSON. Thi
 - Share or version-control configurations as files
 - Build or modify settings programmatically
 
-<img src="/plate-generator-json-tab-light.png" class="docs-screenshot light-only" alt="Plate Generator JSON tab with Apply, Reset, Download and Upload buttons above the settings JSON and an In sync status bar" style="max-width:374px" />
-<img src="/plate-generator-json-tab-dark.png" class="docs-screenshot dark-only" alt="Plate Generator JSON tab with Apply, Reset, Download and Upload buttons above the settings JSON and an In sync status bar" style="max-width:374px" />
+<img src="/plate-generator-json-tab-light.png" class="docs-screenshot light-only" alt="Plate Generator JSON tab with Apply, Reset, Defaults, Download and Upload buttons above the settings JSON and an In sync status bar" style="max-width:374px" />
+<img src="/plate-generator-json-tab-dark.png" class="docs-screenshot dark-only" alt="Plate Generator JSON tab with Apply, Reset, Defaults, Download and Upload buttons above the settings JSON and an In sync status bar" style="max-width:374px" />
 
 ### Using the JSON Editor
 
