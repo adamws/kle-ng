@@ -52,7 +52,6 @@ import {
   buildCircleHoleScript,
   createCherryMxSnapNotchCuts,
   createStabBacksideCut,
-  STAB_BACKSIDE_OVERHANGS,
   createRotaryEncoderBacksideCut,
   ENCODER_CUTOUT_RADIUS,
   ENCODER_PCB_CUTOUT_SIZE,
@@ -1148,13 +1147,6 @@ export async function buildPlate(
       if (stabGeomPair) {
         const [leftGeom, rightGeom] = stabGeomPair
 
-        // Measure local bbox before placement for the backside clearance cut
-        const localUnion = jscadModeling.booleans.union(leftGeom, rightGeom) as Geom2
-        const localBbox = jscadModeling.measurements.measureBoundingBox(localUnion) as [
-          [number, number, number],
-          [number, number, number],
-        ]
-
         const placedLeft = placeGeom2(leftGeom, stabKeyCenterX, stabKeyCenterY, totalStabRotation)
         const placedRight = placeGeom2(rightGeom, stabKeyCenterX, stabKeyCenterY, totalStabRotation)
         const stabGeom = jscadModeling.booleans.union(placedLeft, placedRight) as Geom2
@@ -1181,8 +1173,8 @@ export async function buildPlate(
             stabKeyCenterY,
             totalStabRotation,
             backsideDepth,
-            localBbox,
-            STAB_BACKSIDE_OVERHANGS[stabilizerType as StabType],
+            stabilizerType as StabType,
+            stabOpts,
             scriptShapeRegistry,
           )
           if (stabBacksideCut) stabBacksideCuts.push(stabBacksideCut)

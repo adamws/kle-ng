@@ -28,6 +28,7 @@ export {
   buildAlpsStabScript,
   type StabCutoutOptions,
   type StabType,
+  stabVerticalTurnDeg,
 } from './stabilizer-cutouts'
 export { createCircleHoleGeom, buildCircleHoleScript } from './hole-cutouts'
 export {

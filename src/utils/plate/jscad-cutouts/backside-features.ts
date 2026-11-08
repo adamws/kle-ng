@@ -6,7 +6,12 @@
  */
 import * as jscadModeling from '@jscad/modeling'
 import { fmt, ScriptShapeRegistry, type Geom2 } from './geom-utils'
-import type { StabType } from './stabilizer-cutouts'
+import {
+  createStabGeoms,
+  stabVerticalTurnDeg,
+  type StabCutoutOptions,
+  type StabType,
+} from './stabilizer-cutouts'
 
 /** Width of the snap notch rectangle (mm). */
 const SNAP_NOTCH_WIDTH = 7
@@ -27,17 +32,23 @@ export interface StabBacksideOverhang {
   right: number
   top: number
   bottom: number
+  /**
+   * Mirror the pocket about the switch centre, to the farther of its sides: an MX
+   * stabilizer housing sits on the switch row, while its cutout is not symmetric.
+   */
+  symmetric: boolean
 }
 
-/** Per-stabilizer-type overhang offsets. Values are placeholders — set to 0 until tuned. */
+/** Per-stabilizer-type overhang offsets. */
 export const STAB_BACKSIDE_OVERHANGS: Record<StabType, StabBacksideOverhang> = {
-  'mx-basic': { left: 0, right: 0, top: 3.5, bottom: 1.75 },
-  'mx-tight': { left: 0, right: 0, top: 3.5, bottom: 1.75 },
-  'mx-bidirectional': { left: 0, right: 0, top: 1.75, bottom: 1.75 },
-  'mx-spec': { left: 0, right: 0, top: 1.31, bottom: 3 },
-  'mx-spec-narrow': { left: 0, right: 0, top: 1.31, bottom: 3 },
-  'alps-aek': { left: 0, right: 0, top: 0, bottom: 0 },
-  'alps-at101': { left: 0, right: 0, top: 0, bottom: 0 },
+  'mx-basic': { left: 0, right: 0, top: 3.5, bottom: 1.75, symmetric: true },
+  'mx-tight': { left: 0, right: 0, top: 3.5, bottom: 1.75, symmetric: true },
+  'mx-bidirectional': { left: 0, right: 0, top: 1.75, bottom: 1.75, symmetric: true },
+  'mx-spec': { left: 0, right: 0, top: 1.31, bottom: 3, symmetric: true },
+  'mx-spec-narrow': { left: 0, right: 0, top: 1.31, bottom: 3, symmetric: true },
+  // the slots sit below the switch centre; not validated against hardware yet
+  'alps-aek': { left: 0, right: 0, top: 0, bottom: 0, symmetric: false },
+  'alps-at101': { left: 0, right: 0, top: 0, bottom: 0, symmetric: false },
 }
 
 /**
@@ -137,21 +148,25 @@ export function createCherryMxSnapNotchCuts(
 // ---------------------------------------------------------------------------
 
 /**
- * Build a stabilizer clearance cut for a single key position.
+ * Build a stabilizer clearance cut for a single key position, or null when the
+ * key has no stabilizer.
  *
- * Uses the bounding box of the actual stab geometry (measured in stab-local
- * space before rotation/translation) to derive the rectangle dimensions,
- * ensuring the backside cut stays synchronized with the stab cutout.
- * The STAB_BACKSIDE_X/Y_OVERHANG offsets extend the bbox on each side.
+ * Uses the bounding box of the actual stab geometry to derive the rectangle
+ * dimensions, ensuring the backside cut stays synchronized with the stab cutout.
+ * The box is measured in the stabilizer's own frame, the pair side by side: the
+ * STAB_BACKSIDE_OVERHANGS offsets are relative to the stabilizer (top and bottom
+ * are across its wire), so for a key taller than wide, whose stabilizer
+ * createStabGeoms turns, the pocket is built unturned and turned with it.
+ * The offsets extend the box on each side, and for MX stabilizers the pocket is
+ * then mirrored about the switch centre.
  *
  * @param index - Key index (used to make variable names unique)
  * @param keyCenterX - Key center X in mm (JSCAD coordinate space)
  * @param keyCenterY - Key center Y in mm
  * @param totalStabRotationDeg - Total stab rotation in degrees (key rotation minus stabRotation), CCW positive
  * @param depth - Cut depth from back face in mm
- * @param localBbox - Bounding box of the stab pair in stab-local space, as returned
- *                    by jscadModeling.measurements.measureBoundingBox (two Vec3 entries).
- * @param overhang - Extra clearance to add beyond the bbox on each side.
+ * @param type - Stabilizer type
+ * @param opts - The stabilizer cutout's options (key size, fillet, kerf)
  */
 export function createStabBacksideCut(
   index: number,
@@ -159,36 +174,58 @@ export function createStabBacksideCut(
   keyCenterY: number,
   totalStabRotationDeg: number,
   depth: number,
-  localBbox: [[number, number, number], [number, number, number]],
-  overhang: StabBacksideOverhang,
+  type: StabType,
+  opts: StabCutoutOptions,
   registry?: ScriptShapeRegistry,
-): BacksideCut3D {
-  const [[minX, minY], [maxX, maxY]] = localBbox
-  const totalWidth = maxX - minX + overhang.left + overhang.right
-  const totalHeight = maxY - minY + overhang.top + overhang.bottom
-  const centerX = (minX + maxX) / 2 + (overhang.right - overhang.left) / 2
-  const centerY = (minY + maxY) / 2 + (overhang.top - overhang.bottom) / 2
+): BacksideCut3D | null {
+  const pair = createStabGeoms(type, opts)
+  if (!pair) return null
+  const { union } = jscadModeling.booleans
+  const { rotateZ } = jscadModeling.transforms
+  const { measureBoundingBox } = jscadModeling.measurements
+
+  const turnDeg = stabVerticalTurnDeg(opts)
+  const localPair = union(...pair) as Geom2
+  const stabFrame =
+    turnDeg !== 0 ? (rotateZ((-turnDeg * Math.PI) / 180, localPair) as Geom2) : localPair
+  const [[minX, minY], [maxX, maxY]] = measureBoundingBox(stabFrame) as [number[], number[]]
+  const overhang = STAB_BACKSIDE_OVERHANGS[type]
+  const rotationDeg = totalStabRotationDeg + turnDeg
+  let left = minX! - overhang.left
+  let right = maxX! + overhang.right
+  let bottom = minY! - overhang.bottom
+  let top = maxY! + overhang.top
+  if (overhang.symmetric) {
+    // stab-local origin is the switch centre
+    right = Math.max(right, -left)
+    left = -right
+    top = Math.max(top, -bottom)
+    bottom = -top
+  }
+  const totalWidth = right - left
+  const totalHeight = top - bottom
+  const centerX = (left + right) / 2
+  const centerY = (bottom + top) / 2
 
   const footprint = placedRectangle(
     totalWidth,
     totalHeight,
     centerX,
     centerY,
-    totalStabRotationDeg,
+    rotationDeg,
     keyCenterX,
     keyCenterY,
   )
 
-  const rotRad = totalStabRotationDeg * (Math.PI / 180)
+  const rotRad = rotationDeg * (Math.PI / 180)
 
   const varName = `stab_backside_${index}`
   const rectExpr = `translate([${fmt(centerX)}, ${fmt(centerY)}, ${fmt(depth / 2)}], cuboid({ size: [${fmt(totalWidth)}, ${fmt(totalHeight)}, ${fmt(depth)}] }))`
-  const localExprFull =
-    totalStabRotationDeg !== 0 ? `rotateZ(${fmt(rotRad)}, ${rectExpr})` : rectExpr
+  const localExprFull = rotationDeg !== 0 ? `rotateZ(${fmt(rotRad)}, ${rectExpr})` : rectExpr
 
   let localExpr: string
   if (registry) {
-    const shapeKey = `stab_backside:${fmt(centerX)}:${fmt(centerY)}:${fmt(totalWidth)}:${fmt(totalHeight)}:${fmt(depth)}:${totalStabRotationDeg}`
+    const shapeKey = `stab_backside:${fmt(centerX)}:${fmt(centerY)}:${fmt(totalWidth)}:${fmt(totalHeight)}:${fmt(depth)}:${rotationDeg}`
     localExpr = registry.getOrCreate(shapeKey, 'stab_backside_shape', localExprFull)
   } else {
     localExpr = localExprFull

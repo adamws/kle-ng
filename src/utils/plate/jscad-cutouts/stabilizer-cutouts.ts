@@ -19,6 +19,14 @@ import {
 const { rectangle, roundedRectangle, polygon } = jscadModeling.primitives
 const { translate, rotateZ } = jscadModeling.transforms
 
+/**
+ * The turn (degrees, CCW) the generators below give a key taller than wide: the
+ * stabilizer then runs along the key's height.
+ */
+export function stabVerticalTurnDeg(opts: StabCutoutOptions): number {
+  return opts.keyHeight > opts.keyWidth ? -90 : 0
+}
+
 export interface StabCutoutOptions {
   keyWidth: number
   keyHeight: number

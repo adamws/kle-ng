@@ -1,9 +1,16 @@
 import { describe, it, expect, vi } from 'vitest'
-import * as jscadModeling from '@jscad/modeling'
 import { Key } from '@adamws/kle-serial'
 import DxfParser from 'dxf-json'
 import type { PolylineEntity } from 'dxf-json'
+import * as jscadModeling from '@jscad/modeling'
 import { buildPlate, type PlateBuilderOptions } from '../plate-builder'
+import {
+  createStabGeoms,
+  createStabBacksideCut,
+  placeGeom2,
+  type Geom2,
+  type StabType,
+} from '../jscad-cutouts'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -870,4 +877,79 @@ describe('Plate Builder – STL backside features', () => {
       subtract.mockRestore()
     }
   })
+})
+
+describe('Plate Builder – stabilizer clearance pockets', () => {
+  const { measureBoundingBox, measureArea } = jscadModeling.measurements
+  const { union, subtract } = jscadModeling.booleans
+  const ALL: StabType[] = [
+    'mx-basic',
+    'mx-tight',
+    'mx-bidirectional',
+    'mx-spec',
+    'mx-spec-narrow',
+    'alps-aek',
+    'alps-at101',
+  ]
+
+  const opts = (keyWidth: number, keyHeight: number) => ({
+    keyWidth,
+    keyHeight,
+    filletRadius: 0,
+    sizeAdjust: 0,
+  })
+
+  function pocket(type: StabType, keyWidth = 2, keyHeight = 1, rotationDeg = 0) {
+    const cut = createStabBacksideCut(0, 0, 0, rotationDeg, 0.5, type, opts(keyWidth, keyHeight))!
+    const [[minX, minY], [maxX, maxY]] = measureBoundingBox(cut.footprint)
+    return { footprint: cut.footprint, minX: minX!, minY: minY!, maxX: maxX!, maxY: maxY! }
+  }
+
+  it.each(['mx-basic', 'mx-tight', 'mx-bidirectional', 'mx-spec', 'mx-spec-narrow'] as const)(
+    'centres the %s pocket on the switch, as far as its farther side',
+    (type) => {
+      const p = pocket(type)
+      expect(p.maxX).toBeCloseTo(-p.minX, 6)
+      expect(p.maxY).toBeCloseTo(-p.minY, 6)
+    },
+  )
+
+  it('reaches as far as the asymmetric cutout needed', () => {
+    // the mx-basic cutout spans -9 … 6 mm; the pocket clears 1.75 mm below it
+    expect(pocket('mx-basic').maxY).toBeCloseTo(10.75, 3)
+  })
+
+  it('keeps the Alps pocket on its slots, below the switch centre', () => {
+    expect(pocket('alps-aek').maxY).toBeLessThan(0)
+  })
+
+  it.each(ALL)('turns the %s pocket with the stabilizer of a key taller than wide', (type) => {
+    // the clearances stay across the wire: the 2u pocket turned -90°, (x, y) → (y, -x)
+    const wide = pocket(type, 2, 1)
+    const tall = pocket(type, 1, 2)
+    expect(tall.minX).toBeCloseTo(wide.minY, 3)
+    expect(tall.maxX).toBeCloseTo(wide.maxY, 3)
+    expect(tall.minY).toBeCloseTo(-wide.maxX, 3)
+    expect(tall.maxY).toBeCloseTo(-wide.minX, 3)
+  })
+
+  it.each(
+    ALL.flatMap(
+      (type) =>
+        [
+          [type, 2, 1, 0],
+          [type, 1, 2, 0],
+          [type, 1, 2.25, 30],
+          [type, 6.25, 1, 180],
+        ] as const,
+    ),
+  )(
+    'covers the %s stabilizer cutouts of a %su × %su key turned %s°',
+    (type, keyWidth, keyHeight, rotationDeg) => {
+      const [left, right] = createStabGeoms(type, opts(keyWidth, keyHeight))!
+      const stab = placeGeom2(union(left, right) as Geom2, 0, 0, rotationDeg)
+      const { footprint } = pocket(type, keyWidth, keyHeight, rotationDeg)
+      expect(measureArea(subtract(stab, footprint))).toBeLessThan(1e-6)
+    },
+  )
 })

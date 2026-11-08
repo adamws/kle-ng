@@ -129,7 +129,7 @@ When enabled, a 7 mm × 17 mm rectangular notch centered on each switch cutout i
 
 ### Stabilizer Clearance Pockets
 
-When **Cut Depth** is greater than 0, the generator automatically cuts stabilizer clearance pockets on the back face. These require no configuration and are generated regardless of whether any named backside feature (e.g. Snap Notch) is enabled. The pocket shape depends on the stabilizer type. Stabilizer clearances are 3D-only and do not affect SVG or DXF output.
+When **Cut Depth** is greater than 0, the generator automatically cuts stabilizer clearance pockets on the back face. These require no configuration and are generated regardless of whether any named backside feature (e.g. Snap Notch) is enabled. The pocket shape depends on the stabilizer type; MX stabilizer pockets are symmetric about the switch centre. On keys taller than wide, where the stabilizer runs vertically, the pocket turns with it. Stabilizer clearances are 3D-only and do not affect SVG or DXF output.
 
 ::: warning
 Alps stabilizer backside clearances have not been validated. Verify the pocket geometry against your actual stabilizer hardware before manufacturing.
