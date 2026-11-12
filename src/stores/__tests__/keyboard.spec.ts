@@ -66,6 +66,18 @@ describe('Keyboard Store', () => {
       expect(secondKey!.y).toBe(0) // Same row
     })
 
+    it('should position a new key past the lower step of a stepped key', () => {
+      store.addKey({ x: 0, y: 0, width: 1.25, width2: 1.75, x2: 0, stepped: true })
+      store.addKey()
+      expect(store.keys[1]!.x).toBe(1.75)
+    })
+
+    it('should position a new key after an ISO Enter by its primary rect', () => {
+      store.addKey({ x: 0, y: 0, width: 1.25, height: 2, width2: 1.5, height2: 1, x2: -0.25 })
+      store.addKey()
+      expect(store.keys[1]!.x).toBe(1.25)
+    })
+
     it('should add multiple keys', () => {
       store.addKeys(3)
 

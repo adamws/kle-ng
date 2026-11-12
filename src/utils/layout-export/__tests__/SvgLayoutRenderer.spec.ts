@@ -603,4 +603,41 @@ describe('SvgLayoutRenderer', () => {
       expect(innerPath).not.toContain('stroke=')
     })
   })
+
+  describe('stepped key', () => {
+    // Stepped caps lock: raised 1.25u top, lower step out to 1.75u
+    const makeSteppedInput = () =>
+      makeInput({
+        keys: [
+          {
+            left: 9,
+            top: 9,
+            width: 67.5,
+            height: 54,
+            labels: [],
+            rotationAngle: 0,
+            rotationOriginX: 0,
+            rotationOriginY: 0,
+            darkColor: '#cccccc',
+            lightColor: '#f0f0f0',
+            left2: 9,
+            top2: 9,
+            width2: 94.5,
+            height2: 54,
+            stepped: true,
+          },
+        ],
+      })
+
+    it('outlines both rects but draws the light top only on the raised (primary) rect', () => {
+      const svg = renderer.render(makeSteppedInput())
+      const outer = svg.match(/<path d="[^"]*" fill="#cccccc" stroke="#000000"/g) ?? []
+      expect(outer).toHaveLength(1)
+      const lightFills = svg.match(/<(rect|path)[^>]*fill="#f0f0f0"[^>]*>/g) ?? []
+      expect(lightFills).toHaveLength(1)
+      // Inner rect of the primary 67.5px rect, never stretched over the 94.5px step
+      const w = Number(lightFills[0]!.match(/width="([\d.]+)"/)?.[1])
+      expect(w).toBeLessThan(67.5)
+    })
+  })
 })

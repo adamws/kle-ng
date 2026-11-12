@@ -253,6 +253,11 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     usePlateGeneratorStore().requestRegenerate()
   }
 
+  // Where the next key in the row starts: past the secondary rect too, so a key
+  // added after a stepped Caps Lock (1.25U raised of 1.75U) does not cover the step
+  const keyRightEdge = (key: Key) =>
+    D.add(key.x, Math.max(key.width, D.add(key.x2 || 0, key.width2 || key.width)))
+
   /**
    * Adds a new key to the keyboard layout.
    * If no position is specified, positions the key next to the currently selected key,
@@ -278,11 +283,11 @@ export const useKeyboardStore = defineStore('keyboard', () => {
 
             // Calculate position in the rotated coordinate system
             // Place the new key to the right of the reference key in its local coordinate system
-            newKey.x = D.add(referenceKey.x, referenceKey.width)
+            newKey.x = keyRightEdge(referenceKey)
             newKey.y = referenceKey.y
           } else {
             // Standard positioning for non-rotated keys
-            newKey.x = D.add(referenceKey.x, referenceKey.width)
+            newKey.x = keyRightEdge(referenceKey)
             newKey.y = referenceKey.y
           }
         }
@@ -290,7 +295,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
         // Fallback to end of layout if no selection
         const lastKey = keys.value[keys.value.length - 1]
         if (lastKey) {
-          newKey.x = D.add(lastKey.x, lastKey.width)
+          newKey.x = keyRightEdge(lastKey)
           newKey.y = lastKey.y
         }
       }

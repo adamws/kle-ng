@@ -344,6 +344,7 @@ export class SvgLayoutRenderer implements LayoutRenderer {
       decal,
       nub,
       isRotaryEncoder,
+      stepped,
       left2,
       top2,
       width2,
@@ -382,12 +383,17 @@ export class SvgLayoutRenderer implements LayoutRenderer {
           { x: left2, y: top2!, w: width2, h: height2! },
           ROUND_OUTER,
         )
-        const innerD = this.createUnionSvgPath(inner, inner2, ROUND_INNER)
+        // A stepped key's second rect is the lower step: it keeps the dark outer
+        // fill and gets no light top surface (as in KLE).
+        const innerD = stepped ? null : this.createUnionSvgPath(inner, inner2, ROUND_INNER)
+        const innerTag = stepped
+          ? `<rect x="${inner.x}" y="${inner.y}" width="${inner.w}" height="${inner.h}" fill="${lightColor}" rx="${ROUND_INNER}"/>`
+          : innerD && `<path d="${innerD}" fill="${lightColor}"/>`
 
-        if (outerD && innerD) {
+        if (outerD && innerTag) {
           // Replace the content built above with the union paths
           content = `<path d="${outerD}" fill="${darkColor}" stroke="#000000" stroke-width="1"/>
-    <path d="${innerD}" fill="${lightColor}"/>`
+    ${innerTag}`
         } else {
           // Fallback: correct layering order (outer1, outer2, inner1, inner2) so that
           // each successive fill covers the border seam of the previous element.
@@ -395,8 +401,11 @@ export class SvgLayoutRenderer implements LayoutRenderer {
           const outerY2 = top2! + 0.5
           content = `<rect x="${outerX}" y="${outerY}" width="${width}" height="${height}" fill="${darkColor}" stroke="#000000" stroke-width="1" rx="${ROUND_OUTER}"/>
     <rect x="${outerX2}" y="${outerY2}" width="${width2}" height="${height2}" fill="${darkColor}" stroke="#000000" stroke-width="1" rx="${ROUND_OUTER}"/>
-    <rect x="${inner.x}" y="${inner.y}" width="${inner.w}" height="${inner.h}" fill="${lightColor}" rx="${ROUND_INNER}"/>
+    <rect x="${inner.x}" y="${inner.y}" width="${inner.w}" height="${inner.h}" fill="${lightColor}" rx="${ROUND_INNER}"/>`
+          if (!stepped) {
+            content += `
     <rect x="${inner2.x}" y="${inner2.y}" width="${inner2.w}" height="${inner2.h}" fill="${lightColor}" rx="${ROUND_INNER}"/>`
+          }
         }
       }
 

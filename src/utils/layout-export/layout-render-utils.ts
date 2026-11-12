@@ -104,6 +104,7 @@ export function normalizeLayoutInput(
     const nub = key.nub || false
     const isRotaryEncoder = key.sm === 'rot_ec11'
     const nonRect = isNonRectangular(key)
+    const stepped = nonRect && (key.stepped || false)
 
     let left2: number | undefined
     let top2: number | undefined
@@ -133,6 +134,7 @@ export function normalizeLayoutInput(
       ...(nub && { nub }),
       ...(isRotaryEncoder && { isRotaryEncoder }),
       ...(nonRect && { left2, top2, width2, height2 }),
+      ...(stepped && { stepped }),
     }
   })
 

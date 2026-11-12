@@ -470,6 +470,14 @@ describe('HtmlLayoutRenderer', () => {
       expect(lightColorCount).toBe(2)
     })
 
+    it('renders one light-color inner div for a stepped key (lower step stays dark)', () => {
+      const input = makeNonRectInput()
+      input.keys[0]!.stepped = true
+      const html = renderer.render(input)
+      expect((html.match(/class="key"/g) ?? []).length).toBe(2)
+      expect((html.match(/background:#f0f0f0/g) ?? []).length).toBe(1)
+    })
+
     it('still renders labels inside the container', () => {
       const html = renderer.render(makeNonRectInput())
       expect(html).toContain('>Enter<')

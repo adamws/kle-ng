@@ -94,18 +94,42 @@
                   </div>
                   <div v-else class="row g-1">
                     <div class="col-12">
-                      <label class="control-label">Non-rectangular Key</label>
+                      <!-- Same label + 32px row as the Width/Height inputs, so switching key type never shifts the panel -->
+                      <label class="control-label d-block text-truncate">
+                        {{ isSteppedShape ? 'Stepped Key' : 'Non-rectangular Key' }}
+                        <span class="text-muted">· size is edited in Advanced view</span>
+                      </label>
                       <div
-                        class="d-flex align-items-center form-control form-control-sm bg-light"
-                        style="height: 27px"
+                        class="d-flex flex-nowrap align-items-center gap-1 form-control form-control-sm bg-light"
+                        style="height: 32px"
+                        data-testid="shape-size-box"
                       >
-                        <small class="text-muted me-2">Size cannot be edited directly</small>
+                        <small
+                          class="text-muted text-truncate me-auto"
+                          data-testid="shape-size-summary"
+                          :title="shapeSizeSummary"
+                        >
+                          {{ shapeSizeSummary }}
+                        </small>
+                        <button
+                          @click="toggleAdvancedMode"
+                          class="btn btn-outline-primary shape-size-btn"
+                          data-testid="shape-edit-advanced"
+                          title="Switch to Advanced view to edit both sizes directly"
+                        >
+                          Advanced
+                        </button>
                         <button
                           @click="makeKeyRectangular"
-                          class="btn btn-outline-primary ms-auto"
-                          style="font-size: 10px; padding: 2px 6px"
+                          class="btn btn-outline-primary shape-size-btn"
+                          data-testid="shape-make-rectangular"
+                          :title="
+                            isSteppedShape
+                              ? 'Remove the step and restore the full-width key'
+                              : 'Drop the second rectangle and keep the primary one'
+                          "
                         >
-                          Make Rectangular
+                          {{ isSteppedShape ? 'Remove Step' : 'Make Rectangular' }}
                         </button>
                       </div>
                     </div>
@@ -884,7 +908,11 @@
                     </div>
                   </div>
                   <div class="col">
-                    <div class="form-check">
+                    <div
+                      class="form-check"
+                      :title="isSteppedDisabled ? steppedDisabledReason : undefined"
+                      data-testid="stepped-option"
+                    >
                       <input
                         v-model="currentStepped"
                         @change="updateStepped"
@@ -1008,7 +1036,12 @@ import { D } from '@/utils/decimal-math'
 import { recentlyUsedColorsManager } from '@/utils/recently-used-colors'
 import { isValidHex, normalizeHex } from '@/utils/color-utils'
 import { normalizeAngleDegrees } from '@/utils/angle-utils'
-import { isNonRectangular as isNonRectangularUtil } from '@/utils/key-utils'
+import {
+  isNonRectangular as isNonRectangularUtil,
+  isPureStep,
+  applyStep,
+  removeStep,
+} from '@/utils/key-utils'
 import ManufacturingHelpModal from './ManufacturingHelpModal.vue'
 import BiQuestionCircle from 'bootstrap-icons/icons/question-circle.svg'
 import BiFonts from 'bootstrap-icons/icons/fonts.svg'
@@ -1043,6 +1076,24 @@ const isNonRectangular = computed(() => {
   if (!key) return false
 
   return isNonRectangularUtil(key)
+})
+
+// Stepped key with a second rect: the primary rect is the raised part (KLE convention)
+const isSteppedShape = computed(() => isNonRectangular.value && !!selectedKeys.value[0]?.stepped)
+
+// Short size readout for the basic view, where the size fields are hidden
+const shapeSizeSummary = computed(() => {
+  const key = selectedKeys.value[0]
+  if (!key || !isNonRectangular.value) return ''
+  const width2 = key.width2 || key.width
+  const height2 = key.height2 || key.height
+  const size = (w: number, h: number) =>
+    key.height === 1 && height2 === 1
+      ? `${formatNumber(w)}U`
+      : `${formatNumber(w)}×${formatNumber(h)}U`
+  return isSteppedShape.value
+    ? `${size(key.width, key.height)} raised of ${size(width2, height2)}`
+    : `${size(key.width, key.height)} + ${size(width2, height2)}`
 })
 
 const isRotaryEncoder = computed(() => {
@@ -1084,6 +1135,10 @@ const isSteppedDisabled = computed(() => {
   // Disable step for pure 1x1 keys without any secondary dimensions
   return key.width === 1 && key.height === 1 && !hasSecondaryDimensions
 })
+
+const steppedDisabledReason =
+  'A 1U key has no room for a step. Make the key wider or taller than 1U first: ' +
+  'checking Step then splits it into a raised part and a lower step.'
 
 // Advanced mode state
 const isAdvancedPositionMode = ref(false)
@@ -1603,10 +1658,19 @@ const updateStepped = () => {
   if (selectedKeys.value.length === 0) return
 
   selectedKeys.value.forEach((key) => {
-    key.stepped = currentStepped.value
+    if (currentStepped.value) {
+      applyStep(key)
+    } else {
+      removeStep(key)
+    }
+    // Reset stabilizer rotation when the raised part becomes 1x1 (no stabilizer needed)
+    if (key.width <= 1 && key.height <= 1 && key.stabRotation) {
+      key.stabRotation = 0
+    }
   })
 
   keyboardStore.saveState()
+  updateCurrentValues()
 }
 
 const updateNub = () => {
@@ -1787,6 +1851,8 @@ const makeKeyRectangular = async () => {
   if (selectedKeys.value.length === 0) return
 
   selectedKeys.value.forEach((key) => {
+    // A stepped key becomes the full-size rectangle it covers, not its raised part
+    if (isPureStep(key)) removeStep(key)
     // Remove all non-rectangular properties by casting to any to bypass TypeScript restrictions
     const anyKey = key as unknown as Record<string, unknown>
     delete anyKey.width2
@@ -1891,6 +1957,17 @@ const updateDefaultTextSizeValue = (value: number | undefined) => {
 </script>
 
 <style scoped>
+/* A disabled checkbox swallows hover; let it reach the wrapper whose title explains why */
+.form-check-input:disabled {
+  pointer-events: none;
+}
+
+.shape-size-btn {
+  flex-shrink: 0;
+  font-size: 10px;
+  padding: 2px 6px;
+}
+
 /* Override Bootstrap's responsive column behavior - use flexbox for responsive wrapping */
 .key-properties-panel .col-lg-3.col-md-6 {
   flex: 1 1 340px;

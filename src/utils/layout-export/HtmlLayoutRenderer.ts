@@ -165,6 +165,7 @@ export class HtmlLayoutRenderer implements LayoutRenderer {
       decal,
       nub,
       isRotaryEncoder,
+      stepped,
       left2,
       top2,
       width2,
@@ -187,6 +188,8 @@ export class HtmlLayoutRenderer implements LayoutRenderer {
     // so all children share one stacking context.  Layer order:
     //   outer1 (border) → outer2 (border) → outer1-filler (no border, covers the
     //   junction seam) → inner1 (light) → inner2 (light) → labels
+    // A stepped key skips inner2: its second rect is the lower step, which shows
+    // only the dark outer fill (as in KLE).
     if (left2 !== undefined && width2 !== undefined) {
       // Container at outer1's board position; all children use container-relative coords.
       const containerRotateCss = rotateCss // same origin relative to container pos
@@ -216,7 +219,9 @@ export class HtmlLayoutRenderer implements LayoutRenderer {
         ? `<div style="position:absolute;left:0px;top:0px;width:${width}px;height:${height}px;pointer-events:none;">${labelsHtml}</div>`
         : ''
 
-      const inner = [outer1, outer2, filler, in1, in2, labelsWrapper].filter(Boolean).join('\n')
+      const inner = [outer1, outer2, filler, in1, stepped ? '' : in2, labelsWrapper]
+        .filter(Boolean)
+        .join('\n')
       return `<div style="position:absolute;left:${left}px;top:${top}px;width:0;height:0;overflow:visible;${containerRotateCss}${ghostCss}">${inner}</div>`
     }
 

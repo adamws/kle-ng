@@ -21,14 +21,35 @@ describe('CanvasToolbar', () => {
       const dropdownMenu = wrapper.find('.add-key-group .dropdown-menu')
       expect(dropdownMenu.exists()).toBe(true)
 
-      // Should have exactly 2 special key items
+      // Should have exactly 3 special key items
       const dropdownItems = dropdownMenu.findAll('.dropdown-item')
-      expect(dropdownItems.length).toBe(2)
+      expect(dropdownItems.length).toBe(3)
 
       // Check for specific special keys
       const itemTexts = dropdownItems.map((item) => item.text())
       expect(itemTexts).toContain('ISO Enter')
       expect(itemTexts).toContain('Big-Ass Enter')
+      expect(itemTexts).toContain('Stepped Caps Lock')
+    })
+
+    it('adds a stepped Caps Lock: 1.25U raised part on a 1.75U cap', async () => {
+      const wrapper = mount(CanvasToolbar, {
+        global: {
+          plugins: [createPinia()],
+        },
+      })
+      const store = useKeyboardStore()
+
+      const item = wrapper
+        .findAll('.dropdown-item')
+        .find((item) => item.text() === 'Stepped Caps Lock')
+      await item!.trigger('click')
+
+      expect(store.keys[store.keys.length - 1]).toMatchObject({
+        width: 1.25,
+        width2: 1.75,
+        stepped: true,
+      })
     })
 
     it('should add special key when selected from dropdown', async () => {

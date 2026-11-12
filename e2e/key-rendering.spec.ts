@@ -159,7 +159,12 @@ test.describe('Key Rendering Tests', () => {
       await helper.setKeyOptions({ stepped: true })
       await helper.waitForRender()
 
-      await expect(helper.getCanvas()).toHaveScreenshot('options-stepped-caps.png')
+      // Checking Step splits the 1.75U key into a 1.25U raised part on a 1.75U cap.
+      // The lower step differs from the raised top only in shade, which the default
+      // per-pixel threshold (0.2) cannot tell apart.
+      await expect(helper.getCanvas()).toHaveScreenshot('options-stepped-caps.png', {
+        threshold: 0.05,
+      })
     })
 
     test('home key with nub', async () => {

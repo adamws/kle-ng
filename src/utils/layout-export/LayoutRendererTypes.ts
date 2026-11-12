@@ -28,6 +28,7 @@ export interface KeyRenderData {
   decal?: boolean // no key body, only labels
   nub?: boolean // homing nub bar at 90% down inner cap
   isRotaryEncoder?: boolean // render as circle (uses width for radius)
+  stepped?: boolean // non-rectangular key whose second rect is the lower step: no light top on it
   // Non-rectangular second rectangle (pixel coords, same space as left/top/width/height)
   left2?: number
   top2?: number

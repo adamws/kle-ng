@@ -450,6 +450,24 @@ describe('normalizeLayoutInput', () => {
     expect(k.left2).toBeCloseTo(LAYOUT_PADDING)
   })
 
+  it('stepped key → stepped flag set alongside the second rect', () => {
+    const key = makeKey(0, 0, 1.25, 1)
+    key.width2 = 1.75
+    key.stepped = true
+    const result = normalizeLayoutInput([key], makeMetadata(), 'test', DEFAULT_UNIT)
+    const k = result.keys[0]!
+    expect(k.stepped).toBe(true)
+    expect(k.width2).toBeCloseTo(1.75 * DEFAULT_UNIT)
+  })
+
+  it('stepped flag on a rectangular key → no stepped field (nothing to step)', () => {
+    const key = makeKey(0, 0, 1.75, 1)
+    key.width2 = 1.75
+    key.stepped = true
+    const result = normalizeLayoutInput([key], makeMetadata(), 'test')
+    expect(result.keys[0]!.stepped).toBeUndefined()
+  })
+
   it('normal rectangular key → no left2 field', () => {
     const key = makeKey(0, 0, 1, 1)
     const meta = makeMetadata()

@@ -582,6 +582,85 @@ describe('KeyPropertiesPanel', () => {
     })
   })
 
+  describe('Stepped and non-rectangular keys', () => {
+    const mountWith = async (key: Key) => {
+      store.keys = [key]
+      store.selectedKeys = [key]
+      const wrapper = mount(KeyPropertiesPanel, { global: { plugins: [pinia] } })
+      await wrapper.vm.$nextTick()
+      return wrapper
+    }
+
+    it('checking Step splits a wide key so the step is visible right away', async () => {
+      const key = new Key()
+      key.width = 1.75
+      key.width2 = 1.75
+      const wrapper = await mountWith(key)
+
+      await wrapper.find('#steppedCheck').setValue(true)
+
+      expect(key).toMatchObject({ stepped: true, width: 1.25, width2: 1.75 })
+      expect(wrapper.find('[data-testid="shape-size-summary"]').text()).toContain(
+        '1.25U raised of 1.75U',
+      )
+      expect(wrapper.find('[data-testid="shape-make-rectangular"]').text()).toBe('Remove Step')
+    })
+
+    it('explains on hover why Step is disabled for a 1U key', async () => {
+      const oneU = await mountWith(new Key())
+      expect(oneU.find('#steppedCheck').attributes('disabled')).toBeDefined()
+      expect(oneU.find('[data-testid="stepped-option"]').attributes('title')).toContain(
+        'wider or taller than 1U',
+      )
+
+      const wide = new Key()
+      wide.width = 1.75
+      wide.width2 = 1.75
+      const wrapper = await mountWith(wide)
+      expect(wrapper.find('#steppedCheck').attributes('disabled')).toBeUndefined()
+      expect(wrapper.find('[data-testid="stepped-option"]').attributes('title')).toBeUndefined()
+    })
+
+    it('unchecking Step restores the full-width key', async () => {
+      const key = new Key()
+      key.width = 1.25
+      key.width2 = 1.75
+      key.stepped = true
+      const wrapper = await mountWith(key)
+
+      await wrapper.find('#steppedCheck').setValue(false)
+
+      expect(key).toMatchObject({ stepped: false, width: 1.75, width2: 1.75 })
+      expect(wrapper.find('[data-testid="shape-size-box"]').exists()).toBe(false)
+    })
+
+    it('Remove Step keeps the full width, not the raised part', async () => {
+      const key = new Key()
+      key.width = 1.25
+      key.width2 = 1.75
+      key.stepped = true
+      const wrapper = await mountWith(key)
+
+      await wrapper.find('[data-testid="shape-make-rectangular"]').trigger('click')
+
+      expect(key.width).toBe(1.75)
+      expect(key.stepped).toBeFalsy()
+    })
+
+    it('points non-rectangular keys at Advanced view, which the button opens', async () => {
+      const key = new Key()
+      Object.assign(key, { width: 1.25, height: 2, width2: 1.5, height2: 1, x2: -0.25 })
+      const wrapper = await mountWith(key)
+
+      expect(wrapper.find('[data-testid="shape-size-summary"]').text()).toContain(
+        '1.25×2U + 1.5×1U',
+      )
+      expect(wrapper.find('[data-testid="shape-make-rectangular"]').text()).toBe('Make Rectangular')
+      await wrapper.find('[data-testid="shape-edit-advanced"]').trigger('click')
+      expect(wrapper.find('.toggle-mode-btn').text()).toBe('Basic')
+    })
+  })
+
   describe('Rotary Encoder Functionality', () => {
     it('should disable height inputs when rotary encoder is selected', async () => {
       // Create a rotary encoder key

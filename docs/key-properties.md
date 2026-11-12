@@ -22,8 +22,10 @@ The **Key Properties** panel is enabled whenever one or more keys are selected. 
 
 Click the **Advanced** button to expose secondary position and size fields (X2, Y2, Width2, Height2). These define a second rectangular region combined with the primary one to produce non-rectangular key shapes such as ISO Enter and Big-Ass Enter. Most users do not need to use these directly.
 
-<img src="/key-properties-advanced-light.png" class="docs-screenshot light-only" alt="Key Properties in advanced mode for an ISO Enter key: X2 -0.25, Width 1.25, Height 2, Width2 1.5, Height2 1" />
-<img src="/key-properties-advanced-dark.png" class="docs-screenshot dark-only" alt="Key Properties in advanced mode for an ISO Enter key: X2 -0.25, Width 1.25, Height 2, Width2 1.5, Height2 1" />
+A non-rectangular or stepped key has two sizes, so in the basic view its Width and Height fields are replaced by a single row of the same height. That row shows a size summary, for example `1.25×2U + 1.5×1U`, or `1.25U raised of 1.75U` for a stepped key. It also has two buttons:
+
+- **Advanced** switches to Advanced mode, where both rectangles can be resized directly.
+- **Make Rectangular** drops the second rectangle and keeps the primary one. For a stepped key the button reads **Remove Step** and restores the full-width key instead.
 
 ## Labels
 
@@ -60,10 +62,18 @@ Need a symbol that's not on your keyboard? Use **Extra Tools → [Character Pick
 | Option             | Description                                                                                                                  |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
 | **Ghost**          | Renders the key as transparent/invisible. Used in plate generation to define outline shapes without producing switch cutouts |
-| **Step** (Stepped) | Renders the key with a stepped profile (lower right portion). Used for stepped Caps Lock keycaps                             |
+| **Step** (Stepped) | Gives the key a raised part and a lower step, e.g. a stepped Caps Lock. See [Stepped keys](#stepped-keys)                    |
 | **Home** (Nub)     | Indicates this key has a homing bar or bump (e.g., `F` and `J` on standard layouts)                                          |
 | **Decal**          | Marks the key as a decorative element only — no switch cutout is generated in the plate                                      |
 | **Rotary Encoder** | Marks the key as a rotary encoder. Height cannot be edited for encoders                                                      |
+
+### Stepped Keys
+
+A stepped key follows the keyboard-layout-editor convention: **Width/Height** is the raised part and **Width2/Height2** is the whole keycap, including the lower step. The step is drawn in the darker keycap shade. The switch, plate cutout, and PCB footprint are centered on the raised part.
+
+Checking **Step** on a rectangular key wider than 1U splits it immediately: the current width becomes Width2, and the raised part becomes 0.5U narrower, but never narrower than 1U. A 1.75U key, for example, becomes a 1.25U raised part on a 1.75U cap. A key that is 1U wide but taller is stepped along its height in the same way. Unchecking **Step** restores the full-size key. A key that already has a second rectangle keeps its shape and only gets the flag.
+
+For a ready-made one, open the **Add Special Key** dropdown next to the add-key button and choose **Stepped Caps Lock**. Keys added after it start past its lower step.
 
 ## Colors
 
