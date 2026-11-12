@@ -749,6 +749,111 @@ describe('Plate Builder – stacked keys', () => {
   })
 })
 
+describe('Plate Builder – stepped keys', () => {
+  const tightOutline = (tightMargin: number): PlateBuilderOptions['outline'] => ({
+    outlineType: 'tight',
+    marginTop: 0,
+    marginBottom: 0,
+    marginLeft: 0,
+    marginRight: 0,
+    tightMargin,
+    mergeWithCutouts: false,
+    filletRadius: 0,
+  })
+
+  // [{w2:1.5,l:true},"",{x:0.5,w2:1.75,l:true},""] — two 1U raised tops whose lower
+  // steps reach 1.5U and 1.75U.
+  const steppedPair = () => [
+    createKey({ x: 0, y: 0, width: 1, width2: 1.5, stepped: true }),
+    createKey({ x: 1.5, y: 0, width: 1, width2: 1.75, stepped: true }),
+  ]
+
+  it('centers the switch cutout on the raised (primary) part, not the whole key', async () => {
+    const result = await buildPlate(steppedPair(), { cutoutType: 'cherry-mx-basic' })
+    const centers = parseDxfPolylines(result.dxfContent)
+      .map(polylineCenter)
+      .sort((a, b) => a.x - b.x)
+    expect(centers).toHaveLength(2)
+    expect(centers[0]!.x).toBeCloseTo(0, 6)
+    // Raised part of the second key is centered at 2U, 1.5U from the first one's 0.5U
+    expect(centers[1]!.x).toBeCloseTo(1.5 * 19.05, 6)
+  })
+
+  it('stepped caps lock gets no stabilizer: it is sized by its 1.25U raised part', async () => {
+    const keys = [createKey({ x: 0, y: 0, width: 1.25, width2: 1.75, stepped: true })]
+    const result = await buildPlate(keys, {
+      cutoutType: 'cherry-mx-basic',
+      stabilizerType: 'mx-basic',
+    })
+    expect(parseDxfPolylines(result.dxfContent)).toHaveLength(1)
+  })
+
+  it('tight outline covers the lower step, extending only on its side', async () => {
+    const keys = [createKey({ x: 0, y: 0, width: 1.25, width2: 1.75, stepped: true })]
+    const result = await buildPlate(keys, {
+      cutoutType: 'cherry-mx-basic',
+      outline: tightOutline(0),
+    })
+    const loops = parseDxfPolylines(result.outlineDxfContent!)
+    expect(loops).toHaveLength(1)
+    const b = polylineBounds(loops[0]!)
+    // Primary footprint is 14 + 0.25U wide around the switch; the step adds 0.5U on the right
+    expect(b.minX).toBeCloseTo(-7 - 0.125 * 19.05, 6)
+    expect(b.maxX).toBeCloseTo(7 + 0.125 * 19.05 + 0.5 * 19.05, 6)
+    expect(b.maxY - b.minY).toBeCloseTo(14, 6)
+  })
+
+  it('tight outline joins neighbours across the lower step like regular adjacent keys', async () => {
+    // Half the 19.05 - 14 gap closes the space between abutting footprints.
+    const result = await buildPlate(steppedPair(), {
+      cutoutType: 'cherry-mx-basic',
+      outline: tightOutline((19.05 - 14) / 2),
+    })
+    expect(parseDxfPolylines(result.outlineDxfContent!)).toHaveLength(1)
+  })
+
+  it('tight outline follows a rotated stepped key', async () => {
+    const keys = [
+      createKey({
+        x: 0,
+        y: 0,
+        width: 1.25,
+        width2: 1.75,
+        stepped: true,
+        rotation_angle: 90,
+        rotation_x: 0.625,
+        rotation_y: 0.5,
+      }),
+    ]
+    const result = await buildPlate(keys, {
+      cutoutType: 'cherry-mx-basic',
+      outline: tightOutline(0),
+    })
+    const b = polylineBounds(parseDxfPolylines(result.outlineDxfContent!)[0]!)
+    expect(b.maxX - b.minX).toBeCloseTo(14, 6)
+    // KLE rotates clockwise with +Y down, so the step ends up below the switch (maker.js -Y)
+    expect(b.maxY).toBeCloseTo(7 + 0.125 * 19.05, 6)
+    expect(b.minY).toBeCloseTo(-7 - 0.625 * 19.05, 6)
+  })
+
+  it('tight outline covers the ISO enter overhang left of the switch', async () => {
+    const keys = [
+      createKey({ x: 0, y: 0, width: 1.25, height: 2, width2: 1.5, height2: 1, x2: -0.25 }),
+    ]
+    const result = await buildPlate(keys, {
+      cutoutType: 'cherry-mx-basic',
+      outline: tightOutline(0),
+    })
+    const loops = parseDxfPolylines(result.outlineDxfContent!)
+    expect(loops).toHaveLength(1)
+    const b = polylineBounds(loops[0]!)
+    expect(b.minX).toBeCloseTo(-7 - 0.375 * 19.05, 6)
+    expect(b.maxX).toBeCloseTo(7 + 0.125 * 19.05, 6)
+    // L shape, not the bounding box: 6 corners
+    expect(loops[0]!.length).toBe(6)
+  })
+})
+
 describe('Plate Builder – rotary encoder cutouts (sm === rot_ec11)', () => {
   /** True when every vertex lies (approximately) on a circle of the given radius. */
   function isCircular(vertices: { x: number; y: number }[], radius: number): boolean {

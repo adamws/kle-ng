@@ -7,6 +7,7 @@
 
 import type MakerJs from 'makerjs'
 import type { Key } from '@adamws/kle-serial'
+import polygonClippingLib from 'polygon-clipping'
 import * as jscadModeling from '@jscad/modeling'
 import { serialize as serializeStl } from '@jscad/stl-serializer'
 import type {
@@ -21,6 +22,7 @@ import type {
 } from '@/types/plate'
 import { getMakerJs } from '@/utils/makerjs-loader'
 import { getKeyCenterMm } from '@/utils/keyboard-geometry'
+import { isNonRectangular } from '@/utils/key-utils'
 import { D } from '@/utils/decimal-math'
 import {
   positionCutout,
@@ -214,17 +216,59 @@ function keyToCutoutPosition(
   customHeight?: number,
 ): KeyCutoutPosition {
   const generator = getCutoutGenerator(cutoutType, customWidth, customHeight)
+  // The switch sits at the primary rect's center. For a stepped key that is the
+  // raised part; the secondary rect (lower step) only widens the footprint.
   const centerMm = getKeyCenterMm(key, spacingX, spacingY)
+  const width = key.width || 1
+  const height = key.height || 1
 
-  return {
+  const position: KeyCutoutPosition = {
     centerX: D.sub(D.sub(centerMm.x, originCenterMm.x), D.div(generator.width, 2)),
     centerY: D.sub(D.sub(originCenterMm.y, centerMm.y), D.div(generator.height, 2)),
     rotationAngle: -(key.rotation_angle || 0),
     width: generator.width,
     height: generator.height,
-    footprintWidth: generator.width + ((key.width || 1) - 1) * spacingX,
-    footprintHeight: generator.height + ((key.height || 1) - 1) * spacingY,
+    footprintWidth: generator.width + (width - 1) * spacingX,
+    footprintHeight: generator.height + (height - 1) * spacingY,
   }
+
+  if (isNonRectangular(key)) {
+    const width2 = key.width2 || width
+    const height2 = key.height2 || height
+    position.footprint2 = {
+      offsetX: ((key.x2 || 0) + (width2 - width) / 2) * spacingX,
+      offsetY: -((key.y2 || 0) + (height2 - height) / 2) * spacingY,
+      width: generator.width + (width2 - 1) * spacingX,
+      height: generator.height + (height2 - 1) * spacingY,
+    }
+  }
+
+  return position
+}
+
+/**
+ * Outline loops of a key's padded footprint in a frame centered on the key center:
+ * one rectangle, or for ISO enter / stepped keys the union of both rects.
+ */
+function paddedFootprintLoops(pos: KeyCutoutPosition, margin: number): [number, number][][] {
+  const rect = (cx: number, cy: number, w: number, h: number): [number, number][] => {
+    const hw = w / 2 + margin
+    const hh = h / 2 + margin
+    return [
+      [cx - hw, cy - hh],
+      [cx + hw, cy - hh],
+      [cx + hw, cy + hh],
+      [cx - hw, cy + hh],
+    ]
+  }
+  const primary = rect(0, 0, pos.footprintWidth, pos.footprintHeight)
+  const f2 = pos.footprint2
+  if (!f2) return [primary]
+  const secondary = rect(f2.offsetX, f2.offsetY, f2.width, f2.height)
+  // Outer rings only: a union of two rectangles has no holes.
+  return polygonClippingLib
+    .union([primary], [secondary])
+    .map((polygon) => polygon[0]!.slice(0, -1) as [number, number][])
 }
 
 /**
@@ -316,16 +360,14 @@ function createTightOutlineModel(
   for (let i = 0; i < cutoutPositions.length; i++) {
     const pos = cutoutPositions[i]!
     // Use the key's full footprint (key.width * spacingX, key.height * spacingY) as the base
-    // rectangle so that non-1U keys (2U, ISO enter, etc.) are properly covered without needing
-    // extra outline rectangles.
-    const paddedWidth = pos.footprintWidth + 2 * margin
-    const paddedHeight = pos.footprintHeight + 2 * margin
-
-    // Create Rectangle with bottom-left at local [0, 0]
-    let padded: MakerJs.IModel = new makerjs.models.Rectangle(paddedWidth, paddedHeight)
-
-    // Center at world origin so rotation happens around the footprint center
-    padded = makerjs.model.move(padded, [-paddedWidth / 2, -paddedHeight / 2])
+    // shape so that non-1U keys (2U, ISO enter, stepped keys, etc.) are properly covered
+    // without needing extra outline rectangles. The loops are built around local [0, 0]
+    // (= the key center) so rotation happens around the key center.
+    const loops: Record<string, MakerJs.IModel> = {}
+    paddedFootprintLoops(pos, margin).forEach((points, j) => {
+      loops[`loop_${j}`] = new makerjs.models.ConnectTheDots(true, points)
+    })
+    let padded: MakerJs.IModel = { models: loops }
 
     // Rotate around world [0,0] (= the key center) — same convention as positionCutout
     if (pos.rotationAngle !== 0) {
@@ -337,10 +379,7 @@ function createTightOutlineModel(
     // makerjs.model.move SETS the origin (not additive).
     const keyCenterX = pos.centerX + pos.width / 2
     const keyCenterY = pos.centerY + pos.height / 2
-    padded = makerjs.model.move(padded, [
-      keyCenterX - paddedWidth / 2,
-      keyCenterY - paddedHeight / 2,
-    ])
+    padded = makerjs.model.move(padded, [keyCenterX, keyCenterY])
 
     const k = `padded_${i}`
     paddedModels[k] = padded

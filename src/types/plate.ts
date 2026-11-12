@@ -164,6 +164,12 @@ export interface KeyCutoutPosition {
   footprintWidth: number
   /** Key footprint height in mm (key.height * spacingY) — used for tight outline */
   footprintHeight: number
+  /**
+   * Footprint of the key's secondary rect (ISO enter, stepped keys), sized like the
+   * primary footprint — used for tight outline. The offset is from the key center to
+   * the secondary footprint's center in mm, before rotation, in maker.js axes (+Y up).
+   */
+  footprint2?: { offsetX: number; offsetY: number; width: number; height: number }
 }
 
 /**
