@@ -629,6 +629,37 @@ describe('pcbGenerator store', () => {
       expect(pcbApi.submitTask).not.toHaveBeenCalled()
     })
 
+    it('should not count ghost keys towards the layout size limit', async () => {
+      const store = usePcbGeneratorStore()
+      const mockLayout = {
+        meta: {},
+        keys: [...Array(150).fill({ x: 0, y: 0 }), { x: 0, y: 0, ghost: true }],
+      }
+      mockKeyboardStore.getSerializedData.mockReturnValue(mockLayout)
+      vi.mocked(pcbApi.submitTask).mockResolvedValue({
+        task_id: 'task-ghost',
+        task_status: 'PENDING',
+        task_result: {},
+      })
+
+      await store.startTask()
+      // Ghost keys are still sent, kbplacer ignores them itself
+      expect(vi.mocked(pcbApi.submitTask).mock.calls[0]![0].layout).toBe(mockLayout)
+    })
+
+    it('should treat a layout of only ghost keys as empty', async () => {
+      const store = usePcbGeneratorStore()
+      mockKeyboardStore.getSerializedData.mockReturnValue({
+        meta: {},
+        keys: [{ x: 0, y: 0, ghost: true }],
+      })
+
+      const error = await store.startTask().catch((e) => e)
+      expect(error).toBeInstanceOf(ApiError)
+      expect(error.userMessage).toContain('Layout is empty')
+      expect(pcbApi.submitTask).not.toHaveBeenCalled()
+    })
+
     it('should enforce rate limiting', async () => {
       const store = usePcbGeneratorStore()
       const mockLayout = {

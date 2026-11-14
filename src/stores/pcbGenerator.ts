@@ -265,7 +265,9 @@ export const usePcbGeneratorStore = defineStore('pcbGenerator', () => {
 
       // Validate layout size
       // kle-internal format returns: { meta: {...}, keys: [...] }
-      const keyCount = layout?.keys?.length || 0
+      // Ghost keys are not part of the switch matrix, so they do not count.
+      const keys: { ghost?: boolean }[] = layout?.keys ?? []
+      const keyCount = keys.filter((key) => !key.ghost).length
 
       if (keyCount === 0) {
         throw new ApiError('Validation error', 'Layout is empty. Please add keys to your layout.')
