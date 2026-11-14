@@ -7,6 +7,7 @@ import { blankLabelTextSizeRule } from './rules/blank-label-text-size.rule'
 import { blankLabelTextColorRule } from './rules/blank-label-text-color.rule'
 import { staleRotationOriginRule } from './rules/stale-rotation-origin.rule'
 import { staleStabilizerRotationRule } from './rules/stale-stabilizer-rotation.rule'
+import { ineffectiveStepRule } from './rules/ineffective-step.rule'
 import { keyCollisionsRule } from './rules/key-collisions.rule'
 
 export type {
@@ -40,6 +41,7 @@ export const SANITIZE_RULES: SanitizeRule[] = [
   blankLabelTextColorRule,
   staleRotationOriginRule,
   staleStabilizerRotationRule,
+  ineffectiveStepRule,
   keyCollisionsRule,
 ]
 

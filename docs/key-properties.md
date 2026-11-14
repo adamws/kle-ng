@@ -75,6 +75,8 @@ Checking **Step** on a rectangular key wider than 1U splits it immediately: the 
 
 For a ready-made one, open the **Add Special Key** dropdown next to the add-key button and choose **Stepped Caps Lock**. Keys added after it start past its lower step.
 
+A key whose Width2/Height2 rectangle does not reach past the raised part, such as Width 1.25 with Width2 1, has no lower step, so **Step** has no effect on it. [Sanitize Layout](./layout-editor#sanitize-layout) reports these as **Ineffective steps** and turns them back into plain rectangular keys.
+
 ## Colors
 
 - **Key Color** — Background color of the keycap

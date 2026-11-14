@@ -228,11 +228,11 @@ The **Sanitize Layout** tool scans the layout for redundant data and non-normali
 
 Scanning happens automatically when the panel opens, and issues are grouped into three categories:
 
-| Category           | Description                                                                                                                                                                                    |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Redundant data** | Properties left over on keys that no longer need them — for example, a font size or text color set on a label that is now blank, or a rotation origin still stored on a key that isn't rotated |
-| **Normalization**  | Values that are valid but not in their canonical form — for example, a layout that doesn't start at (0,0), or rotation angles outside the -180..180 range                                      |
-| **Warnings**       | Problems the tool can find but must not fix on your behalf, because the fix is a design decision. These have no checkbox and are never touched by **Apply Fixes**                              |
+| Category           | Description                                                                                                                                                                                                                        |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Redundant data** | Properties left over on keys that no longer need them — for example, a font size or text color set on a label that is now blank, a rotation origin still stored on a key that isn't rotated, or a Step on a key with no lower step |
+| **Normalization**  | Values that are valid but not in their canonical form — for example, a layout that doesn't start at (0,0), or rotation angles outside the -180..180 range                                                                          |
+| **Warnings**       | Problems the tool can find but must not fix on your behalf, because the fix is a design decision. These have no checkbox and are never touched by **Apply Fixes**                                                                  |
 
 Each rule shows a count of how many keys or properties it would affect. Rules with a count of zero are disabled — there's nothing to fix. Uncheck any rule you want to skip, then click **Apply Fixes** to clean up only the checked rules. Use **Rescan** to re-scan the layout after making changes without closing the panel.
 

@@ -510,7 +510,7 @@ onUnmounted(() => {
 
 /*
  * Two tight lines per rule: name + count, then a short description. Sized so all
- * six rules, both group headings and the buttons fit one window without
+ * the rules, both group headings and the buttons fit one window without
  * scrolling — anything added here has to stay within that budget.
  */
 .form-check-label {
