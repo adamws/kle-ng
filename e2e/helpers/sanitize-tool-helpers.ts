@@ -9,6 +9,7 @@ export type SanitizeRuleId =
   | 'blank-label-text-color'
   | 'stale-rotation-origin'
   | 'stale-stabilizer-rotation'
+  | 'ineffective-step'
   | 'key-collisions'
 
 /**

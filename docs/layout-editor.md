@@ -223,8 +223,8 @@ See [Color Themes](./color-themes) for the full theme format, matcher syntax ref
 
 The **Sanitize Layout** tool scans the layout for redundant data and non-normalized values, and lets you clean them up in bulk. Open it from **Extra Tools → Sanitize Layout**.
 
-<img src="/sanitize-layout-panel-light.png" class="docs-screenshot light-only" alt="Sanitize Layout panel reporting one whitespace-only label, one stale rotation origin and one overlapping key pair, with Rescan, Close and Apply Fixes buttons" style="max-width:440px" />
-<img src="/sanitize-layout-panel-dark.png" class="docs-screenshot dark-only" alt="Sanitize Layout panel reporting one whitespace-only label, one stale rotation origin and one overlapping key pair, with Rescan, Close and Apply Fixes buttons" style="max-width:440px" />
+<img src="/sanitize-layout-panel-light.png" class="docs-screenshot light-only" alt="Sanitize Layout panel reporting one whitespace-only label, one stale rotation origin, one ineffective step and one overlapping key pair, with Rescan, Close and Apply Fixes buttons" style="max-width:440px" />
+<img src="/sanitize-layout-panel-dark.png" class="docs-screenshot dark-only" alt="Sanitize Layout panel reporting one whitespace-only label, one stale rotation origin, one ineffective step and one overlapping key pair, with Rescan, Close and Apply Fixes buttons" style="max-width:440px" />
 
 Scanning happens automatically when the panel opens, and issues are grouped into three categories:
 
