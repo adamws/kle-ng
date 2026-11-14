@@ -1,0 +1,68 @@
+{
+  "footprint": "D_SOD-323",
+  "pads": [
+    {
+      "number": "1",
+      "type": "smd",
+      "shape": "roundrect",
+      "at": {
+        "x": -1.05,
+        "y": 0,
+        "rot": 0
+      },
+      "size": {
+        "w": 0.6,
+        "h": 0.45
+      },
+      "layers": [
+        "F.Cu",
+        "F.Mask",
+        "F.Paste"
+      ],
+      "rratio": 0.25
+    },
+    {
+      "number": "2",
+      "type": "smd",
+      "shape": "roundrect",
+      "at": {
+        "x": 1.05,
+        "y": 0,
+        "rot": 0
+      },
+      "size": {
+        "w": 0.6,
+        "h": 0.45
+      },
+      "layers": [
+        "F.Cu",
+        "F.Mask",
+        "F.Paste"
+      ],
+      "rratio": 0.25
+    }
+  ],
+  "courtyard": {
+    "front": [
+      [
+        {
+          "x": -1.6,
+          "y": -0.95
+        },
+        {
+          "x": -1.6,
+          "y": 0.95
+        },
+        {
+          "x": 1.6,
+          "y": 0.95
+        },
+        {
+          "x": 1.6,
+          "y": -0.95
+        }
+      ]
+    ],
+    "back": []
+  }
+}

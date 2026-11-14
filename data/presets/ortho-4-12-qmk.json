@@ -1,0 +1,78 @@
+[
+  {
+    "author": "CannonKeys",
+    "name": "Ortho48",
+    "notes": "Converted from https://github.com/qmk/qmk_firmware/blob/master/keyboards/cannonkeys/ortho48/keyboard.json",
+    "_kleng_qmk_data": "N4Ig1gpgngRg9gQwE4BMD6A7BBbCIBcIA8kgC4AWcALABwgA0I2CGArgGYIDGprSESAiADCLDHAwBpaAGcGTBAEsMpJRgFCAjtjDzWMmAVAA3RSiEAGAB7CAgharyADmctWqAMVryUEU1wg0YwEZRQlLADoLCIBGEABfRnYIBF5+OXxQGG4wABtFAHNyUgJSJFYIRng4UmYCxS4CTlyZSpAuOGxmDHN8MorGDowZOFy8PvK2iCsyhEgoUsnGbDh9CHnFgZAMMCQ4TbakAph8opKJrZkxiCc0Md7+iESQbV1MkFy4LjBlAqMQCBYE4QB5LEDpKAYRoXJ7PZhlRRWNAuYb/DotAgAbRAACEYnFGHiLPI8STiYxbAB2eS2ABsNIArCSYo4KTEmRTySJ2fJhCyQABdRh7ADuGWxeIATLyYgBmGnStmC54oMK+NCq/g8MIYITCIgAGUlACUiAB1eTZb6nYr/FFCWx0RhjYIY/C0qr8VLkX4HZ5HE6FW3ve5oDqsFQEACcjBYinhOoyWS9FF9MOFangIrQKzgoK2SEzcGzMhFiiQuQOjBkWEgVfAGCD50eg3ISEUMlqCAyLZAndSDTQBULqsBzbBAbQpAgnfrCFy06QWFIad7pDLOzGfueYslNBi0ve9sIeI5IBQ7eCgkIMhcCUYvldcCcuBUaHgyF6IBOFRcuUrgydNgEaKKQUB3AgUCrKQ4ogHAZCUGgVBWAegrOpB0FJiABq2AAmkQACqAAqaDwRQcBIShh7AM8OH4cRaAxFYkqsMIRjxBxQA=="
+  },
+  [
+    "0,0",
+    "0,1",
+    "0,2",
+    "0,3",
+    "0,4",
+    "0,5",
+    "0,6",
+    "0,7",
+    "0,8",
+    "0,9",
+    "0,10",
+    "0,11"
+  ],
+  [
+    "1,0",
+    "1,1",
+    "1,2",
+    "1,3",
+    "1,4",
+    "1,5",
+    "1,6",
+    "1,7",
+    "1,8",
+    "1,9",
+    "1,10",
+    "1,11"
+  ],
+  [
+    "2,0",
+    "2,1",
+    "2,2",
+    "2,3",
+    "2,4",
+    "2,5",
+    "2,6",
+    "2,7",
+    "2,8",
+    "2,9",
+    "2,10",
+    "2,11"
+  ],
+  [
+    "3,0",
+    "3,1",
+    "3,2",
+    "3,3",
+    "3,4",
+    {
+      "a": 0
+    },
+    "3,5\n\n\n\n0",
+    {
+      "x": -1,
+      "w": 2
+    },
+    "3,5\n\n\n\n1",
+    {
+      "x": -1
+    },
+    "3,6\n\n\n\n0",
+    {
+      "a": 4
+    },
+    "3,7",
+    "3,8",
+    "3,9",
+    "3,10",
+    "3,11"
+  ]
+]

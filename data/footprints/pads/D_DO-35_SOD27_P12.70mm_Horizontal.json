@@ -1,0 +1,85 @@
+{
+  "footprint": "D_DO-35_SOD27_P12.70mm_Horizontal",
+  "pads": [
+    {
+      "number": "1",
+      "type": "thru_hole",
+      "shape": "roundrect",
+      "at": {
+        "x": 0,
+        "y": 0,
+        "rot": 0
+      },
+      "size": {
+        "w": 1.6,
+        "h": 1.6
+      },
+      "layers": [
+        "F.Cu",
+        "B.Cu",
+        "F.Mask",
+        "B.Mask"
+      ],
+      "rratio": 0.15625,
+      "drill": {
+        "w": 0.8,
+        "h": 0.8,
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "number": "2",
+      "type": "thru_hole",
+      "shape": "circle",
+      "at": {
+        "x": 12.7,
+        "y": 0,
+        "rot": 0
+      },
+      "size": {
+        "w": 1.6,
+        "h": 1.6
+      },
+      "layers": [
+        "F.Cu",
+        "B.Cu",
+        "F.Mask",
+        "B.Mask"
+      ],
+      "drill": {
+        "w": 0.8,
+        "h": 0.8,
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    }
+  ],
+  "courtyard": {
+    "front": [
+      [
+        {
+          "x": -1.05,
+          "y": -1.25
+        },
+        {
+          "x": 13.75,
+          "y": -1.25
+        },
+        {
+          "x": 13.75,
+          "y": 1.25
+        },
+        {
+          "x": -1.05,
+          "y": 1.25
+        }
+      ]
+    ],
+    "back": []
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "footprint": "SW_Alps_Matias_1.00u",
+  "pads": [
+    {
+      "number": "1",
+      "type": "thru_hole",
+      "shape": "circle",
+      "at": {
+        "x": -2.5,
+        "y": -4,
+        "rot": 0
+      },
+      "size": {
+        "w": 2.5,
+        "h": 2.5
+      },
+      "layers": [
+        "F.Cu",
+        "B.Cu",
+        "F.Mask",
+        "B.Mask"
+      ],
+      "drill": {
+        "w": 1.5,
+        "h": 1.5,
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "number": "2",
+      "type": "thru_hole",
+      "shape": "circle",
+      "at": {
+        "x": 2.5,
+        "y": -4.5,
+        "rot": 0
+      },
+      "size": {
+        "w": 2.5,
+        "h": 2.5
+      },
+      "layers": [
+        "F.Cu",
+        "B.Cu",
+        "F.Mask",
+        "B.Mask"
+      ],
+      "drill": {
+        "w": 1.5,
+        "h": 1.5,
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    }
+  ],
+  "courtyard": {
+    "front": [
+      [
+        {
+          "x": -8,
+          "y": -6.65
+        },
+        {
+          "x": -8,
+          "y": 6.65
+        },
+        {
+          "x": 8,
+          "y": 6.65
+        },
+        {
+          "x": 8,
+          "y": -6.65
+        }
+      ]
+    ],
+    "back": []
+  }
+}

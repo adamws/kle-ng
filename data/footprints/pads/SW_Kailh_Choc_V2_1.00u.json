@@ -1,0 +1,140 @@
+{
+  "footprint": "SW_Kailh_Choc_V2_1.00u",
+  "pads": [
+    {
+      "number": "1",
+      "type": "thru_hole",
+      "shape": "circle",
+      "at": {
+        "x": 0,
+        "y": -5.9,
+        "rot": 0
+      },
+      "size": {
+        "w": 2.2,
+        "h": 2.2
+      },
+      "layers": [
+        "F.Cu",
+        "B.Cu",
+        "F.Mask",
+        "B.Mask"
+      ],
+      "drill": {
+        "w": 1.2,
+        "h": 1.2,
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "number": "2",
+      "type": "thru_hole",
+      "shape": "circle",
+      "at": {
+        "x": 5,
+        "y": -3.8,
+        "rot": 0
+      },
+      "size": {
+        "w": 2.2,
+        "h": 2.2
+      },
+      "layers": [
+        "F.Cu",
+        "B.Cu",
+        "F.Mask",
+        "B.Mask"
+      ],
+      "drill": {
+        "w": 1.2,
+        "h": 1.2,
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "number": "",
+      "type": "np_thru_hole",
+      "shape": "circle",
+      "at": {
+        "x": 0,
+        "y": 0,
+        "rot": 0
+      },
+      "size": {
+        "w": 5.05,
+        "h": 5.05
+      },
+      "layers": [
+        "F.Cu",
+        "B.Cu",
+        "F.Mask",
+        "B.Mask"
+      ],
+      "drill": {
+        "w": 5.05,
+        "h": 5.05,
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "number": "",
+      "type": "thru_hole",
+      "shape": "circle",
+      "at": {
+        "x": -5,
+        "y": 5.15,
+        "rot": 0
+      },
+      "size": {
+        "w": 2.6,
+        "h": 2.6
+      },
+      "layers": [
+        "F.Cu",
+        "B.Cu",
+        "F.Mask",
+        "B.Mask"
+      ],
+      "drill": {
+        "w": 1.6,
+        "h": 1.6,
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    }
+  ],
+  "courtyard": {
+    "front": [
+      [
+        {
+          "x": -7.75,
+          "y": -7.75
+        },
+        {
+          "x": -7.75,
+          "y": 7.75
+        },
+        {
+          "x": 7.75,
+          "y": 7.75
+        },
+        {
+          "x": 7.75,
+          "y": -7.75
+        }
+      ]
+    ],
+    "back": []
+  }
+}
